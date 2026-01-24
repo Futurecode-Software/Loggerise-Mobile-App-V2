@@ -308,6 +308,238 @@ export async function getProductModels(
   }
 }
 
+// ============================================
+// BRAND CRUD Operations
+// ============================================
+
+/**
+ * Brand form data for create/update
+ */
+export interface BrandFormData {
+  name: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+/**
+ * Single brand response
+ */
+interface BrandResponse {
+  success: boolean;
+  data: {
+    brand: ProductBrand;
+  };
+}
+
+/**
+ * Get single brand by ID
+ */
+export async function getProductBrand(id: number): Promise<ProductBrand> {
+  try {
+    const response = await api.get<BrandResponse>(`/product-brands/${id}`);
+    return response.data.data.brand;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Create new brand
+ */
+export async function createProductBrand(data: BrandFormData): Promise<ProductBrand> {
+  try {
+    const response = await api.post<BrandResponse>('/product-brands', data);
+    return response.data.data.brand;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Update existing brand
+ */
+export async function updateProductBrand(
+  id: number,
+  data: Partial<BrandFormData>
+): Promise<ProductBrand> {
+  try {
+    const response = await api.put<BrandResponse>(`/product-brands/${id}`, data);
+    return response.data.data.brand;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Delete brand
+ */
+export async function deleteProductBrand(id: number): Promise<void> {
+  try {
+    await api.delete(`/product-brands/${id}`);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+// ============================================
+// MODEL CRUD Operations
+// ============================================
+
+/**
+ * Model form data for create/update
+ */
+export interface ModelFormData {
+  name: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+/**
+ * Single model response
+ */
+interface ModelResponse {
+  success: boolean;
+  data: {
+    model: ProductModel;
+  };
+}
+
+/**
+ * Get single model by ID
+ */
+export async function getProductModel(id: number): Promise<ProductModel> {
+  try {
+    const response = await api.get<ModelResponse>(`/product-models/${id}`);
+    return response.data.data.model;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Create new model
+ */
+export async function createProductModel(data: ModelFormData): Promise<ProductModel> {
+  try {
+    const response = await api.post<ModelResponse>('/product-models', data);
+    return response.data.data.model;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Update existing model
+ */
+export async function updateProductModel(
+  id: number,
+  data: Partial<ModelFormData>
+): Promise<ProductModel> {
+  try {
+    const response = await api.put<ModelResponse>(`/product-models/${id}`, data);
+    return response.data.data.model;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Delete model
+ */
+export async function deleteProductModel(id: number): Promise<void> {
+  try {
+    await api.delete(`/product-models/${id}`);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+// ============================================
+// CATEGORY CRUD Operations
+// ============================================
+
+/**
+ * Category form data for create/update
+ */
+export interface CategoryFormData {
+  name: string;
+  description?: string;
+  parent_id?: number | null;
+  is_active?: boolean;
+}
+
+/**
+ * Single category response
+ */
+interface CategoryResponse {
+  success: boolean;
+  data: {
+    category: ProductCategory;
+  };
+}
+
+/**
+ * Get single category by ID
+ */
+export async function getProductCategory(id: number): Promise<ProductCategory> {
+  try {
+    const response = await api.get<CategoryResponse>(`/product-categories/${id}`);
+    return response.data.data.category;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Create new category
+ */
+export async function createProductCategory(data: CategoryFormData): Promise<ProductCategory> {
+  try {
+    const response = await api.post<CategoryResponse>('/product-categories', data);
+    return response.data.data.category;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Update existing category
+ */
+export async function updateProductCategory(
+  id: number,
+  data: Partial<CategoryFormData>
+): Promise<ProductCategory> {
+  try {
+    const response = await api.put<CategoryResponse>(`/product-categories/${id}`, data);
+    return response.data.data.category;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Delete category
+ */
+export async function deleteProductCategory(id: number): Promise<void> {
+  try {
+    await api.delete(`/product-categories/${id}`);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
 /**
  * Get product type label in Turkish
  */

@@ -7,18 +7,21 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+} from 'react-native-reanimated';
 import {
   Bell,
   Truck,
   Package,
   TrendingUp,
-  Plus,
   FileText,
   Car,
-  ChevronRight,
   ArrowUpRight,
   ArrowDownRight,
   Users,
@@ -30,17 +33,15 @@ import {
   BarChart3,
   Clock,
   MapPin,
-  Calendar,
   CheckCircle2,
-  XCircle,
   AlertTriangle,
+  Calendar,
 } from 'lucide-react-native';
-import { Card, Badge, Avatar } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-// useColorScheme kaldirildi - her zaman light mode kullanilir
+import { Avatar } from '@/components/ui';
 import { useAuth } from '@/context/auth-context';
 import { useNotificationContext } from '@/context/notification-context';
 import { formatCurrencyCompact, formatNumber } from '@/utils/formatters';
+import { DashboardQuickActions } from '@/components/dashboard/quick-actions';
 import {
   getAvailableDashboards,
   getDashboardStats,
@@ -66,6 +67,8 @@ import {
   HRStats,
 } from '@/services/endpoints/dashboard';
 
+const { width } = Dimensions.get('window');
+
 // Dashboard Tab Types
 type DashboardTab = 'overview' | 'logistics' | 'warehouse' | 'domestic' | 'finance' | 'crm' | 'fleet' | 'stock' | 'hr';
 
@@ -74,6 +77,45 @@ interface TabConfig {
   label: string;
   icon: React.ElementType;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CORPORATE LIGHT THEME - Minimalist, Professional, Single Accent Color
+// ═══════════════════════════════════════════════════════════════════════════════
+const Theme = {
+  // Background layers - clean white with subtle depth
+  background: '#F8F9FA',
+  surface: '#FFFFFF',
+  card: '#FFFFFF',
+  cardElevated: '#FFFFFF',
+
+  // Border - very subtle
+  border: '#EBEDF0',
+  borderLight: '#F4F5F7',
+
+  // Brand Green - single accent color (Loggerise brand)
+  accent: '#13452d',
+  accentLight: '#227d53',
+  accentMuted: 'rgba(19, 69, 45, 0.08)',
+  accentGlow: 'rgba(19, 69, 45, 0.04)',
+
+  // Text hierarchy
+  textPrimary: '#1F2937',
+  textSecondary: '#6B7280',
+  textMuted: '#9CA3AF',
+  textAccent: '#13452d',
+
+  // Minimal status colors
+  success: '#227d53',
+  warning: '#d97706',
+  danger: '#dc2626',
+  info: '#2563eb',
+
+  // Status backgrounds - very subtle
+  successBg: 'rgba(34, 125, 83, 0.08)',
+  warningBg: 'rgba(217, 119, 6, 0.08)',
+  dangerBg: 'rgba(220, 38, 38, 0.08)',
+  infoBg: 'rgba(37, 99, 235, 0.08)',
+};
 
 const ALL_TABS: TabConfig[] = [
   { id: 'overview', label: 'Genel', icon: BarChart3 },
@@ -87,7 +129,6 @@ const ALL_TABS: TabConfig[] = [
   { id: 'hr', label: 'İK', icon: Briefcase },
 ];
 
-// Default stats (used for skeleton/loading)
 const DEFAULT_STATS: DashboardStats = {
   monthly_revenue: 0,
   available_vehicles: 0,
@@ -110,27 +151,79 @@ const DEFAULT_AVAILABLE: AvailableDashboards = {
   hr: false,
 };
 
-const QUICK_ACTIONS = [
-  { id: 'newLoad', label: 'Yeni Yük', icon: Package, color: Brand.primary },
-  { id: 'newInvoice', label: 'Fatura Kes', icon: FileText, color: '#3b82f6' },
-  { id: 'addVehicle', label: 'Araç Ekle', icon: Car, color: '#8b5cf6' },
-  { id: 'addContact', label: 'Müşteri Ekle', icon: Plus, color: '#f59e0b' },
-];
+// ═══════════════════════════════════════════════════════════════════════════════
+// CORPORATE CARD COMPONENT - Clean, Minimal
+// ═══════════════════════════════════════════════════════════════════════════════
+const CorporateCard = ({ children, style, onPress }: any) => {
+  const Wrapper = onPress ? TouchableOpacity : View;
+  return (
+    <Wrapper
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={[styles.corporateCard, style]}
+    >
+      {children}
+    </Wrapper>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// METRIC CARD - Clean single-color design
+// ═══════════════════════════════════════════════════════════════════════════════
+const MetricCard = ({
+  icon: Icon,
+  label,
+  value,
+  growth,
+  delay = 0,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string | number;
+  growth?: number;
+  delay?: number;
+}) => {
+  return (
+    <Animated.View entering={FadeInDown.delay(delay).duration(400)} style={styles.metricWrapper}>
+      <CorporateCard style={styles.metricCard}>
+        <View style={styles.metricIconRow}>
+          <View style={styles.metricIcon}>
+            <Icon size={20} color={Theme.accent} strokeWidth={2} />
+          </View>
+          {growth !== undefined && growth !== 0 && (
+            <View style={[styles.growthPill, growth > 0 ? styles.growthUp : styles.growthDown]}>
+              {growth > 0 ? (
+                <ArrowUpRight size={12} color={Theme.success} />
+              ) : (
+                <ArrowDownRight size={12} color={Theme.danger} />
+              )}
+              <Text style={[styles.growthText, { color: growth > 0 ? Theme.success : Theme.danger }]}>
+                {Math.abs(growth)}%
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.metricValue}>{value}</Text>
+        <Text style={styles.metricLabel}>{label}</Text>
+      </CorporateCard>
+    </Animated.View>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NOTE: QuickAction component moved to @/components/dashboard/quick-actions
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export default function DashboardScreen() {
-  // Her zaman light mode kullanilir
-  const colors = Colors.light;
   const { user } = useAuth();
   const { unreadCount, refreshUnreadCount } = useNotificationContext();
 
-  // State
   const [activeTab, setActiveTab] = useState<DashboardTab>('logistics');
   const [refreshing, setRefreshing] = useState(false);
   const [availableDashboards, setAvailableDashboards] = useState<AvailableDashboards>(DEFAULT_AVAILABLE);
   const [isLoadingAvailable, setIsLoadingAvailable] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Dashboard data states (lazy loaded)
   const [basicStats, setBasicStats] = useState<DashboardStats>(DEFAULT_STATS);
   const [overviewStats, setOverviewStats] = useState<OverviewStats | null>(null);
   const [logisticsStats, setLogisticsStats] = useState<LogisticsStats | null>(null);
@@ -142,15 +235,12 @@ export default function DashboardScreen() {
   const [stockStats, setStockStats] = useState<StockStats | null>(null);
   const [hrStats, setHrStats] = useState<HRStats | null>(null);
 
-  // Loading states per tab
   const [loadingTab, setLoadingTab] = useState<DashboardTab | null>(null);
 
-  // Filter tabs based on permissions
   const visibleTabs = useMemo(() => {
     return ALL_TABS.filter(tab => availableDashboards[tab.id]);
   }, [availableDashboards]);
 
-  // Fetch available dashboards on mount
   const fetchAvailableDashboards = useCallback(async () => {
     try {
       setIsLoadingAvailable(true);
@@ -158,7 +248,6 @@ export default function DashboardScreen() {
       const data = await getAvailableDashboards();
       setAvailableDashboards(data);
 
-      // Set initial tab to first available
       const firstAvailable = ALL_TABS.find(tab => data[tab.id]);
       if (firstAvailable) {
         setActiveTab(firstAvailable.id);
@@ -171,7 +260,6 @@ export default function DashboardScreen() {
     }
   }, []);
 
-  // Fetch basic stats (backward compatible)
   const fetchBasicStats = useCallback(async () => {
     try {
       const data = await getDashboardStats();
@@ -181,7 +269,6 @@ export default function DashboardScreen() {
     }
   }, []);
 
-  // Fetch tab-specific data
   const fetchTabData = useCallback(async (tab: DashboardTab) => {
     if (!availableDashboards[tab]) return;
 
@@ -248,19 +335,13 @@ export default function DashboardScreen() {
     } finally {
       setLoadingTab(null);
     }
-    // Stats are checked inside the function (to determine if we should fetch)
-    // but they don't need to be in the dependency array because they don't affect
-    // HOW we fetch - only IF we fetch. Adding them causes infinite re-renders.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availableDashboards]);
+  }, [availableDashboards, overviewStats, logisticsStats, warehouseStats, domesticStats, financeStats, crmStats, fleetStats, stockStats, hrStats]);
 
-  // Initial load
   useEffect(() => {
     fetchAvailableDashboards();
     fetchBasicStats();
   }, [fetchAvailableDashboards, fetchBasicStats]);
 
-  // Fetch tab data when tab changes
   useEffect(() => {
     if (!isLoadingAvailable && availableDashboards[activeTab]) {
       fetchTabData(activeTab);
@@ -269,7 +350,6 @@ export default function DashboardScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Clear cached data
     setOverviewStats(null);
     setLogisticsStats(null);
     setWarehouseStats(null);
@@ -279,22 +359,15 @@ export default function DashboardScreen() {
     setFleetStats(null);
     setStockStats(null);
     setHrStats(null);
-    // Refetch
+
     await Promise.all([
       fetchAvailableDashboards(),
       fetchBasicStats(),
       refreshUnreadCount(),
     ]);
-    // Fetch current tab data
     await fetchTabData(activeTab);
     setRefreshing(false);
   };
-
-  const handleTabChange = (tab: DashboardTab) => {
-    setActiveTab(tab);
-  };
-
-  // formatCurrency replaced with formatCurrencyCompact from @/utils/formatters (safe for undefined values)
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -305,15 +378,15 @@ export default function DashboardScreen() {
 
   const isTabLoading = loadingTab === activeTab;
 
-  // Render tab content based on active tab
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // RENDER TAB CONTENTS
+  // ═══════════════════════════════════════════════════════════════════════════════
   const renderTabContent = () => {
     if (isTabLoading) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Veriler yükleniyor...
-          </Text>
+          <ActivityIndicator size="large" color={Theme.accent} />
+          <Text style={styles.loadingText}>Yükleniyor...</Text>
         </View>
       );
     }
@@ -342,895 +415,326 @@ export default function DashboardScreen() {
     }
   };
 
-  // Overview Content
   const renderOverviewContent = () => {
     if (!overviewStats) return renderBasicContent();
 
     return (
       <>
         <View style={styles.metricsGrid}>
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.successLight }]}>
-              <Truck size={24} color={colors.success} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AKTİF SEFERLER</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{overviewStats.activeTrips}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.warningLight }]}>
-              <MapPin size={24} color={colors.warning} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>YURTİÇİ İŞ EMRİ</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{overviewStats.activeDomesticOrders}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.infoLight }]}>
-              <Package size={24} color={colors.info} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>KABUL BEKLEYEN</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{overviewStats.pendingReceiving}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: '#F3E8FF' }]}>
-              <TrendingUp size={24} color="#8b5cf6" />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AYLIK GELİR</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{formatCurrencyCompact(overviewStats.monthlyRevenue)}</Text>
-          </Card>
+          <MetricCard icon={Truck} label="Aktif Seferler" value={overviewStats.activeTrips} delay={0} />
+          <MetricCard icon={MapPin} label="Yurtiçi İş Emri" value={overviewStats.activeDomesticOrders} delay={50} />
+          <MetricCard icon={Package} label="Kabul Bekleyen" value={overviewStats.pendingReceiving} delay={100} />
+          <MetricCard icon={TrendingUp} label="Aylık Gelir" value={formatCurrencyCompact(overviewStats.monthlyRevenue)} delay={150} />
         </View>
 
-        <Card style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.success }]}>{overviewStats.completedTodayDomestic}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Bugün Tamamlanan</Text>
+        <Animated.View entering={FadeIn.delay(200)}>
+          <CorporateCard style={styles.summaryCard}>
+            <View style={styles.summaryGrid}>
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryValue, { color: Theme.success }]}>{overviewStats.completedTodayDomestic}</Text>
+                <Text style={styles.summaryLabel}>Tamamlanan</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryValue, { color: Theme.danger }]}>{overviewStats.delayedDomestic}</Text>
+                <Text style={styles.summaryLabel}>Geciken</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryValue, { color: Theme.accent }]}>{overviewStats.readyPositions}</Text>
+                <Text style={styles.summaryLabel}>Hazır</Text>
+              </View>
             </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.danger }]}>{overviewStats.delayedDomestic}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Geciken</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.info }]}>{overviewStats.readyPositions}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Hazır Pozisyon</Text>
-            </View>
-          </View>
-        </Card>
+          </CorporateCard>
+        </Animated.View>
       </>
     );
   };
 
-  // Logistics Content
   const renderLogisticsContent = () => {
     if (!logisticsStats) return renderBasicContent();
 
     return (
       <>
         <View style={styles.metricsGrid}>
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.successLight }]}>
-              <Truck size={24} color={colors.success} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AYLIK SEFER</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{logisticsStats.monthlyTripsCount}</Text>
-            {logisticsStats.monthlyTripsGrowth !== 0 && (
-              <View style={styles.growthBadge}>
-                {logisticsStats.monthlyTripsGrowth > 0 ? (
-                  <ArrowUpRight size={14} color={colors.success} />
-                ) : (
-                  <ArrowDownRight size={14} color={colors.danger} />
-                )}
-                <Text style={[styles.growthText, { color: logisticsStats.monthlyTripsGrowth > 0 ? colors.success : colors.danger }]}>
-                  %{Math.abs(logisticsStats.monthlyTripsGrowth)}
-                </Text>
-              </View>
-            )}
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.infoLight }]}>
-              <Clock size={24} color={colors.info} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AKTİF SEFER</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{logisticsStats.activeTripsCount}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.warningLight }]}>
-              <Calendar size={24} color={colors.warning} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>PLANLANAN</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{logisticsStats.plannedTripsCount}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: '#F3E8FF' }]}>
-              <BarChart3 size={24} color="#8b5cf6" />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>TOPLAM</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{logisticsStats.totalTripsCount}</Text>
-          </Card>
+          <MetricCard icon={Truck} label="Aylık Sefer" value={logisticsStats.monthlyTripsCount} growth={logisticsStats.monthlyTripsGrowth} delay={0} />
+          <MetricCard icon={Clock} label="Aktif Sefer" value={logisticsStats.activeTripsCount} delay={50} />
+          <MetricCard icon={Calendar} label="Planlanan" value={logisticsStats.plannedTripsCount} delay={100} />
+          <MetricCard icon={BarChart3} label="Toplam" value={logisticsStats.totalTripsCount} delay={150} />
         </View>
 
-        {/* Expiring Documents */}
         {logisticsStats.expiringDocuments.length > 0 && (
-          <>
+          <Animated.View entering={FadeIn.delay(200)}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Süresi Yaklaşan Belgeler</Text>
+              <AlertTriangle size={18} color={Theme.warning} />
+              <Text style={styles.sectionTitle}>Süresi Yaklaşan Belgeler</Text>
             </View>
-            <Card variant="outlined" padding="none">
-              {logisticsStats.expiringDocuments.slice(0, 5).map((doc, index) => (
-                <View
-                  key={doc.id}
-                  style={[
-                    styles.listItem,
-                    index !== Math.min(logisticsStats.expiringDocuments.length - 1, 4) && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: colors.border,
-                    },
-                  ]}
-                >
-                  <View style={[styles.listItemIcon, { backgroundColor: colors.warningLight }]}>
-                    <AlertTriangle size={16} color={colors.warning} />
-                  </View>
+            <CorporateCard style={styles.listCard}>
+              {logisticsStats.expiringDocuments.slice(0, 4).map((doc, index) => (
+                <View key={doc.id} style={[styles.listItem, index !== Math.min(logisticsStats.expiringDocuments.length - 1, 3) && styles.listItemBorder]}>
+                  <View style={[styles.listItemDot, { backgroundColor: Theme.warning }]} />
                   <View style={styles.listItemContent}>
-                    <Text style={[styles.listItemTitle, { color: colors.text }]}>{doc.name}</Text>
-                    <Text style={[styles.listItemSubtitle, { color: colors.textMuted }]}>
-                      {doc.days_until_expiry} gün kaldı
+                    <Text style={styles.listItemTitle}>{doc.name}</Text>
+                    <Text style={styles.listItemMeta}>{doc.days_until_expiry} gün kaldı</Text>
+                  </View>
+                </View>
+              ))}
+            </CorporateCard>
+          </Animated.View>
+        )}
+
+        {logisticsStats.recentTrips.length > 0 && (
+          <Animated.View entering={FadeIn.delay(300)}>
+            <View style={styles.sectionHeader}>
+              <Truck size={18} color={Theme.accent} />
+              <Text style={styles.sectionTitle}>Son Seferler</Text>
+            </View>
+            <CorporateCard style={styles.listCard}>
+              {logisticsStats.recentTrips.slice(0, 4).map((trip, index) => (
+                <View key={trip.id} style={[styles.listItem, index !== Math.min(logisticsStats.recentTrips.length - 1, 3) && styles.listItemBorder]}>
+                  <View style={[styles.listItemDot, { backgroundColor: trip.status === 'in_progress' ? Theme.success : Theme.textMuted }]} />
+                  <View style={styles.listItemContent}>
+                    <Text style={styles.listItemTitle}>{trip.trip_number}</Text>
+                    <Text style={styles.listItemMeta}>{trip.name || '-'}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, trip.status === 'in_progress' ? styles.statusActive : styles.statusInactive]}>
+                    <Text style={[styles.statusText, { color: trip.status === 'in_progress' ? Theme.success : Theme.textMuted }]}>
+                      {trip.status === 'in_progress' ? 'Devam' : 'Bitti'}
                     </Text>
                   </View>
                 </View>
               ))}
-            </Card>
-          </>
-        )}
-
-        {/* Recent Trips */}
-        {logisticsStats.recentTrips.length > 0 && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Son Seferler</Text>
-            </View>
-            <Card variant="outlined" padding="none">
-              {logisticsStats.recentTrips.map((trip, index) => (
-                <View
-                  key={trip.id}
-                  style={[
-                    styles.listItem,
-                    index !== logisticsStats.recentTrips.length - 1 && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: colors.border,
-                    },
-                  ]}
-                >
-                  <View style={[styles.listItemIcon, { backgroundColor: trip.status === 'in_progress' ? colors.successLight : colors.infoLight }]}>
-                    <Truck size={16} color={trip.status === 'in_progress' ? colors.success : colors.info} />
-                  </View>
-                  <View style={styles.listItemContent}>
-                    <Text style={[styles.listItemTitle, { color: colors.text }]}>{trip.trip_number}</Text>
-                    <Text style={[styles.listItemSubtitle, { color: colors.textMuted }]}>{trip.name || '-'}</Text>
-                  </View>
-                  <Badge
-                    variant={trip.status === 'in_progress' ? 'success' : 'secondary'}
-                    size="sm"
-                  >
-                    {trip.status === 'in_progress' ? 'Devam' : 'Bitti'}
-                  </Badge>
-                </View>
-              ))}
-            </Card>
-          </>
+            </CorporateCard>
+          </Animated.View>
         )}
       </>
     );
   };
 
-  // Warehouse Content
   const renderWarehouseContent = () => {
     if (!warehouseStats) return renderBasicContent();
-
     return (
-      <>
-        <View style={styles.metricsGrid}>
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.warningLight }]}>
-              <Clock size={24} color={colors.warning} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>ÖN TAŞIMA BEK.</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{warehouseStats.summaryStats?.pending_pre_carriages || 0}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.infoLight }]}>
-              <Package size={24} color={colors.info} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>KABUL BEKLEYEN</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{warehouseStats.summaryStats?.pending_warehouse_receiving || 0}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.successLight }]}>
-              <CheckCircle2 size={24} color={colors.success} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>HAZIR</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{warehouseStats.summaryStats?.ready_for_disposition || 0}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: '#F3E8FF' }]}>
-              <Warehouse size={24} color="#8b5cf6" />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>TOPLAM POZ.</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{warehouseStats.summaryStats?.total_positions || 0}</Text>
-          </Card>
-        </View>
-
-        <Card style={styles.infoCard}>
-          <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-            Hazırlık eşiği: %{warehouseStats.threshold}
-          </Text>
-        </Card>
-      </>
+      <View style={styles.metricsGrid}>
+        <MetricCard icon={Clock} label="Ön Taşıma Bek." value={warehouseStats.summaryStats?.pending_pre_carriages || 0} delay={0} />
+        <MetricCard icon={Package} label="Kabul Bekleyen" value={warehouseStats.summaryStats?.pending_warehouse_receiving || 0} delay={50} />
+        <MetricCard icon={CheckCircle2} label="Hazır" value={warehouseStats.summaryStats?.ready_for_disposition || 0} delay={100} />
+        <MetricCard icon={Warehouse} label="Toplam Pozisyon" value={warehouseStats.summaryStats?.total_positions || 0} delay={150} />
+      </View>
     );
   };
 
-  // Domestic Content
   const renderDomesticContent = () => {
     if (!domesticStats) return renderBasicContent();
-
     const stats = domesticStats.summaryStats;
-
     return (
-      <>
-        <View style={styles.metricsGrid}>
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.infoLight }]}>
-              <MapPin size={24} color={colors.info} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>TOPLAM İŞ EMRİ</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{stats.total_orders}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.warningLight }]}>
-              <Truck size={24} color={colors.warning} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>YOLDA</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{stats.in_transit_orders}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.successLight }]}>
-              <CheckCircle2 size={24} color={colors.success} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>BUGÜN BİTEN</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{stats.completed_today}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.dangerLight }]}>
-              <AlertCircle size={24} color={colors.danger} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>GECİKEN</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{stats.delayed_orders}</Text>
-          </Card>
-        </View>
-
-        <Card style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.warning }]}>{stats.pending_orders}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Bekleyen</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.info }]}>{stats.assigned_orders}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Atanmış</Text>
-            </View>
-          </View>
-        </Card>
-
-        {/* Delayed Orders */}
-        {domesticStats.delayedOrders.length > 0 && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Geciken İş Emirleri</Text>
-            </View>
-            <Card variant="outlined" padding="none">
-              {domesticStats.delayedOrders.slice(0, 5).map((order, index) => (
-                <View
-                  key={order.id}
-                  style={[
-                    styles.listItem,
-                    index !== Math.min(domesticStats.delayedOrders.length - 1, 4) && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: colors.border,
-                    },
-                  ]}
-                >
-                  <View style={[styles.listItemIcon, { backgroundColor: colors.dangerLight }]}>
-                    <AlertCircle size={16} color={colors.danger} />
-                  </View>
-                  <View style={styles.listItemContent}>
-                    <Text style={[styles.listItemTitle, { color: colors.text }]}>{order.order_number}</Text>
-                    <Text style={[styles.listItemSubtitle, { color: colors.textMuted }]}>
-                      {order.pickup_city} → {order.delivery_city}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </Card>
-          </>
-        )}
-      </>
+      <View style={styles.metricsGrid}>
+        <MetricCard icon={MapPin} label="Toplam İş Emri" value={stats.total_orders} delay={0} />
+        <MetricCard icon={Truck} label="Yolda" value={stats.in_transit_orders} delay={50} />
+        <MetricCard icon={CheckCircle2} label="Bugün Biten" value={stats.completed_today} delay={100} />
+        <MetricCard icon={AlertCircle} label="Geciken" value={stats.delayed_orders} delay={150} />
+      </View>
     );
   };
 
-  // Finance Content
   const renderFinanceContent = () => {
     if (!financeStats) return renderBasicContent();
-
     return (
-      <>
-        <View style={styles.metricsGrid}>
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.successLight }]}>
-              <ArrowUpRight size={24} color={colors.success} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>ALACAK</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{formatCurrencyCompact(financeStats.receivables.total)}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.dangerLight }]}>
-              <ArrowDownRight size={24} color={colors.danger} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>BORÇ</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{formatCurrencyCompact(financeStats.payables.total)}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.warningLight }]}>
-              <Clock size={24} color={colors.warning} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>GECİKMİŞ ALACAK</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{formatCurrencyCompact(financeStats.receivables.overdue)}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.infoLight }]}>
-              <TrendingUp size={24} color={colors.info} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AYLIK GELİR</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{formatCurrencyCompact(financeStats.incomeStats.totalIncome)}</Text>
-          </Card>
-        </View>
-      </>
+      <View style={styles.metricsGrid}>
+        <MetricCard icon={ArrowUpRight} label="Alacak" value={formatCurrencyCompact(financeStats.receivables.total)} delay={0} />
+        <MetricCard icon={ArrowDownRight} label="Borç" value={formatCurrencyCompact(financeStats.payables.total)} delay={50} />
+        <MetricCard icon={Clock} label="Gecikmiş Alacak" value={formatCurrencyCompact(financeStats.receivables.overdue)} delay={100} />
+        <MetricCard icon={TrendingUp} label="Aylık Gelir" value={formatCurrencyCompact(financeStats.incomeStats.totalIncome)} delay={150} />
+      </View>
     );
   };
 
-  // CRM Content
   const renderCRMContent = () => {
     if (!crmStats) return renderBasicContent();
-
     return (
-      <>
-        <View style={styles.metricsGrid}>
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.successLight }]}>
-              <CheckCircle2 size={24} color={colors.success} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>KAZANILAN</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{crmStats.wonQuotes.count}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.infoLight }]}>
-              <FileText size={24} color={colors.info} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>TOPLAM TEKLİF</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{crmStats.quoteStats.total}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.warningLight }]}>
-              <Users size={24} color={colors.warning} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>MÜŞTERİ</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{crmStats.customerStats.total}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: '#F3E8FF' }]}>
-              <TrendingUp size={24} color="#8b5cf6" />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>DÖNÜŞÜM</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>%{crmStats.conversionRate}</Text>
-          </Card>
-        </View>
-
-        <Card style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.warning }]}>{crmStats.quoteStats.sent}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Gönderilen</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.success }]}>{crmStats.quoteStats.accepted}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Onaylanan</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.danger }]}>{crmStats.quoteStats.rejected}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Reddedilen</Text>
-            </View>
-          </View>
-        </Card>
-      </>
+      <View style={styles.metricsGrid}>
+        <MetricCard icon={CheckCircle2} label="Kazanılan" value={crmStats.wonQuotes.count} delay={0} />
+        <MetricCard icon={FileText} label="Toplam Teklif" value={crmStats.quoteStats.total} delay={50} />
+        <MetricCard icon={Users} label="Müşteri" value={crmStats.customerStats.total} delay={100} />
+        <MetricCard icon={TrendingUp} label="Dönüşüm" value={`%${crmStats.conversionRate}`} delay={150} />
+      </View>
     );
   };
 
-  // Fleet Content
   const renderFleetContent = () => {
     if (!fleetStats) return renderBasicContent();
-
     return (
-      <>
-        <View style={styles.metricsGrid}>
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.successLight }]}>
-              <Car size={24} color={colors.success} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AKTİF ARAÇ</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{fleetStats.vehicleStats.active}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.warningLight }]}>
-              <AlertTriangle size={24} color={colors.warning} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>BAKIMDA</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{fleetStats.vehicleStats.inMaintenance}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.infoLight }]}>
-              <UserCheck size={24} color={colors.info} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AKTİF SÜRÜCÜ</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{fleetStats.driverStats.active}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.dangerLight }]}>
-              <FileText size={24} color={colors.danger} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>SİGORTA UYR.</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{fleetStats.expiringInsurances}</Text>
-          </Card>
-        </View>
-
-        {/* Expiring Documents */}
-        {fleetStats.expiringDocuments.length > 0 && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Süresi Dolan Belgeler</Text>
-            </View>
-            <Card variant="outlined" padding="none">
-              {fleetStats.expiringDocuments.slice(0, 5).map((doc, index) => (
-                <View
-                  key={doc.id}
-                  style={[
-                    styles.listItem,
-                    index !== Math.min(fleetStats.expiringDocuments.length - 1, 4) && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: colors.border,
-                    },
-                  ]}
-                >
-                  <View style={[styles.listItemIcon, { backgroundColor: colors.warningLight }]}>
-                    <AlertTriangle size={16} color={colors.warning} />
-                  </View>
-                  <View style={styles.listItemContent}>
-                    <Text style={[styles.listItemTitle, { color: colors.text }]}>{doc.name}</Text>
-                    <Text style={[styles.listItemSubtitle, { color: colors.textMuted }]}>
-                      {doc.type_label} - {doc.days_until_expiry} gün kaldı
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </Card>
-          </>
-        )}
-      </>
+      <View style={styles.metricsGrid}>
+        <MetricCard icon={Car} label="Aktif Araç" value={fleetStats.vehicleStats.active} delay={0} />
+        <MetricCard icon={AlertTriangle} label="Bakımda" value={fleetStats.vehicleStats.inMaintenance} delay={50} />
+        <MetricCard icon={UserCheck} label="Aktif Sürücü" value={fleetStats.driverStats.active} delay={100} />
+        <MetricCard icon={FileText} label="Sigorta Uyarısı" value={fleetStats.expiringInsurances} delay={150} />
+      </View>
     );
   };
 
-  // Stock Content
   const renderStockContent = () => {
     if (!stockStats) return renderBasicContent();
-
     return (
-      <>
-        <View style={styles.metricsGrid}>
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.successLight }]}>
-              <TrendingUp size={24} color={colors.success} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>STOK DEĞERİ</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{formatCurrencyCompact(stockStats.totalStockValue)}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.infoLight }]}>
-              <Package size={24} color={colors.info} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>TOPLAM ÜRÜN</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{stockStats.productStats.total}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.dangerLight }]}>
-              <AlertCircle size={24} color={colors.danger} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>DÜŞÜK STOK</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{stockStats.productStats.lowStock}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.warningLight }]}>
-              <Warehouse size={24} color={colors.warning} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AKTİF DEPO</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{stockStats.warehouseStats.active}</Text>
-          </Card>
-        </View>
-
-        <Card style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.info }]}>{stockStats.movementStats.today}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Bugün Hareket</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.success }]}>{stockStats.movementStats.inbound}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Giriş</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.warning }]}>{stockStats.movementStats.outbound}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Çıkış</Text>
-            </View>
-          </View>
-        </Card>
-      </>
+      <View style={styles.metricsGrid}>
+        <MetricCard icon={TrendingUp} label="Stok Değeri" value={formatCurrencyCompact(stockStats.totalStockValue)} delay={0} />
+        <MetricCard icon={Package} label="Toplam Ürün" value={stockStats.productStats.total} delay={50} />
+        <MetricCard icon={AlertCircle} label="Düşük Stok" value={stockStats.productStats.lowStock} delay={100} />
+        <MetricCard icon={Warehouse} label="Aktif Depo" value={stockStats.warehouseStats.active} delay={150} />
+      </View>
     );
   };
 
-  // HR Content
   const renderHRContent = () => {
     if (!hrStats) return renderBasicContent();
-
     return (
-      <>
-        <View style={styles.metricsGrid}>
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.successLight }]}>
-              <Users size={24} color={colors.success} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AKTİF PERSONEL</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{hrStats.activeEmployees}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.infoLight }]}>
-              <Briefcase size={24} color={colors.info} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AKTİF İLAN</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{hrStats.activeJobPostings}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.warningLight }]}>
-              <FileText size={24} color={colors.warning} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>BEKLEYEN BAŞV.</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{hrStats.pendingApplications}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: '#F3E8FF' }]}>
-              <Calendar size={24} color="#8b5cf6" />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>MÜLAKAT</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{hrStats.interviewScheduled}</Text>
-          </Card>
-        </View>
-
-        <Card style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.success }]}>{hrStats.hiredThisMonth}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Bu Ay İşe Alınan</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.danger }]}>{hrStats.leftThisMonth}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Bu Ay Ayrılan</Text>
-            </View>
-          </View>
-        </Card>
-
-        {/* Expiring Documents */}
-        {hrStats.allExpiringDocuments.length > 0 && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Süresi Yaklaşan Belgeler</Text>
-            </View>
-            <Card variant="outlined" padding="none">
-              {hrStats.allExpiringDocuments.slice(0, 5).map((doc, index) => (
-                <View
-                  key={`${doc.id}-${doc.document_type}`}
-                  style={[
-                    styles.listItem,
-                    index !== Math.min(hrStats.allExpiringDocuments.length - 1, 4) && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: colors.border,
-                    },
-                  ]}
-                >
-                  <View style={[styles.listItemIcon, { backgroundColor: colors.warningLight }]}>
-                    <AlertTriangle size={16} color={colors.warning} />
-                  </View>
-                  <View style={styles.listItemContent}>
-                    <Text style={[styles.listItemTitle, { color: colors.text }]}>{doc.employee_name}</Text>
-                    <Text style={[styles.listItemSubtitle, { color: colors.textMuted }]}>
-                      {doc.document_type} - {doc.days_until_expiry} gün kaldı
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </Card>
-          </>
-        )}
-      </>
+      <View style={styles.metricsGrid}>
+        <MetricCard icon={Users} label="Aktif Personel" value={hrStats.activeEmployees} delay={0} />
+        <MetricCard icon={Briefcase} label="Aktif İlan" value={hrStats.activeJobPostings} delay={50} />
+        <MetricCard icon={FileText} label="Bekleyen Başvuru" value={hrStats.pendingApplications} delay={100} />
+        <MetricCard icon={Calendar} label="Mülakat" value={hrStats.interviewScheduled} delay={150} />
+      </View>
     );
   };
 
-  // Basic Content (fallback)
   const renderBasicContent = () => {
     return (
-      <>
-        <View style={styles.metricsGrid}>
-          <Card style={styles.metricCard} onPress={() => router.push('/(tabs)/loads')}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.successLight }]}>
-              <Truck size={24} color={colors.success} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>TOPLAM SEFER</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{basicStats.total_trips}</Text>
-          </Card>
-
-          <Card style={styles.metricCard} onPress={() => router.push('/(tabs)/loads')}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.warningLight }]}>
-              <Package size={24} color={colors.warning} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AKTİF YÜKLER</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{basicStats.active_loads}</Text>
-          </Card>
-
-          <Card style={styles.metricCard}>
-            <View style={[styles.metricIcon, { backgroundColor: colors.infoLight }]}>
-              <TrendingUp size={24} color={colors.info} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>AYLIK GELİR</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{formatCurrencyCompact(basicStats.monthly_revenue)}</Text>
-          </Card>
-
-          <Card style={styles.metricCard} onPress={() => router.push('/(tabs)/contacts')}>
-            <View style={[styles.metricIcon, { backgroundColor: '#F3E8FF' }]}>
-              <Users size={24} color="#8b5cf6" />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>TOPLAM CARİ</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{formatNumber(basicStats.total_contacts)}</Text>
-          </Card>
-        </View>
-
-        <Card style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.success }]}>{basicStats.available_vehicles}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Müsait Araç</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.warning }]}>{basicStats.busy_vehicles}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Meşgul Araç</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>{basicStats.total_vehicles}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Toplam Araç</Text>
-            </View>
-          </View>
-        </Card>
-      </>
+      <View style={styles.metricsGrid}>
+        <MetricCard icon={Truck} label="Toplam Sefer" value={basicStats.total_trips} delay={0} />
+        <MetricCard icon={Package} label="Aktif Yükler" value={basicStats.active_loads} delay={50} />
+        <MetricCard icon={TrendingUp} label="Aylık Gelir" value={formatCurrencyCompact(basicStats.monthly_revenue)} delay={100} />
+        <MetricCard icon={Users} label="Toplam Cari" value={formatNumber(basicStats.total_contacts)} delay={150} />
+      </View>
     );
   };
 
-  // Loading state for initial load
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // LOADING STATE
+  // ═══════════════════════════════════════════════════════════════════════════════
   if (isLoadingAvailable) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.fullLoadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Dashboard yükleniyor...
-          </Text>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingFull}>
+          <ActivityIndicator size="large" color={Theme.accent} />
+          <Text style={styles.loadingText}>Dashboard yükleniyor...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // MAIN RENDER
+  // ═══════════════════════════════════════════════════════════════════════════════
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          style={styles.userSection}
-          onPress={() => router.push('/(tabs)/profile')}
-          activeOpacity={0.7}
-        >
-          <Avatar
-            source={user?.avatar}
-            name={user?.fullName || 'Kullanıcı'}
-            size="md"
-          />
+    <SafeAreaView style={styles.container}>
+      {/* HEADER - Clean, Minimal */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.userSection} onPress={() => router.push('/(tabs)/profile')} activeOpacity={0.7}>
+          <Avatar source={user?.avatar} name={user?.fullName || 'Kullanıcı'} size="md" />
           <View style={styles.userInfo}>
-            <Text style={[styles.headerGreeting, { color: colors.text }]}>
-              {getGreeting()}, {user?.fullName?.split(' ')[0] || 'Kullanıcı'}
-            </Text>
-            <Text style={[styles.headerDate, { color: colors.textSecondary }]}>
-              {new Date().toLocaleDateString('tr-TR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
+            <Text style={styles.greeting}>{getGreeting()}, {user?.fullName?.split(' ')[0] || 'Kullanıcı'}</Text>
+            <Text style={styles.dateText}>
+              {new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.notificationButton}
-          onPress={() => router.push('/notifications')}
-        >
-          <Bell size={24} color={colors.icon} />
+        <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push('/notifications')}>
+          <Bell size={22} color={Theme.textSecondary} />
           {unreadCount > 0 && (
-            <View style={[styles.notificationBadge, { backgroundColor: colors.danger }]}>
-              <Text style={styles.notificationCount}>
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Tab Bar - Only show tabs user has access to */}
+      {/* TAB BAR - Minimal pill style */}
       {visibleTabs.length > 0 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={[styles.tabBar, { backgroundColor: colors.surface }]}
+          style={styles.tabBar}
           contentContainerStyle={styles.tabBarContent}
         >
-          {visibleTabs.map((tab) => (
-            <TouchableOpacity
-              key={tab.id}
-              style={[
-                styles.tab,
-                activeTab === tab.id && styles.activeTab,
-                activeTab === tab.id && { borderBottomColor: Brand.primary },
-              ]}
-              onPress={() => handleTabChange(tab.id)}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  { color: activeTab === tab.id ? Brand.primary : colors.textSecondary },
-                  activeTab === tab.id && styles.activeTabText,
-                ]}
+          {visibleTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                style={[styles.tab, isActive && styles.tabActive]}
+                onPress={() => setActiveTab(tab.id)}
+                activeOpacity={0.7}
               >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Icon size={16} color={isActive ? '#FFFFFF' : Theme.textMuted} strokeWidth={isActive ? 2.5 : 2} />
+                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       )}
 
-      {/* Content */}
+      {/* CONTENT */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Brand.primary}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Theme.accent} />
         }
       >
-        {/* Error State */}
         {error && (
-          <View style={[styles.errorContainer, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={20} color={colors.danger} />
-            <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
-            <TouchableOpacity onPress={fetchAvailableDashboards}>
-              <Text style={[styles.retryText, { color: colors.danger }]}>Tekrar Dene</Text>
-            </TouchableOpacity>
+          <View style={styles.errorBox}>
+            <AlertCircle size={18} color={Theme.danger} />
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
-        {/* Tab Content */}
         {renderTabContent()}
 
-        {/* Quick Actions */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Hızlı İşlemler</Text>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.quickActionsScroll}
-          contentContainerStyle={styles.quickActionsContainer}
-        >
-          {QUICK_ACTIONS.map((action) => (
-            <TouchableOpacity
-              key={action.id}
-              style={[styles.quickAction, { backgroundColor: colors.card, ...Shadows.sm }]}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}15` }]}>
-                <action.icon size={24} color={action.color} />
-              </View>
-              <Text style={[styles.quickActionLabel, { color: colors.text }]}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {/* QUICK ACTIONS - Dashboard-specific actions */}
+        <Animated.View entering={FadeIn.delay(400)}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Hızlı İşlemler</Text>
+          </View>
+          <DashboardQuickActions dashboardId={activeTab} />
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// STYLES - Corporate, Minimal, Professional
+// ═══════════════════════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Theme.background,
   },
-  fullLoadingContainer: {
+  loadingFull: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.md,
+    gap: 16,
   },
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing['2xl'],
-    gap: Spacing.md,
+    paddingVertical: 60,
+    gap: 12,
   },
   loadingText: {
-    ...Typography.bodyMD,
+    fontSize: 14,
+    color: Theme.textMuted,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   userSection: {
     flexDirection: 'row',
@@ -1238,207 +742,285 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userInfo: {
-    marginLeft: Spacing.md,
-    flex: 1,
+    marginLeft: 12,
   },
-  headerGreeting: {
-    ...Typography.headingSM,
+  greeting: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: Theme.textPrimary,
     marginBottom: 2,
   },
-  headerDate: {
-    ...Typography.bodyXS,
+  dateText: {
+    fontSize: 13,
+    color: Theme.textMuted,
   },
-  notificationButton: {
-    position: 'relative',
-    padding: Spacing.sm,
+  notificationBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Theme.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
   },
-  notificationBadge: {
+  badge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    top: 8,
+    right: 8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  notificationCount: {
-    color: '#FFFFFF',
+  badgeText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
+
+  // Tab Bar
   tabBar: {
-    maxHeight: 48,
+    maxHeight: 52,
   },
   tabBarContent: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.lg,
+    paddingHorizontal: 20,
+    gap: 8,
+    paddingBottom: 4,
   },
   tab: {
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: Theme.borderLight,
   },
-  activeTab: {
-    borderBottomWidth: 3,
+  tabActive: {
+    backgroundColor: Theme.accent,
   },
-  tabText: {
-    ...Typography.bodyMD,
+  tabLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: Theme.textMuted,
   },
-  activeTabText: {
+  tabLabelActive: {
+    color: '#FFFFFF',
     fontWeight: '600',
   },
+
+  // Content
   content: {
     flex: 1,
   },
   contentContainer: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing['3xl'],
+    padding: 20,
+    paddingBottom: 40,
+    gap: 20,
   },
-  errorContainer: {
+
+  // Error
+  errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: 8,
-    marginBottom: Spacing.lg,
+    gap: 10,
+    padding: 14,
+    backgroundColor: Theme.dangerBg,
+    borderRadius: 12,
   },
   errorText: {
-    ...Typography.bodySM,
+    fontSize: 13,
+    color: Theme.danger,
     flex: 1,
   },
-  retryText: {
-    ...Typography.bodySM,
-    fontWeight: '600',
-  },
+
+  // Metrics Grid
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.md,
-    marginBottom: Spacing.md,
+    gap: 12,
+  },
+  metricWrapper: {
+    width: (width - 52) / 2,
+  },
+  corporateCard: {
+    backgroundColor: Theme.card,
+    borderRadius: 14,
+    // Very subtle border - cleaner than shadow
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
   },
   metricCard: {
-    width: '48%',
-    flexGrow: 1,
+    padding: 18,
+  },
+  metricIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   metricIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Theme.accentMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.md,
   },
-  metricLabel: {
-    ...Typography.bodyXS,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    marginBottom: Spacing.xs,
-  },
-  metricValue: {
-    ...Typography.headingLG,
-  },
-  growthBadge: {
+  growthPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.xs,
+    gap: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  growthUp: {
+    backgroundColor: Theme.successBg,
+  },
+  growthDown: {
+    backgroundColor: Theme.dangerBg,
   },
   growthText: {
-    ...Typography.bodySM,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  metricValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Theme.textPrimary,
+    marginBottom: 4,
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: Theme.textMuted,
     fontWeight: '500',
-    marginLeft: 2,
   },
+
+  // Summary Card
   summaryCard: {
-    marginBottom: Spacing.xl,
+    padding: 20,
   },
-  summaryRow: {
+  summaryGrid: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
   },
   summaryItem: {
-    alignItems: 'center',
     flex: 1,
+    alignItems: 'center',
   },
   summaryValue: {
-    ...Typography.headingLG,
-    marginBottom: Spacing.xs,
+    fontSize: 26,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   summaryLabel: {
-    ...Typography.bodyXS,
-    textAlign: 'center',
+    fontSize: 12,
+    color: Theme.textMuted,
   },
   summaryDivider: {
     width: 1,
-    height: 40,
+    height: 36,
+    backgroundColor: Theme.borderLight,
   },
-  infoCard: {
-    marginBottom: Spacing.xl,
-  },
-  infoText: {
-    ...Typography.bodySM,
-    textAlign: 'center',
-  },
+
+  // Section
   sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
-    marginTop: Spacing.lg,
+    gap: 8,
+    marginBottom: 12,
+    marginTop: 8,
   },
   sectionTitle: {
-    ...Typography.headingSM,
+    fontSize: 15,
+    fontWeight: '600',
+    color: Theme.textPrimary,
+  },
+
+  // List Card
+  listCard: {
+    padding: 0,
+    overflow: 'hidden',
   },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.md,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  listItemIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
+  listItemBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Theme.border,
+  },
+  listItemDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 12,
   },
   listItemContent: {
     flex: 1,
   },
   listItemTitle: {
-    ...Typography.bodyMD,
+    fontSize: 14,
     fontWeight: '500',
+    color: Theme.textPrimary,
     marginBottom: 2,
   },
-  listItemSubtitle: {
-    ...Typography.bodySM,
+  listItemMeta: {
+    fontSize: 12,
+    color: Theme.textMuted,
   },
-  quickActionsScroll: {
-    marginHorizontal: -Spacing.lg,
-    marginBottom: Spacing.xl,
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
-  quickActionsContainer: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.md,
+  statusActive: {
+    backgroundColor: Theme.successBg,
+  },
+  statusInactive: {
+    backgroundColor: Theme.accentMuted,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // Quick Actions
+  quickActionsCard: {
+    padding: 0,
+    overflow: 'hidden',
   },
   quickAction: {
-    width: 80,
-    height: 80,
-    borderRadius: BorderRadius.lg,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   quickActionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Theme.accentMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xs,
+    marginRight: 14,
   },
   quickActionLabel: {
-    ...Typography.bodyXS,
-    textAlign: 'center',
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: Theme.textPrimary,
+  },
+  quickActionDivider: {
+    height: 1,
+    backgroundColor: Theme.borderLight,
+    marginLeft: 68,
+    marginRight: 16,
   },
 });

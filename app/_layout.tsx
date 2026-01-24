@@ -66,6 +66,8 @@ export default function RootLayout() {
               <Stack.Screen name="bank" />
               <Stack.Screen name="cash-register" />
               <Stack.Screen name="vehicle" />
+              <Stack.Screen name="stock" />
+              <Stack.Screen name="finance" />
             </Stack>
             <StatusBar style="dark" />
             <Toast position='top' topOffset={60} />

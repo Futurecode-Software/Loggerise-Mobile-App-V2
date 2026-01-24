@@ -589,12 +589,56 @@ POST /api/v1/mobile/vehicles/1/fault-reports
 
 ---
 
+---
+
+## Dashboard Quick Actions API Endpoints
+
+The mobile app's dashboard quick actions system integrates with the following backend API endpoints:
+
+### Domestic Transport Orders (7 endpoints)
+- `GET /api/v1/mobile/domestic-orders` - List domestic transport orders
+- `POST /api/v1/mobile/domestic-orders` - Create new domestic order
+- `GET /api/v1/mobile/domestic-orders/{order}` - Get order details
+- `PUT /api/v1/mobile/domestic-orders/{order}` - Update order
+- `DELETE /api/v1/mobile/domestic-orders/{order}` - Delete order
+- `POST /api/v1/mobile/domestic-orders/{order}/status` - Update order status
+- `GET /api/v1/mobile/domestic-orders/summary` - Get summary statistics
+
+### Stock Movements (6 endpoints)
+- `GET /api/v1/mobile/stock-movements` - List stock movements
+- `POST /api/v1/mobile/stock-movements` - Create new stock movement
+- `GET /api/v1/mobile/stock-movements/{movement}` - Get movement details
+- `PUT /api/v1/mobile/stock-movements/{movement}` - Update movement
+- `DELETE /api/v1/mobile/stock-movements/{movement}` - Delete movement
+- `GET /api/v1/mobile/stock-movements/summary` - Get summary statistics
+
+### Invoices (7 endpoints)
+- `GET /api/v1/mobile/invoices` - List invoices
+- `POST /api/v1/mobile/invoices` - Create new invoice
+- `GET /api/v1/mobile/invoices/{invoice}` - Get invoice details
+- `PUT /api/v1/mobile/invoices/{invoice}` - Update invoice
+- `DELETE /api/v1/mobile/invoices/{invoice}` - Delete invoice
+- `POST /api/v1/mobile/invoices/{invoice}/approve` - Approve invoice
+- `GET /api/v1/mobile/invoices/summary` - Get summary statistics
+
+### Quick Action Routes Used by Dashboard
+All quick actions navigate to existing mobile app screens or trigger API calls:
+- Quote creation: `/quote/new` (existing)
+- Vehicle management: `/vehicle/new`, `/(tabs)/vehicles` (existing)
+- Contact management: `/contact/new` (existing)
+- Financial transactions: `/(tabs)/transactions` (existing)
+- Logistics: `/(tabs)/loads`, `/(tabs)/positions` (existing)
+- CRM: `/crm` (existing)
+
+---
+
 ## Summary
 
 ✅ **Complete production-grade backend implementation**
 ✅ **100% feature parity with web vehicle show page**
-✅ **All 17 required endpoints implemented**
+✅ **37 total mobile API endpoints** (17 vehicles + 20 quick actions)
 ✅ **Full CRUD for vehicles and all related records**
+✅ **Dashboard quick actions with 20 new endpoints**
 ✅ **Comprehensive validation and error handling**
 ✅ **Proper authorization and logging**
 ✅ **Ready for mobile integration**

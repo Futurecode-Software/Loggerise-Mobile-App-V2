@@ -1,60 +1,134 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  Car,
-  Boxes,
+  // Stock Management
+  Package,
+  Box,
+  Tag,
+  Layers,
+  FolderTree,
+  Warehouse,
+  ArrowLeftRight,
+  // Finance
+  Landmark,
+  Wallet,
   BarChart3,
+  Receipt,
+  FileCheck,
+  ScrollText,
+  // Logistics
+  Car,
+  Route,
+  Truck,
+  // Management
   Users,
   Handshake,
   FileText,
+  // Communication
   MessageCircle,
-  Settings,
-  Landmark,
-  Wallet,
-  Package,
-  Warehouse,
   Sparkles,
-  ChevronRight,
+  // UI
+  Settings,
 } from 'lucide-react-native';
-import { Card } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-// useColorScheme kaldirildi - her zaman light mode kullanilir
+import { CollapsibleMenuSection } from '@/components/menu';
+import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
 
+/**
+ * Menu sections configuration matching web sidebar structure
+ */
 const MENU_SECTIONS = [
   {
+    id: 'stock',
+    title: 'Stok Yönetimi',
+    icon: Package,
+    iconColor: '#f59e0b',
+    defaultExpanded: true,
+    items: [
+      { id: 'products', label: 'Ürünler', icon: Box, color: '#f59e0b', route: '/products' },
+      { id: 'brands', label: 'Markalar', icon: Tag, color: '#8b5cf6', route: '/stock/brands' },
+      { id: 'models', label: 'Modeller', icon: Layers, color: '#06b6d4', route: '/stock/models' },
+      {
+        id: 'categories',
+        label: 'Kategoriler',
+        icon: FolderTree,
+        color: '#10b981',
+        route: '/stock/categories',
+      },
+      { id: 'warehouses', label: 'Depolar', icon: Warehouse, color: '#3b82f6', route: '/warehouse' },
+      {
+        id: 'movements',
+        label: 'Stok Hareketleri',
+        icon: ArrowLeftRight,
+        color: '#ec4899',
+        route: '/stock/movements',
+      },
+    ],
+  },
+  {
+    id: 'finance',
+    title: 'Finans',
+    icon: Landmark,
+    iconColor: '#22c55e',
+    defaultExpanded: false,
+    items: [
+      { id: 'cash', label: 'Kasalar', icon: Wallet, color: '#14b8a6', route: '/cash-register' },
+      { id: 'banks', label: 'Banka Hesapları', icon: Landmark, color: '#22c55e', route: '/bank' },
+      { id: 'checks', label: 'Çekler', icon: FileCheck, color: '#f97316', route: '/finance/checks' },
+      {
+        id: 'notes',
+        label: 'Senetler',
+        icon: ScrollText,
+        color: '#a855f7',
+        route: '/finance/notes',
+      },
+      {
+        id: 'transactions',
+        label: 'Mali Hareketler',
+        icon: BarChart3,
+        color: '#6366f1',
+        route: '/transactions',
+      },
+      { id: 'invoices', label: 'Faturalar', icon: Receipt, color: '#ef4444', route: '/invoices' },
+    ],
+  },
+  {
+    id: 'logistics',
     title: 'Lojistik',
+    icon: Truck,
+    iconColor: '#3b82f6',
+    defaultExpanded: false,
     items: [
       { id: 'vehicles', label: 'Araçlar', icon: Car, color: '#3b82f6', route: '/vehicle' },
-      { id: 'warehouse', label: 'Depo', icon: Warehouse, color: '#8b5cf6', route: '/warehouse' },
-      { id: 'products', label: 'Ürünler', icon: Package, color: '#f59e0b', route: '/products' },
+      { id: 'trips', label: 'Seferler', icon: Route, color: '#8b5cf6', route: '/trips' },
+      {
+        id: 'domestic',
+        label: 'Yurtiçi İş Emirleri',
+        icon: Truck,
+        color: '#f59e0b',
+        route: '/domestic/orders',
+      },
     ],
   },
   {
-    title: 'Finans',
-    items: [
-      { id: 'banks', label: 'Banka Hesapları', icon: Landmark, color: '#22c55e', route: '/bank' },
-      { id: 'cash', label: 'Kasalar', icon: Wallet, color: '#14b8a6', route: '/cash-register' },
-      { id: 'transactions', label: 'İşlemler', icon: BarChart3, color: '#6366f1', route: '/transactions' },
-    ],
-  },
-  {
+    id: 'management',
     title: 'Yönetim',
+    icon: Users,
+    iconColor: '#ec4899',
+    defaultExpanded: false,
     items: [
       { id: 'employees', label: 'Çalışanlar', icon: Users, color: '#ec4899', route: '/employee' },
-      { id: 'crm', label: 'CRM', icon: Handshake, color: '#f97316', route: '/crm' },
+      { id: 'crm', label: 'CRM Müşteriler', icon: Handshake, color: '#f97316', route: '/crm' },
       { id: 'quotes', label: 'Teklifler', icon: FileText, color: '#84cc16', route: '/quotes' },
     ],
   },
   {
+    id: 'communication',
     title: 'İletişim',
+    icon: MessageCircle,
+    iconColor: '#0ea5e9',
+    defaultExpanded: false,
     items: [
       { id: 'messages', label: 'Mesajlar', icon: MessageCircle, color: '#0ea5e9', route: '/messages' },
       { id: 'ai', label: 'Loggy AI', icon: Sparkles, color: Brand.primary, route: '/ai-reports' },
@@ -63,7 +137,6 @@ const MENU_SECTIONS = [
 ];
 
 export default function MoreScreen() {
-  // Her zaman light mode kullanilir
   const colors = Colors.light;
 
   const handleItemPress = (route: string) => {
@@ -89,40 +162,20 @@ export default function MoreScreen() {
         showsVerticalScrollIndicator={false}
       >
         {MENU_SECTIONS.map((section) => (
-          <View key={section.title} style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-              {section.title}
-            </Text>
-            <Card variant="outlined" padding="none">
-              {section.items.map((item, index) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[
-                    styles.menuItem,
-                    index !== section.items.length - 1 && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: colors.border,
-                    },
-                  ]}
-                  onPress={() => handleItemPress(item.route)}
-                >
-                  <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
-                    <item.icon size={22} color={item.color} />
-                  </View>
-                  <Text style={[styles.menuLabel, { color: colors.text }]}>
-                    {item.label}
-                  </Text>
-                  <ChevronRight size={20} color={colors.icon} />
-                </TouchableOpacity>
-              ))}
-            </Card>
-          </View>
+          <CollapsibleMenuSection
+            key={section.id}
+            id={section.id}
+            title={section.title}
+            icon={section.icon}
+            iconColor={section.iconColor}
+            items={section.items}
+            defaultExpanded={section.defaultExpanded}
+            onItemPress={handleItemPress}
+          />
         ))}
 
         {/* Version Info */}
-        <Text style={[styles.versionText, { color: colors.textMuted }]}>
-          Loggerise v1.0.0
-        </Text>
+        <Text style={[styles.versionText, { color: colors.textMuted }]}>Loggerise v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -153,38 +206,9 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: Spacing['3xl'],
   },
-  section: {
-    marginBottom: Spacing.xl,
-  },
-  sectionTitle: {
-    ...Typography.bodySM,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: Spacing.sm,
-    marginLeft: Spacing.xs,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.lg,
-  },
-  menuIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  menuLabel: {
-    ...Typography.bodyMD,
-    fontWeight: '500',
-    flex: 1,
-  },
   versionText: {
     ...Typography.bodySM,
     textAlign: 'center',
-    marginTop: Spacing.lg,
+    marginTop: Spacing.xl,
   },
 });
