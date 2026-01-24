@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Eye, Save, Send } from 'lucide-react-native';
 import { Card } from '@/components/ui';
-import { Colors, Spacing, Brand } from '@/constants/theme';
+import { Spacing, Brand } from '@/constants/theme';
 import { NewQuoteFormData } from '@/services/endpoints/quotes-new-format';
 
 interface QuoteCreatePreviewScreenProps {
@@ -30,7 +30,39 @@ export function QuoteCreatePreviewScreen({
   onSaveDraft,
   onSend,
 }: QuoteCreatePreviewScreenProps) {
-  const colors = Colors.light;
+  // Para formatlama fonksiyonu
+  const formatCurrency = (amount: number, currency?: string): string => {
+    const curr = currency || data.currency || 'TRY';
+    return new Intl.NumberFormat('tr-TR', {
+      style: 'currency',
+      currency: curr,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  // Sayı formatlama (miktar için)
+  const formatNumber = (value: number, decimals: number = 2): string => {
+    return new Intl.NumberFormat('tr-TR', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }).format(value);
+  };
+
+  // Tarih formatlama fonksiyonu
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('tr-TR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(date);
+    } catch {
+      return dateString;
+    }
+  };
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -78,7 +110,11 @@ export function QuoteCreatePreviewScreen({
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Müşteri</Text>
           <Text style={styles.infoText}>
-            {data.customer_id ? `Müşteri ID: ${data.customer_id}` : 'Seçilmedi'}
+            {data.customer
+              ? data.customer.short_name || data.customer.name
+              : data.customer_id
+                ? `Müşteri ID: ${data.customer_id}`
+                : 'Seçilmedi'}
           </Text>
         </Card>
 
@@ -87,11 +123,11 @@ export function QuoteCreatePreviewScreen({
           <Text style={styles.sectionTitle}>Tarihler</Text>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Teklif Tarihi:</Text>
-            <Text style={styles.infoValue}>{data.quote_date || '-'}</Text>
+            <Text style={styles.infoValue}>{formatDate(data.quote_date)}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Geçerlilik:</Text>
-            <Text style={styles.infoValue}>{data.valid_until || '-'}</Text>
+            <Text style={styles.infoValue}>{formatDate(data.valid_until)}</Text>
           </View>
         </Card>
 
@@ -134,12 +170,12 @@ export function QuoteCreatePreviewScreen({
               </Text>
               {item.gross_weight && (
                 <Text style={styles.cargoItemDetail}>
-                  Brüt Ağırlık: {item.gross_weight} kg
+                  Brüt Ağırlık: {formatNumber(Number(item.gross_weight))} kg
                 </Text>
               )}
               {item.package_count && (
                 <Text style={styles.cargoItemDetail}>
-                  Paket Sayısı: {item.package_count} {item.package_type}
+                  Paket Sayısı: {formatNumber(Number(item.package_count), 0)} {item.package_type || ''}
                 </Text>
               )}
             </View>
@@ -154,7 +190,7 @@ export function QuoteCreatePreviewScreen({
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Para Birimi:</Text>
             <Text style={styles.infoValue}>
-              {data.currency} (Kur: {data.exchange_rate})
+              {data.currency || 'TRY'} (Kur: {data.exchange_rate || 1})
             </Text>
           </View>
 
@@ -165,8 +201,8 @@ export function QuoteCreatePreviewScreen({
                 {item.description || `Kalem ${index + 1}`}
               </Text>
               <Text style={styles.pricingItemPrice}>
-                {item.unit_price?.toFixed(2)} x {item.quantity || 1} ={' '}
-                {((item.unit_price || 0) * (item.quantity || 1)).toFixed(2)} {data.currency}
+                {formatCurrency(item.unit_price || 0)} x {formatNumber(item.quantity || 1, 0)} ={' '}
+                {formatCurrency((item.unit_price || 0) * (item.quantity || 1))}
               </Text>
             </View>
           ))}
@@ -176,7 +212,7 @@ export function QuoteCreatePreviewScreen({
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Ara Toplam:</Text>
             <Text style={styles.totalValue}>
-              {totals.subtotal.toFixed(2)} {data.currency}
+              {formatCurrency(totals.subtotal)}
             </Text>
           </View>
 
@@ -186,7 +222,7 @@ export function QuoteCreatePreviewScreen({
                 İndirim ({data.discount_percentage || 0}%):
               </Text>
               <Text style={[styles.totalValue, styles.discountText]}>
-                -{totals.discountAmount.toFixed(2)} {data.currency}
+                -{formatCurrency(totals.discountAmount)}
               </Text>
             </View>
           )}
@@ -197,7 +233,7 @@ export function QuoteCreatePreviewScreen({
                 KDV ({data.vat_rate || 0}%):
               </Text>
               <Text style={styles.totalValue}>
-                {totals.vatAmount.toFixed(2)} {data.currency}
+                {formatCurrency(totals.vatAmount)}
               </Text>
             </View>
           )}
@@ -206,7 +242,7 @@ export function QuoteCreatePreviewScreen({
           <View style={styles.totalRow}>
             <Text style={styles.grandTotalLabel}>TOPLAM:</Text>
             <Text style={styles.grandTotalValue}>
-              {totals.total.toFixed(2)} {data.currency}
+              {formatCurrency(totals.total)}
             </Text>
           </View>
         </Card>

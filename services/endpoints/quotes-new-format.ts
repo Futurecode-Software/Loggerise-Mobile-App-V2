@@ -79,6 +79,11 @@ export interface NewAddressData {
 export interface NewQuoteFormData {
   // Temel Bilgiler - Step 1
   customer_id: number; // ZORUNLU
+  customer?: {
+    id: number;
+    name: string;
+    short_name?: string;
+  }; // Müşteri bilgisi (preview için)
   quote_date: string; // ZORUNLU (YYYY-MM-DD)
   valid_until: string; // ZORUNLU (YYYY-MM-DD)
 

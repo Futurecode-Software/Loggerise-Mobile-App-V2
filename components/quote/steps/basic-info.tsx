@@ -102,7 +102,19 @@ export function QuoteCreateBasicInfoScreen({
             label="Müşteri *"
             placeholder="Müşteri ara ve seçiniz..."
             value={data.customer_id}
-            onValueChange={(value) => onChange({ customer_id: Number(value) })}
+            onValueChange={(value, option) => {
+              // Müşteri ID'sini ve bilgilerini kaydet
+              onChange({
+                customer_id: Number(value),
+                customer: option
+                  ? {
+                      id: Number(value),
+                      name: option.label,
+                      short_name: option.label,
+                    }
+                  : undefined,
+              });
+            }}
             loadOptions={loadCustomerOptions}
             minSearchLength={2}
             debounceMs={300}
