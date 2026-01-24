@@ -1,0 +1,450 @@
+/**
+ * Quote Create - Step 5: Önizleme
+ *
+ * Teklif özeti + Taslak Kaydet / Gönder butonları
+ */
+
+import React, { useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
+import { Eye, Save, Send } from 'lucide-react-native';
+import { Card } from '@/components/ui';
+import { Colors, Spacing, Brand } from '@/constants/theme';
+import { NewQuoteFormData } from '@/services/endpoints/quotes-new-format';
+
+interface QuoteCreatePreviewScreenProps {
+  data: Partial<NewQuoteFormData>;
+  onBack: () => void;
+  onSaveDraft: () => void;
+  onSend: () => void;
+}
+
+export function QuoteCreatePreviewScreen({
+  data,
+  onBack,
+  onSaveDraft,
+  onSend,
+}: QuoteCreatePreviewScreenProps) {
+  const colors = Colors.light;
+
+  // Calculate totals
+  const totals = useMemo(() => {
+    const pricingItems = data.pricing_items || [];
+    const subtotal = pricingItems.reduce(
+      (sum, item) => sum + (item.unit_price || 0) * (item.quantity || 1),
+      0
+    );
+
+    const discountAmount =
+      data.discount_amount ||
+      subtotal * ((data.discount_percentage || 0) / 100);
+
+    const afterDiscount = subtotal - discountAmount;
+
+    const vatAmount = data.include_vat
+      ? afterDiscount * ((data.vat_rate || 0) / 100)
+      : 0;
+
+    const total = afterDiscount + vatAmount;
+
+    return {
+      subtotal,
+      discountAmount,
+      afterDiscount,
+      vatAmount,
+      total,
+    };
+  }, [data]);
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Eye size={24} color={Brand.primary} />
+          <Text style={styles.headerTitle}>Teklif Özeti</Text>
+        </View>
+
+        {/* Müşteri Bilgisi */}
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Müşteri</Text>
+          <Text style={styles.infoText}>
+            {data.customer_id ? `Müşteri ID: ${data.customer_id}` : 'Seçilmedi'}
+          </Text>
+        </Card>
+
+        {/* Tarihler */}
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Tarihler</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Teklif Tarihi:</Text>
+            <Text style={styles.infoValue}>{data.quote_date || '-'}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Geçerlilik:</Text>
+            <Text style={styles.infoValue}>{data.valid_until || '-'}</Text>
+          </View>
+        </Card>
+
+        {/* Transport Bilgileri */}
+        {(data.direction || data.vehicle_type) && (
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Taşıma Bilgileri</Text>
+            {data.direction && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Yön:</Text>
+                <Text style={styles.infoValue}>
+                  {data.direction === 'import' ? 'İthalat' : 'İhracat'}
+                </Text>
+              </View>
+            )}
+            {data.vehicle_type && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Araç Tipi:</Text>
+                <Text style={styles.infoValue}>{data.vehicle_type}</Text>
+              </View>
+            )}
+            {data.loading_type && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Yükleme Tipi:</Text>
+                <Text style={styles.infoValue}>{data.loading_type}</Text>
+              </View>
+            )}
+          </Card>
+        )}
+
+        {/* Kargo Kalemleri */}
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Kargo Kalemleri ({data.cargo_items?.length || 0})
+          </Text>
+          {(data.cargo_items || []).map((item, index) => (
+            <View key={index} style={styles.cargoItem}>
+              <Text style={styles.cargoItemName}>
+                {index + 1}. {item.cargo_name || 'Isimsiz'}
+              </Text>
+              {item.gross_weight && (
+                <Text style={styles.cargoItemDetail}>
+                  Brüt Ağırlık: {item.gross_weight} kg
+                </Text>
+              )}
+              {item.package_count && (
+                <Text style={styles.cargoItemDetail}>
+                  Paket Sayısı: {item.package_count} {item.package_type}
+                </Text>
+              )}
+            </View>
+          ))}
+        </Card>
+
+        {/* Fiyatlandırma */}
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Fiyatlandırma</Text>
+
+          {/* Currency */}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Para Birimi:</Text>
+            <Text style={styles.infoValue}>
+              {data.currency} (Kur: {data.exchange_rate})
+            </Text>
+          </View>
+
+          {/* Pricing Items */}
+          {(data.pricing_items || []).map((item, index) => (
+            <View key={index} style={styles.pricingItemRow}>
+              <Text style={styles.pricingItemDesc}>
+                {item.description || `Kalem ${index + 1}`}
+              </Text>
+              <Text style={styles.pricingItemPrice}>
+                {item.unit_price?.toFixed(2)} x {item.quantity || 1} ={' '}
+                {((item.unit_price || 0) * (item.quantity || 1)).toFixed(2)} {data.currency}
+              </Text>
+            </View>
+          ))}
+
+          {/* Totals */}
+          <View style={styles.divider} />
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Ara Toplam:</Text>
+            <Text style={styles.totalValue}>
+              {totals.subtotal.toFixed(2)} {data.currency}
+            </Text>
+          </View>
+
+          {totals.discountAmount > 0 && (
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>
+                İndirim ({data.discount_percentage || 0}%):
+              </Text>
+              <Text style={[styles.totalValue, styles.discountText]}>
+                -{totals.discountAmount.toFixed(2)} {data.currency}
+              </Text>
+            </View>
+          )}
+
+          {data.include_vat && (
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>
+                KDV ({data.vat_rate || 0}%):
+              </Text>
+              <Text style={styles.totalValue}>
+                {totals.vatAmount.toFixed(2)} {data.currency}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.divider} />
+          <View style={styles.totalRow}>
+            <Text style={styles.grandTotalLabel}>TOPLAM:</Text>
+            <Text style={styles.grandTotalValue}>
+              {totals.total.toFixed(2)} {data.currency}
+            </Text>
+          </View>
+        </Card>
+
+        {/* Notlar */}
+        {(data.terms_conditions || data.customer_notes || data.internal_notes) && (
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Notlar</Text>
+            {data.terms_conditions && (
+              <View style={styles.noteBlock}>
+                <Text style={styles.noteTitle}>Şartlar ve Koşullar:</Text>
+                <Text style={styles.noteText}>{data.terms_conditions}</Text>
+              </View>
+            )}
+            {data.customer_notes && (
+              <View style={styles.noteBlock}>
+                <Text style={styles.noteTitle}>Müşteri Notları:</Text>
+                <Text style={styles.noteText}>{data.customer_notes}</Text>
+              </View>
+            )}
+            {data.internal_notes && (
+              <View style={styles.noteBlock}>
+                <Text style={styles.noteTitle}>Dahili Notlar:</Text>
+                <Text style={styles.noteText}>{data.internal_notes}</Text>
+              </View>
+            )}
+          </Card>
+        )}
+      </ScrollView>
+
+      {/* Bottom Actions */}
+      <View style={styles.bottomActions}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={onBack}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.backButtonText}>Geri</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.draftButton}
+          onPress={onSaveDraft}
+          activeOpacity={0.8}
+        >
+          <Save size={20} color="#FFFFFF" />
+          <Text style={styles.draftButtonText}>Taslak Kaydet</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.sendButton}
+          onPress={onSend}
+          activeOpacity={0.8}
+        >
+          <Send size={20} color="#FFFFFF" />
+          <Text style={styles.sendButtonText}>Gönder</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: Spacing.md,
+    paddingBottom: Spacing.xxl,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginLeft: Spacing.sm,
+  },
+  section: {
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: Spacing.sm,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.xs / 2,
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  cargoItem: {
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  cargoItemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: Spacing.xs / 2,
+  },
+  cargoItemDetail: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  pricingItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.xs,
+  },
+  pricingItemDesc: {
+    fontSize: 14,
+    color: '#6B7280',
+    flex: 1,
+  },
+  pricingItemPrice: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+    marginLeft: Spacing.sm,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: Spacing.sm,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.xs / 2,
+  },
+  totalLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  totalValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  discountText: {
+    color: '#DC2626',
+  },
+  grandTotalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  grandTotalValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Brand.primary,
+  },
+  noteBlock: {
+    marginBottom: Spacing.md,
+  },
+  noteTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: Spacing.xs / 2,
+  },
+  noteText: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 18,
+  },
+  bottomActions: {
+    flexDirection: 'row',
+    padding: Spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    gap: Spacing.sm,
+  },
+  backButton: {
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  backButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  draftButton: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#6B7280',
+    paddingVertical: Spacing.md,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+  },
+  draftButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  sendButton: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: Brand.primary,
+    paddingVertical: Spacing.md,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+  },
+  sendButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+});

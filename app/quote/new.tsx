@@ -1,599 +1,260 @@
 /**
- * New Quote Screen
+ * Multi-Step Quote Creation Screen
  *
- * Create new quote (teklif) with load items.
- * Matches backend MobileStoreQuoteRequest validation 100%.
+ * Web ile %100 uyumlu 5-adımlı teklif oluşturma ekranı
+ * Backend: MobileStoreQuoteRequest (güncellenmiş version)
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import {
-  ChevronLeft,
-  Save,
-  Plus,
-  Trash2,
-  User,
-  Calendar,
-  DollarSign,
-  Package,
-} from 'lucide-react-native';
-import { Input, Card, Checkbox, AutocompleteInput, DateInput } from '@/components/ui';
-import type { AutocompleteOption } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { ChevronLeft, Save, Send } from 'lucide-react-native';
+import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
-import {
-  createQuote,
-  QuoteFormData,
-  LoadItem,
-  CurrencyType,
-} from '@/services/endpoints/quotes';
-import { getContacts } from '@/services/endpoints/contacts';
-import { getCurrentRate } from '@/services/endpoints/exchange-rates';
-import { getErrorMessage, getValidationErrors } from '@/services/api';
+import { QuoteFormStepper } from '@/components/quote/quote-form-stepper';
+import { NewQuoteFormData, validateStep } from '@/services/endpoints/quotes-new-format';
+import api from '@/services/api';
 
-// Currency options
-const CURRENCY_OPTIONS = [
-  { label: 'Türk Lirası (₺)', value: 'TRY' },
-  { label: 'Amerikan Doları ($)', value: 'USD' },
-  { label: 'Euro (€)', value: 'EUR' },
-  { label: 'İngiliz Sterlini (£)', value: 'GBP' },
-];
+// Step component imports
+import { QuoteCreateBasicInfoScreen } from '@/components/quote/steps/basic-info';
+import { QuoteCreateCargoItemsScreen } from '@/components/quote/steps/cargo-items';
+import { QuoteCreateAddressesScreen } from '@/components/quote/steps/addresses';
+import { QuoteCreatePricingScreen } from '@/components/quote/steps/pricing';
+import { QuoteCreatePreviewScreen } from '@/components/quote/steps/preview';
 
-export default function NewQuoteScreen() {
+export default function CreateMultiStepQuoteScreen() {
   const colors = Colors.light;
   const { success, error: showError } = useToast();
 
-  // Basic info state
-  const [customerId, setCustomerId] = useState<number | string>('');
-  const [quoteDate, setQuoteDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
-  const [validUntil, setValidUntil] = useState(
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  );
-  const [currency, setCurrency] = useState<CurrencyType>('TRY');
-  const [exchangeRate, setExchangeRate] = useState('1');
-  const [includeVat, setIncludeVat] = useState(true);
-  const [vatRate, setVatRate] = useState('20');
-
-  // Discount state
-  const [discountPercentage, setDiscountPercentage] = useState('');
-  const [discountAmount, setDiscountAmount] = useState('');
-
-  // Notes state
-  const [termsConditions, setTermsConditions] = useState('');
-  const [internalNotes, setInternalNotes] = useState('');
-  const [customerNotes, setCustomerNotes] = useState('');
-
-  // Load items state
-  const [loadItems, setLoadItems] = useState<LoadItem[]>([
-    {
-      cargo_name: '',
-      freight_price: 0,
-    },
-  ]);
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // Global form state
+  const [currentStep, setCurrentStep] = useState(1);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingRate, setIsLoadingRate] = useState(false);
 
-  // Fetch exchange rate when currency changes
-  useEffect(() => {
-    const fetchRate = async () => {
-      if (currency === 'TRY') {
-        setExchangeRate('1');
-        return;
-      }
+  // Form data state
+  const [quoteData, setQuoteData] = useState<Partial<NewQuoteFormData>>({
+    quote_date: new Date().toISOString().split('T')[0],
+    valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0],
+    currency: 'TRY',
+    exchange_rate: 1,
+    include_vat: true,
+    vat_rate: 20,
+    cargo_items: [],
+  });
 
-      if (!currency) {
-        return;
-      }
-
-      setIsLoadingRate(true);
-      try {
-        const rate = await getCurrentRate(currency);
-        setExchangeRate(rate.toString());
-      } catch (error) {
-        console.error('Error fetching exchange rate:', error);
-        // Set error in form errors instead of showing alert to avoid re-render loop
-        setErrors((prev) => ({
-          ...prev,
-          exchange_rate: 'Kur bilgisi alınamadı. Lütfen manuel girin.',
-        }));
-      } finally {
-        setIsLoadingRate(false);
-      }
-    };
-
-    fetchRate();
-  }, [currency]);
-
-  // Load customer options
-  const loadCustomerOptions = useCallback(
-    async (searchQuery: string): Promise<AutocompleteOption[]> => {
-      try {
-        const { contacts } = await getContacts({
-          search: searchQuery,
-          is_active: true,
-          per_page: 20,
-        });
-
-        return contacts.map((contact) => ({
-          label: contact.name,
-          value: contact.id,
-          subtitle: contact.code ? `Kod: ${contact.code}` : undefined,
-        }));
-      } catch (error) {
-        console.error('Error loading customers:', error);
-        return [];
-      }
-    },
-    []
-  );
-
-  // Handle load item change
-  const handleLoadItemChange = useCallback(
-    (index: number, field: keyof LoadItem, value: any) => {
-      setLoadItems((prev) => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], [field]: value };
-        return updated;
-      });
-
-      // Clear errors for this field
-      const errorKey = `load_items.${index}.${field}`;
-      if (errors[errorKey]) {
-        setErrors((prevErrors) => {
-          const newErrors = { ...prevErrors };
-          delete newErrors[errorKey];
-          return newErrors;
-        });
-      }
-    },
-    [errors]
-  );
-
-  // Add load item
-  const handleAddLoadItem = useCallback(() => {
-    setLoadItems((prev) => [
-      ...prev,
-      {
-        cargo_name: '',
-        freight_price: 0,
-      },
-    ]);
+  // Update form data (partial update)
+  const updateQuoteData = useCallback((updates: Partial<NewQuoteFormData>) => {
+    setQuoteData((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Remove load item
-  const handleRemoveLoadItem = useCallback((index: number) => {
-    setLoadItems((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  // Clear field error
-  const clearError = useCallback((field: string) => {
-    setErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors[field];
-      return newErrors;
-    });
-  }, []);
-
-  // Validation
-  const validateForm = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    // Required fields
-    if (!customerId || customerId === '') {
-      newErrors.customer_id = 'Müşteri zorunludur.';
+  // Validate current step
+  const validateCurrentStep = useCallback((): boolean => {
+    const errors = validateStep(currentStep, quoteData);
+    if (errors.length > 0) {
+      showError(errors[0]); // İlk hatayı göster
+      return false;
     }
-    if (!quoteDate) {
-      newErrors.quote_date = 'Teklif tarihi zorunludur.';
-    }
-    if (!validUntil) {
-      newErrors.valid_until = 'Geçerlilik tarihi zorunludur.';
-    }
-    if (!currency) {
-      newErrors.currency = 'Para birimi zorunludur.';
-    }
-    if (!exchangeRate || parseFloat(exchangeRate) <= 0) {
-      newErrors.exchange_rate = 'Geçerli bir kur giriniz.';
-    }
+    return true;
+  }, [currentStep, quoteData, showError]);
 
-    // Date validation
-    if (quoteDate && validUntil && new Date(validUntil) <= new Date(quoteDate)) {
-      newErrors.valid_until = 'Geçerlilik tarihi, teklif tarihinden sonra olmalıdır.';
-    }
-
-    // Load items validation
-    if (loadItems.length === 0) {
-      newErrors.load_items = 'En az bir yük kalemi eklenmelidir.';
-    }
-
-    loadItems.forEach((item, index) => {
-      if (!item.cargo_name?.trim()) {
-        newErrors[`load_items.${index}.cargo_name`] = 'Mal adı zorunludur.';
-      }
-      if (
-        !item.freight_price ||
-        isNaN(item.freight_price) ||
-        item.freight_price < 0
-      ) {
-        newErrors[`load_items.${index}.freight_price`] =
-          'Geçerli bir navlun ücreti giriniz.';
-      }
-    });
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [customerId, quoteDate, validUntil, currency, exchangeRate, loadItems]);
-
-  // Submit handler
-  const handleSubmit = useCallback(async () => {
-    if (!validateForm()) {
-      showError('Hata', 'Lütfen tüm zorunlu alanları doldurun.');
+  // Go to next step
+  const goToNextStep = useCallback(() => {
+    if (!validateCurrentStep()) {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const formData: QuoteFormData = {
-        customer_id: typeof customerId === 'number' ? customerId : parseInt(String(customerId), 10),
-        quote_date: quoteDate,
-        valid_until: validUntil,
-        currency,
-        exchange_rate: parseFloat(exchangeRate),
-        include_vat: includeVat,
-        vat_rate: includeVat ? parseFloat(vatRate || '0') : undefined,
-        discount_percentage: discountPercentage
-          ? parseFloat(discountPercentage)
-          : undefined,
-        discount_amount: discountAmount ? parseFloat(discountAmount) : undefined,
-        terms_conditions: termsConditions || undefined,
-        internal_notes: internalNotes || undefined,
-        customer_notes: customerNotes || undefined,
-        load_items: loadItems,
-      };
-
-      const quote = await createQuote(formData);
-
-      success('Başarılı', 'Teklif başarıyla oluşturuldu.');
-      setTimeout(() => {
-        router.replace(`/quote/${quote.id}` as any);
-      }, 1500);
-    } catch (error: any) {
-      const validationErrors = getValidationErrors(error);
-      if (validationErrors) {
-        // Convert Laravel errors to flat object
-        const flatErrors: Record<string, string> = {};
-        Object.entries(validationErrors).forEach(([field, messages]) => {
-          if (Array.isArray(messages) && messages.length > 0) {
-            flatErrors[field] = messages[0];
-          }
-        });
-        setErrors(flatErrors);
-      } else {
-        showError('Hata', getErrorMessage(error));
-      }
-    } finally {
-      setIsSubmitting(false);
+    // Mark current step as completed
+    if (!completedSteps.includes(currentStep)) {
+      setCompletedSteps((prev) => [...prev, currentStep]);
     }
-  }, [
-    validateForm,
-    customerId,
-    quoteDate,
-    validUntil,
-    currency,
-    exchangeRate,
-    includeVat,
-    vatRate,
-    discountPercentage,
-    discountAmount,
-    termsConditions,
-    internalNotes,
-    customerNotes,
-    loadItems,
-    success,
-    showError,
-  ]);
+
+    // Move to next step
+    if (currentStep < 5) {
+      setCurrentStep(currentStep + 1);
+    }
+  }, [currentStep, validateCurrentStep, completedSteps]);
+
+  // Go to previous step
+  const goToPreviousStep = useCallback(() => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    } else {
+      router.back();
+    }
+  }, [currentStep]);
+
+  // Go to specific step (from stepper)
+  const goToStep = useCallback(
+    (step: number) => {
+      // Sadece tamamlanmış veya önceki step'lere gidilebilir
+      if (step <= currentStep || completedSteps.includes(step)) {
+        setCurrentStep(step);
+      }
+    },
+    [currentStep, completedSteps]
+  );
+
+  // Submit quote (draft or send)
+  const handleSubmit = useCallback(
+    async (action: 'draft' | 'send') => {
+      // Final validation (all steps)
+      const finalErrors = validateStep(5, quoteData);
+      if (finalErrors.length > 0) {
+        showError(finalErrors[0]);
+        return;
+      }
+
+      try {
+        setIsSubmitting(true);
+
+        const response = await api.post('/quotes', {
+          ...quoteData,
+          action,
+        });
+
+        if (response.data.success) {
+          success(
+            action === 'send'
+              ? 'Teklif oluşturuldu ve müşteriye gönderildi'
+              : 'Teklif taslak olarak kaydedildi'
+          );
+
+          // Go to quote detail
+          const quoteId = response.data.data.quote.id;
+          router.replace(`/quote/${quoteId}`);
+        } else {
+          throw new Error(response.data.message || 'Teklif oluşturulamadı');
+        }
+      } catch (err: any) {
+        console.error('[CreateMultiStepQuote] Submit error:', err);
+        showError(err.response?.data?.message || err.message || 'Bir hata oluştu');
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [quoteData, showError, success]
+  );
+
+  // Confirm send action
+  const confirmSendQuote = useCallback(() => {
+    Alert.alert(
+      'Teklif Gönder',
+      'Teklif müşteriye e-posta ile gönderilecektir. Onaylıyor musunuz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Gönder',
+          style: 'default',
+          onPress: () => handleSubmit('send'),
+        },
+      ]
+    );
+  }, [handleSubmit]);
+
+  // Render current step content
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <QuoteCreateBasicInfoScreen
+            data={quoteData}
+            onChange={updateQuoteData}
+            onNext={goToNextStep}
+          />
+        );
+      case 2:
+        return (
+          <QuoteCreateCargoItemsScreen
+            data={quoteData}
+            onChange={updateQuoteData}
+            onNext={goToNextStep}
+            onBack={goToPreviousStep}
+          />
+        );
+      case 3:
+        return (
+          <QuoteCreateAddressesScreen
+            data={quoteData}
+            onChange={updateQuoteData}
+            onNext={goToNextStep}
+            onBack={goToPreviousStep}
+          />
+        );
+      case 4:
+        return (
+          <QuoteCreatePricingScreen
+            data={quoteData}
+            onChange={updateQuoteData}
+            onNext={goToNextStep}
+            onBack={goToPreviousStep}
+          />
+        );
+      case 5:
+        return (
+          <QuoteCreatePreviewScreen
+            data={quoteData}
+            onBack={goToPreviousStep}
+            onSaveDraft={() => handleSubmit('draft')}
+            onSend={confirmSendQuote}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Yeni Teklif</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+        keyboardVerticalOffset={100}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          nestedScrollEnabled={true}
-        >
-          {/* Basic Information */}
-          <Card style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <User size={20} color={Brand.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Temel Bilgiler
-              </Text>
-            </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={goToPreviousStep}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <ChevronLeft size={24} color={colors.text} />
+            <Text style={styles.backButtonText}>
+              {currentStep > 1 ? 'Geri' : 'İptal'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Yeni Teklif</Text>
+          <View style={styles.headerRight} />
+        </View>
 
-            <AutocompleteInput
-              label="Müşteri"
-              placeholder="Müşteri ara..."
-              value={customerId}
-              onValueChange={(value) => {
-                setCustomerId(value);
-                clearError('customer_id');
-              }}
-              loadOptions={loadCustomerOptions}
-              error={errors.customer_id}
-              required
-              minSearchLength={0}
-              debounceMs={300}
-            />
+        {/* Stepper */}
+        <QuoteFormStepper
+          currentStep={currentStep}
+          completedSteps={completedSteps}
+          onStepPress={goToStep}
+        />
 
-            <View style={styles.row}>
-              <View style={styles.halfWidth}>
-                <DateInput
-                  label="Teklif Tarihi"
-                  value={quoteDate}
-                  onChangeDate={(date) => {
-                    setQuoteDate(date);
-                    clearError('quote_date');
-                  }}
-                  error={errors.quote_date}
-                  required
-                />
-              </View>
-              <View style={styles.halfWidth}>
-                <DateInput
-                  label="Geçerlilik Tarihi"
-                  value={validUntil}
-                  onChangeDate={(date) => {
-                    setValidUntil(date);
-                    clearError('valid_until');
-                  }}
-                  error={errors.valid_until}
-                  required
-                  minimumDate={quoteDate}
-                />
-              </View>
-            </View>
-          </Card>
+        {/* Step Content */}
+        <View style={styles.content}>{renderStepContent()}</View>
 
-          {/* Pricing */}
-          <Card style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <DollarSign size={20} color={Brand.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Fiyatlandırma
-              </Text>
-            </View>
-
-            <View style={styles.row}>
-              <View style={styles.halfWidth}>
-                <SelectInput
-                  label="Para Birimi"
-                  value={currency}
-                  onValueChange={(value) => {
-                    setCurrency(value as CurrencyType);
-                    clearError('currency');
-                  }}
-                  options={CURRENCY_OPTIONS}
-                  error={errors.currency}
-                  required
-                />
-              </View>
-              <View style={styles.halfWidth}>
-                <Input
-                  label="Kur"
-                  placeholder="Kur"
-                  value={exchangeRate}
-                  onChangeText={(text) => {
-                    setExchangeRate(text);
-                    clearError('exchange_rate');
-                  }}
-                  keyboardType="decimal-pad"
-                  error={errors.exchange_rate}
-                  required
-                  editable={!isLoadingRate}
-                  rightIcon={
-                    isLoadingRate ? (
-                      <ActivityIndicator size="small" color={Brand.primary} />
-                    ) : undefined
-                  }
-                />
-              </View>
-            </View>
-
-            <View style={styles.checkboxRow}>
-              <Checkbox
-                checked={includeVat}
-                onCheckedChange={setIncludeVat}
-                label="KDV Dahil"
-              />
-            </View>
-
-            {includeVat && (
-              <Input
-                label="KDV Oranı (%)"
-                placeholder="KDV oranı"
-                value={vatRate}
-                onChangeText={setVatRate}
-                keyboardType="decimal-pad"
-              />
-            )}
-
-            <View style={styles.row}>
-              <View style={styles.halfWidth}>
-                <Input
-                  label="İndirim (%)"
-                  placeholder="İndirim yüzdesi"
-                  value={discountPercentage}
-                  onChangeText={setDiscountPercentage}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-              <View style={styles.halfWidth}>
-                <Input
-                  label="İndirim Tutarı"
-                  placeholder="İndirim tutarı"
-                  value={discountAmount}
-                  onChangeText={setDiscountAmount}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
-          </Card>
-
-          {/* Load Items */}
-          <Card style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Package size={20} color={Brand.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Yük Kalemleri
-              </Text>
-              <TouchableOpacity
-                onPress={handleAddLoadItem}
-                style={[styles.addButton, { backgroundColor: Brand.primary }]}
-              >
-                <Plus size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-
-            {errors.load_items && (
-              <Text style={[styles.errorText, { color: colors.danger }]}>
-                {errors.load_items}
-              </Text>
-            )}
-
-            {loadItems.map((item, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.loadItem,
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-              >
-                <View style={styles.loadItemHeader}>
-                  <Text style={[styles.loadItemTitle, { color: colors.text }]}>
-                    Yük #{index + 1}
-                  </Text>
-                  {loadItems.length > 1 && (
-                    <TouchableOpacity
-                      onPress={() => handleRemoveLoadItem(index)}
-                      style={styles.removeButton}
-                    >
-                      <Trash2 size={16} color={colors.danger} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                <Input
-                  label="Mal Adı"
-                  placeholder="Mal adı"
-                  value={item.cargo_name}
-                  onChangeText={(text) =>
-                    handleLoadItemChange(index, 'cargo_name', text)
-                  }
-                  error={errors[`load_items.${index}.cargo_name`]}
-                  required
-                />
-
-                <Input
-                  label="Navlun Ücreti"
-                  placeholder="Navlun ücreti"
-                  value={item.freight_price?.toString() || ''}
-                  onChangeText={(text) =>
-                    handleLoadItemChange(
-                      index,
-                      'freight_price',
-                      parseFloat(text) || 0
-                    )
-                  }
-                  keyboardType="decimal-pad"
-                  error={errors[`load_items.${index}.freight_price`]}
-                  required
-                />
-              </View>
-            ))}
-          </Card>
-
-          {/* Notes */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Notlar</Text>
-
-            <Input
-              label="Şartlar ve Koşullar"
-              placeholder="Şartlar ve koşullar..."
-              value={termsConditions}
-              onChangeText={setTermsConditions}
-              multiline
-              numberOfLines={3}
-            />
-
-            <Input
-              label="Dahili Notlar"
-              placeholder="Dahili notlar..."
-              value={internalNotes}
-              onChangeText={setInternalNotes}
-              multiline
-              numberOfLines={3}
-            />
-
-            <Input
-              label="Müşteri Notları"
-              placeholder="Müşteri notları..."
-              value={customerNotes}
-              onChangeText={setCustomerNotes}
-              multiline
-              numberOfLines={3}
-            />
-          </Card>
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                { backgroundColor: Brand.primary },
-                isSubmitting && styles.submitButtonDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Save size={20} color="#FFFFFF" />
-                  <Text style={styles.submitButtonText}>Teklif Oluştur</Text>
-                </>
-              )}
-            </TouchableOpacity>
+        {/* Loading Overlay */}
+        {isSubmitting && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={Brand.primary} />
+            <Text style={styles.loadingText}>Teklif oluşturuluyor...</Text>
           </View>
-        </ScrollView>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -602,104 +263,64 @@ export default function NewQuoteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: Brand.primary,
+    marginLeft: Spacing.xs / 2,
   },
   headerTitle: {
-    ...Typography.headingLG,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
   },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
+  headerRight: {
+    width: 60,
   },
   content: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-  },
-  section: {
-    marginBottom: 0,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.headingMD,
     flex: 1,
   },
-  row: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  halfWidth: {
+  placeholderContainer: {
     flex: 1,
-  },
-  checkboxRow: {
-    marginVertical: Spacing.sm,
-  },
-  addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  loadItem: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    marginBottom: Spacing.md,
-  },
-  loadItemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    padding: Spacing.xl,
   },
-  loadItemTitle: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
+  placeholderText: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
-  removeButton: {
-    padding: Spacing.xs,
-  },
-  errorText: {
-    ...Typography.bodySM,
-    marginBottom: Spacing.sm,
-  },
-  buttonContainer: {
-    marginTop: Spacing.lg,
-    marginBottom: Spacing['2xl'],
-  },
-  submitButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    zIndex: 1000,
   },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
+  loadingText: {
+    marginTop: Spacing.md,
+    fontSize: 16,
     color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

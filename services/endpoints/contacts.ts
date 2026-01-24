@@ -93,6 +93,7 @@ export interface ContactFilters {
   type?: ContactType;
   status?: ContactStatus;
   is_active?: boolean;
+  include_potential?: boolean;
   page?: number;
   per_page?: number;
   sort_by?: string;
@@ -240,6 +241,26 @@ export interface AddressFormData {
   address_type: 'billing' | 'shipping' | 'both';
   is_default?: boolean;
   is_active?: boolean;
+}
+
+/**
+ * Get all addresses for a contact
+ */
+export async function getContactAddresses(
+  contactId: number,
+  filters?: { search?: string; is_shipping?: boolean; is_active?: boolean }
+): Promise<{ addresses: ContactAddress[] }> {
+  try {
+    const response = await api.get<{ success: boolean; data: ContactAddress[] }>(
+      `/contacts/${contactId}/addresses`,
+      { params: filters }
+    );
+    // Backend returns array directly in data, wrap it for consistency
+    return { addresses: response.data.data };
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
 }
 
 /**

@@ -8,6 +8,7 @@ export { Divider } from './divider';
 export { Checkbox } from './checkbox';
 export { SearchableSelect } from './searchable-select';
 export type { SearchableSelectOption, SearchableSelectProps } from './searchable-select';
+export { SelectInput } from './select-input';
 export { AutocompleteInput } from './autocomplete-input';
 export type { AutocompleteOption, AutocompleteInputProps } from './autocomplete-input';
 export {
