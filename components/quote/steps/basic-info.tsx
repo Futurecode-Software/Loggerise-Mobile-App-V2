@@ -4,7 +4,7 @@
  * Müşteri, tarihler, transport bilgileri
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,9 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Calendar, User, Truck } from 'lucide-react-native';
-import { Input, DateInput, Card, AutocompleteInput, SelectInput } from '@/components/ui';
+import { DateInput, Card, AutocompleteInput, SelectInput } from '@/components/ui';
 import type { AutocompleteOption } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
+import { Spacing, Brand } from '@/constants/theme';
 import { NewQuoteFormData, Direction } from '@/services/endpoints/quotes-new-format';
 import { getContacts } from '@/services/endpoints/contacts';
 
@@ -26,28 +26,42 @@ interface QuoteCreateBasicInfoScreenProps {
 }
 
 const DIRECTION_OPTIONS = [
-  { label: 'İthalat', value: 'import' },
-  { label: 'İhracat', value: 'export' },
+  { label: 'İhracat (IHR)', value: 'export' },
+  { label: 'İthalat (ITH)', value: 'import' },
 ];
 
 const VEHICLE_TYPE_OPTIONS = [
-  { label: 'Tır', value: 'Tır' },
-  { label: 'Kamyon', value: 'Kamyon' },
-  { label: 'Kamyonet', value: 'Kamyonet' },
-  { label: 'Dorse', value: 'Dorse' },
-  { label: 'Konteyner', value: 'Konteyner' },
+  { label: 'Tenteli', value: 'tenteli' },
+  { label: 'Mega Tenteli', value: 'mega_tenteli' },
+  { label: 'Maxi Tenteli', value: 'maxi_tenteli' },
+  { label: 'Optima Tenteli', value: 'optima_tenteli' },
+  { label: 'Jumbo Tenteli', value: 'jumbo_tenteli' },
+  { label: 'Jumbo Düz', value: 'jumbo_duz' },
+  { label: 'Düz', value: 'duz' },
+  { label: 'Kapalı Kasa', value: 'kapali_kasa' },
+  { label: 'Açık Kasa', value: 'acik_kasa' },
+  { label: 'Mega Askılı', value: 'mega_askili' },
+  { label: 'Frigorifik', value: 'frigorifik' },
+  { label: 'Lowbed', value: 'lowbed' },
+  { label: 'Damper', value: 'damper' },
+  { label: 'Tır', value: 'tir' },
+  { label: 'Kamyon', value: 'kamyon' },
+  { label: 'Kamyonet', value: 'kamyonet' },
 ];
 
 const LOADING_TYPE_OPTIONS = [
-  { label: 'FTL (Tam Yük)', value: 'FTL' },
-  { label: 'LTL (Parsiyel)', value: 'LTL' },
-  { label: 'Konteyner', value: 'Konteyner' },
+  { label: 'Normal', value: 'normal' },
+  { label: 'Karışık', value: 'karisik' },
+];
+
+const LOAD_TYPE_OPTIONS = [
+  { label: 'Komple', value: 'full' },
+  { label: 'Parsiyel', value: 'partial' },
 ];
 
 const TRANSPORT_SPEED_OPTIONS = [
-  { label: 'Ekspres', value: 'Ekspres' },
-  { label: 'Standart', value: 'Standart' },
-  { label: 'Ekonomik', value: 'Ekonomik' },
+  { label: 'Expres', value: 'expres' },
+  { label: 'Normal', value: 'normal' },
 ];
 
 export function QuoteCreateBasicInfoScreen({
@@ -55,8 +69,6 @@ export function QuoteCreateBasicInfoScreen({
   onChange,
   onNext,
 }: QuoteCreateBasicInfoScreenProps) {
-  const colors = Colors.light;
-
   // Load customer options
   const loadCustomerOptions = useCallback(
     async (searchQuery: string): Promise<AutocompleteOption[]> => {
@@ -165,30 +177,38 @@ export function QuoteCreateBasicInfoScreen({
             options={DIRECTION_OPTIONS}
           />
 
+          <SelectInput
+            label="Araç Tipi"
+            placeholder="Seçiniz..."
+            value={data.vehicle_type}
+            onValueChange={(value) => onChange({ vehicle_type: value })}
+            options={VEHICLE_TYPE_OPTIONS}
+          />
+
           <View style={styles.row}>
             <View style={styles.halfWidth}>
               <SelectInput
-                label="Araç Tipi"
-                placeholder="Seçiniz..."
-                value={data.vehicle_type}
-                onValueChange={(value) => onChange({ vehicle_type: value })}
-                options={VEHICLE_TYPE_OPTIONS}
-              />
-            </View>
-
-            <View style={styles.halfWidth}>
-              <SelectInput
-                label="Yükleme Tipi"
+                label="Yükleme Tipi *"
                 placeholder="Seçiniz..."
                 value={data.loading_type}
                 onValueChange={(value) => onChange({ loading_type: value })}
                 options={LOADING_TYPE_OPTIONS}
               />
             </View>
+
+            <View style={styles.halfWidth}>
+              <SelectInput
+                label="Yük Tipi"
+                placeholder="Seçiniz..."
+                value={data.load_type}
+                onValueChange={(value) => onChange({ load_type: value })}
+                options={LOAD_TYPE_OPTIONS}
+              />
+            </View>
           </View>
 
           <SelectInput
-            label="Taşıma Hızı"
+            label="Yük Taşıma Hızı *"
             placeholder="Seçiniz..."
             value={data.transport_speed}
             onValueChange={(value) => onChange({ transport_speed: value })}

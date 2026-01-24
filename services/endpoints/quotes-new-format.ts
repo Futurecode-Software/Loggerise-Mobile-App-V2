@@ -90,9 +90,9 @@ export interface NewQuoteFormData {
   // Transport Bilgileri - TEKLİF SEVİYESİNDE (Step 1)
   direction?: Direction;
   vehicle_type?: string;
-  loading_type?: string;
-  load_type?: 'full' | 'partial';
-  transport_speed?: string;
+  loading_type?: string; // normal, karisik
+  load_type?: 'full' | 'partial'; // Komple/Parsiyel
+  transport_speed?: string; // expres, normal
   cargo_class?: string;
 
   // Beyanname Bilgileri (opsiyonel - advanced)

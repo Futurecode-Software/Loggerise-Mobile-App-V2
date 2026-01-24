@@ -17,6 +17,26 @@ import { Card } from '@/components/ui';
 import { Spacing, Brand } from '@/constants/theme';
 import { NewQuoteFormData } from '@/services/endpoints/quotes-new-format';
 
+// Araç tipi seçenekleri (web ile aynı)
+const VEHICLE_TYPE_OPTIONS = [
+  { label: 'Tenteli', value: 'tenteli' },
+  { label: 'Mega Tenteli', value: 'mega_tenteli' },
+  { label: 'Maxi Tenteli', value: 'maxi_tenteli' },
+  { label: 'Optima Tenteli', value: 'optima_tenteli' },
+  { label: 'Jumbo Tenteli', value: 'jumbo_tenteli' },
+  { label: 'Jumbo Düz', value: 'jumbo_duz' },
+  { label: 'Düz', value: 'duz' },
+  { label: 'Kapalı Kasa', value: 'kapali_kasa' },
+  { label: 'Açık Kasa', value: 'acik_kasa' },
+  { label: 'Mega Askılı', value: 'mega_askili' },
+  { label: 'Frigorifik', value: 'frigorifik' },
+  { label: 'Lowbed', value: 'lowbed' },
+  { label: 'Damper', value: 'damper' },
+  { label: 'Tır', value: 'tir' },
+  { label: 'Kamyon', value: 'kamyon' },
+  { label: 'Kamyonet', value: 'kamyonet' },
+];
+
 interface QuoteCreatePreviewScreenProps {
   data: Partial<NewQuoteFormData>;
   onBack: () => void;
@@ -132,27 +152,47 @@ export function QuoteCreatePreviewScreen({
         </Card>
 
         {/* Transport Bilgileri */}
-        {(data.direction || data.vehicle_type) && (
+        {(data.direction || data.vehicle_type || data.loading_type || data.load_type || data.transport_speed) && (
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Taşıma Bilgileri</Text>
             {data.direction && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Yön:</Text>
                 <Text style={styles.infoValue}>
-                  {data.direction === 'import' ? 'İthalat' : 'İhracat'}
+                  {data.direction === 'import' ? 'İthalat (ITH)' : 'İhracat (IHR)'}
                 </Text>
               </View>
             )}
             {data.vehicle_type && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Araç Tipi:</Text>
-                <Text style={styles.infoValue}>{data.vehicle_type}</Text>
+                <Text style={styles.infoValue}>
+                  {VEHICLE_TYPE_OPTIONS.find(opt => opt.value === data.vehicle_type)?.label || data.vehicle_type}
+                </Text>
               </View>
             )}
             {data.loading_type && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Yükleme Tipi:</Text>
-                <Text style={styles.infoValue}>{data.loading_type}</Text>
+                <Text style={styles.infoValue}>
+                  {data.loading_type === 'normal' ? 'Normal' : 'Karışık'}
+                </Text>
+              </View>
+            )}
+            {data.load_type && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Yük Tipi:</Text>
+                <Text style={styles.infoValue}>
+                  {data.load_type === 'full' ? 'Komple' : 'Parsiyel'}
+                </Text>
+              </View>
+            )}
+            {data.transport_speed && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Taşıma Hızı:</Text>
+                <Text style={styles.infoValue}>
+                  {data.transport_speed === 'expres' ? 'Expres' : 'Normal'}
+                </Text>
               </View>
             )}
           </Card>
