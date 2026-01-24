@@ -154,38 +154,17 @@ export default function QuotesScreen() {
         />
       </View>
 
-      <View style={styles.amountsRow}>
-        <View style={styles.amountItem}>
-          <Text style={[styles.amountLabel, { color: colors.textMuted }]}>Ara Toplam</Text>
-          <Text style={[styles.amountValue, { color: colors.textSecondary }]}>
-            {formatAmount(item.subtotal, item.currency)}
-          </Text>
-        </View>
-        <View style={styles.amountItem}>
-          <Text style={[styles.amountLabel, { color: colors.textMuted }]}>KDV</Text>
-          <Text style={[styles.amountValue, { color: colors.textSecondary }]}>
-            {formatAmount(item.vat_amount, item.currency)}
-          </Text>
-        </View>
-        <View style={styles.amountItem}>
-          <Text style={[styles.amountLabel, { color: colors.textMuted }]}>Genel Toplam</Text>
-          <Text style={[styles.amountValue, styles.grandTotal, { color: colors.text }]}>
-            {formatAmount(item.total_amount, item.currency)}
-          </Text>
-        </View>
-      </View>
-
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
-          <Calendar size={12} color={colors.textMuted} />
-          <Text style={[styles.metaText, { color: colors.textMuted }]}>
-            Oluşturulma: {formatDate(item.created_at)}
+          <Calendar size={14} color={colors.textMuted} />
+          <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+            Teklif: {formatDate(item.quote_date)}
           </Text>
         </View>
         {item.valid_until && (
           <View style={styles.metaItem}>
-            <Calendar size={12} color={colors.textMuted} />
-            <Text style={[styles.metaText, { color: colors.textMuted }]}>
+            <Calendar size={14} color={colors.textMuted} />
+            <Text style={[styles.metaText, { color: colors.textSecondary }]}>
               Geçerlilik: {formatDate(item.valid_until)}
             </Text>
           </View>
@@ -193,11 +172,9 @@ export default function QuotesScreen() {
       </View>
 
       <View style={[styles.quoteFooter, { borderTopColor: colors.border }]}>
-        {item.preparedBy && (
-          <Text style={[styles.preparedBy, { color: colors.textMuted }]}>
-            Hazırlayan: {item.preparedBy.name}
-          </Text>
-        )}
+        <Text style={[styles.totalAmount, { color: colors.text }]}>
+          {formatAmount(item.total_amount, item.currency)}
+        </Text>
         <ChevronRight size={18} color={colors.icon} />
       </View>
     </Card>
@@ -448,37 +425,19 @@ const styles = StyleSheet.create({
     ...Typography.bodySM,
     flex: 1,
   },
-  amountsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-  },
-  amountItem: {
-    alignItems: 'center',
-  },
-  amountLabel: {
-    ...Typography.bodyXS,
-    marginBottom: Spacing.xs,
-  },
-  amountValue: {
-    ...Typography.bodySM,
-  },
-  grandTotal: {
-    fontWeight: '700',
-  },
   metaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
+    flexDirection: 'column',
+    gap: Spacing.sm,
     marginBottom: Spacing.md,
+    marginTop: Spacing.xs,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
   },
   metaText: {
-    ...Typography.bodyXS,
+    ...Typography.bodySM,
   },
   quoteFooter: {
     flexDirection: 'row',
@@ -487,9 +446,9 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     borderTopWidth: 1,
   },
-  preparedBy: {
-    ...Typography.bodySM,
-    flex: 1,
+  totalAmount: {
+    ...Typography.bodyLG,
+    fontWeight: '700',
   },
   loadingState: {
     flex: 1,

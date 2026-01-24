@@ -155,69 +155,69 @@ export function QuoteCreatePreviewScreen({
         {(data.direction || data.vehicle_type || data.loading_type || data.load_type || data.transport_speed) && (
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Taşıma Bilgileri</Text>
-            {data.direction && (
+            {data.direction ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Yön:</Text>
                 <Text style={styles.infoValue}>
                   {data.direction === 'import' ? 'İthalat (ITH)' : 'İhracat (IHR)'}
                 </Text>
               </View>
-            )}
-            {data.vehicle_type && (
+            ) : null}
+            {data.vehicle_type ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Araç Tipi:</Text>
                 <Text style={styles.infoValue}>
-                  {VEHICLE_TYPE_OPTIONS.find(opt => opt.value === data.vehicle_type)?.label || data.vehicle_type}
+                  {VEHICLE_TYPE_OPTIONS.find(opt => opt.value === data.vehicle_type)?.label || data.vehicle_type || '-'}
                 </Text>
               </View>
-            )}
-            {data.loading_type && (
+            ) : null}
+            {data.loading_type ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Yükleme Tipi:</Text>
                 <Text style={styles.infoValue}>
                   {data.loading_type === 'normal' ? 'Normal' : 'Karışık'}
                 </Text>
               </View>
-            )}
-            {data.load_type && (
+            ) : null}
+            {data.load_type ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Yük Tipi:</Text>
                 <Text style={styles.infoValue}>
                   {data.load_type === 'full' ? 'Komple' : 'Parsiyel'}
                 </Text>
               </View>
-            )}
-            {data.transport_speed && (
+            ) : null}
+            {data.transport_speed ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Taşıma Hızı:</Text>
                 <Text style={styles.infoValue}>
                   {data.transport_speed === 'expres' ? 'Expres' : 'Normal'}
                 </Text>
               </View>
-            )}
+            ) : null}
           </Card>
         )}
 
         {/* Kargo Kalemleri */}
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>
-            Kargo Kalemleri ({data.cargo_items?.length || 0})
+            {`Kargo Kalemleri (${data.cargo_items?.length || 0})`}
           </Text>
           {(data.cargo_items || []).map((item, index) => (
             <View key={index} style={styles.cargoItem}>
               <Text style={styles.cargoItemName}>
-                {index + 1}. {item.cargo_name || 'Isimsiz'}
+                {`${index + 1}. ${item.cargo_name || 'Isimsiz'}`}
               </Text>
-              {item.gross_weight && (
+              {item.gross_weight ? (
                 <Text style={styles.cargoItemDetail}>
-                  Brüt Ağırlık: {formatNumber(Number(item.gross_weight))} kg
+                  {`Brüt Ağırlık: ${formatNumber(Number(item.gross_weight))} kg`}
                 </Text>
-              )}
-              {item.package_count && (
+              ) : null}
+              {item.package_count ? (
                 <Text style={styles.cargoItemDetail}>
-                  Paket Sayısı: {formatNumber(Number(item.package_count), 0)} {item.package_type || ''}
+                  {`Paket Sayısı: ${formatNumber(Number(item.package_count), 0)}${item.package_type ? ` ${item.package_type}` : ''}`}
                 </Text>
-              )}
+              ) : null}
             </View>
           ))}
         </Card>
@@ -230,7 +230,7 @@ export function QuoteCreatePreviewScreen({
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Para Birimi:</Text>
             <Text style={styles.infoValue}>
-              {data.currency || 'TRY'} (Kur: {data.exchange_rate || 1})
+              {`${data.currency || 'TRY'} (Kur: ${data.exchange_rate || 1})`}
             </Text>
           </View>
 
@@ -241,8 +241,7 @@ export function QuoteCreatePreviewScreen({
                 {item.description || `Kalem ${index + 1}`}
               </Text>
               <Text style={styles.pricingItemPrice}>
-                {formatCurrency(item.unit_price || 0)} x {formatNumber(item.quantity || 1, 0)} ={' '}
-                {formatCurrency((item.unit_price || 0) * (item.quantity || 1))}
+                {`${formatCurrency(item.unit_price || 0)} x ${formatNumber(item.quantity || 1, 0)} = ${formatCurrency((item.unit_price || 0) * (item.quantity || 1))}`}
               </Text>
             </View>
           ))}
@@ -259,10 +258,10 @@ export function QuoteCreatePreviewScreen({
           {totals.discountAmount > 0 && (
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>
-                İndirim ({data.discount_percentage || 0}%):
+                {`İndirim (${data.discount_percentage || 0}%):`}
               </Text>
               <Text style={[styles.totalValue, styles.discountText]}>
-                -{formatCurrency(totals.discountAmount)}
+                {`-${formatCurrency(totals.discountAmount)}`}
               </Text>
             </View>
           )}
@@ -270,7 +269,7 @@ export function QuoteCreatePreviewScreen({
           {data.include_vat && (
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>
-                KDV ({data.vat_rate || 0}%):
+                {`KDV (${data.vat_rate || 0}%):`}
               </Text>
               <Text style={styles.totalValue}>
                 {formatCurrency(totals.vatAmount)}

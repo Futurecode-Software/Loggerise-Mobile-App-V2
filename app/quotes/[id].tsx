@@ -123,15 +123,14 @@ export default function QuoteDetailScreen() {
     if (!quote) return;
 
     try {
-      const message = await exportQuotePdf(quoteId);
-      Alert.alert('PDF Oluşturuldu', message, [
+      const result = await exportQuotePdf(quoteId);
+      Alert.alert('Başarılı', 'PDF indirildi ve paylaşıldı', [
         {
           text: 'Tamam',
         },
       ]);
-      // Note: In a real implementation, the backend would return a download URL
-      // and we could use Share API or open the URL
     } catch (err) {
+      console.error('PDF export error:', err);
       Alert.alert('Hata', err instanceof Error ? err.message : 'PDF oluşturulamadı');
     }
   };
@@ -347,21 +346,21 @@ export default function QuoteDetailScreen() {
           <View style={styles.pricingRow}>
             <Text style={[styles.pricingLabel, { color: colors.textSecondary }]}>Ara Toplam</Text>
             <Text style={[styles.pricingValue, { color: colors.text }]}>
-              {formatAmount(quote.subtotal, quote.currency_type)}
+              {formatAmount(quote.subtotal, quote.currency)}
             </Text>
           </View>
 
           <View style={styles.pricingRow}>
             <Text style={[styles.pricingLabel, { color: colors.textSecondary }]}>KDV</Text>
             <Text style={[styles.pricingValue, { color: colors.text }]}>
-              {formatAmount(quote.vat_total, quote.currency_type)}
+              {formatAmount(quote.vat_amount, quote.currency)}
             </Text>
           </View>
 
           <View style={styles.pricingRow}>
             <Text style={[styles.pricingLabel, { color: colors.textSecondary }]}>İndirim</Text>
             <Text style={[styles.pricingValue, { color: colors.danger }]}>
-              -{formatAmount(quote.discount_total, quote.currency_type)}
+              -{formatAmount(quote.discount_amount, quote.currency)}
             </Text>
           </View>
 
@@ -370,7 +369,7 @@ export default function QuoteDetailScreen() {
           <View style={styles.pricingRow}>
             <Text style={[styles.pricingLabelTotal, { color: colors.text }]}>Genel Toplam</Text>
             <Text style={[styles.pricingValueTotal, { color: Brand.primary }]}>
-              {formatAmount(quote.grand_total, quote.currency_type)}
+              {formatAmount(quote.total_amount, quote.currency)}
             </Text>
           </View>
         </Card>

@@ -6,6 +6,10 @@
  */
 
 import api, { getErrorMessage } from '../api';
+import { API_BASE_URL } from '../config';
+import { secureStorage } from '../storage';
+import { Directory, File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 /**
  * Quote status enum
@@ -31,27 +35,55 @@ export type AddressType = 'pickup' | 'delivery';
  * Cargo item (nested within load item)
  */
 export interface CargoItem {
+  cargo_name?: string;
+  cargo_name_foreign?: string;
   package_type?: string;
   package_count?: number;
   piece_count?: number;
-  gross_weight?: number;
-  net_weight?: number;
-  volumetric_weight?: number;
-  lademetre_weight?: number;
-  total_chargeable_weight?: number;
-  width?: number;
-  height?: number;
-  length?: number;
-  volume?: number;
-  lademetre?: number;
+  gross_weight?: number | string;
+  net_weight?: number | string;
+  volumetric_weight?: number | string;
+  lademetre_weight?: number | string;
+  total_chargeable_weight?: number | string;
+  width?: number | string;
+  height?: number | string;
+  length?: number | string;
+  volume?: number | string;
+  lademetre?: number | string;
   is_stackable?: boolean;
   is_hazardous?: boolean;
   hazmat_un_no?: string;
   hazmat_class?: string;
   hazmat_page_no?: string;
   hazmat_packing_group?: string;
-  hazmat_flash_point?: number;
+  hazmat_flash_point?: number | string;
   hazmat_description?: string;
+}
+
+/**
+ * Pricing item (fiyatlandırma kalemi)
+ */
+export interface PricingItem {
+  product_id?: number;
+  product?: {
+    id: number;
+    name: string;
+    code?: string;
+  };
+  description?: string;
+  quantity: number | string;
+  unit: string;
+  unit_price: number | string;
+  currency?: CurrencyType;
+  exchange_rate?: number | string;
+  vat_rate?: number | string;
+  vat_amount?: number | string;
+  discount_rate?: number | string;
+  discount_amount?: number | string;
+  sub_total: number | string;
+  total: number | string;
+  is_active?: boolean;
+  sort_order?: number;
 }
 
 /**
@@ -92,20 +124,21 @@ export interface Quote {
   customer?: { id: number; name: string; code?: string } | null;
   prepared_by_user_id?: number;
   prepared_by?: { id: number; name: string; email: string } | null;
+  preparedBy?: { id: number; name: string; email: string } | null;
   quote_date?: string;
   valid_until?: string;
   status: QuoteStatus;
   currency: CurrencyType;
-  exchange_rate: number;
+  exchange_rate: number | string;
   include_vat?: boolean;
-  vat_rate?: number;
+  vat_rate?: number | string;
   load_items?: LoadItem[];
   cargo_items?: LoadItem[];
-  subtotal: number;
-  discount_percentage?: number;
-  discount_amount?: number;
-  vat_amount: number;
-  total_amount: number;
+  subtotal: number | string;
+  discount_percentage?: number | string;
+  discount_amount?: number | string;
+  vat_amount: number | string;
+  total_amount: number | string;
   terms_conditions?: string;
   internal_notes?: string;
   customer_notes?: string;
@@ -329,16 +362,63 @@ export async function duplicateQuote(id: number): Promise<Quote> {
 
 /**
  * Export quote as PDF
+ * Downloads PDF file and saves to device storage
+ * Uses new expo-file-system API with File and Directory classes
  */
-export async function exportQuotePdf(id: number): Promise<string> {
+export async function exportQuotePdf(id: number): Promise<{ uri: string; fileName: string }> {
   try {
-    const response = await api.get<{
-      success: boolean;
-      message: string;
-      data: { quote_id: number; quote_number: string; pdf_url?: string };
-    }>(`/quotes/${id}/pdf`);
-    return response.data.message;
+    // Get auth token
+    const token = await secureStorage.getToken();
+    if (!token) {
+      throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+    }
+
+    const fileName = `teklif_${id}_${new Date().getTime()}.pdf`;
+
+    // Create directory for PDFs in cache (idempotent: won't fail if exists)
+    const pdfDirectory = new Directory(Paths.cache, 'pdfs');
+    await pdfDirectory.create({ idempotent: true });
+
+    console.log('[PDF Export] Downloading from:', `${API_BASE_URL}/quotes/${id}/pdf`);
+
+    // Create the target file
+    const targetFile = new File(pdfDirectory, fileName);
+
+    // Delete if already exists
+    if (await targetFile.exists) {
+      console.log('[PDF Export] Deleting existing file:', targetFile.uri);
+      await targetFile.delete();
+    }
+
+    // Download PDF directly to target file
+    const downloadedFile = await File.downloadFileAsync(
+      `${API_BASE_URL}/quotes/${id}/pdf`,
+      targetFile,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/pdf',
+        },
+      }
+    );
+
+    console.log('[PDF Export] Downloaded file:', downloadedFile.uri);
+
+    // Share/Open the downloaded PDF
+    if (await Sharing.isAvailableAsync()) {
+      console.log('[PDF Export] Sharing file...');
+      await Sharing.shareAsync(downloadedFile.uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: 'Teklif PDF',
+        UTI: 'com.adobe.pdf',
+      });
+    } else {
+      console.warn('[PDF Export] Sharing not available on this device');
+    }
+
+    return { uri: downloadedFile.uri, fileName };
   } catch (error) {
+    console.error('PDF download error:', error);
     const message = getErrorMessage(error);
     throw new Error(message);
   }
@@ -393,17 +473,25 @@ export function getCurrencySymbol(currency: CurrencyType): string {
 }
 
 /**
- * Format amount with currency (safe for undefined/null values)
+ * Format amount with currency (safe for undefined/null/string values)
  */
 export function formatAmount(
-  amount: number | undefined | null,
+  amount: number | string | undefined | null,
   currency: CurrencyType
 ): string {
-  if (amount === undefined || amount === null || isNaN(amount)) {
+  if (amount === undefined || amount === null) {
     return '-';
   }
+
+  // Convert string to number (Laravel decimal cast returns string)
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+
+  if (isNaN(numericAmount)) {
+    return '-';
+  }
+
   const symbol = getCurrencySymbol(currency);
-  const formatted = amount.toLocaleString('tr-TR', {
+  const formatted = numericAmount.toLocaleString('tr-TR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

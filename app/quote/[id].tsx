@@ -43,6 +43,7 @@ import {
   duplicateQuote,
   exportQuotePdf,
   Quote,
+  LoadItem,
   formatAmount,
   formatDate,
   getQuoteStatusLabel,
@@ -165,8 +166,9 @@ export default function QuoteDetailScreen() {
   const handleExportPdf = async () => {
     if (!id) return;
     try {
-      const message = await exportQuotePdf(parseInt(id, 10));
-      success('Başarılı', message);
+      success('İndiriliyor', 'PDF hazırlanıyor...');
+      const { uri, fileName } = await exportQuotePdf(parseInt(id, 10));
+      success('Başarılı', `PDF indirildi: ${fileName}`);
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'PDF oluşturulamadı.');
     }
@@ -340,45 +342,213 @@ export default function QuoteDetailScreen() {
           {quote.vat_rate !== undefined && renderInfoRow('KDV Oranı', `${quote.vat_rate}%`)}
         </Card>
 
-        {/* Dates Card */}
+        {/* Dates & Info Card */}
         <Card style={styles.section}>
           <View style={styles.sectionHeader}>
             <Calendar size={20} color={Brand.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Tarihler</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Tarihler ve Bilgiler</Text>
           </View>
 
           {renderInfoRow('Teklif Tarihi', formatDate(quote.quote_date), Calendar)}
           {renderInfoRow('Geçerlilik Tarihi', formatDate(quote.valid_until), Calendar)}
           {renderInfoRow('Oluşturulma', formatDate(quote.created_at), Calendar)}
           {quote.sent_at && renderInfoRow('Gönderim', formatDate(quote.sent_at), Send)}
+          {(quote.preparedBy || (quote as any).prepared_by) && renderInfoRow(
+            'Hazırlayan',
+            (quote.preparedBy?.name || (quote as any).prepared_by?.name),
+            User
+          )}
         </Card>
 
-        {/* Load Items */}
-        {quote.load_items && quote.load_items.length > 0 && (
+        {/* Pricing Items (Fiyat Kalemleri) */}
+        {(quote as any).pricing_items && (quote as any).pricing_items.length > 0 && (
           <Card style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Package size={20} color={Brand.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Yük Kalemleri</Text>
+              <DollarSign size={20} color={Brand.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Fiyat Kalemleri ({(quote as any).pricing_items.length})
+              </Text>
             </View>
 
-            {quote.load_items.map((item, index) => (
+            {(quote as any).pricing_items.map((item: any, index: number) => (
               <View
                 key={index}
                 style={[
-                  styles.loadItem,
+                  styles.pricingItem,
                   { backgroundColor: colors.surface, borderColor: colors.border },
                 ]}
               >
-                <Text style={[styles.loadItemTitle, { color: colors.text }]}>
-                  {item.cargo_name}
+                <View style={styles.pricingItemHeader}>
+                  <Text style={[styles.pricingItemTitle, { color: colors.text }]}>
+                    {item.product?.name || item.description || '-'}
+                  </Text>
+                  {item.product?.code && (
+                    <Text style={[styles.pricingItemCode, { color: colors.textMuted }]}>
+                      Kod: {item.product.code}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.pricingItemDetails}>
+                  <View style={styles.pricingItemRow}>
+                    <Text style={[styles.pricingItemLabel, { color: colors.textSecondary }]}>
+                      Miktar:
+                    </Text>
+                    <Text style={[styles.pricingItemValue, { color: colors.text }]}>
+                      {parseFloat(item.quantity).toLocaleString('tr-TR')} {item.unit}
+                    </Text>
+                  </View>
+
+                  <View style={styles.pricingItemRow}>
+                    <Text style={[styles.pricingItemLabel, { color: colors.textSecondary }]}>
+                      Birim Fiyat:
+                    </Text>
+                    <Text style={[styles.pricingItemValue, { color: colors.text }]}>
+                      {formatAmount(item.unit_price, item.currency || quote.currency)}
+                    </Text>
+                  </View>
+
+                  {item.vat_rate && parseFloat(item.vat_rate) > 0 && (
+                    <View style={styles.pricingItemRow}>
+                      <Text style={[styles.pricingItemLabel, { color: colors.textSecondary }]}>
+                        KDV:
+                      </Text>
+                      <Text style={[styles.pricingItemValue, { color: colors.text }]}>
+                        %{parseFloat(item.vat_rate).toFixed(0)}
+                      </Text>
+                    </View>
+                  )}
+
+                  {item.discount_amount && parseFloat(item.discount_amount) > 0 && (
+                    <View style={styles.pricingItemRow}>
+                      <Text style={[styles.pricingItemLabel, { color: colors.textSecondary }]}>
+                        İndirim:
+                      </Text>
+                      <Text style={[styles.pricingItemValue, { color: colors.danger }]}>
+                        -{formatAmount(item.discount_amount, item.currency || quote.currency)}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={[styles.pricingItemRow, styles.pricingItemTotal]}>
+                    <Text style={[styles.pricingItemTotalLabel, { color: colors.text }]}>
+                      Toplam:
+                    </Text>
+                    <Text style={[styles.pricingItemTotalValue, { color: Brand.primary }]}>
+                      {formatAmount(item.total, item.currency || quote.currency)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </Card>
+        )}
+
+        {/* Cargo Items (Kargo Kalemleri) */}
+        {quote.cargo_items && quote.cargo_items.length > 0 && (
+          <Card style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Package size={20} color={Brand.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Kargo Kalemleri ({quote.cargo_items.length})
+              </Text>
+            </View>
+
+            {quote.cargo_items.map((item, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.cargoItem,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+              >
+                <Text style={[styles.cargoItemTitle, { color: colors.text }]}>
+                  {item.cargo_name || 'İsimsiz Kalem'}
                 </Text>
-                <View style={styles.loadItemRow}>
-                  <Text style={[styles.loadItemLabel, { color: colors.textMuted }]}>
-                    Navlun:
+                {item.cargo_name_foreign && (
+                  <Text style={[styles.cargoItemSubtitle, { color: colors.textMuted }]}>
+                    {item.cargo_name_foreign}
                   </Text>
-                  <Text style={[styles.loadItemValue, { color: colors.text }]}>
-                    {formatAmount(item.freight_price, quote.currency)}
-                  </Text>
+                )}
+
+                <View style={styles.cargoItemDetails}>
+                  {item.package_type && (
+                    <View style={styles.cargoItemDetail}>
+                      <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
+                        Ambalaj:
+                      </Text>
+                      <Text style={[styles.cargoDetailValue, { color: colors.text }]}>
+                        {item.package_type}
+                      </Text>
+                    </View>
+                  )}
+
+                  {item.package_count && item.package_count > 0 && (
+                    <View style={styles.cargoItemDetail}>
+                      <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
+                        Koli:
+                      </Text>
+                      <Text style={[styles.cargoDetailValue, { color: colors.text }]}>
+                        {item.package_count}
+                      </Text>
+                    </View>
+                  )}
+
+                  {item.piece_count && item.piece_count > 0 && (
+                    <View style={styles.cargoItemDetail}>
+                      <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
+                        Adet:
+                      </Text>
+                      <Text style={[styles.cargoDetailValue, { color: colors.text }]}>
+                        {item.piece_count}
+                      </Text>
+                    </View>
+                  )}
+
+                  {item.gross_weight && parseFloat(item.gross_weight as string) > 0 && (
+                    <View style={styles.cargoItemDetail}>
+                      <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
+                        Brüt Ağırlık:
+                      </Text>
+                      <Text style={[styles.cargoDetailValue, { color: colors.text }]}>
+                        {parseFloat(item.gross_weight as string).toLocaleString('tr-TR')} kg
+                      </Text>
+                    </View>
+                  )}
+
+                  {item.net_weight && parseFloat(item.net_weight as string) > 0 && (
+                    <View style={styles.cargoItemDetail}>
+                      <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
+                        Net Ağırlık:
+                      </Text>
+                      <Text style={[styles.cargoDetailValue, { color: colors.text }]}>
+                        {parseFloat(item.net_weight as string).toLocaleString('tr-TR')} kg
+                      </Text>
+                    </View>
+                  )}
+
+                  {(item.width || item.height || item.length) && (
+                    <View style={styles.cargoItemDetail}>
+                      <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
+                        Boyut (GxYxU):
+                      </Text>
+                      <Text style={[styles.cargoDetailValue, { color: colors.text }]}>
+                        {item.width || '-'} x {item.height || '-'} x {item.length || '-'} cm
+                      </Text>
+                    </View>
+                  )}
+
+                  {item.is_hazardous && (
+                    <Badge label="Tehlikeli Madde" variant="danger" size="sm" />
+                  )}
+
+                  {item.is_stackable !== undefined && (
+                    <Badge
+                      label={item.is_stackable ? 'İstiflenebilir' : 'İstiflenemez'}
+                      variant={item.is_stackable ? 'default' : 'warning'}
+                      size="sm"
+                    />
+                  )}
                 </View>
               </View>
             ))}
@@ -617,26 +787,85 @@ const styles = StyleSheet.create({
     ...Typography.bodyMD,
     fontWeight: '500',
   },
-  loadItem: {
+  // Pricing Items Styles
+  pricingItem: {
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
   },
-  loadItemTitle: {
+  pricingItemHeader: {
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+  },
+  pricingItemTitle: {
     ...Typography.bodyMD,
     fontWeight: '600',
-    marginBottom: Spacing.sm,
   },
-  loadItemRow: {
+  pricingItemCode: {
+    ...Typography.bodyXS,
+    marginTop: Spacing.xs,
+  },
+  pricingItemDetails: {
+    gap: Spacing.sm,
+  },
+  pricingItemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  loadItemLabel: {
+  pricingItemLabel: {
     ...Typography.bodySM,
   },
-  loadItemValue: {
+  pricingItemValue: {
+    ...Typography.bodySM,
+    fontWeight: '500',
+  },
+  pricingItemTotal: {
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.border,
+  },
+  pricingItemTotalLabel: {
+    ...Typography.bodyMD,
+    fontWeight: '700',
+  },
+  pricingItemTotalValue: {
+    ...Typography.bodyMD,
+    fontWeight: '700',
+  },
+
+  // Cargo Items Styles
+  cargoItem: {
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginBottom: Spacing.md,
+  },
+  cargoItemTitle: {
+    ...Typography.bodyMD,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  cargoItemSubtitle: {
+    ...Typography.bodySM,
+    marginBottom: Spacing.md,
+  },
+  cargoItemDetails: {
+    gap: Spacing.sm,
+  },
+  cargoItemDetail: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cargoDetailLabel: {
+    ...Typography.bodySM,
+  },
+  cargoDetailValue: {
     ...Typography.bodySM,
     fontWeight: '500',
   },
