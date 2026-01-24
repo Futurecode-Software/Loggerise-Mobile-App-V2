@@ -14,7 +14,7 @@ export function useToast() {
       text1: title,
       text2: message,
       duration: options?.duration ?? 3000,
-      position: options?.position ?? 'bottom',
+      position: options?.position ?? 'top',
     });
   };
 

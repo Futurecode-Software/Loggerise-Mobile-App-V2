@@ -68,7 +68,7 @@ export default function RootLayout() {
               <Stack.Screen name="vehicle" />
             </Stack>
             <StatusBar style="dark" />
-            <Toast />
+            <Toast position='top' topOffset={60} />
           </ThemeProvider>
         </NotificationProvider>
       </AuthProvider>

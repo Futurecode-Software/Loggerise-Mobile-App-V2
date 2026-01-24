@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ChevronLeft,
   Search,
@@ -45,6 +46,7 @@ const STATUS_FILTERS = [
 
 export default function QuotesScreen() {
   const colors = Colors.light;
+  const isFirstRender = useRef(true);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -109,6 +111,19 @@ export default function QuotesScreen() {
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  // Refresh list when screen comes into focus (e.g., after duplicating a quote)
+  // Skip on first render to avoid double-fetching
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstRender.current) {
+        isFirstRender.current = false;
+        return;
+      }
+
+      fetchQuotes(1, false);
+    }, [fetchQuotes])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

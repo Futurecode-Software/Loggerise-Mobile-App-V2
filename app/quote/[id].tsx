@@ -187,8 +187,8 @@ export default function QuoteDetailScreen() {
     return (
       <View style={styles.infoRow}>
         <View style={styles.infoRowLeft}>
-          {Icon && <Icon size={16} color={colors.textMuted} />}
-          <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}:</Text>
+          {Icon ? <Icon size={16} color={colors.textMuted} /> : null}
+          <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{`${label}:`}</Text>
         </View>
         <Text style={[styles.infoValue, { color: colors.text }]}>{displayValue}</Text>
       </View>
@@ -241,11 +241,11 @@ export default function QuoteDetailScreen() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Teklif Detayı</Text>
         <View style={styles.headerActions}>
-          {quote.can_edit && (
+          {quote.can_edit ? (
             <TouchableOpacity style={styles.headerButton}>
               <Edit size={22} color={colors.icon} />
             </TouchableOpacity>
-          )}
+          ) : null}
           <TouchableOpacity style={styles.headerButton} onPress={handleDelete}>
             <Trash2 size={22} color={colors.danger} />
           </TouchableOpacity>
@@ -282,14 +282,14 @@ export default function QuoteDetailScreen() {
             </View>
           </View>
 
-          {quote.customer && (
+          {quote.customer ? (
             <View style={styles.customerRow}>
               <User size={16} color={colors.textMuted} />
               <Text style={[styles.customerText, { color: colors.textSecondary }]}>
                 {quote.customer.name}
               </Text>
             </View>
-          )}
+          ) : null}
         </Card>
 
         {/* Pricing Card */}
@@ -308,16 +308,16 @@ export default function QuoteDetailScreen() {
             </Text>
           </View>
 
-          {quote.discount_amount && quote.discount_amount > 0 && (
+          {quote.discount_amount && quote.discount_amount > 0 ? (
             <View style={styles.pricingRow}>
               <Text style={[styles.pricingLabel, { color: colors.textSecondary }]}>
                 İndirim:
               </Text>
               <Text style={[styles.pricingValue, { color: colors.danger }]}>
-                -{formatAmount(quote.discount_amount, quote.currency)}
+                {`-${formatAmount(quote.discount_amount, quote.currency)}`}
               </Text>
             </View>
-          )}
+          ) : null}
 
           <View style={styles.pricingRow}>
             <Text style={[styles.pricingLabel, { color: colors.textSecondary }]}>KDV:</Text>
@@ -337,9 +337,8 @@ export default function QuoteDetailScreen() {
 
           {renderInfoRow('Para Birimi', quote.currency)}
           {renderInfoRow('Kur', quote.exchange_rate)}
-          {quote.include_vat !== undefined &&
-            renderInfoRow('KDV Dahil', quote.include_vat)}
-          {quote.vat_rate !== undefined && renderInfoRow('KDV Oranı', `${quote.vat_rate}%`)}
+          {quote.include_vat !== undefined ? renderInfoRow('KDV Dahil', quote.include_vat) : null}
+          {quote.vat_rate !== undefined ? renderInfoRow('KDV Oranı', `%${quote.vat_rate}`) : null}
         </Card>
 
         {/* Dates & Info Card */}
@@ -352,21 +351,21 @@ export default function QuoteDetailScreen() {
           {renderInfoRow('Teklif Tarihi', formatDate(quote.quote_date), Calendar)}
           {renderInfoRow('Geçerlilik Tarihi', formatDate(quote.valid_until), Calendar)}
           {renderInfoRow('Oluşturulma', formatDate(quote.created_at), Calendar)}
-          {quote.sent_at && renderInfoRow('Gönderim', formatDate(quote.sent_at), Send)}
-          {(quote.preparedBy || (quote as any).prepared_by) && renderInfoRow(
+          {quote.sent_at ? renderInfoRow('Gönderim', formatDate(quote.sent_at), Send) : null}
+          {(quote.preparedBy || (quote as any).prepared_by) ? renderInfoRow(
             'Hazırlayan',
             (quote.preparedBy?.name || (quote as any).prepared_by?.name),
             User
-          )}
+          ) : null}
         </Card>
 
         {/* Pricing Items (Fiyat Kalemleri) */}
-        {(quote as any).pricing_items && (quote as any).pricing_items.length > 0 && (
+        {(quote as any).pricing_items && (quote as any).pricing_items.length > 0 ? (
           <Card style={styles.section}>
             <View style={styles.sectionHeader}>
               <DollarSign size={20} color={Brand.primary} />
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Fiyat Kalemleri ({(quote as any).pricing_items.length})
+                {`Fiyat Kalemleri (${(quote as any).pricing_items.length})`}
               </Text>
             </View>
 
@@ -382,11 +381,11 @@ export default function QuoteDetailScreen() {
                   <Text style={[styles.pricingItemTitle, { color: colors.text }]}>
                     {item.product?.name || item.description || '-'}
                   </Text>
-                  {item.product?.code && (
+                  {item.product?.code ? (
                     <Text style={[styles.pricingItemCode, { color: colors.textMuted }]}>
-                      Kod: {item.product.code}
+                      {`Kod: ${item.product.code}`}
                     </Text>
-                  )}
+                  ) : null}
                 </View>
 
                 <View style={styles.pricingItemDetails}>
@@ -395,7 +394,7 @@ export default function QuoteDetailScreen() {
                       Miktar:
                     </Text>
                     <Text style={[styles.pricingItemValue, { color: colors.text }]}>
-                      {parseFloat(item.quantity).toLocaleString('tr-TR')} {item.unit}
+                      {`${parseFloat(item.quantity).toLocaleString('tr-TR')} ${item.unit}`}
                     </Text>
                   </View>
 
@@ -408,27 +407,27 @@ export default function QuoteDetailScreen() {
                     </Text>
                   </View>
 
-                  {item.vat_rate && parseFloat(item.vat_rate) > 0 && (
+                  {item.vat_rate && parseFloat(item.vat_rate) > 0 ? (
                     <View style={styles.pricingItemRow}>
                       <Text style={[styles.pricingItemLabel, { color: colors.textSecondary }]}>
                         KDV:
                       </Text>
                       <Text style={[styles.pricingItemValue, { color: colors.text }]}>
-                        %{parseFloat(item.vat_rate).toFixed(0)}
+                        {`%${parseFloat(item.vat_rate).toFixed(0)}`}
                       </Text>
                     </View>
-                  )}
+                  ) : null}
 
-                  {item.discount_amount && parseFloat(item.discount_amount) > 0 && (
+                  {item.discount_amount && parseFloat(item.discount_amount) > 0 ? (
                     <View style={styles.pricingItemRow}>
                       <Text style={[styles.pricingItemLabel, { color: colors.textSecondary }]}>
                         İndirim:
                       </Text>
                       <Text style={[styles.pricingItemValue, { color: colors.danger }]}>
-                        -{formatAmount(item.discount_amount, item.currency || quote.currency)}
+                        {`-${formatAmount(item.discount_amount, item.currency || quote.currency)}`}
                       </Text>
                     </View>
-                  )}
+                  ) : null}
 
                   <View style={[styles.pricingItemRow, styles.pricingItemTotal]}>
                     <Text style={[styles.pricingItemTotalLabel, { color: colors.text }]}>
@@ -442,15 +441,15 @@ export default function QuoteDetailScreen() {
               </View>
             ))}
           </Card>
-        )}
+        ) : null}
 
         {/* Cargo Items (Kargo Kalemleri) */}
-        {quote.cargo_items && quote.cargo_items.length > 0 && (
+        {quote.cargo_items && quote.cargo_items.length > 0 ? (
           <Card style={styles.section}>
             <View style={styles.sectionHeader}>
               <Package size={20} color={Brand.primary} />
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Kargo Kalemleri ({quote.cargo_items.length})
+                {`Kargo Kalemleri (${quote.cargo_items.length})`}
               </Text>
             </View>
 
@@ -465,14 +464,14 @@ export default function QuoteDetailScreen() {
                 <Text style={[styles.cargoItemTitle, { color: colors.text }]}>
                   {item.cargo_name || 'İsimsiz Kalem'}
                 </Text>
-                {item.cargo_name_foreign && (
+                {item.cargo_name_foreign ? (
                   <Text style={[styles.cargoItemSubtitle, { color: colors.textMuted }]}>
                     {item.cargo_name_foreign}
                   </Text>
-                )}
+                ) : null}
 
                 <View style={styles.cargoItemDetails}>
-                  {item.package_type && (
+                  {item.package_type ? (
                     <View style={styles.cargoItemDetail}>
                       <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
                         Ambalaj:
@@ -481,9 +480,9 @@ export default function QuoteDetailScreen() {
                         {item.package_type}
                       </Text>
                     </View>
-                  )}
+                  ) : null}
 
-                  {item.package_count && item.package_count > 0 && (
+                  {item.package_count && item.package_count > 0 ? (
                     <View style={styles.cargoItemDetail}>
                       <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
                         Koli:
@@ -492,9 +491,9 @@ export default function QuoteDetailScreen() {
                         {item.package_count}
                       </Text>
                     </View>
-                  )}
+                  ) : null}
 
-                  {item.piece_count && item.piece_count > 0 && (
+                  {item.piece_count && item.piece_count > 0 ? (
                     <View style={styles.cargoItemDetail}>
                       <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
                         Adet:
@@ -503,64 +502,64 @@ export default function QuoteDetailScreen() {
                         {item.piece_count}
                       </Text>
                     </View>
-                  )}
+                  ) : null}
 
-                  {item.gross_weight && parseFloat(item.gross_weight as string) > 0 && (
+                  {item.gross_weight && parseFloat(item.gross_weight as string) > 0 ? (
                     <View style={styles.cargoItemDetail}>
                       <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
                         Brüt Ağırlık:
                       </Text>
                       <Text style={[styles.cargoDetailValue, { color: colors.text }]}>
-                        {parseFloat(item.gross_weight as string).toLocaleString('tr-TR')} kg
+                        {`${parseFloat(item.gross_weight as string).toLocaleString('tr-TR')} kg`}
                       </Text>
                     </View>
-                  )}
+                  ) : null}
 
-                  {item.net_weight && parseFloat(item.net_weight as string) > 0 && (
+                  {item.net_weight && parseFloat(item.net_weight as string) > 0 ? (
                     <View style={styles.cargoItemDetail}>
                       <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
                         Net Ağırlık:
                       </Text>
                       <Text style={[styles.cargoDetailValue, { color: colors.text }]}>
-                        {parseFloat(item.net_weight as string).toLocaleString('tr-TR')} kg
+                        {`${parseFloat(item.net_weight as string).toLocaleString('tr-TR')} kg`}
                       </Text>
                     </View>
-                  )}
+                  ) : null}
 
-                  {(item.width || item.height || item.length) && (
+                  {(item.width || item.height || item.length) ? (
                     <View style={styles.cargoItemDetail}>
                       <Text style={[styles.cargoDetailLabel, { color: colors.textSecondary }]}>
                         Boyut (GxYxU):
                       </Text>
                       <Text style={[styles.cargoDetailValue, { color: colors.text }]}>
-                        {item.width || '-'} x {item.height || '-'} x {item.length || '-'} cm
+                        {`${item.width || '-'} x ${item.height || '-'} x ${item.length || '-'} cm`}
                       </Text>
                     </View>
-                  )}
+                  ) : null}
 
-                  {item.is_hazardous && (
+                  {item.is_hazardous ? (
                     <Badge label="Tehlikeli Madde" variant="danger" size="sm" />
-                  )}
+                  ) : null}
 
-                  {item.is_stackable !== undefined && (
+                  {item.is_stackable !== undefined ? (
                     <Badge
                       label={item.is_stackable ? 'İstiflenebilir' : 'İstiflenemez'}
                       variant={item.is_stackable ? 'default' : 'warning'}
                       size="sm"
                     />
-                  )}
+                  ) : null}
                 </View>
               </View>
             ))}
           </Card>
-        )}
+        ) : null}
 
         {/* Notes */}
-        {(quote.terms_conditions || quote.internal_notes || quote.customer_notes) && (
+        {(quote.terms_conditions || quote.internal_notes || quote.customer_notes) ? (
           <Card style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Notlar</Text>
 
-            {quote.terms_conditions && (
+            {quote.terms_conditions ? (
               <View style={styles.noteSection}>
                 <Text style={[styles.noteLabel, { color: colors.textSecondary }]}>
                   Şartlar ve Koşullar:
@@ -569,9 +568,9 @@ export default function QuoteDetailScreen() {
                   {quote.terms_conditions}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {quote.internal_notes && (
+            {quote.internal_notes ? (
               <View style={styles.noteSection}>
                 <Text style={[styles.noteLabel, { color: colors.textSecondary }]}>
                   Dahili Notlar:
@@ -580,9 +579,9 @@ export default function QuoteDetailScreen() {
                   {quote.internal_notes}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {quote.customer_notes && (
+            {quote.customer_notes ? (
               <View style={styles.noteSection}>
                 <Text style={[styles.noteLabel, { color: colors.textSecondary }]}>
                   Müşteri Notları:
@@ -591,13 +590,13 @@ export default function QuoteDetailScreen() {
                   {quote.customer_notes}
                 </Text>
               </View>
-            )}
+            ) : null}
           </Card>
-        )}
+        ) : null}
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          {quote.status === 'draft' && (
+          {quote.status === 'draft' ? (
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: Brand.primary }]}
               onPress={handleSend}
@@ -612,7 +611,7 @@ export default function QuoteDetailScreen() {
                 </>
               )}
             </TouchableOpacity>
-          )}
+          ) : null}
 
           <TouchableOpacity
             style={[
