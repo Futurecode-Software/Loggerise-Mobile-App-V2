@@ -1,0 +1,451 @@
+/**
+ * SearchableSelect Component
+ *
+ * Async searchable select component similar to web AsyncSelect.
+ * Supports searching with debounced API calls.
+ */
+
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  FlatList,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+} from 'react-native';
+import { Search, X, ChevronDown, Check } from 'lucide-react-native';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+
+export interface SearchableSelectOption {
+  label: string;
+  value: string | number;
+  subtitle?: string;
+}
+
+export interface SearchableSelectProps {
+  label?: string;
+  placeholder?: string;
+  value?: string | number;
+  onValueChange: (value: string | number) => void;
+  loadOptions: (searchQuery: string) => Promise<SearchableSelectOption[]>;
+  error?: string;
+  required?: boolean;
+  disabled?: boolean;
+  renderOption?: (option: SearchableSelectOption) => React.ReactNode;
+}
+
+export function SearchableSelect({
+  label,
+  placeholder = 'Seçiniz...',
+  value,
+  onValueChange,
+  loadOptions,
+  error,
+  required,
+  disabled,
+  renderOption,
+}: SearchableSelectProps) {
+  const colors = Colors.light;
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [options, setOptions] = useState<SearchableSelectOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<SearchableSelectOption | null>(null);
+
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Load initial options when modal opens
+  useEffect(() => {
+    if (isOpen && options.length === 0) {
+      fetchOptions('');
+    }
+  }, [isOpen]);
+
+  // Debounced search
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchOptions(searchQuery);
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, isOpen]);
+
+  // Fetch options from API
+  const fetchOptions = useCallback(async (query: string) => {
+    setIsLoading(true);
+    try {
+      const results = await loadOptions(query);
+      setOptions(results);
+
+      // Update selected option if value matches
+      if (value) {
+        const selected = results.find((opt) => opt.value === value);
+        if (selected) {
+          setSelectedOption(selected);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading options:', error);
+      setOptions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadOptions, value]);
+
+  // Handle option selection
+  const handleSelect = useCallback(
+    (option: SearchableSelectOption) => {
+      setSelectedOption(option);
+      onValueChange(option.value);
+      setIsOpen(false);
+      setSearchQuery('');
+    },
+    [onValueChange]
+  );
+
+  // Handle clear
+  const handleClear = useCallback(() => {
+    setSelectedOption(null);
+    onValueChange('');
+  }, [onValueChange]);
+
+  // Render option item
+  const renderOptionItem = useCallback(
+    ({ item }: { item: SearchableSelectOption }) => {
+      const isSelected = item.value === value;
+
+      if (renderOption) {
+        return (
+          <TouchableOpacity
+            style={[
+              styles.optionItem,
+              { borderBottomColor: colors.border },
+              isSelected && { backgroundColor: colors.surface },
+            ]}
+            onPress={() => handleSelect(item)}
+          >
+            {renderOption(item)}
+            {isSelected && (
+              <Check size={20} color={Brand.primary} style={styles.checkIcon} />
+            )}
+          </TouchableOpacity>
+        );
+      }
+
+      return (
+        <TouchableOpacity
+          style={[
+            styles.optionItem,
+            { borderBottomColor: colors.border },
+            isSelected && { backgroundColor: colors.surface },
+          ]}
+          onPress={() => handleSelect(item)}
+        >
+          <View style={styles.optionContent}>
+            <Text
+              style={[
+                styles.optionLabel,
+                { color: colors.text },
+                isSelected && { fontWeight: '600' },
+              ]}
+            >
+              {item.label}
+            </Text>
+            {item.subtitle && (
+              <Text style={[styles.optionSubtitle, { color: colors.textMuted }]}>
+                {item.subtitle}
+              </Text>
+            )}
+          </View>
+          {isSelected && <Check size={20} color={Brand.primary} />}
+        </TouchableOpacity>
+      );
+    },
+    [value, colors, handleSelect, renderOption]
+  );
+
+  return (
+    <View style={styles.container}>
+      {label && (
+        <Text style={[styles.label, { color: colors.text }]}>
+          {label}
+          {required && <Text style={{ color: colors.danger }}> *</Text>}
+        </Text>
+      )}
+
+      <TouchableOpacity
+        style={[
+          styles.selectButton,
+          {
+            backgroundColor: colors.card,
+            borderColor: error ? colors.danger : colors.border,
+          },
+          disabled && { opacity: 0.5 },
+        ]}
+        onPress={() => !disabled && setIsOpen(true)}
+        disabled={disabled}
+      >
+        <View style={styles.selectContent}>
+          {selectedOption ? (
+            <>
+              <View style={styles.selectedContent}>
+                <Text style={[styles.selectedLabel, { color: colors.text }]}>
+                  {selectedOption.label}
+                </Text>
+                {selectedOption.subtitle && (
+                  <Text style={[styles.selectedSubtitle, { color: colors.textMuted }]}>
+                    {selectedOption.subtitle}
+                  </Text>
+                )}
+              </View>
+              {!disabled && (
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleClear();
+                  }}
+                  style={styles.clearButton}
+                >
+                  <X size={18} color={colors.icon} />
+                </TouchableOpacity>
+              )}
+            </>
+          ) : (
+            <>
+              <Text style={[styles.placeholder, { color: colors.textMuted }]}>
+                {placeholder}
+              </Text>
+              <ChevronDown size={20} color={colors.icon} />
+            </>
+          )}
+        </View>
+      </TouchableOpacity>
+
+      {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
+
+      <Modal
+        visible={isOpen}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsOpen(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setIsOpen(false)} />
+
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            {/* Header */}
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {label || 'Seçim Yap'}
+              </Text>
+              <TouchableOpacity onPress={() => setIsOpen(false)} style={styles.closeButton}>
+                <X size={24} color={colors.icon} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input */}
+            <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
+              <Search size={20} color={colors.icon} />
+              <TextInput
+                style={[styles.searchInput, { color: colors.text }]}
+                placeholder="Ara..."
+                placeholderTextColor={colors.textMuted}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <X size={18} color={colors.icon} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Options List */}
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={Brand.primary} />
+                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                  Aranıyor...
+                </Text>
+              </View>
+            ) : options.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  {searchQuery ? 'Sonuç bulunamadı' : 'Seçenek bulunamadı'}
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={options}
+                keyExtractor={(item) => String(item.value)}
+                renderItem={renderOptionItem}
+                style={styles.optionsList}
+                contentContainerStyle={styles.optionsListContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              />
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    marginBottom: Spacing.md,
+  },
+  label: {
+    ...Typography.bodySM,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  selectButton: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    minHeight: 48,
+  },
+  selectContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectedContent: {
+    flex: 1,
+    marginRight: Spacing.sm,
+  },
+  selectedLabel: {
+    ...Typography.bodyMD,
+  },
+  selectedSubtitle: {
+    ...Typography.bodySM,
+    marginTop: Spacing.xs,
+  },
+  placeholder: {
+    ...Typography.bodyMD,
+    flex: 1,
+  },
+  clearButton: {
+    padding: Spacing.xs,
+    marginRight: Spacing.xs,
+  },
+  errorText: {
+    ...Typography.bodyXS,
+    marginTop: Spacing.xs,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    maxHeight: '80%',
+    borderTopLeftRadius: BorderRadius.lg,
+    borderTopRightRadius: BorderRadius.lg,
+    ...Shadows.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    ...Typography.headingMD,
+  },
+  closeButton: {
+    padding: Spacing.sm,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    margin: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  searchInput: {
+    flex: 1,
+    ...Typography.bodyMD,
+    paddingVertical: Spacing.xs,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing['4xl'],
+  },
+  loadingText: {
+    ...Typography.bodyMD,
+    marginTop: Spacing.md,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing['4xl'],
+  },
+  emptyText: {
+    ...Typography.bodyMD,
+  },
+  optionsList: {
+    flex: 1,
+  },
+  optionsListContent: {
+    paddingBottom: Spacing.lg,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  optionContent: {
+    flex: 1,
+    marginRight: Spacing.sm,
+  },
+  optionLabel: {
+    ...Typography.bodyMD,
+  },
+  optionSubtitle: {
+    ...Typography.bodySM,
+    marginTop: Spacing.xs,
+  },
+  checkIcon: {
+    marginLeft: Spacing.sm,
+  },
+});

@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx expo start --clear)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit - Loggerise Mobile v2\n\nReact Native \\(Expo\\) mobile application for Loggerise logistics management system.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git branch:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd comprehensive project README\n\n- Project overview and features documentation\n- Tech stack and dependencies list\n- Installation and setup instructions\n- Project structure with directory tree\n- API integration and error handling guide\n- UI components usage examples\n- Theme system and color palette\n- Build and deployment commands\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npx expo install:*)",
+      "Bash(npm run lint)",
+      "Bash(ipconfig:*)",
+      "Bash(findstr:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(xargs basename:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "laravel-boost"
+  ]
+}
