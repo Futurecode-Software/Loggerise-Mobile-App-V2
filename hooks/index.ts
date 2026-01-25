@@ -8,6 +8,9 @@ export { useNotifications } from './use-notifications';
 export { useGoogleAuth } from './use-google-auth';
 export { useToast } from './use-toast';
 export { useQuoteDetail } from './use-quote-detail';
+export { useMessagingWebSocket } from './use-messaging-websocket';
+export { useConversationMessages } from './use-conversation-messages';
+export { useNewConversation } from './use-new-conversation';
 
 // Dashboard Quick Actions
 export { useDashboardQuickActions } from './use-dashboard-quick-actions';

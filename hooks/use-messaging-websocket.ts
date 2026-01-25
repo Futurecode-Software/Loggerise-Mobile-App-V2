@@ -12,6 +12,8 @@ import {
   subscribeToUserChannel,
   unsubscribeFromChannel,
   onConnectionStateChange,
+  reconnectWebSocket,
+  resetReconnectAttempts,
 } from '@/services/websocket';
 import { Message } from '@/services/endpoints/messaging';
 
@@ -70,6 +72,14 @@ export function useMessagingWebSocket({
   const currentConversationIdRef = useRef<number | undefined>(undefined);
   const isSubscribedRef = useRef(false);
 
+  // Reconnect function for external use
+  const reconnect = useCallback(async () => {
+    resetReconnectAttempts();
+    const connected = await reconnectWebSocket();
+    setIsConnected(connected);
+    return connected;
+  }, []);
+
   // Initialize WebSocket connection (only once)
   useEffect(() => {
     let mounted = true;
@@ -87,6 +97,12 @@ export function useMessagingWebSocket({
     const unsubscribe = onConnectionStateChange((state) => {
       if (mounted) {
         setIsConnected(state === 'connected');
+
+        // If disconnected, try to resubscribe when reconnected
+        if (state === 'connected') {
+          // Reset subscription flag to allow resubscription
+          isSubscribedRef.current = false;
+        }
       }
     });
 
@@ -242,5 +258,6 @@ export function useMessagingWebSocket({
   return {
     isConnected,
     typingUsers,
+    reconnect,
   };
 }

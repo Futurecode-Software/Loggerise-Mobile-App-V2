@@ -266,3 +266,36 @@ export function isWebSocketConnected(): boolean {
 export function getConnectionState(): string {
   return pusher?.connection.state || 'disconnected';
 }
+
+/**
+ * Force reconnect WebSocket
+ * Useful when app comes back from background
+ */
+export async function reconnectWebSocket(): Promise<boolean> {
+  // If already connected, return true
+  if (pusher && isConnected) {
+    return true;
+  }
+
+  // If pusher exists but not connected, try to reconnect
+  if (pusher) {
+    try {
+      pusher.connect();
+      return true;
+    } catch {
+      // If reconnect fails, reinitialize
+      disconnectWebSocket();
+    }
+  }
+
+  // Initialize fresh connection
+  return initializeWebSocket();
+}
+
+/**
+ * Reset reconnect attempts counter
+ * Call this when user manually triggers a refresh
+ */
+export function resetReconnectAttempts(): void {
+  reconnectAttempts = 0;
+}

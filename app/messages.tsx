@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ChevronLeft,
   Search,
@@ -39,75 +42,39 @@ export default function MessagesScreen() {
   const colors = Colors.light;
   const { user } = useAuth();
 
+  // Refs
+  const isFirstRender = useRef(true);
+  const appState = useRef(AppState.currentState);
+  const conversationsRef = useRef<Conversation[]>([]);
+
+  // State
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-
-  // API state
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Keep conversations ref in sync
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
+
   // Current user ID
   const currentUserId = user?.id || 0;
 
-  // WebSocket for real-time updates
-  const { isConnected } = useMessagingWebSocket({
-    userId: currentUserId,
-    onNewConversationMessage: (message: Message, conversationId: number) => {
-      // Update conversation list when new message arrives
-      setConversations((prevConversations) => {
-        const existingConversation = prevConversations.find((c) => c.id === conversationId);
-
-        if (existingConversation) {
-          // Update existing conversation
-          const updatedConversation = {
-            ...existingConversation,
-            last_message: {
-              message: message.message,
-              created_at: 'Şimdi',
-              sender_name: message.user.name,
-            },
-            unread_count: (existingConversation.unread_count || 0) + 1,
-            updated_at: new Date().toISOString(),
-          };
-
-          // Move to top
-          return [
-            updatedConversation,
-            ...prevConversations.filter((c) => c.id !== conversationId),
-          ];
-        }
-
-        // If conversation doesn't exist, refresh the list
-        fetchConversations();
-        return prevConversations;
-      });
-
-      // Update total unread count
-      setTotalUnreadCount((prev) => prev + 1);
-    },
-    onParticipantAdded: () => {
-      // Refresh conversations when added to a new group
-      fetchConversations();
-    },
-  });
-
   // Fetch conversations from API
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = useCallback(async (showLoading = true) => {
     try {
       setError(null);
+      if (showLoading) setIsLoading(true);
 
-      // Build filters
       const filters: ConversationFilters = {};
-
-      // Add search filter
       if (searchQuery.trim()) {
         filters.search = searchQuery.trim();
       }
 
       const response = await getConversations(filters);
-
       setConversations(response.conversations);
       setTotalUnreadCount(response.totalUnreadCount);
     } catch (err) {
@@ -118,35 +85,111 @@ export default function MessagesScreen() {
     }
   }, [searchQuery]);
 
+  // Handle new message from WebSocket
+  const handleNewConversationMessage = useCallback((message: Message, conversationId: number) => {
+    setConversations((prevConversations) => {
+      const existingConversation = prevConversations.find((c) => c.id === conversationId);
+
+      if (existingConversation) {
+        const updatedConversation: Conversation = {
+          ...existingConversation,
+          last_message: {
+            message: message.message,
+            created_at: 'Şimdi',
+            sender_name: message.user?.name || '',
+          },
+          unread_count: (existingConversation.unread_count || 0) + 1,
+          updated_at: new Date().toISOString(),
+        };
+
+        return [
+          updatedConversation,
+          ...prevConversations.filter((c) => c.id !== conversationId),
+        ];
+      }
+
+      // If conversation doesn't exist, fetch the list (using ref to avoid closure issues)
+      fetchConversations(false);
+      return prevConversations;
+    });
+
+    setTotalUnreadCount((prev) => prev + 1);
+  }, [fetchConversations]);
+
+  // Handle participant added
+  const handleParticipantAdded = useCallback(() => {
+    fetchConversations(false);
+  }, [fetchConversations]);
+
+  // WebSocket for real-time updates
+  const { isConnected, reconnect } = useMessagingWebSocket({
+    userId: currentUserId,
+    onNewConversationMessage: handleNewConversationMessage,
+    onParticipantAdded: handleParticipantAdded,
+  });
+
+  // Handle AppState changes (background/foreground)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState: AppStateStatus) => {
+      // App came to foreground
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // Re-initialize WebSocket connection
+        await reconnect();
+        // Refresh conversations
+        fetchConversations(false);
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [fetchConversations, reconnect]);
+
   // Initial load
   useEffect(() => {
-    setIsLoading(true);
     fetchConversations();
-  }, []);
+  }, [fetchConversations]);
 
   // Search with debounce
   useEffect(() => {
+    // Skip initial render
+    if (isFirstRender.current) return;
+
     const timeoutId = setTimeout(() => {
-      setIsLoading(true);
       fetchConversations();
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [searchQuery, fetchConversations]);
 
-  const onRefresh = async () => {
+  // Refresh list when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstRender.current) {
+        isFirstRender.current = false;
+        return;
+      }
+
+      // Refresh without showing loading spinner
+      fetchConversations(false);
+    }, [fetchConversations])
+  );
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchConversations();
+    await fetchConversations(false);
     setRefreshing(false);
-  };
+  }, [fetchConversations]);
 
-  // Sort conversations by last message time (newest first)
-  const sortedConversations = [...conversations].sort((a, b) => {
-    // Use updated_at for sorting
-    const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-    const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-    return dateB - dateA;
-  });
+  // Sort conversations by last message time (newest first) - memoized
+  const sortedConversations = useMemo(() => {
+    return [...conversations].sort((a, b) => {
+      const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [conversations]);
 
   const renderConversation = ({ item }: { item: Conversation }) => {
     const hasUnread = (item.unread_count || 0) > 0;
