@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, LayoutAnimation } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -35,6 +34,7 @@ import {
   Settings,
 } from 'lucide-react-native';
 import { CollapsibleMenuSection } from '@/components/menu';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
 
 const EXPANDED_SECTION_STORAGE_KEY = '@loggerise_menu_expanded_section';
@@ -191,17 +191,19 @@ export default function MoreScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Daha Fazla</Text>
-        <TouchableOpacity
-          style={styles.settingsButton}
-          onPress={() => router.push('/settings' as any)}
-        >
-          <Settings size={22} color={colors.icon} />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title="Daha Fazla"
+        rightIcons={
+          <TouchableOpacity
+            onPress={() => router.push('/settings' as any)}
+            activeOpacity={0.7}
+          >
+            <Settings size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         style={styles.content}
@@ -230,7 +232,7 @@ export default function MoreScreen() {
         {/* Version Info */}
         <Text style={[styles.versionText, { color: colors.textMuted }]}>Loggerise v1.0.0</Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -238,20 +240,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-  },
-  settingsButton: {
-    padding: Spacing.sm,
-  },
+  // Header styles removed - using FullScreenHeader component
   content: {
     flex: 1,
   },

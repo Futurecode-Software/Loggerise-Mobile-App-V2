@@ -8,10 +8,8 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  ChevronLeft,
   Filter,
   Plus,
   Wallet,
@@ -20,6 +18,7 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { Card, Badge } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   getCashRegisters,
@@ -295,23 +294,22 @@ export default function CashRegistersScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Kasalar</Text>
-        <View style={styles.headerActions}>
-          {pagination && (
-            <Text style={[styles.countText, { color: colors.textSecondary }]}>
-              {pagination.total} kasa
-            </Text>
-          )}
-          <TouchableOpacity style={styles.headerButton}>
-            <Filter size={22} color={colors.icon} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title="Kasalar"
+        subtitle={pagination ? `${pagination.total} kasa` : undefined}
+        showBackButton={true}
+        rightIcons={
+          <TouchableOpacity
+            onPress={() => {
+              // Filter action
+            }}
+            activeOpacity={0.7}
+          >
+            <Filter size={22} color="#FFFFFF" />
           </TouchableOpacity>
-        </View>
-      </View>
+        }
+      />
 
       <FlatList
         data={cashRegisters}
@@ -339,40 +337,13 @@ export default function CashRegistersScreen() {
       >
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  headerButton: {
-    padding: Spacing.sm,
-  },
-  countText: {
-    ...Typography.bodySM,
   },
   listContent: {
     padding: Spacing.lg,

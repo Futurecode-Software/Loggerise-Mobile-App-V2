@@ -10,7 +10,6 @@ import {
   AppState,
   AppStateStatus,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -23,6 +22,7 @@ import {
   WifiOff,
 } from 'lucide-react-native';
 import { Avatar, Input } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useMessageContext } from '@/context/message-context';
@@ -351,26 +351,28 @@ export default function MessagesTabScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header - Tab style (no back button) */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Mesajlar</Text>
-        <View style={styles.headerRight}>
-          {/* Connection status indicator */}
-          {isConnected ? (
-            <Wifi size={18} color={Brand.primary} style={{ marginRight: Spacing.sm }} />
-          ) : (
-            <WifiOff size={18} color={colors.textMuted} style={{ marginRight: Spacing.sm }} />
-          )}
-          {totalUnreadCount > 0 && (
-            <View style={[styles.headerUnreadBadge, { backgroundColor: colors.danger }]}>
-              <Text style={styles.headerUnreadCount}>
-                {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-              </Text>
-            </View>
-          )}
-        </View>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title="Mesajlar"
+        rightIcons={
+          <View style={styles.headerRight}>
+            {/* Connection status indicator */}
+            {isConnected ? (
+              <Wifi size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+            ) : (
+              <WifiOff size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm, opacity: 0.7 }} />
+            )}
+            {totalUnreadCount > 0 && (
+              <View style={[styles.headerUnreadBadge, { backgroundColor: colors.danger }]}>
+                <Text style={styles.headerUnreadCount}>
+                  {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
+        }
+      />
 
       {/* Search */}
       <View style={styles.searchContainer}>
@@ -405,9 +407,9 @@ export default function MessagesTabScreen() {
         style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
         onPress={() => router.push('/message/new' as any)}
       >
-        <Plus size={24} color="#FFFFFF" />
+        <Plus size={24} color="#FFFFFF"         />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -415,17 +417,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-  },
+  // Header styles removed - using FullScreenHeader component
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',

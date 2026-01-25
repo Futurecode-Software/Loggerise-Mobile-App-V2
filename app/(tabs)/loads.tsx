@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
   Search,
@@ -23,6 +22,7 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { Card, Badge, Input } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   getLoads,
@@ -369,21 +369,17 @@ export default function LoadsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Yükler</Text>
-        <View style={styles.headerActions}>
-          {pagination && (
-            <Text style={[styles.countText, { color: colors.textSecondary }]}>
-              {pagination.total} kayıt
-            </Text>
-          )}
-          <TouchableOpacity style={styles.headerButton}>
-            <Filter size={22} color={colors.icon} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title="Yükler"
+        subtitle={pagination ? `${pagination.total} kayıt` : undefined}
+        rightIcons={
+          <TouchableOpacity activeOpacity={0.7}>
+            <Filter size={22} color="#FFFFFF" />
           </TouchableOpacity>
-        </View>
-      </View>
+        }
+      />
 
       {/* Search */}
       <View style={styles.searchContainer}>
@@ -503,7 +499,7 @@ export default function LoadsScreen() {
       >
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -511,17 +507,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-  },
+  // Header styles removed - using FullScreenHeader component
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',

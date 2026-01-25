@@ -8,10 +8,8 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  ChevronLeft,
   Search,
   Filter,
   Plus,
@@ -22,6 +20,7 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { Card, Badge, Avatar, Input } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 // useColorScheme kaldirildi - her zaman light mode kullanilir
 import {
@@ -276,24 +275,22 @@ export default function EmployeesScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Çalışanlar</Text>
-        <View style={styles.headerActions}>
-          {pagination && (
-            <Text style={[styles.countText, { color: colors.textSecondary }]}>
-              {pagination.total} kişi
-            </Text>
-          )}
-          <TouchableOpacity style={styles.headerButton}>
-            <Filter size={22} color={colors.icon} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title="Çalışanlar"
+        subtitle={pagination ? `${pagination.total} kişi` : undefined}
+        showBackButton={true}
+        rightIcons={
+          <TouchableOpacity
+            onPress={() => {
+              // Filter action
+            }}
+            activeOpacity={0.7}
+          >
+            <Filter size={22} color="#FFFFFF" />
           </TouchableOpacity>
-        </View>
-      </View>
+        }
+      />
 
       {/* Search */}
       <View style={styles.searchContainer}>
@@ -365,40 +362,13 @@ export default function EmployeesScreen() {
       >
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  headerButton: {
-    padding: Spacing.sm,
-  },
-  countText: {
-    ...Typography.bodySM,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,

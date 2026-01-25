@@ -9,14 +9,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import { useLocalSearchParams } from 'expo-router';
-import { MessageCircle, AlertCircle } from 'lucide-react-native';
+import { useLocalSearchParams, router } from 'expo-router';
+import { MessageCircle, AlertCircle, Settings, Users } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useConversationMessages } from '@/hooks/use-conversation-messages';
-import { MessageHeader, MessageBubble, MessageInput } from '@/components/message';
+import { MessageBubble, MessageInput } from '@/components/message';
+import { FullScreenHeader } from '@/components/header';
+import { Avatar } from '@/components/ui';
 import { Message } from '@/services/endpoints/messaging';
 
 export default function MessageDetailScreen() {
@@ -111,15 +112,63 @@ export default function MessageDetailScreen() {
   // Key extractor
   const keyExtractor = useCallback((item: Message) => String(item.id), []);
 
+  // Header content
+  const displayName = (() => {
+    if (!conversation) return 'Mesajlar';
+    if (conversation.type === 'group') {
+      return conversation.name || 'İsimsiz Grup';
+    }
+    return conversation.other_user?.name || conversation.name || 'Bilinmeyen';
+  })();
+
+  const subtitle = (() => {
+    if (!conversation) return '';
+
+    const typingUsersList = Object.values(typingUsers);
+    if (typingUsersList.length > 0) {
+      return `${typingUsersList[0].name} yazıyor...`;
+    }
+
+    if (!isConnected) {
+      return 'Bağlanıyor...';
+    }
+
+    if (conversation.type === 'group') {
+      return conversation.description || `${participants.length} katılımcı`;
+    }
+    return conversation.other_user?.email || '';
+  })();
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#F0F2F5' }]} edges={['top', 'bottom']}>
-      {/* Header */}
-      <MessageHeader
-        conversation={conversation}
-        typingUsers={typingUsers}
-        isConnected={isConnected}
-        participantCount={participants.length}
-        conversationId={id || ''}
+    <View style={[styles.container, { backgroundColor: '#F0F2F5' }]}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title={displayName}
+        subtitle={subtitle}
+        showBackButton
+        leftIcon={
+          conversation?.type === 'group' ? (
+            <View style={[styles.groupAvatar, { backgroundColor: Brand.primary }]}>
+              <Users size={20} color="#FFFFFF" />
+            </View>
+          ) : (
+            <Avatar
+              name={displayName}
+              size="sm"
+              source={conversation?.other_user?.profile_photo_url || undefined}
+            />
+          )
+        }
+        rightIcons={
+          conversation?.type === 'group' ? (
+            <TouchableOpacity
+              onPress={() => router.push(`/message/group/${id}` as any)}
+              activeOpacity={0.7}
+            >
+              <Settings size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : null
+        }
       />
 
       {/* Messages */}
@@ -183,7 +232,7 @@ export default function MessageDetailScreen() {
         onSend={handleSendMessage}
         isSending={isSending}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -288,5 +337,12 @@ const styles = StyleSheet.create({
     ...Typography.bodySM,
     textAlign: 'center',
     marginTop: Spacing.sm,
+  },
+  groupAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

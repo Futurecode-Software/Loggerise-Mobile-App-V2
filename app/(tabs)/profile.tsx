@@ -8,7 +8,6 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -24,6 +23,7 @@ import {
   Camera,
 } from 'lucide-react-native';
 import { Card, Avatar } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useNotificationContext } from '@/context/notification-context';
@@ -276,14 +276,16 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Profil</Text>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <LogOut size={22} color={colors.icon} />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title="Profil"
+        rightIcons={
+          <TouchableOpacity onPress={handleLogout} activeOpacity={0.7}>
+            <LogOut size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         style={styles.content}
@@ -376,7 +378,7 @@ export default function ProfileScreen() {
           Versiyon 1.0.0
         </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -384,20 +386,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-  },
-  logoutButton: {
-    padding: Spacing.sm,
-  },
+  // Header styles removed - using FullScreenHeader component
   content: {
     flex: 1,
   },

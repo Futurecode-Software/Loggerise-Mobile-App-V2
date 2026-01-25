@@ -8,12 +8,9 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  ChevronLeft,
   Search,
-  Filter,
   Plus,
   User,
   Phone,
@@ -23,6 +20,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import { Card, Badge, Input } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   getCrmCustomers,
@@ -216,32 +214,22 @@ export default function CrmCustomersListScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>CRM Müşterileri</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader title="CRM Müşterileri" showBackButton={true} />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Müşteriler yükleniyor...
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>CRM Müşterileri</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader title="CRM Müşterileri" showBackButton={true} />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
             <AlertCircle size={64} color={colors.danger} />
@@ -258,25 +246,24 @@ export default function CrmCustomersListScreen() {
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>CRM Müşterileri</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('/crm/customers/new' as any)}
-        >
-          <Plus size={24} color={Brand.primary} />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title="CRM Müşterileri"
+        showBackButton={true}
+        rightIcons={
+          <TouchableOpacity
+            onPress={() => router.push('/crm/customers/new' as any)}
+            activeOpacity={0.7}
+          >
+            <Plus size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       {/* Search Bar */}
       <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
@@ -344,32 +331,13 @@ export default function CrmCustomersListScreen() {
         onEndReachedThreshold={0.5}
         showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  addButton: {
-    padding: Spacing.sm,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,

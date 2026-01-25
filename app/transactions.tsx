@@ -8,10 +8,8 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  ChevronLeft,
   Search,
   Filter,
   Plus,
@@ -26,6 +24,7 @@ import {
   TrendingDown,
 } from 'lucide-react-native';
 import { Card, Badge, Input } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   getFinancialTransactions,
@@ -381,23 +380,22 @@ export default function TransactionsScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Mali İşlemler</Text>
-        <View style={styles.headerActions}>
-          {pagination && (
-            <Text style={[styles.countText, { color: colors.textSecondary }]}>
-              {pagination.total} işlem
-            </Text>
-          )}
-          <TouchableOpacity style={styles.headerButton}>
-            <Filter size={22} color={colors.icon} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title="Mali İşlemler"
+        subtitle={pagination ? `${pagination.total} işlem` : undefined}
+        showBackButton={true}
+        rightIcons={
+          <TouchableOpacity
+            onPress={() => {
+              // Filter action
+            }}
+            activeOpacity={0.7}
+          >
+            <Filter size={22} color="#FFFFFF" />
           </TouchableOpacity>
-        </View>
-      </View>
+        }
+      />
 
       <View style={styles.searchContainer}>
         <Input
@@ -435,40 +433,13 @@ export default function TransactionsScreen() {
       >
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  headerButton: {
-    padding: Spacing.sm,
-  },
-  countText: {
-    ...Typography.bodySM,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,
