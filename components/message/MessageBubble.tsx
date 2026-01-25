@@ -102,11 +102,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 1,
-    elevation: 1,
   },
   messageBubbleMine: {
     backgroundColor: Brand.primary,

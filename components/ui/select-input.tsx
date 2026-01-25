@@ -12,30 +12,38 @@ interface SelectInputProps {
   label: string;
   options: Option[];
   selectedValue?: string | null;
+  /** Alias for selectedValue - for consistent API */
+  value?: string | null;
   onValueChange: (value: string) => void;
   error?: string;
   placeholder?: string;
   searchable?: boolean;
+  disabled?: boolean;
 }
 
 export function SelectInput({
   label,
   options,
   selectedValue,
+  value: valueProp,
   onValueChange,
   error,
   placeholder = 'Seçiniz...',
   searchable = true,
+  disabled = false,
 }: SelectInputProps) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState<string | null>(selectedValue || null);
+  // Support both selectedValue and value props
+  const externalValue = selectedValue ?? valueProp ?? null;
+  const [value, setValue] = useState<string | null>(externalValue);
   const [items, setItems] = useState(options.map((opt) => ({ label: opt.label, value: opt.value })));
   const colors = Colors.light;
 
-  // Sync internal state with external selectedValue
+  // Sync internal state with external selectedValue or value prop
   useEffect(() => {
-    setValue(selectedValue || null);
-  }, [selectedValue]);
+    const newValue = selectedValue ?? valueProp ?? null;
+    setValue(newValue);
+  }, [selectedValue, valueProp]);
 
   // Sync items when options change
   useEffect(() => {
@@ -103,6 +111,7 @@ export function SelectInput({
         showTickIcon={false}
         closeAfterSelecting={true}
         closeOnBackPressed={true}
+        disabled={disabled}
       />
       {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
     </View>

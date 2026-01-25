@@ -24,7 +24,6 @@ import {
 } from 'lucide-react-native';
 import { Card, Badge, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-// useColorScheme kaldirildi - her zaman light mode kullanilir
 import {
   getLoads,
   Load,
@@ -32,7 +31,8 @@ import {
   LoadFilters,
   Pagination,
   getStatusLabel,
-  getStatusColor,
+  getDirectionLabel,
+  getDirectionColor,
 } from '@/services/endpoints/loads';
 
 const STATUS_FILTERS = [
@@ -44,12 +44,18 @@ const STATUS_FILTERS = [
   { id: 'cancelled', label: 'İptal', color: '#d0021b' },
 ];
 
+const DIRECTION_FILTERS = [
+  { id: 'all', label: 'Tümü', color: undefined },
+  { id: 'export', label: 'İhracat', color: '#227d53' },
+  { id: 'import', label: 'İthalat', color: '#3b82f6' },
+];
+
 export default function LoadsScreen() {
-  // Her zaman light mode kullanilir
   const colors = Colors.light;
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeStatusFilter, setActiveStatusFilter] = useState('all');
+  const [activeDirectionFilter, setActiveDirectionFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
   // API state
@@ -78,8 +84,13 @@ export default function LoadsScreen() {
         }
 
         // Add status filter
-        if (activeFilter !== 'all') {
-          filters.status = activeFilter as LoadStatus;
+        if (activeStatusFilter !== 'all') {
+          filters.status = activeStatusFilter as LoadStatus;
+        }
+
+        // Add direction filter
+        if (activeDirectionFilter !== 'all') {
+          filters.direction = activeDirectionFilter as 'import' | 'export';
         }
 
         const response = await getLoads(filters);
@@ -98,7 +109,7 @@ export default function LoadsScreen() {
         setIsLoadingMore(false);
       }
     },
-    [searchQuery, activeFilter]
+    [searchQuery, activeStatusFilter, activeDirectionFilter]
   );
 
   // Track if initial mount has completed
@@ -108,7 +119,7 @@ export default function LoadsScreen() {
   useEffect(() => {
     setIsLoading(true);
     fetchLoads(1, false);
-  }, [activeFilter]); // Don't include searchQuery to avoid too many requests
+  }, [activeStatusFilter, activeDirectionFilter]);
 
   // Search with debounce - skip on initial mount to prevent double fetch
   useEffect(() => {
@@ -202,7 +213,21 @@ export default function LoadsScreen() {
     >
       {/* Header */}
       <View style={styles.loadHeader}>
-        <Text style={[styles.loadNumber, { color: colors.text }]}>{item.load_number}</Text>
+        <View style={styles.loadHeaderLeft}>
+          <Text style={[styles.loadNumber, { color: colors.text }]}>{item.load_number}</Text>
+          {item.direction && (
+            <Badge
+              label={getDirectionLabel(item.direction)}
+              variant="outline"
+              size="sm"
+              style={{
+                borderColor: getDirectionColor(item.direction),
+                backgroundColor: getDirectionColor(item.direction) + '15',
+              }}
+              textStyle={{ color: getDirectionColor(item.direction) }}
+            />
+          )}
+        </View>
         {getStatusBadge(item.status)}
       </View>
 
@@ -230,40 +255,17 @@ export default function LoadsScreen() {
         </View>
       </View>
 
-      {/* Dates */}
-      <View style={styles.datesContainer}>
-        <View style={styles.dateItem}>
-          <Calendar size={14} color={colors.icon} />
-          <Text style={[styles.dateText, { color: colors.textMuted }]}>
-            {formatDate(item.pickup_date)}
-          </Text>
-        </View>
-        <Text style={[styles.dateSeparator, { color: colors.textMuted }]}>-</Text>
-        <View style={styles.dateItem}>
-          <Calendar size={14} color={colors.icon} />
-          <Text style={[styles.dateText, { color: colors.textMuted }]}>
-            {formatDate(item.delivery_date)}
-          </Text>
-        </View>
-      </View>
-
       {/* Details */}
       <View style={styles.detailsContainer}>
         <View style={styles.detailItem}>
           <Package size={14} color={colors.icon} />
           <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-            {formatNumber(item.total_weight, 'kg')}
-          </Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Box size={14} color={colors.icon} />
-          <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-            {formatNumber(item.total_volume, 'm³')}
+            {item.vehicle_type || '-'}
           </Text>
         </View>
         <View style={styles.detailItem}>
           <Text style={[styles.priceText, { color: colors.success }]}>
-            {formatPrice(item.sale_price, item.sale_currency)}
+            {formatPrice(item.freight_fee, item.freight_fee_currency)}
           </Text>
         </View>
       </View>
@@ -371,12 +373,12 @@ export default function LoadsScreen() {
         />
       </View>
 
-      {/* Status Filters */}
+      {/* Direction Filters */}
       <View style={styles.filterContainer}>
         <FlatList
           horizontal
-          data={STATUS_FILTERS}
-          keyExtractor={(item) => item.id}
+          data={DIRECTION_FILTERS}
+          keyExtractor={(item) => `direction-${item.id}`}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterContent}
           renderItem={({ item }) => (
@@ -385,22 +387,62 @@ export default function LoadsScreen() {
                 styles.filterChip,
                 {
                   backgroundColor:
-                    activeFilter === item.id
+                    activeDirectionFilter === item.id
                       ? item.color || Brand.primary
                       : colors.card,
                   borderColor:
-                    activeFilter === item.id
+                    activeDirectionFilter === item.id
                       ? item.color || Brand.primary
                       : colors.border,
                 },
               ]}
-              onPress={() => setActiveFilter(item.id)}
+              onPress={() => setActiveDirectionFilter(item.id)}
             >
               <Text
                 style={[
                   styles.filterChipText,
                   {
-                    color: activeFilter === item.id ? '#FFFFFF' : colors.textSecondary,
+                    color: activeDirectionFilter === item.id ? '#FFFFFF' : colors.textSecondary,
+                  },
+                ]}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+
+      {/* Status Filters */}
+      <View style={styles.filterContainer}>
+        <FlatList
+          horizontal
+          data={STATUS_FILTERS}
+          keyExtractor={(item) => `status-${item.id}`}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContent}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor:
+                    activeStatusFilter === item.id
+                      ? item.color || Brand.primary
+                      : colors.card,
+                  borderColor:
+                    activeStatusFilter === item.id
+                      ? item.color || Brand.primary
+                      : colors.border,
+                },
+              ]}
+              onPress={() => setActiveStatusFilter(item.id)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  {
+                    color: activeStatusFilter === item.id ? '#FFFFFF' : colors.textSecondary,
                   },
                 ]}
               >
@@ -476,7 +518,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   filterContainer: {
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
   filterContent: {
     paddingHorizontal: Spacing.lg,
@@ -505,6 +547,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
+  },
+  loadHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flex: 1,
   },
   loadNumber: {
     ...Typography.bodyMD,

@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     ...Platform.select({
       android: {
-        elevation: 8,
+        elevation: 3,
       },
     }),
   },

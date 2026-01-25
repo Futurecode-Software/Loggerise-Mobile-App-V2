@@ -114,10 +114,10 @@ const styles = StyleSheet.create({
     maxWidth: '85%',
     minWidth: '70%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 3,
   },
   header: {
     flexDirection: 'row',

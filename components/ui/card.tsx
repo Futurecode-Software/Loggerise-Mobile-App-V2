@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
-import { Colors, BorderRadius, Spacing, Shadows } from '@/constants/theme';
+import { Colors, BorderRadius, Spacing } from '@/constants/theme';
 
 interface CardProps {
   children: React.ReactNode;
@@ -36,7 +36,14 @@ export function Card({
       default:
         return {
           backgroundColor: colors.card,
-          ...Shadows.md,
+          borderWidth: 1,
+          borderColor: 'rgba(0,0,0,0.03)',
+          // Subtle shadow
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.04,
+          shadowRadius: 3,
+          elevation: 1,
         };
     }
   };
@@ -79,6 +86,6 @@ export function Card({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: BorderRadius.lg,
+    borderRadius: 14,
   },
 });

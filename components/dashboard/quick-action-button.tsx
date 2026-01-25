@@ -1,36 +1,30 @@
 /**
  * Quick Action Button Component
  *
- * Individual button for dashboard quick actions.
- * Supports badges, disabled state, and haptic feedback.
+ * Modern, animated button for dashboard quick actions.
+ * Features scale animation, haptic feedback, and elegant styling.
  */
 
 import React from 'react';
-import { Pressable, Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, Dimensions } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useHaptics } from '@/hooks/use-haptics';
 import { QuickAction } from '@/contexts/quick-actions-context';
+import { DashboardTheme } from '@/constants/dashboard-theme';
 
-/**
- * Corporate Light Theme Colors (matches dashboard theme)
- */
-const Theme = {
-  accent: '#13452d',
-  accentLight: '#227d53',
-  accentMuted: 'rgba(19, 69, 45, 0.08)',
-  textPrimary: '#1F2937',
-  textMuted: '#9CA3AF',
-  danger: '#dc2626',
-  surface: '#FFFFFF',
-  border: '#EBEDF0',
-};
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 60) / 2; // 2 columns with padding
 
-/**
- * Quick Action Button Props
- */
 interface QuickActionButtonProps extends QuickAction {}
 
-/**
- * Quick Action Button Component
- */
 export const QuickActionButton: React.FC<QuickActionButtonProps> = ({
   label,
   icon: Icon,
@@ -38,81 +32,171 @@ export const QuickActionButton: React.FC<QuickActionButtonProps> = ({
   badge,
   disabled,
 }) => {
-  const handlePress = () => {
-    if (disabled) return;
-    onPress();
-  };
+  const { hapticLight } = useHaptics();
+  const scale = useSharedValue(1);
+  const pressed = useSharedValue(0);
+
+  const gesture = Gesture.Tap()
+    .enabled(!disabled)
+    .onBegin(() => {
+      scale.value = withSpring(0.95, { damping: 15, stiffness: 400 });
+      pressed.value = withTiming(1, { duration: 100 });
+    })
+    .onFinalize((_, success) => {
+      scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+      pressed.value = withTiming(0, { duration: 150 });
+      if (success && !disabled) {
+        hapticLight();
+        onPress();
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
+
+  const iconContainerStyle = useAnimatedStyle(() => {
+    const backgroundColor = interpolate(
+      pressed.value,
+      [0, 1],
+      [0, 1],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      backgroundColor:
+        backgroundColor > 0.5
+          ? DashboardTheme.accent
+          : DashboardTheme.accentMuted,
+    };
+  });
+
+  const iconStyle = useAnimatedStyle(() => {
+    const iconScale = interpolate(
+      pressed.value,
+      [0, 1],
+      [1, 1.1],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      transform: [{ scale: iconScale }],
+    };
+  });
 
   return (
-    <Pressable
-      onPress={handlePress}
-      disabled={disabled}
-      style={({ pressed }) => [
-        styles.button,
-        pressed && !disabled && styles.pressed,
-        disabled && styles.disabled,
-      ]}
-    >
-      <View style={styles.iconContainer}>
-        <Icon
-          size={24}
-          color={disabled ? Theme.textMuted : Theme.accent}
-          strokeWidth={2}
-        />
-        {badge !== undefined && badge > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {badge > 99 ? '99+' : badge}
-            </Text>
+    <View style={styles.wrapper}>
+      <GestureDetector gesture={gesture}>
+        <Animated.View
+          style={[
+            styles.card,
+            animatedStyle,
+            disabled && styles.cardDisabled,
+          ]}
+        >
+          {/* Decorative corner accent */}
+          <View style={styles.cornerAccent} />
+
+          {/* Icon Container */}
+          <Animated.View
+            style={[
+              styles.iconContainer,
+              iconContainerStyle,
+              disabled && styles.iconContainerDisabled,
+            ]}
+          >
+            <Animated.View style={iconStyle}>
+              <Icon
+                size={22}
+                color={disabled ? DashboardTheme.textMuted : DashboardTheme.accent}
+                strokeWidth={2}
+              />
+            </Animated.View>
+          </Animated.View>
+
+          {/* Badge */}
+          {badge !== undefined && badge > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {badge > 99 ? '99+' : badge}
+              </Text>
+            </View>
+          )}
+
+          {/* Label */}
+          <Text
+            style={[styles.label, disabled && styles.labelDisabled]}
+            numberOfLines={2}
+          >
+            {label}
+          </Text>
+
+          {/* Subtle arrow indicator */}
+          <View style={styles.arrowContainer}>
+            <View style={[styles.arrow, disabled && styles.arrowDisabled]} />
           </View>
-        )}
-      </View>
-      <Text
-        style={[styles.label, disabled && styles.disabledLabel]}
-        numberOfLines={2}
-      >
-        {label}
-      </Text>
-    </Pressable>
+        </Animated.View>
+      </GestureDetector>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  button: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 12,
-    minWidth: 80,
+  wrapper: {
+    width: CARD_WIDTH,
   },
-  pressed: {
-    opacity: 0.7,
+  card: {
+    backgroundColor: DashboardTheme.card,
+    borderRadius: 14,
+    padding: 16,
+    minHeight: 110,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+    overflow: 'hidden',
+    position: 'relative',
+    // Subtle shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  disabled: {
+  cardDisabled: {
     opacity: 0.5,
   },
+  cornerAccent: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    backgroundColor: DashboardTheme.accentGlow,
+    borderBottomLeftRadius: 40,
+  },
   iconContainer: {
-    position: 'relative',
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: Theme.accentMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  iconContainerDisabled: {
+    backgroundColor: 'rgba(156, 163, 175, 0.1)',
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -8,
-    backgroundColor: Theme.danger,
+    top: 12,
+    right: 12,
+    backgroundColor: DashboardTheme.danger,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: Theme.surface,
+    paddingHorizontal: 6,
   },
   badgeText: {
     color: '#FFFFFF',
@@ -120,12 +204,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   label: {
-    fontSize: 12,
-    textAlign: 'center',
-    color: Theme.textPrimary,
-    fontWeight: '500',
+    fontSize: 13,
+    color: DashboardTheme.textPrimary,
+    fontWeight: '600',
+    lineHeight: 18,
   },
-  disabledLabel: {
-    color: Theme.textMuted,
+  labelDisabled: {
+    color: DashboardTheme.textMuted,
+  },
+  arrowContainer: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+  },
+  arrow: {
+    width: 16,
+    height: 16,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: DashboardTheme.accentLight,
+    transform: [{ rotate: '-45deg' }],
+    opacity: 0.4,
+  },
+  arrowDisabled: {
+    borderColor: DashboardTheme.textMuted,
   },
 });

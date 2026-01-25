@@ -7,7 +7,6 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { DashboardTheme } from '@/constants/dashboard-theme';
 import { CorporateCard } from './corporate-card';
 
@@ -19,33 +18,30 @@ interface SummaryItem {
 
 interface SummaryCardProps {
   items: SummaryItem[];
-  delay?: number;
 }
 
-export const SummaryCard = ({ items, delay = 200 }: SummaryCardProps) => {
+export const SummaryCard = ({ items }: SummaryCardProps) => {
   return (
-    <Animated.View entering={FadeIn.delay(delay)}>
-      <CorporateCard style={styles.card}>
-        <View style={styles.grid}>
-          {items.map((item, index) => (
-            <React.Fragment key={index}>
-              <View style={styles.item}>
-                <Text
-                  style={[
-                    styles.value,
-                    { color: item.color || DashboardTheme.textPrimary },
-                  ]}
-                >
-                  {item.value}
-                </Text>
-                <Text style={styles.label}>{item.label}</Text>
-              </View>
-              {index < items.length - 1 && <View style={styles.divider} />}
-            </React.Fragment>
-          ))}
-        </View>
-      </CorporateCard>
-    </Animated.View>
+    <CorporateCard style={styles.card}>
+      <View style={styles.grid}>
+        {items.map((item, index) => (
+          <React.Fragment key={index}>
+            <View style={styles.item}>
+              <Text
+                style={[
+                  styles.value,
+                  { color: item.color || DashboardTheme.textPrimary },
+                ]}
+              >
+                {item.value}
+              </Text>
+              <Text style={styles.label}>{item.label}</Text>
+            </View>
+            {index < items.length - 1 && <View style={styles.divider} />}
+          </React.Fragment>
+        ))}
+      </View>
+    </CorporateCard>
   );
 };
 

@@ -7,7 +7,6 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { LucideIcon } from 'lucide-react-native';
 import { DashboardTheme } from '@/constants/dashboard-theme';
 import { CorporateCard } from './corporate-card';
@@ -29,7 +28,6 @@ interface ListCardProps {
   titleIconColor?: string;
   items: ListItem[];
   maxItems?: number;
-  delay?: number;
 }
 
 export const ListCard = ({
@@ -38,7 +36,6 @@ export const ListCard = ({
   titleIconColor = DashboardTheme.accent,
   items,
   maxItems = 4,
-  delay = 200,
 }: ListCardProps) => {
   const displayItems = items.slice(0, maxItems);
 
@@ -47,7 +44,7 @@ export const ListCard = ({
   }
 
   return (
-    <Animated.View entering={FadeIn.delay(delay)}>
+    <View>
       {title && (
         <View style={styles.header}>
           {TitleIcon && (
@@ -101,7 +98,7 @@ export const ListCard = ({
           </View>
         ))}
       </CorporateCard>
-    </Animated.View>
+    </View>
   );
 };
 

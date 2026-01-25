@@ -23,14 +23,13 @@ interface MetricsGridProps {
 export const MetricsGrid = ({ metrics }: MetricsGridProps) => {
   return (
     <View style={styles.grid}>
-      {metrics.map((metric, index) => (
+      {metrics.map((metric) => (
         <MetricCard
           key={metric.label}
           icon={metric.icon}
           label={metric.label}
           value={metric.value}
           growth={metric.growth}
-          delay={index * 50}
         />
       ))}
     </View>

@@ -17,9 +17,19 @@ export type LoadStatus =
   | 'cancelled';
 
 /**
- * Load type enum
+ * Load type enum - Backend compatible
  */
-export type LoadType = 'ftl' | 'ltl' | 'groupage' | 'express' | 'other';
+export type LoadType = 'full' | 'partial';
+
+/**
+ * Load direction enum
+ */
+export type LoadDirection = 'import' | 'export' | null;
+
+/**
+ * Load address type enum - Backend compatible
+ */
+export type LoadAddressType = 'pickup' | 'delivery';
 
 /**
  * Load entity
@@ -28,34 +38,72 @@ export interface Load {
   id: number;
   load_number: string;
   cargo_name?: string;
+  cargo_name_foreign?: string;
+  direction?: LoadDirection;
   status: LoadStatus;
-  load_type: LoadType;
+  load_type?: LoadType;
+  vehicle_type?: string;
+  loading_type?: string;
+  transport_speed?: string;
+  cargo_class?: string;
+  customer_id?: number;
   customer?: {
     id: number;
+    code?: string;
     name: string;
   };
+  sender_company_id?: number;
   sender_company?: {
     id: number;
+    code?: string;
     name: string;
   };
+  receiver_company_id?: number;
   receiver_company?: {
     id: number;
+    code?: string;
     name: string;
   };
+  manufacturer_company_id?: number;
   manufacturer_company?: {
     id: number;
+    code?: string;
     name: string;
   };
-  pickup_date?: string;
-  delivery_date?: string;
-  total_weight?: number;
-  total_volume?: number;
-  total_lademetre?: number;
-  sale_price?: number;
-  sale_currency?: string;
+  freight_fee?: number;
+  freight_fee_currency?: string;
+  freight_fee_exchange_rate?: number;
+  // Beyanname bilgileri
+  declaration_no?: string;
+  declaration_submission_date?: string;
+  declaration_ready_date?: string;
+  declaration_inspection_date?: string;
+  declaration_clearance_date?: string;
+  // Fatura bilgileri
+  cargo_invoice_no?: string;
+  cargo_invoice_date?: string;
+  // Mal bedeli
+  estimated_cargo_value?: number;
+  estimated_value_currency?: string;
+  estimated_value_exchange_rate?: number;
+  // Diğer bilgiler
+  delivery_terms?: string;
+  gtip_hs_code?: string;
+  atr_no?: string;
+  regime_no?: string;
+  // Belge durumları
+  invoice_document?: string;
+  atr_document?: string;
+  packing_list_document?: string;
+  origin_certificate_document?: string;
+  health_certificate_document?: string;
+  eur1_document?: string;
+  t1_t2_document?: string;
+  sort_order?: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
 }
 
 /**
@@ -72,22 +120,32 @@ export interface LoadDetail extends Load {
 export interface LoadItem {
   id: number;
   load_id: number;
+  cargo_name?: string;
+  cargo_name_foreign?: string;
   package_type?: string;
   package_count?: number;
   piece_count?: number;
   gross_weight?: number;
   net_weight?: number;
   volumetric_weight?: number;
+  lademetre_weight?: number;
+  total_chargeable_weight?: number;
   width?: number;
   height?: number;
   length?: number;
   volume?: number;
-  is_stackable: boolean;
-  is_hazardous: boolean;
+  lademetre?: number;
+  is_stackable?: boolean;
+  stackable_rows?: number;
+  is_hazardous?: boolean;
   hazmat_un_no?: string;
   hazmat_class?: string;
-  sort_order: number;
-  is_active: boolean;
+  hazmat_page_no?: string;
+  hazmat_packing_group?: string;
+  hazmat_flash_point?: string;
+  hazmat_description?: string;
+  sort_order?: number;
+  is_active?: boolean;
 }
 
 /**
@@ -96,17 +154,104 @@ export interface LoadItem {
 export interface LoadAddress {
   id: number;
   load_id: number;
-  address_type: 'loading' | 'unloading' | 'customs' | 'warehouse';
-  sequence: number;
-  loading_location?: { id: number; name: string };
-  loading_company?: { id: number; name: string };
-  unloading_location?: { id: number; name: string };
-  unloading_company?: { id: number; name: string };
-  destination_country?: { id: number; name: string };
-  loading_date?: string;
-  unloading_date?: string;
-  notes?: string;
-  is_active: boolean;
+  type: LoadAddressType;
+  sort_order?: number;
+  is_active?: boolean;
+  // Geocoding
+  latitude?: number;
+  longitude?: number;
+  geocoding_status?: string;
+  // Pickup type
+  pickup_type?: string;
+  // Loading info
+  loading_company_id?: number;
+  loadingCompany?: { id: number; name: string };
+  loading_location_id?: number;
+  loadingLocation?: {
+    id: number;
+    title?: string;
+    address?: string;
+    city?: { id: number; name: string };
+    state?: { id: number; name: string };
+    country?: { id: number; name: string };
+  };
+  expected_loading_entry_date?: string;
+  loading_entry_date?: string;
+  loading_exit_date?: string;
+  // Domestic warehouse
+  domestic_warehouse_id?: number;
+  domesticWarehouse?: {
+    id: number;
+    name?: string;
+    code?: string;
+    address?: string;
+  };
+  domestic_warehouse_expected_entry_date?: string;
+  domestic_warehouse_expected_exit_date?: string;
+  domestic_warehouse_entry_date?: string;
+  domestic_warehouse_exit_date?: string;
+  // Domestic customs
+  domestic_customs_company_id?: number;
+  domesticCustomsCompany?: { id: number; name: string };
+  domestic_customs_location_id?: number;
+  domesticCustomsLocation?: {
+    id: number;
+    title?: string;
+    address?: string;
+  };
+  expected_domestic_customs_entry_date?: string;
+  domestic_customs_date?: string;
+  domestic_customs_entry_date?: string;
+  domestic_customs_exit_date?: string;
+  // Delivery type
+  delivery_type?: string;
+  // International customs
+  intl_customs_company_id?: number;
+  intlCustomsCompany?: { id: number; name: string };
+  t1_number?: string;
+  intl_customs_location_id?: number;
+  intlCustomsLocation?: {
+    id: number;
+    title?: string;
+    address?: string;
+  };
+  receiver_customs_location_id?: number;
+  receiverCustomsLocation?: {
+    id: number;
+    title?: string;
+    address?: string;
+  };
+  expected_intl_customs_entry_date?: string;
+  intl_customs_entry_date?: string;
+  intl_customs_exit_date?: string;
+  // Unloading
+  unloading_company_id?: number;
+  unloadingCompany?: { id: number; name: string };
+  unloading_location_id?: number;
+  unloadingLocation?: {
+    id: number;
+    title?: string;
+    address?: string;
+    city?: { id: number; name: string };
+    state?: { id: number; name: string };
+    country?: { id: number; name: string };
+  };
+  destination_country_id?: number;
+  destinationCountry?: { id: number; name: string };
+  expected_unloading_entry_date?: string;
+  unloading_arrival_date?: string;
+  unloading_entry_date?: string;
+  unloading_exit_date?: string;
+  // International warehouse
+  intl_warehouse_id?: number;
+  intlWarehouse?: {
+    id: number;
+    name?: string;
+    code?: string;
+    address?: string;
+  };
+  intl_warehouse_entry_date?: string;
+  intl_warehouse_exit_date?: string;
 }
 
 /**
@@ -118,6 +263,7 @@ export interface LoadFilters {
   customer_id?: number;
   status?: LoadStatus;
   load_type?: LoadType;
+  direction?: 'import' | 'export';
   cargo_name?: string;
   is_active?: boolean;
   assigned_to_trip?: 'assigned' | 'not_assigned' | 'all';
@@ -161,6 +307,14 @@ interface LoadResponse {
 }
 
 /**
+ * Delete response
+ */
+interface DeleteResponse {
+  success: boolean;
+  message: string;
+}
+
+/**
  * Get loads list with optional filters
  */
 export async function getLoads(
@@ -191,10 +345,126 @@ export async function getLoad(id: number): Promise<LoadDetail> {
 }
 
 /**
+ * Delete load by ID
+ */
+export async function deleteLoad(id: number): Promise<void> {
+  try {
+    await api.delete<DeleteResponse>(`/loads/${id}`);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Load pricing item for create/update
+ */
+export interface LoadPricingItem {
+  freight_type: string;
+  freight_type_other?: string;
+  currency: string;
+  amount: string;
+  description?: string;
+}
+
+/**
+ * Load form data for create/update - Web ile %100 uyumlu
+ */
+export interface LoadFormData {
+  cargo_name?: string;
+  cargo_name_foreign?: string;
+  direction?: 'import' | 'export';
+  vehicle_type?: string;
+  loading_type?: string;
+  transport_speed?: string;
+  cargo_class?: string;
+  load_type?: LoadType;
+  status?: string;
+  customer_id?: number;
+  sender_company_id?: number;
+  manufacturer_company_id?: number;
+  receiver_company_id?: number;
+  freight_fee?: number;
+  freight_fee_currency?: string;
+  freight_fee_exchange_rate?: number;
+  // Beyanname bilgileri
+  declaration_no?: string;
+  declaration_submission_date?: string;
+  declaration_acceptance_date?: string;
+  declaration_closing_date?: string;
+  declaration_ready_date?: string;
+  declaration_inspection_date?: string;
+  declaration_clearance_date?: string;
+  customs_reference_no?: string;
+  // Fatura bilgileri
+  cargo_invoice_no?: string;
+  cargo_invoice_date?: string;
+  invoice_date?: string;
+  // Mal bedeli
+  estimated_cargo_value?: string;
+  estimated_value_currency?: string;
+  estimated_value_exchange_rate?: string;
+  exchange_rate?: string;
+  // Teslim şekilleri ve ödeme
+  delivery_terms?: string;
+  payment_method?: string;
+  // Gümrük bilgileri
+  gtip_hs_code?: string;
+  atr_no?: string;
+  eur1_no?: string;
+  regime_no?: string;
+  t1_t2_no?: string;
+  // Belge durumları
+  invoice_document?: string;
+  atr_document?: string;
+  packing_list_document?: string;
+  origin_certificate_document?: string;
+  health_certificate_document?: string;
+  eur1_document?: string;
+  t1_t2_document?: string;
+  // Notlar
+  customs_notes?: string;
+  notes?: string;
+  // Diğer
+  publish_to_pool?: boolean;
+  is_active: boolean;
+  items?: Partial<LoadItem>[];
+  addresses?: Partial<LoadAddress>[];
+  pricing_items?: LoadPricingItem[];
+}
+
+/**
+ * Create new load
+ */
+export async function createLoad(data: LoadFormData): Promise<LoadDetail> {
+  try {
+    console.log('[API] Creating load with data:', JSON.stringify(data, null, 2));
+    const response = await api.post<LoadResponse>('/loads', data);
+    return response.data.data.load;
+  } catch (error: any) {
+    console.error('[API] Load creation failed:', error?.response?.data || error);
+    // Get detailed error message
+    if (error?.response?.data?.errors) {
+      const errors = error.response.data.errors;
+      const firstField = Object.keys(errors)[0];
+      if (firstField) {
+        throw new Error(`${firstField}: ${errors[firstField][0]}`);
+      }
+    }
+    if (error?.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
  * Get status label in Turkish
  */
-export function getStatusLabel(status: LoadStatus): string {
-  const labels: Record<LoadStatus, string> = {
+export function getStatusLabel(status?: LoadStatus | string): string {
+  if (!status) return '-';
+  const labels: Record<string, string> = {
     pending: 'Beklemede',
     confirmed: 'Onaylandı',
     in_transit: 'Yolda',
@@ -207,8 +477,9 @@ export function getStatusLabel(status: LoadStatus): string {
 /**
  * Get status color
  */
-export function getStatusColor(status: LoadStatus): string {
-  const colors: Record<LoadStatus, string> = {
+export function getStatusColor(status?: LoadStatus | string): string {
+  if (!status) return '#6B7280';
+  const colors: Record<string, string> = {
     pending: '#f5a623',
     confirmed: '#3b82f6',
     in_transit: '#227d53',
@@ -216,4 +487,46 @@ export function getStatusColor(status: LoadStatus): string {
     cancelled: '#d0021b',
   };
   return colors[status] || '#6B7280';
+}
+
+/**
+ * Get direction label in Turkish
+ */
+export function getDirectionLabel(direction?: LoadDirection): string {
+  if (!direction) return '-';
+  return direction === 'export' ? 'İhracat' : 'İthalat';
+}
+
+/**
+ * Get direction color
+ */
+export function getDirectionColor(direction?: LoadDirection): string {
+  if (!direction) return '#6B7280';
+  return direction === 'export' ? '#227d53' : '#3b82f6';
+}
+
+/**
+ * Get load type label in Turkish
+ */
+export function getLoadTypeLabel(loadType?: LoadType): string {
+  if (!loadType) return '-';
+  const labels: Record<LoadType, string> = {
+    full: 'Komple',
+    partial: 'Parsiyel',
+  };
+  return labels[loadType] || loadType;
+}
+
+/**
+ * Get document status label in Turkish
+ */
+export function getDocumentStatusLabel(status?: string): string {
+  if (!status) return '-';
+  const labels: Record<string, string> = {
+    none: 'Yok',
+    original: 'Orijinal',
+    copy: 'Kopya',
+    digital: 'Dijital',
+  };
+  return labels[status] || status;
 }

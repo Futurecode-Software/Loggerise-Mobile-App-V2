@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LogBox } from 'react-native';
 import Toast from 'react-native-toast-message';
 import 'react-native-reanimated';
@@ -87,18 +88,20 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <KeyboardProvider>
-        <AuthProvider>
-          <NotificationProvider>
-            <MessageProvider>
-              <DashboardProvider>
-                <RootLayoutNav />
-              </DashboardProvider>
-            </MessageProvider>
-          </NotificationProvider>
-        </AuthProvider>
-      </KeyboardProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <KeyboardProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <MessageProvider>
+                <DashboardProvider>
+                  <RootLayoutNav />
+                </DashboardProvider>
+              </MessageProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </KeyboardProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

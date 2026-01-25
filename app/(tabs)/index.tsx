@@ -17,7 +17,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import {
   Bell,
   Truck,
@@ -106,19 +105,7 @@ export default function DashboardScreen() {
     await Promise.all([onRefresh(), refreshUnreadCount(), refreshMessageCount()]);
   };
 
-  const renderTabContent = () => {
-    if (isTabLoading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={DashboardTheme.accent} />
-          <Text style={styles.loadingText}>Yukleniyor...</Text>
-        </View>
-      );
-    }
-
-    const TabComponent = TAB_COMPONENTS[activeTab] || BasicTab;
-    return <TabComponent />;
-  };
+  const TabComponent = TAB_COMPONENTS[activeTab] || BasicTab;
 
   // Loading state
   if (isLoadingAvailable) {
@@ -245,15 +232,17 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {renderTabContent()}
-
-        {/* Quick Actions */}
-        <Animated.View entering={FadeIn.delay(400)}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Hizli Islemler</Text>
+        {isTabLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={DashboardTheme.accent} />
+            <Text style={styles.loadingText}>Yukleniyor...</Text>
           </View>
-          <DashboardQuickActions dashboardId={activeTab} />
-        </Animated.View>
+        ) : (
+          <View style={styles.dashboardContent}>
+            <TabComponent />
+            <DashboardQuickActions dashboardId={activeTab} showHeader />
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -390,6 +379,8 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 20,
     paddingBottom: 40,
+  },
+  dashboardContent: {
     gap: 20,
   },
 
@@ -406,19 +397,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: DashboardTheme.danger,
     flex: 1,
-  },
-
-  // Section
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: DashboardTheme.textPrimary,
   },
 });

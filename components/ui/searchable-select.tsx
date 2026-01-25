@@ -32,7 +32,11 @@ export interface SearchableSelectProps {
   label?: string;
   placeholder?: string;
   value?: string | number;
+  /** Pass the currently selected option to display it immediately without waiting for options to load */
+  selectedOption?: SearchableSelectOption | null;
   onValueChange: (value: string | number) => void;
+  /** Called when an option is selected, provides the full option object */
+  onSelect?: (option: SearchableSelectOption | null) => void;
   loadOptions: (searchQuery: string) => Promise<SearchableSelectOption[]>;
   error?: string;
   required?: boolean;
@@ -44,7 +48,9 @@ export function SearchableSelect({
   label,
   placeholder = 'Seçiniz...',
   value,
+  selectedOption: selectedOptionProp,
   onValueChange,
+  onSelect,
   loadOptions,
   error,
   required,
@@ -57,7 +63,10 @@ export function SearchableSelect({
   const [searchQuery, setSearchQuery] = useState('');
   const [options, setOptions] = useState<SearchableSelectOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedOption, setSelectedOption] = useState<SearchableSelectOption | null>(null);
+  // Initialize with selectedOptionProp if provided
+  const [selectedOption, setSelectedOption] = useState<SearchableSelectOption | null>(
+    selectedOptionProp || null
+  );
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
@@ -67,6 +76,26 @@ export function SearchableSelect({
       fetchOptions('');
     }
   }, [isOpen]);
+
+  // Sync with external selectedOption prop (primary source of truth)
+  useEffect(() => {
+    if (selectedOptionProp !== undefined) {
+      setSelectedOption(selectedOptionProp);
+    }
+  }, [selectedOptionProp]);
+
+  // Sync selectedOption with external value prop (fallback when options are loaded)
+  useEffect(() => {
+    // Only try to find from options if no selectedOptionProp was provided
+    if (selectedOptionProp === undefined && value && options.length > 0) {
+      const selected = options.find((opt) => opt.value === value);
+      if (selected && selectedOption?.value !== value) {
+        setSelectedOption(selected);
+      }
+    } else if (!value && !selectedOptionProp && selectedOption) {
+      setSelectedOption(null);
+    }
+  }, [value, options, selectedOptionProp]);
 
   // Debounced search
   useEffect(() => {
@@ -114,17 +143,19 @@ export function SearchableSelect({
     (option: SearchableSelectOption) => {
       setSelectedOption(option);
       onValueChange(option.value);
+      onSelect?.(option);
       setIsOpen(false);
       setSearchQuery('');
     },
-    [onValueChange]
+    [onValueChange, onSelect]
   );
 
   // Handle clear
   const handleClear = useCallback(() => {
     setSelectedOption(null);
     onValueChange('');
-  }, [onValueChange]);
+    onSelect?.(null);
+  }, [onValueChange, onSelect]);
 
   // Render option item
   const renderOptionItem = useCallback(
@@ -364,11 +395,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalOverlay: {
-    flex: 1,
+    height: 60,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    maxHeight: '80%',
+    flex: 1,
     borderTopLeftRadius: BorderRadius.lg,
     borderTopRightRadius: BorderRadius.lg,
     ...Shadows.lg,

@@ -7,7 +7,6 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react-native';
 import { DashboardTheme } from '@/constants/dashboard-theme';
 import { CorporateCard } from './corporate-card';
@@ -19,7 +18,6 @@ interface MetricCardProps {
   label: string;
   value: string | number;
   growth?: number;
-  delay?: number;
 }
 
 export const MetricCard = ({
@@ -27,13 +25,9 @@ export const MetricCard = ({
   label,
   value,
   growth,
-  delay = 0,
 }: MetricCardProps) => {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(delay).duration(400)}
-      style={styles.wrapper}
-    >
+    <View style={styles.wrapper}>
       <CorporateCard style={styles.card}>
         <View style={styles.iconRow}>
           <View style={styles.iconContainer}>
@@ -68,7 +62,7 @@ export const MetricCard = ({
         <Text style={styles.value}>{value}</Text>
         <Text style={styles.label}>{label}</Text>
       </CorporateCard>
-    </Animated.View>
+    </View>
   );
 };
 
