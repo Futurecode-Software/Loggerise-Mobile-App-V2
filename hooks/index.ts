@@ -6,6 +6,8 @@ export { useNetwork } from './use-network';
 export type { NetworkState } from './use-network';
 export { useNotifications } from './use-notifications';
 export { useGoogleAuth } from './use-google-auth';
+export { useToast } from './use-toast';
+export { useQuoteDetail } from './use-quote-detail';
 
 // Dashboard Quick Actions
 export { useDashboardQuickActions } from './use-dashboard-quick-actions';

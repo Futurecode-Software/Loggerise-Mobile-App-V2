@@ -78,10 +78,15 @@ export default function MessageDetailScreen() {
     conversationId: id ? parseInt(id, 10) : undefined,
     onNewMessage: (message: Message) => {
       // Add message to list (avoid duplicates)
+      // Calculate is_mine since WebSocket doesn't include it
       setMessages((prev) => {
         const exists = prev.some((m) => m.id === message.id);
         if (exists) return prev;
-        return [...prev, message];
+        const enrichedMessage: Message = {
+          ...message,
+          is_mine: message.user_id === currentUserId,
+        };
+        return [...prev, enrichedMessage];
       });
 
       // Inverted FlatList'te en yeni mesaj en üstte (offset 0)
@@ -261,9 +266,9 @@ export default function MessageDetailScreen() {
             <View style={styles.avatarContainer}>
               {isLastInGroup ? (
                 <Avatar
-                  name={item.user.name}
-                  size="xs"
-                  source={item.user.profile_photo_url || undefined}
+                  name={item.user?.name || 'Unknown'}
+                  size="sm"
+                  source={item.user?.profile_photo_url || undefined}
                 />
               ) : (
                 <View style={styles.avatarPlaceholder} />
@@ -284,7 +289,7 @@ export default function MessageDetailScreen() {
             {/* Sender name only in groups, only on first message */}
             {!isMine && conversation?.type === 'group' && isFirstInGroup && (
               <Text style={styles.senderName}>
-                {item.user.name}
+                {item.user?.name || 'Unknown'}
               </Text>
             )}
             <View style={styles.messageContent}>
