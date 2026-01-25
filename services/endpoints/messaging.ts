@@ -2,91 +2,102 @@
  * Messaging API Endpoints
  *
  * Handles conversations, messages, and real-time messaging operations.
+ * Backend-compatible with Loggerise web application.
  */
 
 import api, { getErrorMessage } from '../api';
 
 /**
- * Message type enum
+ * Conversation type enum - MUST match backend ('dm' | 'group')
  */
-export type MessageType = 'text' | 'image' | 'file' | 'voice' | 'location' | 'system';
+export type ConversationType = 'dm' | 'group';
 
 /**
- * Conversation type enum
+ * User basic info (matches UserBasicResource from backend)
  */
-export type ConversationType = 'direct' | 'group';
-
-/**
- * Participant entity
- */
-export interface Participant {
+export interface UserBasic {
   id: number;
-  user_id: number;
-  conversation_id: number;
-  nickname?: string;
-  is_admin: boolean;
-  is_muted: boolean;
-  joined_at: string;
-  last_read_at?: string;
-  user: {
-    id: number;
-    name: string;
-    email: string;
-    profile_photo_url?: string;
-  };
+  name: string;
+  email: string;
+  avatar_initials: string;
+  profile_photo_url?: string | null;
 }
 
 /**
- * Message entity
+ * Participant entity (matches backend response)
+ */
+export interface Participant {
+  id: number;
+  name: string;
+  email: string;
+  avatar_initials: string;
+  profile_photo_url?: string | null;
+  role: 'admin' | 'member';
+  is_creator: boolean;
+}
+
+/**
+ * Message entity (matches MessageResource from backend)
  */
 export interface Message {
   id: number;
   conversation_id: number;
-  sender_id: number;
-  message_type: MessageType;
-  content?: string;
-  file_path?: string;
-  file_name?: string;
-  file_size?: number;
-  file_mime_type?: string;
-  latitude?: number;
-  longitude?: number;
-  is_edited: boolean;
-  is_deleted: boolean;
-  read_at?: string;
+  user_id: number;
+  message: string;
   created_at: string;
-  updated_at: string;
-  sender?: {
+  formatted_time: string;
+  formatted_date: string;
+  is_mine: boolean;
+  user: {
     id: number;
     name: string;
-    profile_photo_url?: string;
+    avatar_initials: string;
+    profile_photo_url?: string | null;
   };
 }
 
 /**
- * Conversation entity
+ * Last message in conversation list
+ */
+export interface LastMessage {
+  message: string;
+  created_at: string; // diffForHumans format
+  sender_name: string;
+}
+
+/**
+ * Conversation entity (matches ConversationResource from backend)
  */
 export interface Conversation {
   id: number;
   type: ConversationType;
-  name?: string;
-  avatar_url?: string;
-  last_message_id?: number;
+  name: string | null;
+  description?: string | null;
+  participant_count?: number;
+  avatar_url?: string | null;
+  other_user?: UserBasic | null;
+  last_message: LastMessage | null;
   last_message_at?: string;
-  created_by: number;
-  is_active: boolean;
+  unread_count: number;
+  role?: 'admin' | 'member';
+  is_admin?: boolean;
+  is_creator?: boolean;
+  updated_at: string;
+}
+
+/**
+ * Conversation detail (matches ConversationDetailResource from backend)
+ */
+export interface ConversationDetail {
+  id: number;
+  type: ConversationType;
+  name: string | null;
+  description?: string | null;
+  avatar_url?: string | null;
+  other_user?: UserBasic | null;
+  created_by?: number;
   created_at: string;
   updated_at: string;
-  // Relations
-  last_message?: Message;
-  participants?: Participant[];
-  unread_count?: number;
-  // Computed for direct messages
-  other_user?: {
-    id: number;
-    name: string;
-    profile_photo_url?: string;
-  };
 }
 
 /**
@@ -104,13 +115,12 @@ export interface Pagination {
  */
 export interface ConversationFilters {
   search?: string;
-  type?: ConversationType;
   page?: number;
   per_page?: number;
 }
 
 /**
- * Conversations list response
+ * Conversations list response (matches backend index response)
  */
 interface ConversationsListResponse {
   success: boolean;
@@ -121,20 +131,18 @@ interface ConversationsListResponse {
 }
 
 /**
- * Single conversation response
+ * Single conversation response (matches backend show response)
  */
-interface ConversationResponse {
+interface ConversationShowResponse {
   success: boolean;
   data: {
-    conversation: Conversation;
+    conversation: ConversationDetail;
     messages: {
       data: Message[];
-      pagination: {
-        current_page: number;
-        last_page: number;
-        per_page: number;
-        total: number;
-      };
+      current_page: number;
+      last_page: number;
+      per_page: number;
+      total: number;
     };
     participants: Participant[];
   };
@@ -146,7 +154,7 @@ interface ConversationResponse {
 interface FindOrCreateResponse {
   success: boolean;
   data: {
-    conversation: Conversation;
+    conversation: ConversationDetail;
     messages: Message[];
   };
 }
@@ -163,12 +171,50 @@ interface MessageResponse {
 }
 
 /**
+ * Group details response
+ */
+interface GroupDetailsResponse {
+  success: boolean;
+  data: {
+    conversation: {
+      id: number;
+      type: string;
+      name: string;
+      description: string | null;
+      avatar_url: string | null;
+      created_by: number;
+    };
+    participants: Participant[];
+    available_users: UserBasic[];
+    current_user_role: 'admin' | 'member';
+    is_admin: boolean;
+    is_creator: boolean;
+  };
+}
+
+/**
  * Create group request
  */
 export interface CreateGroupRequest {
   name: string;
-  participant_ids: number[];
-  avatar?: File;
+  description?: string;
+  user_ids: number[];
+}
+
+/**
+ * Create group response
+ */
+interface CreateGroupResponse {
+  success: boolean;
+  message: string;
+  data: {
+    conversation: {
+      id: number;
+      type: string;
+      name: string;
+      description: string | null;
+    };
+  };
 }
 
 /**
@@ -196,26 +242,27 @@ export async function getConversations(
  */
 export async function getConversation(
   id: number,
-  page: number = 1
+  page: number = 1,
+  perPage: number = 50
 ): Promise<{
-  conversation: Conversation;
+  conversation: ConversationDetail;
   messages: Message[];
   participants: Participant[];
   pagination: Pagination;
 }> {
   try {
-    const response = await api.get<ConversationResponse>(`/conversations/${id}`, {
-      params: { page },
+    const response = await api.get<ConversationShowResponse>(`/conversations/${id}`, {
+      params: { page, per_page: perPage },
     });
     return {
       conversation: response.data.data.conversation,
       messages: response.data.data.messages.data,
       participants: response.data.data.participants,
       pagination: {
-        current_page: response.data.data.messages.pagination.current_page,
-        last_page: response.data.data.messages.pagination.last_page,
-        per_page: response.data.data.messages.pagination.per_page,
-        total: response.data.data.messages.pagination.total,
+        current_page: response.data.data.messages.current_page,
+        last_page: response.data.data.messages.last_page,
+        per_page: response.data.data.messages.per_page,
+        total: response.data.data.messages.total,
       },
     };
   } catch (error) {
@@ -229,7 +276,7 @@ export async function getConversation(
  */
 export async function findOrCreateConversation(
   userId: number
-): Promise<{ conversation: Conversation; messages: Message[] }> {
+): Promise<{ conversation: ConversationDetail; messages: Message[] }> {
   try {
     const response = await api.post<FindOrCreateResponse>('/conversations/find-or-create', {
       user_id: userId,
@@ -257,153 +304,16 @@ export async function markConversationAsRead(conversationId: number): Promise<vo
 }
 
 /**
- * Create a group conversation
- */
-export async function createGroup(data: CreateGroupRequest): Promise<Conversation> {
-  try {
-    const formData = new FormData();
-    formData.append('name', data.name);
-    data.participant_ids.forEach((id, index) => {
-      formData.append(`participant_ids[${index}]`, String(id));
-    });
-    if (data.avatar) {
-      formData.append('avatar', data.avatar);
-    }
-
-    const response = await api.post<{ success: boolean; data: { group: Conversation } }>(
-      '/conversations/groups',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
-    return response.data.data.group;
-  } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
-  }
-}
-
-/**
- * Get group details
- */
-export async function getGroupDetails(groupId: number): Promise<{
-  group: Conversation;
-  participants: Participant[];
-}> {
-  try {
-    const response = await api.get<{
-      success: boolean;
-      data: { group: Conversation; participants: Participant[] };
-    }>(`/conversations/groups/${groupId}`);
-    return {
-      group: response.data.data.group,
-      participants: response.data.data.participants,
-    };
-  } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
-  }
-}
-
-/**
- * Update group
- */
-export async function updateGroup(
-  groupId: number,
-  data: { name?: string }
-): Promise<Conversation> {
-  try {
-    const response = await api.put<{ success: boolean; data: { group: Conversation } }>(
-      `/conversations/groups/${groupId}`,
-      data
-    );
-    return response.data.data.group;
-  } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
-  }
-}
-
-/**
- * Add participants to group
- */
-export async function addParticipants(
-  groupId: number,
-  userIds: number[]
-): Promise<void> {
-  try {
-    await api.post(`/conversations/groups/${groupId}/participants`, {
-      user_ids: userIds,
-    });
-  } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
-  }
-}
-
-/**
- * Remove participant from group
- */
-export async function removeParticipant(
-  groupId: number,
-  userId: number
-): Promise<void> {
-  try {
-    await api.delete(`/conversations/groups/${groupId}/participants/${userId}`);
-  } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
-  }
-}
-
-/**
- * Leave group
- */
-export async function leaveGroup(groupId: number): Promise<void> {
-  try {
-    await api.post(`/conversations/groups/${groupId}/leave`);
-  } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
-  }
-}
-
-/**
  * Send a message
  */
 export async function sendMessage(data: {
   conversation_id: number;
-  message_type?: MessageType;
-  content?: string;
-  file?: File;
-  latitude?: number;
-  longitude?: number;
+  message: string;
 }): Promise<Message> {
   try {
-    const formData = new FormData();
-    formData.append('conversation_id', String(data.conversation_id));
-    formData.append('message_type', data.message_type || 'text');
-
-    if (data.content) {
-      formData.append('content', data.content);
-    }
-    if (data.file) {
-      formData.append('file', data.file);
-    }
-    if (data.latitude !== undefined) {
-      formData.append('latitude', String(data.latitude));
-    }
-    if (data.longitude !== undefined) {
-      formData.append('longitude', String(data.longitude));
-    }
-
-    const response = await api.post<MessageResponse>('/messages', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const response = await api.post<MessageResponse>('/messages', {
+      conversation_id: data.conversation_id,
+      message: data.message,
     });
     return response.data.data.message;
   } catch (error) {
@@ -431,7 +341,141 @@ export async function sendTypingIndicator(
 }
 
 /**
- * Format message time
+ * Create a group conversation
+ */
+export async function createGroup(data: CreateGroupRequest): Promise<{
+  id: number;
+  type: string;
+  name: string;
+  description: string | null;
+}> {
+  try {
+    const response = await api.post<CreateGroupResponse>('/groups', data);
+    return response.data.data.conversation;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Get group details
+ */
+export async function getGroupDetails(groupId: number): Promise<{
+  conversation: {
+    id: number;
+    type: string;
+    name: string;
+    description: string | null;
+    avatar_url: string | null;
+    created_by: number;
+  };
+  participants: Participant[];
+  availableUsers: UserBasic[];
+  currentUserRole: 'admin' | 'member';
+  isAdmin: boolean;
+  isCreator: boolean;
+}> {
+  try {
+    const response = await api.get<GroupDetailsResponse>(`/groups/${groupId}/details`);
+    return {
+      conversation: response.data.data.conversation,
+      participants: response.data.data.participants,
+      availableUsers: response.data.data.available_users,
+      currentUserRole: response.data.data.current_user_role,
+      isAdmin: response.data.data.is_admin,
+      isCreator: response.data.data.is_creator,
+    };
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Update group info
+ */
+export async function updateGroup(
+  groupId: number,
+  data: { name?: string; description?: string }
+): Promise<void> {
+  try {
+    await api.put(`/groups/${groupId}`, data);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Update group avatar
+ */
+export async function updateGroupAvatar(groupId: number, avatar: FormData): Promise<void> {
+  try {
+    await api.post(`/groups/${groupId}/avatar`, avatar, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Add participants to group
+ */
+export async function addParticipants(groupId: number, userIds: number[]): Promise<void> {
+  try {
+    await api.post(`/groups/${groupId}/participants`, {
+      user_ids: userIds,
+    });
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Remove participant from group
+ */
+export async function removeParticipant(groupId: number, userId: number): Promise<void> {
+  try {
+    await api.delete(`/groups/${groupId}/participants/${userId}`);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Leave group
+ */
+export async function leaveGroup(groupId: number): Promise<void> {
+  try {
+    await api.post(`/groups/${groupId}/leave`);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Get available users for messaging
+ */
+export async function getAvailableUsers(): Promise<UserBasic[]> {
+  try {
+    const response = await api.get<{ success: boolean; data: UserBasic[] }>('/users/available');
+    return response.data.data;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Format message time for display
  */
 export function formatMessageTime(dateString: string): string {
   const date = new Date(dateString);
@@ -443,7 +487,7 @@ export function formatMessageTime(dateString: string): string {
     // Today - show time only
     return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
   } else if (diffDays === 1) {
-    return 'Dun';
+    return 'Dün';
   } else if (diffDays < 7) {
     // This week - show day name
     return date.toLocaleDateString('tr-TR', { weekday: 'short' });
@@ -458,7 +502,7 @@ export function formatMessageTime(dateString: string): string {
  */
 export function getConversationName(conversation: Conversation, currentUserId: number): string {
   if (conversation.type === 'group') {
-    return conversation.name || 'Isimsiz Grup';
+    return conversation.name || 'İsimsiz Grup';
   }
 
   // For direct messages, show the other user's name
@@ -466,60 +510,51 @@ export function getConversationName(conversation: Conversation, currentUserId: n
     return conversation.other_user.name;
   }
 
-  // Fallback: find other participant
-  const otherParticipant = conversation.participants?.find(
-    (p) => p.user_id !== currentUserId
-  );
-  return otherParticipant?.user?.name || 'Bilinmeyen';
+  return conversation.name || 'Bilinmeyen';
 }
 
 /**
- * Get conversation avatar URL
+ * Get conversation avatar initials or URL
  */
 export function getConversationAvatar(
   conversation: Conversation,
   currentUserId: number
-): string | undefined {
+): { initials: string; url?: string | null } {
   if (conversation.type === 'group') {
-    return conversation.avatar_url;
+    const initials = conversation.name
+      ? conversation.name
+          .split(' ')
+          .map((w) => w[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase()
+      : 'GR';
+    return { initials, url: conversation.avatar_url };
   }
 
   // For direct messages, show the other user's avatar
   if (conversation.other_user) {
-    return conversation.other_user.profile_photo_url;
+    return {
+      initials: conversation.other_user.avatar_initials,
+      url: conversation.other_user.profile_photo_url,
+    };
   }
 
-  // Fallback: find other participant
-  const otherParticipant = conversation.participants?.find(
-    (p) => p.user_id !== currentUserId
-  );
-  return otherParticipant?.user?.profile_photo_url;
+  return { initials: '??' };
 }
 
 /**
- * Get message preview text
+ * Get message preview text for conversation list
  */
-export function getMessagePreview(message: Message | undefined): string {
-  if (!message) return '';
+export function getMessagePreview(lastMessage: LastMessage | null): string {
+  if (!lastMessage) return '';
+  return lastMessage.message;
+}
 
-  if (message.is_deleted) {
-    return 'Bu mesaj silindi';
-  }
-
-  switch (message.message_type) {
-    case 'text':
-      return message.content || '';
-    case 'image':
-      return '📷 Fotograf';
-    case 'file':
-      return `📎 ${message.file_name || 'Dosya'}`;
-    case 'voice':
-      return '🎤 Sesli mesaj';
-    case 'location':
-      return '📍 Konum';
-    case 'system':
-      return message.content || 'Sistem mesaji';
-    default:
-      return '';
-  }
+/**
+ * Get last message time
+ */
+export function getLastMessageTime(lastMessage: LastMessage | null): string {
+  if (!lastMessage) return '';
+  return lastMessage.created_at;
 }

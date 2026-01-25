@@ -45,3 +45,18 @@ export const GOOGLE_EXPO_CLIENT_ID = Constants.expoConfig?.extra?.googleExpoClie
 export const GOOGLE_WEB_CLIENT_ID = Constants.expoConfig?.extra?.googleWebClientId || '';
 export const GOOGLE_ANDROID_CLIENT_ID = Constants.expoConfig?.extra?.googleAndroidClientId || '';
 export const GOOGLE_IOS_CLIENT_ID = Constants.expoConfig?.extra?.googleIosClientId || '';
+
+/**
+ * WebSocket/Reverb Configuration
+ * Laravel Reverb is Pusher-compatible, so we use pusher-js client
+ *
+ * To configure, set these in your .env file:
+ * - EXPO_PUBLIC_REVERB_APP_KEY
+ * - EXPO_PUBLIC_REVERB_HOST
+ * - EXPO_PUBLIC_REVERB_PORT
+ * - EXPO_PUBLIC_REVERB_SCHEME (http or https)
+ */
+export const REVERB_APP_KEY = Constants.expoConfig?.extra?.reverbAppKey || 'loggerise-reverb-key';
+export const REVERB_HOST = Constants.expoConfig?.extra?.reverbHost || (__DEV__ ? '10.0.2.2' : 'reverb.loggerise.com');
+export const REVERB_PORT = parseInt(Constants.expoConfig?.extra?.reverbPort || (__DEV__ ? '8080' : '443'), 10);
+export const REVERB_SCHEME = Constants.expoConfig?.extra?.reverbScheme || (__DEV__ ? 'http' : 'https');

@@ -14,14 +14,14 @@ import {
   ChevronLeft,
   Search,
   Plus,
-  Pin,
   MessageCircle,
   Users,
   AlertCircle,
+  Wifi,
+  WifiOff,
 } from 'lucide-react-native';
 import { Avatar, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-// useColorScheme kaldirildi - her zaman light mode kullanilir
 import { useAuth } from '@/context/auth-context';
 import {
   getConversations,
@@ -30,11 +30,12 @@ import {
   getConversationName,
   getConversationAvatar,
   getMessagePreview,
-  formatMessageTime,
+  getLastMessageTime,
+  Message,
 } from '@/services/endpoints/messaging';
+import { useMessagingWebSocket } from '@/hooks/use-messaging-websocket';
 
 export default function MessagesScreen() {
-  // Her zaman light mode kullanilir
   const colors = Colors.light;
   const { user } = useAuth();
 
@@ -49,6 +50,48 @@ export default function MessagesScreen() {
 
   // Current user ID
   const currentUserId = user?.id || 0;
+
+  // WebSocket for real-time updates
+  const { isConnected } = useMessagingWebSocket({
+    userId: currentUserId,
+    onNewConversationMessage: (message: Message, conversationId: number) => {
+      // Update conversation list when new message arrives
+      setConversations((prevConversations) => {
+        const existingConversation = prevConversations.find((c) => c.id === conversationId);
+
+        if (existingConversation) {
+          // Update existing conversation
+          const updatedConversation = {
+            ...existingConversation,
+            last_message: {
+              message: message.message,
+              created_at: 'Şimdi',
+              sender_name: message.user.name,
+            },
+            unread_count: (existingConversation.unread_count || 0) + 1,
+            updated_at: new Date().toISOString(),
+          };
+
+          // Move to top
+          return [
+            updatedConversation,
+            ...prevConversations.filter((c) => c.id !== conversationId),
+          ];
+        }
+
+        // If conversation doesn't exist, refresh the list
+        fetchConversations();
+        return prevConversations;
+      });
+
+      // Update total unread count
+      setTotalUnreadCount((prev) => prev + 1);
+    },
+    onParticipantAdded: () => {
+      // Refresh conversations when added to a new group
+      fetchConversations();
+    },
+  });
 
   // Fetch conversations from API
   const fetchConversations = useCallback(async () => {
@@ -97,21 +140,20 @@ export default function MessagesScreen() {
     setRefreshing(false);
   };
 
-  // Sort conversations: pinned first, then by last message time
+  // Sort conversations by last message time (newest first)
   const sortedConversations = [...conversations].sort((a, b) => {
-    // Note: If backend doesn't provide isPinned, we can add it later
-    // For now, sort by last_message_at
-    const dateA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-    const dateB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+    // Use updated_at for sorting
+    const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+    const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
     return dateB - dateA;
   });
 
   const renderConversation = ({ item }: { item: Conversation }) => {
     const hasUnread = (item.unread_count || 0) > 0;
     const displayName = getConversationName(item, currentUserId);
-    const avatarUrl = getConversationAvatar(item, currentUserId);
+    const avatar = getConversationAvatar(item, currentUserId);
     const lastMessagePreview = getMessagePreview(item.last_message);
-    const timestamp = item.last_message_at ? formatMessageTime(item.last_message_at) : '';
+    const timestamp = getLastMessageTime(item.last_message);
 
     return (
       <TouchableOpacity
@@ -127,14 +169,18 @@ export default function MessagesScreen() {
         <View style={styles.avatarContainer}>
           {item.type === 'group' ? (
             <View style={[styles.groupAvatar, { backgroundColor: Brand.primary }]}>
-              {item.avatar_url ? (
+              {avatar.url ? (
                 <Avatar name={displayName} size="md" />
               ) : (
                 <Users size={24} color="#FFFFFF" />
               )}
             </View>
           ) : (
-            <Avatar name={displayName} size="md" />
+            <Avatar
+              name={displayName}
+              size="md"
+              source={avatar.url || undefined}
+            />
           )}
         </View>
 
@@ -157,9 +203,9 @@ export default function MessagesScreen() {
             </View>
           </View>
 
-          {item.type === 'group' && item.participants && (
+          {item.type === 'group' && item.participant_count && (
             <Text style={[styles.participants, { color: colors.textMuted }]}>
-              {item.participants.length} kişi
+              {item.participant_count} kişi
             </Text>
           )}
 
@@ -172,7 +218,9 @@ export default function MessagesScreen() {
               ]}
               numberOfLines={2}
             >
-              {lastMessagePreview || 'Henüz mesaj yok'}
+              {item.last_message?.sender_name
+                ? `${item.last_message.sender_name}: ${lastMessagePreview}`
+                : lastMessagePreview || 'Henüz mesaj yok'}
             </Text>
             {hasUnread && (
               <View style={[styles.unreadBadge, { backgroundColor: colors.danger }]}>
@@ -250,6 +298,12 @@ export default function MessagesScreen() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Mesajlar</Text>
         <View style={styles.headerRight}>
+          {/* Connection status indicator */}
+          {isConnected ? (
+            <Wifi size={18} color={Brand.primary} style={{ marginRight: Spacing.sm }} />
+          ) : (
+            <WifiOff size={18} color={colors.textMuted} style={{ marginRight: Spacing.sm }} />
+          )}
           {totalUnreadCount > 0 && (
             <View style={[styles.headerUnreadBadge, { backgroundColor: colors.danger }]}>
               <Text style={styles.headerUnreadCount}>
@@ -288,7 +342,7 @@ export default function MessagesScreen() {
         }
       />
 
-      {/* FAB */}
+      {/* FAB - New Conversation */}
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
         onPress={() => router.push('/message/new' as any)}
@@ -398,11 +452,6 @@ const styles = StyleSheet.create({
   },
   unreadMessage: {
     fontWeight: '500',
-  },
-  typingText: {
-    ...Typography.bodySM,
-    fontStyle: 'italic',
-    flex: 1,
   },
   unreadBadge: {
     minWidth: 20,

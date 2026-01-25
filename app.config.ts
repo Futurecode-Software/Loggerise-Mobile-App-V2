@@ -68,6 +68,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     googleExpoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || '',
     // API Configuration
     apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:8000/api/v1/mobile',
+    // WebSocket/Reverb Configuration (Laravel Reverb - Pusher compatible)
+    reverbAppKey: process.env.EXPO_PUBLIC_REVERB_APP_KEY || 'loggerise-reverb-key',
+    reverbHost: process.env.EXPO_PUBLIC_REVERB_HOST || '10.0.2.2',
+    reverbPort: process.env.EXPO_PUBLIC_REVERB_PORT || '8080',
+    reverbScheme: process.env.EXPO_PUBLIC_REVERB_SCHEME || 'http',
     // EAS Project ID (for push notifications)
     eas: {
       projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || '',
