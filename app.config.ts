@@ -75,9 +75,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     reverbHost: process.env.EXPO_PUBLIC_REVERB_HOST || '10.0.2.2',
     reverbPort: process.env.EXPO_PUBLIC_REVERB_PORT || '8080',
     reverbScheme: process.env.EXPO_PUBLIC_REVERB_SCHEME || 'http',
-    // EAS Project ID (for push notifications)
+    // EAS Project ID (for push notifications and EAS Build)
     eas: {
-      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || '',
+      projectId: 'c8ee4f0f-504a-4177-84ea-c7687843b041',
     },
   },
 });
