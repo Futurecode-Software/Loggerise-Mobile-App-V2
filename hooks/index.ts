@@ -5,6 +5,12 @@ export type { HapticType } from './use-haptics';
 export { useNetwork } from './use-network';
 export type { NetworkState } from './use-network';
 export { useNotifications } from './use-notifications';
+export {
+  useNotificationObserver,
+  scheduleMessageNotification,
+  setActiveConversation,
+  getActiveConversation,
+} from './use-notification-observer';
 export { useGoogleAuth } from './use-google-auth';
 export { useToast } from './use-toast';
 export { useQuoteDetail } from './use-quote-detail';

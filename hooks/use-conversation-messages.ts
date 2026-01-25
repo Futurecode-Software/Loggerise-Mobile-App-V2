@@ -18,6 +18,7 @@ import {
   Participant,
 } from '@/services/endpoints/messaging';
 import { useMessagingWebSocket } from './use-messaging-websocket';
+import { setActiveConversation } from './use-notification-observer';
 
 interface UseConversationMessagesOptions {
   conversationId: string | undefined;
@@ -126,6 +127,17 @@ export function useConversationMessages({
   useEffect(() => {
     fetchConversation();
   }, [fetchConversation]);
+
+  // Track active conversation for notification suppression
+  useEffect(() => {
+    if (parsedConversationId) {
+      setActiveConversation(parsedConversationId);
+    }
+
+    return () => {
+      setActiveConversation(null);
+    };
+  }, [parsedConversationId]);
 
   // Handle typing indicator
   const sendTypingStatus = useCallback(

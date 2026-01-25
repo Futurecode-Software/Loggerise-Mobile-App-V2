@@ -37,6 +37,7 @@ import {
   Message,
 } from '@/services/endpoints/messaging';
 import { useMessagingWebSocket } from '@/hooks/use-messaging-websocket';
+import { scheduleMessageNotification } from '@/hooks/use-notification-observer';
 
 export default function MessagesScreen() {
   const colors = Colors.light;
@@ -91,12 +92,24 @@ export default function MessagesScreen() {
       const existingConversation = prevConversations.find((c) => c.id === conversationId);
 
       if (existingConversation) {
+        // Show local notification for new message
+        const senderName = message.user?.name || 'Bilinmeyen';
+        const messageText = message.message || '';
+        const conversationType = existingConversation.type === 'group' ? 'group' : 'private';
+
+        scheduleMessageNotification(
+          senderName,
+          messageText,
+          conversationId,
+          conversationType
+        );
+
         const updatedConversation: Conversation = {
           ...existingConversation,
           last_message: {
             message: message.message,
             created_at: 'Şimdi',
-            sender_name: message.user?.name || '',
+            sender_name: senderName,
           },
           unread_count: (existingConversation.unread_count || 0) + 1,
           updated_at: new Date().toISOString(),

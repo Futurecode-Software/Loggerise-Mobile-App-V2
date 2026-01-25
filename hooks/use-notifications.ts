@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react';
+import { Platform } from 'react-native';
+import * as Device from 'expo-device';
 import {
   getUnreadCount,
   getRecentNotifications,
@@ -48,17 +50,17 @@ export function useNotifications() {
     // Get initial unread count from API
     await refreshUnreadCount();
 
-    // Push notifications disabled - using API-based notifications only
-    // To enable push notifications on physical devices, uncomment below:
-    // if (Device.isDevice && Platform.OS !== 'web') {
-    //   try {
-    //     const { initializePushNotifications } = await import('@/services/notifications');
-    //     const token = await initializePushNotifications();
-    //     setPushToken(token);
-    //   } catch (error) {
-    //     console.log('Push notifications not available:', error);
-    //   }
-    // }
+    // Initialize push notifications on physical devices
+    if (Device.isDevice && Platform.OS !== 'web') {
+      try {
+        const { initializePushNotifications } = await import('@/services/notifications');
+        const token = await initializePushNotifications();
+        setPushToken(token);
+        console.log('[Notifications] Push token registered:', token ? 'success' : 'no token');
+      } catch (error) {
+        console.log('[Notifications] Push notifications not available:', error);
+      }
+    }
 
     setIsInitialized(true);
   }, [isInitialized, refreshUnreadCount]);

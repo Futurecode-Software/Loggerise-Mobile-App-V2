@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   // Stock Management
   Package,
@@ -35,6 +36,13 @@ import {
 import { CollapsibleMenuSection } from '@/components/menu';
 import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
 
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const EXPANDED_SECTION_STORAGE_KEY = '@loggerise_menu_expanded_section';
+
 /**
  * Menu sections configuration matching web sidebar structure
  */
@@ -44,7 +52,6 @@ const MENU_SECTIONS = [
     title: 'Stok Yönetimi',
     icon: Package,
     iconColor: '#f59e0b',
-    defaultExpanded: true,
     items: [
       { id: 'products', label: 'Ürünler', icon: Box, color: '#f59e0b', route: '/products' },
       { id: 'brands', label: 'Markalar', icon: Tag, color: '#8b5cf6', route: '/stock/brands' },
@@ -71,7 +78,6 @@ const MENU_SECTIONS = [
     title: 'Finans',
     icon: Landmark,
     iconColor: '#22c55e',
-    defaultExpanded: false,
     items: [
       { id: 'cash', label: 'Kasalar', icon: Wallet, color: '#14b8a6', route: '/cash-register' },
       { id: 'banks', label: 'Banka Hesapları', icon: Landmark, color: '#22c55e', route: '/bank' },
@@ -98,7 +104,6 @@ const MENU_SECTIONS = [
     title: 'Lojistik',
     icon: Truck,
     iconColor: '#3b82f6',
-    defaultExpanded: false,
     items: [
       { id: 'vehicles', label: 'Araçlar', icon: Car, color: '#3b82f6', route: '/vehicle' },
       { id: 'trips', label: 'Seferler', icon: Route, color: '#8b5cf6', route: '/trips' },
@@ -116,7 +121,6 @@ const MENU_SECTIONS = [
     title: 'Yönetim',
     icon: Users,
     iconColor: '#ec4899',
-    defaultExpanded: false,
     items: [
       { id: 'employees', label: 'Çalışanlar', icon: Users, color: '#ec4899', route: '/employee' },
       { id: 'crm', label: 'CRM Müşteriler', icon: Handshake, color: '#f97316', route: '/crm' },
@@ -128,7 +132,6 @@ const MENU_SECTIONS = [
     title: 'İletişim',
     icon: MessageCircle,
     iconColor: '#0ea5e9',
-    defaultExpanded: false,
     items: [
       { id: 'messages', label: 'Mesajlar', icon: MessageCircle, color: '#0ea5e9', route: '/messages' },
       { id: 'ai', label: 'Loggy AI', icon: Sparkles, color: Brand.primary, route: '/ai-reports' },
@@ -138,10 +141,57 @@ const MENU_SECTIONS = [
 
 export default function MoreScreen() {
   const colors = Colors.light;
+  // Accordion state: only one section can be expanded at a time
+  // null means no section is expanded
+  const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const handleItemPress = (route: string) => {
+  // Load saved expanded section from AsyncStorage
+  useEffect(() => {
+    const loadState = async () => {
+      try {
+        const savedSection = await AsyncStorage.getItem(EXPANDED_SECTION_STORAGE_KEY);
+        if (savedSection) {
+          setExpandedSectionId(savedSection);
+        }
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Failed to load menu state:', error);
+        setIsInitialized(true);
+      }
+    };
+    loadState();
+  }, []);
+
+  // Save expanded section to AsyncStorage when it changes
+  useEffect(() => {
+    if (isInitialized) {
+      if (expandedSectionId) {
+        AsyncStorage.setItem(EXPANDED_SECTION_STORAGE_KEY, expandedSectionId).catch((error) =>
+          console.error('Failed to save menu state:', error)
+        );
+      } else {
+        AsyncStorage.removeItem(EXPANDED_SECTION_STORAGE_KEY).catch((error) =>
+          console.error('Failed to remove menu state:', error)
+        );
+      }
+    }
+  }, [expandedSectionId, isInitialized]);
+
+  const handleToggle = useCallback((sectionId: string) => {
+    LayoutAnimation.configureNext({
+      duration: 250,
+      update: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+    });
+    setExpandedSectionId((current) => (current === sectionId ? null : sectionId));
+  }, []);
+
+  const handleItemPress = useCallback((route: string) => {
     router.push(route as any);
-  };
+  }, []);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -161,6 +211,11 @@ export default function MoreScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        {/* Info text */}
+        <Text style={[styles.infoText, { color: colors.textMuted }]}>
+          Bir kategori seçerek alt menülere erişebilirsiniz
+        </Text>
+
         {MENU_SECTIONS.map((section) => (
           <CollapsibleMenuSection
             key={section.id}
@@ -169,7 +224,8 @@ export default function MoreScreen() {
             icon={section.icon}
             iconColor={section.iconColor}
             items={section.items}
-            defaultExpanded={section.defaultExpanded}
+            isExpanded={expandedSectionId === section.id}
+            onToggle={handleToggle}
             onItemPress={handleItemPress}
           />
         ))}
@@ -205,6 +261,11 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: Spacing.lg,
     paddingBottom: Spacing['3xl'],
+  },
+  infoText: {
+    ...Typography.bodySM,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
   },
   versionText: {
     ...Typography.bodySM,

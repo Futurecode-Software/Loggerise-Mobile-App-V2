@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,17 +9,13 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
-import { ChevronDown } from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme';
-import { Card } from '@/components/ui';
+import { ChevronDown, ChevronRight } from 'lucide-react-native';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/constants/theme';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-const STORAGE_KEY_PREFIX = '@loggerise_menu_section_';
 
 interface MenuItem {
   id: string;
@@ -35,7 +31,8 @@ interface CollapsibleMenuSectionProps {
   icon: React.ElementType;
   iconColor?: string;
   items: MenuItem[];
-  defaultExpanded?: boolean;
+  isExpanded: boolean;
+  onToggle: (sectionId: string) => void;
   onItemPress: (route: string) => void;
 }
 
@@ -45,51 +42,35 @@ export function CollapsibleMenuSection({
   icon: SectionIcon,
   iconColor = Colors.light.primary,
   items,
-  defaultExpanded = false,
+  isExpanded,
+  onToggle,
   onItemPress,
 }: CollapsibleMenuSectionProps) {
   const colors = Colors.light;
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const rotateAnim = useRef(new Animated.Value(defaultExpanded ? 1 : 0)).current;
-  const [isInitialized, setIsInitialized] = useState(false);
+  const rotateAnim = useRef(new Animated.Value(isExpanded ? 1 : 0)).current;
 
-  // Load saved state from AsyncStorage
+  // Animate rotation when isExpanded changes
   useEffect(() => {
-    const loadState = async () => {
-      try {
-        const savedState = await AsyncStorage.getItem(`${STORAGE_KEY_PREFIX}${id}`);
-        if (savedState !== null) {
-          const expanded = savedState === 'true';
-          setIsExpanded(expanded);
-          rotateAnim.setValue(expanded ? 1 : 0);
-        }
-        setIsInitialized(true);
-      } catch (error) {
-        console.error('Failed to load menu section state:', error);
-        setIsInitialized(true);
-      }
-    };
-    loadState();
-  }, [id]);
-
-  // Save state to AsyncStorage when it changes
-  useEffect(() => {
-    if (isInitialized) {
-      AsyncStorage.setItem(`${STORAGE_KEY_PREFIX}${id}`, String(isExpanded)).catch((error) =>
-        console.error('Failed to save menu section state:', error)
-      );
-    }
-  }, [isExpanded, id, isInitialized]);
-
-  const toggleExpanded = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setIsExpanded(!isExpanded);
-
     Animated.timing(rotateAnim, {
-      toValue: isExpanded ? 0 : 1,
-      duration: 200,
+      toValue: isExpanded ? 1 : 0,
+      duration: 250,
       useNativeDriver: true,
     }).start();
+  }, [isExpanded]);
+
+  const handleToggle = () => {
+    LayoutAnimation.configureNext({
+      duration: 250,
+      update: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+    });
+    onToggle(id);
   };
 
   const rotateInterpolate = rotateAnim.interpolate({
@@ -99,50 +80,54 @@ export function CollapsibleMenuSection({
 
   return (
     <View style={styles.section}>
-      {/* Section Header */}
+      {/* Section Header - Main Category */}
       <TouchableOpacity
-        style={styles.sectionHeader}
-        onPress={toggleExpanded}
+        style={[
+          styles.sectionHeader,
+          isExpanded && styles.sectionHeaderExpanded,
+          isExpanded && { borderColor: `${iconColor}30` },
+        ]}
+        onPress={handleToggle}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        aria-expanded={isExpanded}
       >
         <View style={[styles.sectionIcon, { backgroundColor: `${iconColor}15` }]}>
-          <SectionIcon size={18} color={iconColor} />
+          <SectionIcon size={20} color={iconColor} strokeWidth={2.5} />
         </View>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
-        <Text style={[styles.itemCount, { color: colors.textMuted }]}>{items.length}</Text>
-        <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-          <ChevronDown size={20} color={colors.icon} />
-        </Animated.View>
+        <View style={styles.sectionRight}>
+          <View style={[styles.itemCountBadge, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.itemCount, { color: colors.textMuted }]}>{items.length}</Text>
+          </View>
+          <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+            <ChevronDown size={20} color={colors.icon} />
+          </Animated.View>
+        </View>
       </TouchableOpacity>
 
-      {/* Section Items */}
+      {/* Section Items - Subcategories */}
       {isExpanded && (
-        <Card variant="outlined" padding="none" style={styles.itemsContainer}>
+        <View style={[styles.itemsContainer, { borderLeftColor: `${iconColor}30` }]}>
           {items.map((item, index) => (
             <TouchableOpacity
               key={item.id}
               style={[
                 styles.menuItem,
-                index !== items.length - 1 && {
-                  borderBottomWidth: 1,
-                  borderBottomColor: colors.border,
-                },
+                index === items.length - 1 && styles.menuItemLast,
               ]}
               onPress={() => onItemPress(item.route)}
-              activeOpacity={0.7}
+              activeOpacity={0.6}
             >
-              <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
-                <item.icon size={20} color={item.color} />
-              </View>
-              <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
-              <ChevronDown
-                size={16}
-                color={colors.icon}
-                style={{ transform: [{ rotate: '-90deg' }] }}
-              />
+              {/* Subcategory: Simple gray icon without background */}
+              <item.icon size={18} color={colors.textMuted} strokeWidth={1.5} />
+              <Text style={[styles.menuLabel, { color: colors.textSecondary }]}>
+                {item.label}
+              </Text>
+              <ChevronRight size={16} color={colors.border} />
             </TouchableOpacity>
           ))}
-        </Card>
+        </View>
       )}
     </View>
   );
@@ -150,40 +135,25 @@ export function CollapsibleMenuSection({
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
-    marginBottom: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.light.surface,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  sectionHeaderExpanded: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    borderWidth: 1.5,
+    ...Shadows.sm,
   },
   sectionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.headingSM,
-    flex: 1,
-  },
-  itemCount: {
-    ...Typography.bodySM,
-    marginRight: Spacing.sm,
-  },
-  itemsContainer: {
-    marginLeft: Spacing.xs,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
-  },
-  menuIcon: {
     width: 36,
     height: 36,
     borderRadius: BorderRadius.md,
@@ -191,9 +161,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: Spacing.md,
   },
+  sectionTitle: {
+    ...Typography.headingSM,
+    flex: 1,
+    fontWeight: '600',
+  },
+  sectionRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  itemCountBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  itemCount: {
+    ...Typography.bodyXS,
+    fontWeight: '500',
+  },
+  itemsContainer: {
+    marginLeft: Spacing.lg,
+    paddingLeft: Spacing.md,
+    borderLeftWidth: 2,
+    marginTop: -1,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.sm,
+    gap: Spacing.md,
+  },
+  menuItemLast: {
+    marginBottom: Spacing.sm,
+  },
   menuLabel: {
     ...Typography.bodyMD,
-    fontWeight: '500',
+    fontWeight: '400',
     flex: 1,
   },
 });

@@ -10,6 +10,7 @@ import 'react-native-reanimated';
 import { AuthProvider } from '@/context/auth-context';
 import { NotificationProvider } from '@/context/notification-context';
 import { Colors } from '@/constants/theme';
+import { useNotificationObserver } from '@/hooks/use-notification-observer';
 
 // Suppress known non-critical warnings from dependencies
 // These warnings come from react-navigation and react-native-toast-message internals
@@ -50,30 +51,43 @@ export const unstable_settings = {
   anchor: '(auth)',
 };
 
+/**
+ * Inner layout component that uses notification observer
+ * Must be inside providers to access auth context
+ */
+function RootLayoutNav() {
+  // Handle notification tap responses for navigation
+  useNotificationObserver();
+
+  return (
+    <ThemeProvider value={LoggeriseLight}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="notifications" options={{ presentation: 'formSheet', title: 'Bildirimler' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'formSheet', title: 'Modal' }} />
+        <Stack.Screen name="employee" />
+        <Stack.Screen name="warehouse" />
+        <Stack.Screen name="bank" />
+        <Stack.Screen name="cash-register" />
+        <Stack.Screen name="vehicle" />
+        <Stack.Screen name="stock" />
+        <Stack.Screen name="finance" />
+      </Stack>
+      <StatusBar style="dark" />
+      <Toast position='top' topOffset={60} />
+    </ThemeProvider>
+  );
+}
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <KeyboardProvider>
         <AuthProvider>
           <NotificationProvider>
-            <ThemeProvider value={LoggeriseLight}>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="profile" />
-                <Stack.Screen name="notifications" options={{ presentation: 'formSheet', title: 'Bildirimler' }} />
-                <Stack.Screen name="modal" options={{ presentation: 'formSheet', title: 'Modal' }} />
-                <Stack.Screen name="employee" />
-                <Stack.Screen name="warehouse" />
-                <Stack.Screen name="bank" />
-                <Stack.Screen name="cash-register" />
-                <Stack.Screen name="vehicle" />
-                <Stack.Screen name="stock" />
-                <Stack.Screen name="finance" />
-              </Stack>
-              <StatusBar style="dark" />
-              <Toast position='top' topOffset={60} />
-            </ThemeProvider>
+            <RootLayoutNav />
           </NotificationProvider>
         </AuthProvider>
       </KeyboardProvider>
