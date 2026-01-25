@@ -80,7 +80,7 @@ function RootLayoutNav() {
         <Stack.Screen name="positions" />
         <Stack.Screen name="messages" />
       </Stack>
-      <StatusBar style="dark" />
+      {/* StatusBar artık her sayfada FullScreenHeader içinde yönetiliyor */}
       <Toast position='top' topOffset={60} />
     </ThemeProvider>
   );

@@ -84,6 +84,8 @@ export function Avatar({
             width: sizeValue,
             height: sizeValue,
             borderRadius: sizeValue / 2,
+            borderWidth: 1,
+            borderColor: '#FFFFFF',
           },
           style as ImageStyle,
         ]}
@@ -101,6 +103,8 @@ export function Avatar({
           height: sizeValue,
           borderRadius: sizeValue / 2,
           backgroundColor: bgColor,
+          borderWidth: 1,
+          borderColor: '#FFFFFF',
         },
         style,
       ]}

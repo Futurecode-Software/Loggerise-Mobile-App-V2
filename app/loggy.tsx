@@ -38,6 +38,7 @@ import { ViewMode } from '@/components/loggy/constants';
 import { TypingIndicator } from '@/components/loggy/TypingIndicator';
 import { QuickSuggestions } from '@/components/loggy/QuickSuggestions';
 import { MessageBubble } from '@/components/loggy/MessageBubble';
+import { FullScreenHeader } from '@/components/header';
 
 export default function LoggyScreen() {
   const colors = Colors.light;
@@ -235,25 +236,19 @@ export default function LoggyScreen() {
     const displayConversations = searchQuery.length >= 2 ? searchResults : conversations;
 
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <View style={styles.headerTitleRow}>
-              <Sparkles size={20} color={Brand.primary} />
-              <Text style={[styles.headerTitle, { color: colors.text }]}>Loggy</Text>
-            </View>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              AI Asistan
-            </Text>
-          </View>
-          <TouchableOpacity style={styles.newChatButton} onPress={handleCreateNewConversation}>
-            <Plus size={22} color={Brand.primary} />
-          </TouchableOpacity>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Full Screen Header */}
+        <FullScreenHeader
+          title="Loggy"
+          subtitle="AI Asistan"
+          showBackButton
+          leftIcon={<Sparkles size={20} color="#FFFFFF" />}
+          rightIcons={
+            <TouchableOpacity onPress={handleCreateNewConversation} activeOpacity={0.7}>
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          }
+        />
 
         {/* Search */}
         <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
@@ -294,40 +289,35 @@ export default function LoggyScreen() {
             <Plus size={24} color="#FFFFFF" />
           </TouchableOpacity>
         )}
-      </SafeAreaView>
+      </View>
     );
   }
 
   // ============ CHAT VIEW ============
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={goBackToList} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <View style={styles.headerTitleRow}>
-            <Bot size={20} color={Brand.primary} />
-            <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-              {currentConversation?.title || 'Yeni Konuşma'}
-            </Text>
-          </View>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {currentConversation
-              ? formatConversationTime(currentConversation.created_at)
-              : 'Doğal dille sorgula'}
-          </Text>
-        </View>
-        {currentConversation && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDelete(currentConversation.id)}
-          >
-            <Trash2 size={20} color={colors.danger} />
-          </TouchableOpacity>
-        )}
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title={currentConversation?.title || 'Yeni Konuşma'}
+        subtitle={
+          currentConversation
+            ? formatConversationTime(currentConversation.created_at)
+            : 'Doğal dille sorgula'
+        }
+        showBackButton
+        onBackPress={goBackToList}
+        leftIcon={<Bot size={20} color="#FFFFFF" />}
+        rightIcons={
+          currentConversation ? (
+            <TouchableOpacity
+              onPress={() => handleDelete(currentConversation.id)}
+              activeOpacity={0.7}
+            >
+              <Trash2 size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : null
+        }
+      />
 
       {/* API Not Configured Overlay */}
       {!isAiConfigured && (
@@ -466,44 +456,13 @@ export default function LoggyScreen() {
           </View>
         </KeyboardStickyView>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerContent: {
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingMD,
-    flex: 1,
-  },
-  headerSubtitle: {
-    ...Typography.bodySM,
-    marginTop: 2,
-  },
-  newChatButton: {
-    padding: Spacing.sm,
   },
   deleteButton: {
     padding: Spacing.sm,

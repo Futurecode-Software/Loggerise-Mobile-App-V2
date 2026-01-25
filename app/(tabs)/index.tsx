@@ -15,7 +15,6 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
   Bell,
@@ -33,6 +32,7 @@ import {
 } from 'lucide-react-native';
 
 import { Avatar } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { useAuth } from '@/context/auth-context';
 import { useNotificationContext } from '@/context/notification-context';
 import { useMessageContext } from '@/context/message-context';
@@ -110,107 +110,98 @@ export default function DashboardScreen() {
   // Loading state
   if (isLoadingAvailable) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <FullScreenHeader
+          title="Dashboard"
+          subtitle="Yükleniyor..."
+        />
         <View style={styles.loadingFull}>
           <ActivityIndicator size="large" color={DashboardTheme.accent} />
           <Text style={styles.loadingText}>Dashboard yukleniyor...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.userSection}
-          onPress={() => router.push('/(tabs)/profile')}
-          activeOpacity={0.7}
-        >
-          <Avatar
-            source={user?.avatar}
-            name={user?.fullName || 'Kullanici'}
-            size="md"
-          />
-          <View style={styles.userInfo}>
-            <Text style={styles.greeting}>
-              {getGreeting()}, {user?.fullName?.split(' ')[0] || 'Kullanici'}
-            </Text>
-            <Text style={styles.dateText}>
-              {new Date().toLocaleDateString('tr-TR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
-            </Text>
-          </View>
-        </TouchableOpacity>
-        <View style={styles.headerIcons}>
-          {/* Message Icon */}
-          <TouchableOpacity
-            style={styles.headerIconBtn}
-            onPress={() => router.push('/(tabs)/messages')}
-          >
-            <MessageCircle size={22} color={DashboardTheme.textSecondary} />
-            {unreadMessageCount > 0 && (
-              <View style={[styles.badge, styles.messageBadge]}>
-                <Text style={styles.badgeText}>
-                  {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          {/* Notification Bell */}
-          <TouchableOpacity
-            style={styles.notificationBtn}
-            onPress={() => router.push('/notifications')}
-          >
-            <Bell size={22} color={DashboardTheme.textSecondary} />
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+  // Tab'ları header için hazırla
+  const headerTabs = visibleTabs.map((tab) => {
+    const Icon = TAB_ICONS[tab.id];
+    const isActive = activeTab === tab.id;
+    return {
+      id: tab.id,
+      label: tab.label,
+      icon: <Icon size={16} color="#FFFFFF" strokeWidth={isActive ? 2.5 : 2} />,
+      isActive,
+      onPress: () => setActiveTab(tab.id),
+    };
+  });
 
-      {/* Tab Bar */}
-      {visibleTabs.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.tabBar}
-          contentContainerStyle={styles.tabBarContent}
-        >
-          {visibleTabs.map((tab) => {
-            const Icon = TAB_ICONS[tab.id];
-            const isActive = activeTab === tab.id;
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                style={[styles.tab, isActive && styles.tabActive]}
-                onPress={() => setActiveTab(tab.id)}
-                activeOpacity={0.7}
-              >
-                <Icon
-                  size={16}
-                  color={isActive ? '#FFFFFF' : DashboardTheme.textMuted}
-                  strokeWidth={isActive ? 2.5 : 2}
-                />
-                <Text
-                  style={[styles.tabLabel, isActive && styles.tabLabelActive]}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
+  return (
+    <View style={styles.container}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        leftContent={
+          <View style={styles.headerLeftContent}>
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/profile')}
+              activeOpacity={0.7}
+            >
+              <Avatar
+                source={user?.avatar}
+                name={user?.fullName || 'Kullanici'}
+                size="sm"
+              />
+            </TouchableOpacity>
+            <View style={styles.headerUserInfo}>
+              <Text style={styles.headerGreeting}>
+                {getGreeting()}, {user?.fullName?.split(' ')[0] || 'Kullanici'}
+              </Text>
+              <Text style={styles.headerDate}>
+                {new Date().toLocaleDateString('tr-TR', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                })}
+              </Text>
+            </View>
+          </View>
+        }
+        rightIcons={
+          <View style={styles.headerIcons}>
+            {/* Message Icon */}
+            <TouchableOpacity
+              style={styles.headerIconBtn}
+              onPress={() => router.push('/(tabs)/messages')}
+              activeOpacity={0.7}
+            >
+              <MessageCircle size={22} color="#FFFFFF" />
+              {unreadMessageCount > 0 && (
+                <View style={[styles.badge, styles.messageBadge]}>
+                  <Text style={styles.badgeText}>
+                    {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {/* Notification Bell */}
+            <TouchableOpacity
+              style={styles.notificationBtn}
+              onPress={() => router.push('/notifications')}
+              activeOpacity={0.7}
+            >
+              <Bell size={22} color="#FFFFFF" />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        }
+        tabs={headerTabs}
+      />
 
       {/* Content */}
       <ScrollView
@@ -244,7 +235,7 @@ export default function DashboardScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -270,106 +261,63 @@ const styles = StyleSheet.create({
     color: DashboardTheme.textMuted,
   },
 
-  // Header
-  header: {
+  // Header Left Content
+  headerLeftContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  userSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    gap: 12,
     flex: 1,
   },
-  userInfo: {
-    marginLeft: 12,
+  headerUserInfo: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  greeting: {
-    fontSize: 17,
+  headerGreeting: {
+    fontSize: 16,
     fontWeight: '600',
-    color: DashboardTheme.textPrimary,
-    marginBottom: 2,
+    color: '#FFFFFF',
   },
-  dateText: {
-    fontSize: 13,
-    color: DashboardTheme.textMuted,
+  headerDate: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    marginTop: 2,
   },
+  // Header Icons
   headerIcons: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   headerIconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: DashboardTheme.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    position: 'relative',
+    padding: 4,
   },
   notificationBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: DashboardTheme.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    position: 'relative',
+    padding: 4,
   },
   badge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: DashboardTheme.danger,
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FF3B30',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#13452d',
   },
   messageBadge: {
-    backgroundColor: DashboardTheme.accent,
+    backgroundColor: '#FF9500',
   },
   badgeText: {
     fontSize: 10,
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-
-  // Tab Bar
-  tabBar: {
-    maxHeight: 52,
-  },
-  tabBarContent: {
-    paddingHorizontal: 20,
-    gap: 8,
-    paddingBottom: 4,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 24,
-    backgroundColor: DashboardTheme.borderLight,
-  },
-  tabActive: {
-    backgroundColor: DashboardTheme.accent,
-  },
-  tabLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: DashboardTheme.textMuted,
-  },
-  tabLabelActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
 
   // Content
