@@ -39,8 +39,10 @@ const STATUS_FILTERS = [
   { id: 'all', label: 'Tümü', color: undefined },
   { id: 'pending', label: 'Beklemede', color: '#f5a623' },
   { id: 'confirmed', label: 'Onaylandı', color: '#3b82f6' },
+  { id: 'in_progress', label: 'İşlemde', color: '#3b82f6' },
   { id: 'in_transit', label: 'Yolda', color: '#227d53' },
   { id: 'delivered', label: 'Teslim Edildi', color: '#13452d' },
+  { id: 'completed', label: 'Tamamlandı', color: '#13452d' },
   { id: 'cancelled', label: 'İptal', color: '#d0021b' },
 ];
 
@@ -185,14 +187,35 @@ export default function LoadsScreen() {
     return `${formatted} ${currency || 'TL'}`;
   };
 
-  const getStatusBadge = (status: LoadStatus) => {
+  const getStatusBadge = (status: LoadStatus | string) => {
     const label = getStatusLabel(status);
-    const variantMap: Record<LoadStatus, 'warning' | 'info' | 'success' | 'danger' | 'default'> = {
+    const variantMap: Record<string, 'warning' | 'info' | 'success' | 'danger' | 'default'> = {
+      // Temel status'lar
       pending: 'warning',
       confirmed: 'info',
       in_transit: 'success',
       delivered: 'success',
       cancelled: 'danger',
+      // Ek status'lar
+      completed: 'success',
+      in_progress: 'info',
+      loading: 'warning',
+      assigned: 'info',
+      loaded: 'success',
+      at_customs: 'warning',
+      // Türkçe status'lar
+      'Beklemede': 'warning',
+      'Hazırlanıyor': 'warning',
+      'Hazır': 'info',
+      'Yükleniyor': 'warning',
+      'Yüklendi': 'success',
+      'Yolda': 'success',
+      'Gümrükte': 'warning',
+      'Boşaltılıyor': 'info',
+      'Teslim Edildi': 'success',
+      'Tamamlandı': 'success',
+      'İptal Edildi': 'danger',
+      'Beklemede (Sorun)': 'danger',
     };
     return <Badge label={label} variant={variantMap[status] || 'default'} size="sm" />;
   };

@@ -14,7 +14,13 @@ export type LoadStatus =
   | 'confirmed'
   | 'in_transit'
   | 'delivered'
-  | 'cancelled';
+  | 'cancelled'
+  | 'completed'
+  | 'in_progress'
+  | 'loading'
+  | 'assigned'
+  | 'loaded'
+  | 'at_customs';
 
 /**
  * Load type enum - Backend compatible
@@ -465,11 +471,32 @@ export async function createLoad(data: LoadFormData): Promise<LoadDetail> {
 export function getStatusLabel(status?: LoadStatus | string): string {
   if (!status) return '-';
   const labels: Record<string, string> = {
+    // Temel status'lar
     pending: 'Beklemede',
     confirmed: 'Onaylandı',
     in_transit: 'Yolda',
     delivered: 'Teslim Edildi',
     cancelled: 'İptal',
+    // Ek status'lar
+    completed: 'Tamamlandı',
+    in_progress: 'İşlemde',
+    loading: 'Yükleniyor',
+    assigned: 'Atandı',
+    loaded: 'Yüklendi',
+    at_customs: 'Gümrükte',
+    // Türkçe status'lar (backend'den gelebilir)
+    'Beklemede': 'Beklemede',
+    'Hazırlanıyor': 'Hazırlanıyor',
+    'Hazır': 'Hazır',
+    'Yükleniyor': 'Yükleniyor',
+    'Yüklendi': 'Yüklendi',
+    'Yolda': 'Yolda',
+    'Gümrükte': 'Gümrükte',
+    'Boşaltılıyor': 'Boşaltılıyor',
+    'Teslim Edildi': 'Teslim Edildi',
+    'Tamamlandı': 'Tamamlandı',
+    'İptal Edildi': 'İptal Edildi',
+    'Beklemede (Sorun)': 'Beklemede (Sorun)',
   };
   return labels[status] || status;
 }
@@ -480,11 +507,32 @@ export function getStatusLabel(status?: LoadStatus | string): string {
 export function getStatusColor(status?: LoadStatus | string): string {
   if (!status) return '#6B7280';
   const colors: Record<string, string> = {
+    // Temel status'lar
     pending: '#f5a623',
     confirmed: '#3b82f6',
     in_transit: '#227d53',
     delivered: '#13452d',
     cancelled: '#d0021b',
+    // Ek status'lar
+    completed: '#13452d',
+    in_progress: '#3b82f6',
+    loading: '#f5a623',
+    assigned: '#3b82f6',
+    loaded: '#227d53',
+    at_customs: '#f5a623',
+    // Türkçe status'lar için renkler
+    'Beklemede': '#f5a623',
+    'Hazırlanıyor': '#f5a623',
+    'Hazır': '#3b82f6',
+    'Yükleniyor': '#f5a623',
+    'Yüklendi': '#227d53',
+    'Yolda': '#227d53',
+    'Gümrükte': '#f5a623',
+    'Boşaltılıyor': '#3b82f6',
+    'Teslim Edildi': '#13452d',
+    'Tamamlandı': '#13452d',
+    'İptal Edildi': '#d0021b',
+    'Beklemede (Sorun)': '#d0021b',
   };
   return colors[status] || '#6B7280';
 }
