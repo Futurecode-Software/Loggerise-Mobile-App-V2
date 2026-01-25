@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   AppState,
   AppStateStatus,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,8 +19,6 @@ import {
   MessageCircle,
   Users,
   AlertCircle,
-  Wifi,
-  WifiOff,
 } from 'lucide-react-native';
 import { Avatar, Input } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
@@ -357,12 +356,14 @@ export default function MessagesTabScreen() {
         title="Mesajlar"
         rightIcons={
           <View style={styles.headerRight}>
-            {/* Connection status indicator */}
-            {isConnected ? (
-              <Wifi size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
-            ) : (
-              <WifiOff size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm, opacity: 0.7 }} />
-            )}
+            {/* Yeni Grup Butonu */}
+            <TouchableOpacity
+              onPress={() => router.push('/message/group/new' as any)}
+              style={[styles.groupButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+              activeOpacity={0.7}
+            >
+              <Users size={18} color="#FFFFFF" />
+            </TouchableOpacity>
             {totalUnreadCount > 0 && (
               <View style={[styles.headerUnreadBadge, { backgroundColor: colors.danger }]}>
                 <Text style={styles.headerUnreadCount}>
@@ -407,7 +408,7 @@ export default function MessagesTabScreen() {
         style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
         onPress={() => router.push('/message/new' as any)}
       >
-        <Plus size={24} color="#FFFFFF"         />
+        <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
     </View>
   );
@@ -422,6 +423,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+  },
+  groupButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerUnreadBadge: {
     minWidth: 24,

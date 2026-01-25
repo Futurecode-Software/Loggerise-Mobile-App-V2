@@ -1,189 +1,79 @@
-import React, { useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Users, AlertCircle } from 'lucide-react-native';
-import { Input, Button } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+/**
+ * New Conversation Screen
+ *
+ * Screen for starting a new direct message conversation.
+ * Uses shared UserSelectList component.
+ */
+
+import React from 'react';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Text } from 'react-native';
+import { Users } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { FullScreenHeader } from '@/components/header';
+import { Colors, Brand, Typography, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useNewConversation } from '@/hooks/use-new-conversation';
-import {
-  NewConversationHeader,
-  UserListItem,
-  SelectedUsersRow,
-} from '@/components/message';
-import { UserBasic } from '@/services/endpoints/messaging';
+import { UserSelectList } from '@/components/message';
 
 export default function NewConversationScreen() {
   const colors = Colors.light;
   const { user } = useAuth();
-  const currentUserId = typeof user?.id === 'string' ? parseInt(user.id, 10) : (user?.id || 0);
+  const currentUserId = typeof user?.id === 'string' ? parseInt(user.id, 10) : user?.id || 0;
 
   const {
-    mode,
-    setMode,
     searchQuery,
     setSearchQuery,
     filteredUsers,
-    selectedUsers,
-    toggleUserSelection,
-    groupName,
-    setGroupName,
-    groupDescription,
-    setGroupDescription,
     isLoading,
     isCreating,
     error,
     handleUserSelect,
-    handleCreateGroup,
     refetch,
   } = useNewConversation({ currentUserId });
 
-  // Render user item
-  const renderUser = useCallback(
-    ({ item }: { item: UserBasic }) => {
-      const isSelected = selectedUsers.some((u) => u.id === item.id);
-      return (
-        <UserListItem
-          user={item}
-          isSelected={isSelected}
-          isGroupMode={mode === 'group'}
-          onPress={() => handleUserSelect(item)}
-          disabled={isCreating}
-        />
-      );
-    },
-    [selectedUsers, mode, handleUserSelect, isCreating]
-  );
-
-  // Render empty state
-  const renderEmptyState = useCallback(() => {
-    if (isLoading) {
-      return (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Kullanıcılar yükleniyor...
-          </Text>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.centerContainer}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={refetch}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.centerContainer}>
-        <Users size={64} color={colors.textMuted} />
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {searchQuery ? 'Kullanıcı bulunamadı' : 'Kullanıcı yok'}
-        </Text>
-        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-          {searchQuery
-            ? 'Farklı bir arama terimi deneyin'
-            : 'Henüz mesajlaşabileceğiniz kullanıcı yok'}
-        </Text>
-      </View>
-    );
-  }, [isLoading, error, searchQuery, colors, refetch]);
-
-  // Key extractor
-  const keyExtractor = useCallback((item: UserBasic) => String(item.id), []);
-
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <NewConversationHeader mode={mode} onGroupModePress={() => setMode('group')} />
-
-      {/* Group Name Input (when in group mode) */}
-      {mode === 'group' && (
-        <View style={[styles.groupInputs, { backgroundColor: colors.surface }]}>
-          <Input
-            placeholder="Grup adı *"
-            value={groupName}
-            onChangeText={setGroupName}
-            containerStyle={styles.groupNameInput}
-          />
-          <Input
-            placeholder="Açıklama (isteğe bağlı)"
-            value={groupDescription}
-            onChangeText={setGroupDescription}
-            containerStyle={styles.groupDescInput}
-          />
-        </View>
-      )}
-
-      {/* Selected Users */}
-      {mode === 'group' && (
-        <SelectedUsersRow users={selectedUsers} onRemove={toggleUserSelection} />
-      )}
-
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <Input
-          placeholder="Kullanıcı ara..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          leftIcon={<Search size={20} color={colors.icon} />}
-          containerStyle={styles.searchInput}
-        />
-      </View>
-
-      {/* User List */}
-      <FlatList
-        data={filteredUsers}
-        keyExtractor={keyExtractor}
-        renderItem={renderUser}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
+    <View style={[styles.container, { backgroundColor: '#F0F2F5' }]}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title="Yeni Mesaj"
+        subtitle="Mesajlaşmak istediğiniz kişiyi seçin"
+        showBackButton
+        rightIcons={
+          <TouchableOpacity
+            style={[styles.groupButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+            onPress={() => router.push('/message/group/new' as any)}
+            activeOpacity={0.7}
+          >
+            <Users size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
       />
 
-      {/* Create Group Button */}
-      {mode === 'group' && (
-        <View
-          style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}
-        >
-          <Button
-            onPress={handleCreateGroup}
-            loading={isCreating}
-            disabled={!groupName.trim() || selectedUsers.length === 0 || isCreating}
-            style={styles.createButton}
-          >
-            {`Grup Oluştur (${selectedUsers.length} kişi)`}
-          </Button>
-        </View>
-      )}
+      {/* Content Area */}
+      <View style={styles.contentArea}>
+        <UserSelectList
+          users={filteredUsers}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onUserSelect={handleUserSelect}
+          isLoading={isLoading}
+          isCreating={isCreating}
+          error={error}
+          onRetry={refetch}
+          isGroupMode={false}
+        />
 
-      {/* Loading Overlay */}
-      {isCreating && mode === 'select' && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingOverlayText, { color: colors.text }]}>
-            Konuşma başlatılıyor...
-          </Text>
-        </View>
-      )}
-    </SafeAreaView>
+        {/* Loading Overlay */}
+        {isCreating && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={Brand.primary} />
+            <Text style={[styles.loadingOverlayText, { color: colors.text }]}>
+              Konuşma başlatılıyor...
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -191,74 +81,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  groupInputs: {
-    padding: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  groupNameInput: {
-    marginBottom: 0,
-  },
-  groupDescInput: {
-    marginBottom: 0,
-  },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-  },
-  searchInput: {
-    marginBottom: 0,
-  },
-  listContent: {
-    flexGrow: 1,
-    paddingBottom: 100,
-  },
-  footer: {
-    padding: Spacing.lg,
-    borderTopWidth: 1,
-  },
-  createButton: {
-    width: '100%',
-  },
-  centerContainer: {
+  contentArea: {
     flex: 1,
+    backgroundColor: '#F0F2F5',
+  },
+  groupButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  errorTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.lg,
-  },
-  errorText: {
-    ...Typography.bodySM,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
-  },
-  retryButton: {
-    marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  retryButtonText: {
-    ...Typography.bodySM,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  emptyTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.lg,
-  },
-  emptyText: {
-    ...Typography.bodySM,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

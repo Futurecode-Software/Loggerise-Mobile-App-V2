@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   AppState,
   AppStateStatus,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -20,8 +21,6 @@ import {
   MessageCircle,
   Users,
   AlertCircle,
-  Wifi,
-  WifiOff,
 } from 'lucide-react-native';
 import { Avatar, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
@@ -354,12 +353,14 @@ export default function MessagesScreen() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Mesajlar</Text>
         <View style={styles.headerRight}>
-          {/* Connection status indicator */}
-          {isConnected ? (
-            <Wifi size={18} color={Brand.primary} style={{ marginRight: Spacing.sm }} />
-          ) : (
-            <WifiOff size={18} color={colors.textMuted} style={{ marginRight: Spacing.sm }} />
-          )}
+          {/* Yeni Grup Butonu */}
+          <TouchableOpacity
+            onPress={() => router.push('/message/group/new' as any)}
+            style={[styles.groupButton, { backgroundColor: Brand.primary }]}
+            activeOpacity={0.7}
+          >
+            <Users size={18} color="#FFFFFF" />
+          </TouchableOpacity>
           {totalUnreadCount > 0 && (
             <View style={[styles.headerUnreadBadge, { backgroundColor: colors.danger }]}>
               <Text style={styles.headerUnreadCount}>
@@ -433,6 +434,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+  },
+  groupButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerUnreadBadge: {
     minWidth: 24,

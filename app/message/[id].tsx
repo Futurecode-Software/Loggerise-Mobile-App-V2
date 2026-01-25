@@ -1,30 +1,27 @@
-import React, { useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+/**
+ * Conversation Detail Screen
+ *
+ * Unified screen for both direct messages and group conversations.
+ * Uses shared MessageListView component.
+ * Group settings accessible via full-page navigation.
+ */
+
+import React from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, router } from 'expo-router';
-import { MessageCircle, AlertCircle, Settings, Users } from 'lucide-react-native';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Settings, Users } from 'lucide-react-native';
+import { Colors, Brand } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useConversationMessages } from '@/hooks/use-conversation-messages';
-import { MessageBubble, MessageInput } from '@/components/message';
+import { MessageListView, MessageInput } from '@/components/message';
 import { FullScreenHeader } from '@/components/header';
 import { Avatar } from '@/components/ui';
-import { Message } from '@/services/endpoints/messaging';
 
-export default function MessageDetailScreen() {
+export default function ConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
   const { user } = useAuth();
-  const currentUserId = typeof user?.id === 'string' ? parseInt(user.id, 10) : (user?.id || 0);
+  const currentUserId = typeof user?.id === 'string' ? parseInt(user.id, 10) : user?.id || 0;
   const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
 
   // Custom hook for all conversation logic
@@ -47,75 +44,13 @@ export default function MessageDetailScreen() {
     currentUserId,
   });
 
-  // Inverted messages for FlatList (newest first)
-  const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
-
-  // Animated style for keyboard
-  const animatedListStyle = useAnimatedStyle(() => ({
-    paddingBottom: -keyboardHeight.value,
-  }));
-
-  // Typing indicator component
-  const renderTypingIndicator = useCallback(() => {
-    const typingUserNames = Object.values(typingUsers);
-    if (typingUserNames.length === 0) return null;
-
-    return (
-      <View style={styles.typingContainer}>
-        <View style={styles.typingBubble}>
-          <View style={styles.typingDots}>
-            <View style={styles.typingDot} />
-            <View style={[styles.typingDot, styles.typingDotMiddle]} />
-            <View style={styles.typingDot} />
-          </View>
-        </View>
-      </View>
-    );
-  }, [typingUsers]);
-
-  // Render message item
-  const renderMessage = useCallback(
-    ({ item, index }: { item: Message; index: number }) => {
-      const nextMessage = invertedMessages[index + 1];
-      const prevMessage = invertedMessages[index - 1];
-
-      const showDate =
-        !nextMessage || (nextMessage.formatted_date !== item.formatted_date && item.formatted_date);
-
-      const isLastInGroup = !prevMessage || prevMessage.user_id !== item.user_id;
-      const isFirstInGroup =
-        !nextMessage ||
-        nextMessage.user_id !== item.user_id ||
-        nextMessage.formatted_date !== item.formatted_date;
-
-      return (
-        <>
-          {showDate && item.formatted_date && (
-            <View style={styles.dateContainer}>
-              <View style={styles.dateBadge}>
-                <Text style={styles.dateText}>{item.formatted_date}</Text>
-              </View>
-            </View>
-          )}
-          <MessageBubble
-            item={item}
-            isFirstInGroup={isFirstInGroup}
-            isLastInGroup={isLastInGroup}
-            isGroupConversation={conversation?.type === 'group'}
-          />
-        </>
-      );
-    },
-    [invertedMessages, conversation?.type]
-  );
-
-  // Key extractor
-  const keyExtractor = useCallback((item: Message) => String(item.id), []);
+  // Determine if this is a group conversation
+  const isGroupConversation = conversation?.type === 'group';
 
   // Header content
   const displayName = (() => {
     if (!conversation) return 'Mesajlar';
-    if (conversation.type === 'group') {
+    if (isGroupConversation) {
       return conversation.name || 'İsimsiz Grup';
     }
     return conversation.other_user?.name || conversation.name || 'Bilinmeyen';
@@ -133,11 +68,16 @@ export default function MessageDetailScreen() {
       return 'Bağlanıyor...';
     }
 
-    if (conversation.type === 'group') {
+    if (isGroupConversation) {
       return conversation.description || `${participants.length} katılımcı`;
     }
     return conversation.other_user?.email || '';
   })();
+
+  // Navigate to group settings
+  const handleOpenGroupSettings = () => {
+    router.push(`/message/group/${id}` as any);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: '#F0F2F5' }]}>
@@ -147,7 +87,7 @@ export default function MessageDetailScreen() {
         subtitle={subtitle}
         showBackButton
         leftIcon={
-          conversation?.type === 'group' ? (
+          isGroupConversation ? (
             <View style={[styles.groupAvatar, { backgroundColor: Brand.primary }]}>
               <Users size={20} color="#FFFFFF" />
             </View>
@@ -160,11 +100,8 @@ export default function MessageDetailScreen() {
           )
         }
         rightIcons={
-          conversation?.type === 'group' ? (
-            <TouchableOpacity
-              onPress={() => router.push(`/message/group/${id}` as any)}
-              activeOpacity={0.7}
-            >
+          isGroupConversation ? (
+            <TouchableOpacity onPress={handleOpenGroupSettings} activeOpacity={0.7}>
               <Settings size={22} color="#FFFFFF" />
             </TouchableOpacity>
           ) : null
@@ -172,58 +109,16 @@ export default function MessageDetailScreen() {
       />
 
       {/* Messages */}
-      {isLoading ? (
-        <View style={[styles.messagesContainer, styles.centerContainer]}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Mesajlar yükleniyor...
-          </Text>
-        </View>
-      ) : error ? (
-        <View style={[styles.messagesContainer, styles.centerContainer]}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={refetch}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      ) : invertedMessages.length === 0 ? (
-        <View style={[styles.messagesContainer, styles.centerContainer]}>
-          <MessageCircle size={64} color={colors.textMuted} />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>Henüz mesaj yok</Text>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            İlk mesajı siz gönderin!
-          </Text>
-        </View>
-      ) : (
-        <Animated.View style={[styles.messagesContainer, animatedListStyle]}>
-          <FlatList
-            ref={flatListRef}
-            data={invertedMessages}
-            keyExtractor={keyExtractor}
-            renderItem={renderMessage}
-            inverted
-            contentContainerStyle={styles.messagesList}
-            ListHeaderComponent={renderTypingIndicator}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            removeClippedSubviews={Platform.OS === 'android'}
-            maxToRenderPerBatch={15}
-            windowSize={21}
-            initialNumToRender={20}
-            maintainVisibleContentPosition={{
-              minIndexForVisible: 0,
-              autoscrollToTopThreshold: 100,
-            }}
-            style={styles.flatList}
-          />
-        </Animated.View>
-      )}
+      <MessageListView
+        messages={messages}
+        isGroupConversation={isGroupConversation}
+        isLoading={isLoading}
+        error={error}
+        typingUsers={typingUsers}
+        keyboardHeight={keyboardHeight}
+        flatListRef={flatListRef}
+        onRetry={refetch}
+      />
 
       {/* Input */}
       <MessageInput
@@ -239,104 +134,6 @@ export default function MessageDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  messagesContainer: {
-    flex: 1,
-    backgroundColor: '#F0F2F5',
-  },
-  flatList: {
-    flex: 1,
-  },
-  messagesList: {
-    paddingHorizontal: 4,
-    paddingTop: 8,
-    paddingBottom: Spacing.md,
-  },
-  dateContainer: {
-    alignItems: 'center',
-    marginVertical: Spacing.md,
-  },
-  dateBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-  },
-  dateText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#667781',
-  },
-  typingContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginTop: 4,
-    marginLeft: 42,
-    marginBottom: 8,
-  },
-  typingBubble: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 18,
-    borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-  },
-  typingDots: {
-    flexDirection: 'row',
-    gap: 4,
-    alignItems: 'center',
-  },
-  typingDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: '#8696A0',
-  },
-  typingDotMiddle: {
-    opacity: 0.6,
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  errorTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.lg,
-  },
-  errorText: {
-    ...Typography.bodySM,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
-  },
-  retryButton: {
-    marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  retryButtonText: {
-    ...Typography.bodySM,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  emptyTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.lg,
-  },
-  emptyText: {
-    ...Typography.bodySM,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
   },
   groupAvatar: {
     width: 32,
