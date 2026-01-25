@@ -136,7 +136,7 @@ const MENU_SECTIONS = [
     iconColor: '#0ea5e9',
     items: [
       // Mesajlar artık tab'da - More menüsünden kaldırıldı
-      { id: 'ai', label: 'Loggy AI', icon: Sparkles, color: Brand.primary, route: '/ai-reports' },
+      { id: 'ai', label: 'Loggy AI', icon: Sparkles, color: Brand.primary, route: '/loggy' },
     ],
   },
 ];
