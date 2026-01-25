@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,15 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Alert,
+  Keyboard,
+  Pressable,
 } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardStickyView, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   ChevronLeft,
@@ -43,6 +46,7 @@ export default function MessageDetailScreen() {
   const { user } = useAuth();
   const currentUserId = user?.id || 0;
   const insets = useSafeAreaInsets();
+  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
 
   // State
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
@@ -57,6 +61,16 @@ export default function MessageDetailScreen() {
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTypingRef = useRef<boolean>(false);
+  const inputRef = useRef<TextInput>(null);
+
+  // Inverted FlatList için mesajları tersine çevir (en yeni en başta)
+  const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
+
+  // Klavye açıldığında FlatList'in küçülmesi için animated style
+  // keyboardHeight: 0 (kapalı) -> -keyboardHeight (açık)
+  const animatedListStyle = useAnimatedStyle(() => ({
+    paddingBottom: -keyboardHeight.value,
+  }));
 
   // WebSocket for real-time messaging
   const { isConnected, typingUsers } = useMessagingWebSocket({
@@ -70,9 +84,10 @@ export default function MessageDetailScreen() {
         return [...prev, message];
       });
 
-      // Scroll to bottom
+      // Inverted FlatList'te en yeni mesaj en üstte (offset 0)
+      // scrollToOffset ile smooth scroll
       setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
       }, 100);
 
       // Mark as read
@@ -108,14 +123,8 @@ export default function MessageDetailScreen() {
     fetchConversation();
   }, [fetchConversation]);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
-  }, [messages.length]);
+  // Inverted FlatList'te en yeni mesajlar zaten görünür
+  // Sadece ilk yüklemede scroll yapmaya gerek yok
 
   // Handle typing indicator
   const handleTypingIndicator = useCallback(
@@ -165,9 +174,9 @@ export default function MessageDetailScreen() {
       // Add to messages list
       setMessages((prev) => [...prev, sentMessage]);
 
-      // Scroll to bottom
+      // Inverted FlatList'te en yeni mesaj en üstte
       setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
       }, 100);
     } catch (err) {
       console.error('Send message error:', err);
@@ -208,23 +217,30 @@ export default function MessageDetailScreen() {
     return conversation.other_user?.email || '';
   };
 
-  // Render message item
+  // Render message item (inverted FlatList için - en yeni mesaj index 0'da)
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isMine = item.is_mine;
-    const showDate =
-      index === 0 ||
-      messages[index - 1].formatted_date !== item.formatted_date;
 
-    // Check if next message is from same user (for grouping)
-    const nextMessage = messages[index + 1];
-    const isLastInGroup = !nextMessage || nextMessage.user_id !== item.user_id;
-    const prevMessage = messages[index - 1];
-    const isFirstInGroup = !prevMessage || prevMessage.user_id !== item.user_id ||
-      prevMessage.formatted_date !== item.formatted_date;
+    // Inverted list'te sıra ters: index 0 = en yeni mesaj
+    // Tarih gösterimi: bir sonraki mesaj (eski) farklı tarihli ise göster
+    const nextMessage = invertedMessages[index + 1]; // Daha eski mesaj
+    const showDate = !nextMessage || (nextMessage.formatted_date !== item.formatted_date && item.formatted_date);
+
+    // Mesaj gruplama (inverted):
+    // - prevMessage = daha yeni mesaj (index - 1)
+    // - nextMessage = daha eski mesaj (index + 1)
+    const prevMessage = invertedMessages[index - 1]; // Daha yeni mesaj
+
+    // Grupta son mu? (Bu mesajdan sonra farklı kullanıcı veya mesaj yok)
+    const isLastInGroup = !prevMessage || prevMessage.user_id !== item.user_id;
+
+    // Grupta ilk mi? (Bu mesajdan önce farklı kullanıcı, tarih veya mesaj yok)
+    const isFirstInGroup = !nextMessage || nextMessage.user_id !== item.user_id ||
+      nextMessage.formatted_date !== item.formatted_date;
 
     return (
       <>
-        {showDate && (
+        {showDate && item.formatted_date && (
           <View style={styles.dateContainer}>
             <View style={styles.dateBadge}>
               <Text style={styles.dateText}>
@@ -286,7 +302,7 @@ export default function MessageDetailScreen() {
                   isMine ? styles.messageTimeMine : styles.messageTimeOther,
                 ]}
               >
-                {item.formatted_time}
+                {item.formatted_time || ''}
               </Text>
             </View>
           </View>
@@ -313,22 +329,71 @@ export default function MessageDetailScreen() {
     );
   };
 
-  // Render empty state
-  const renderEmptyState = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.centerContainer}>
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: '#F0F2F5' }]} edges={['top']}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: '#FFFFFF' }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <ChevronLeft size={24} color={colors.text} />
+        </TouchableOpacity>
+
+        <Pressable
+          style={styles.headerContent}
+          onPress={() => {
+            Keyboard.dismiss();
+          }}
+        >
+          {conversation?.type === 'group' ? (
+            <View style={[styles.groupAvatar, { backgroundColor: Brand.primary }]}>
+              <Users size={20} color="#FFFFFF" />
+            </View>
+          ) : (
+            <Avatar
+              name={getDisplayName()}
+              size="sm"
+              source={conversation?.other_user?.profile_photo_url || undefined}
+            />
+          )}
+          <View style={styles.headerText}>
+            <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+              {getDisplayName()}
+            </Text>
+            <Text
+              style={[
+                styles.headerSubtitle,
+                {
+                  color: Object.keys(typingUsers).length > 0 ? Brand.primary : colors.textMuted,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {getSubtitle()}
+            </Text>
+          </View>
+        </Pressable>
+
+        {conversation?.type === 'group' && (
+          <TouchableOpacity
+            onPress={() => router.push(`/message/group/${id}` as any)}
+            style={styles.settingsButton}
+          >
+            <Settings size={22} color={colors.text} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Messages */}
+      {isLoading ? (
+        // Loading state - FlatList dışında, ters çevrilme sorunu yok
+        <View style={[styles.messagesContainer, styles.centerContainer]}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Mesajlar yükleniyor...
           </Text>
         </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.centerContainer}>
+      ) : error ? (
+        // Error state - FlatList dışında
+        <View style={[styles.messagesContainer, styles.centerContainer]}>
           <AlertCircle size={64} color={colors.danger} />
           <Text style={[styles.errorTitle, { color: colors.text }]}>
             Bir hata oluştu
@@ -346,101 +411,64 @@ export default function MessageDetailScreen() {
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
-      );
-    }
-
-    return (
-      <View style={styles.centerContainer}>
-        <MessageCircle size={64} color={colors.textMuted} />
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          Henüz mesaj yok
-        </Text>
-        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-          İlk mesajı siz gönderin!
-        </Text>
-      </View>
-    );
-  };
-
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#F0F2F5' }]} edges={['top']}>
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        enabled={Platform.OS === 'ios'}
-      >
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: '#FFFFFF' }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-
-          <View style={styles.headerContent}>
-            {conversation?.type === 'group' ? (
-              <View style={[styles.groupAvatar, { backgroundColor: Brand.primary }]}>
-                <Users size={20} color="#FFFFFF" />
-              </View>
-            ) : (
-              <Avatar
-                name={getDisplayName()}
-                size="sm"
-                source={conversation?.other_user?.profile_photo_url || undefined}
-              />
-            )}
-            <View style={styles.headerText}>
-              <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-                {getDisplayName()}
-              </Text>
-              <Text
-                style={[
-                  styles.headerSubtitle,
-                  {
-                    color: Object.keys(typingUsers).length > 0 ? Brand.primary : colors.textMuted,
-                  },
-                ]}
-                numberOfLines={1}
-              >
-                {getSubtitle()}
-              </Text>
-            </View>
-          </View>
-
-          {conversation?.type === 'group' && (
-            <TouchableOpacity
-              onPress={() => router.push(`/message/group/${id}` as any)}
-              style={styles.settingsButton}
-            >
-              <Settings size={22} color={colors.text} />
-            </TouchableOpacity>
-          )}
+      ) : invertedMessages.length === 0 ? (
+        // Empty state - FlatList dışında
+        <View style={[styles.messagesContainer, styles.centerContainer]}>
+          <MessageCircle size={64} color={colors.textMuted} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            Henüz mesaj yok
+          </Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            İlk mesajı siz gönderin!
+          </Text>
         </View>
-
-        {/* Messages */}
-        <View style={[styles.messagesContainer, { backgroundColor: '#F0F2F5' }]}>
+      ) : (
+        // WhatsApp tarzı inverted FlatList - sadece mesaj varken
+        <Animated.View style={[styles.messagesContainer, animatedListStyle]}>
           <FlatList
             ref={flatListRef}
-            data={messages}
+            data={invertedMessages}
             keyExtractor={(item) => String(item.id)}
             renderItem={renderMessage}
-            contentContainerStyle={[
-              styles.messagesList,
-              messages.length === 0 && styles.messagesListEmpty,
-            ]}
-            ListEmptyComponent={renderEmptyState}
-            ListFooterComponent={renderTypingIndicator}
+            inverted
+            contentContainerStyle={styles.messagesList}
+            ListHeaderComponent={renderTypingIndicator}
             showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => {
-              if (messages.length > 0) {
-                flatListRef.current?.scrollToEnd({ animated: false });
-              }
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            removeClippedSubviews={Platform.OS === 'android'}
+            maxToRenderPerBatch={15}
+            windowSize={21}
+            initialNumToRender={20}
+            maintainVisibleContentPosition={{
+              minIndexForVisible: 0,
+              autoscrollToTopThreshold: 100,
             }}
+            style={styles.flatList}
           />
-        </View>
+        </Animated.View>
+      )}
 
-        {/* Input */}
-        <View style={[styles.inputContainer, { backgroundColor: '#F0F2F5', paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {/* Input - KeyboardStickyView ile klavye üstünde sabit */}
+      <KeyboardStickyView
+        offset={{ closed: 0, opened: 0 }}
+        style={styles.stickyContainer}
+      >
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: '#F0F2F5',
+              // Android için daha fazla bottom padding
+              paddingBottom: Platform.OS === 'android'
+                ? Math.max(insets.bottom, 16)
+                : (insets.bottom > 0 ? insets.bottom : 8),
+            },
+          ]}
+        >
           <View style={styles.inputWrapper}>
             <TextInput
+              ref={inputRef}
               style={[styles.input, { color: colors.text }]}
               placeholder="Mesaj yazın..."
               placeholderTextColor="#8696A0"
@@ -448,6 +476,8 @@ export default function MessageDetailScreen() {
               onChangeText={handleTextChange}
               multiline
               maxLength={5000}
+              textAlignVertical="center"
+              blurOnSubmit={false}
             />
           </View>
           <TouchableOpacity
@@ -466,7 +496,7 @@ export default function MessageDetailScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardStickyView>
     </SafeAreaView>
   );
 }
@@ -475,8 +505,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  keyboardContainer: {
-    flex: 1,
+  stickyContainer: {
+    // KeyboardStickyView için container style
   },
   header: {
     flexDirection: 'row',
@@ -522,15 +552,16 @@ const styles = StyleSheet.create({
   },
   messagesContainer: {
     flex: 1,
+    backgroundColor: '#F0F2F5',
+  },
+  flatList: {
+    flex: 1,
   },
   messagesList: {
     paddingHorizontal: 4,
-    paddingTop: Spacing.md,
-    paddingBottom: 8,
-  },
-  messagesListEmpty: {
-    flex: 1,
-    justifyContent: 'center',
+    // Inverted FlatList'te paddingTop aslında bottom, paddingBottom aslında top
+    paddingTop: 8, // Gerçekte bottom padding
+    paddingBottom: Spacing.md, // Gerçekte top padding
   },
   dateContainer: {
     alignItems: 'center',

@@ -35,6 +35,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: 'com.loggerise.app',
+    // Chat ekranlarında klavye input'u düzgün göstermesi için kritik
+    softwareKeyboardLayoutMode: 'resize',
   },
   web: {
     output: 'static',

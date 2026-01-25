@@ -33,14 +33,12 @@ const connectionCallbacks: Set<ConnectionCallback> = new Set();
  */
 export async function initializeWebSocket(): Promise<boolean> {
   if (pusher && isConnected) {
-    console.log('[WebSocket] Already connected');
     return true;
   }
 
   try {
     const token = await secureStorage.getToken();
     if (!token) {
-      console.log('[WebSocket] No auth token available');
       return false;
     }
 
@@ -69,37 +67,28 @@ export async function initializeWebSocket(): Promise<boolean> {
 
     // Connection state bindings
     pusher.connection.bind('connected', () => {
-      console.log('[WebSocket] Connected');
       isConnected = true;
       reconnectAttempts = 0;
       notifyConnectionState('connected');
     });
 
     pusher.connection.bind('disconnected', () => {
-      console.log('[WebSocket] Disconnected');
       isConnected = false;
       notifyConnectionState('disconnected');
     });
 
-    pusher.connection.bind('error', (error: any) => {
-      console.error('[WebSocket] Connection error:', error);
+    pusher.connection.bind('error', () => {
       isConnected = false;
       notifyConnectionState('error');
       handleReconnect();
     });
 
-    pusher.connection.bind('state_change', (states: { current: string; previous: string }) => {
-      console.log(`[WebSocket] State: ${states.previous} -> ${states.current}`);
-    });
-
-    // DEBUG: Log ALL incoming events globally
-    pusher.bind_global((eventName: string, data: any) => {
-      console.log(`[WebSocket] GLOBAL EVENT: ${eventName}`, JSON.stringify(data).substring(0, 200));
+    pusher.connection.bind('state_change', () => {
+      // State change handled by connected/disconnected events
     });
 
     return true;
-  } catch (error) {
-    console.error('[WebSocket] Initialization error:', error);
+  } catch {
     return false;
   }
 }
@@ -109,13 +98,11 @@ export async function initializeWebSocket(): Promise<boolean> {
  */
 function handleReconnect(): void {
   if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-    console.log('[WebSocket] Max reconnect attempts reached');
     return;
   }
 
   reconnectAttempts++;
   const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-  console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${reconnectAttempts})`);
 
   setTimeout(async () => {
     await initializeWebSocket();
@@ -136,7 +123,6 @@ export function disconnectWebSocket(): void {
     pusher.disconnect();
     pusher = null;
     isConnected = false;
-    console.log('[WebSocket] Disconnected and cleaned up');
   }
 }
 
@@ -151,7 +137,6 @@ export function subscribeToConversation(
   const channelName = `private-conversation.${conversationId}`;
 
   if (!pusher) {
-    console.warn('[WebSocket] Pusher not initialized');
     return () => {};
   }
 
@@ -160,28 +145,16 @@ export function subscribeToConversation(
   if (!channel) {
     channel = pusher.subscribe(channelName);
     activeChannels.set(channelName, channel);
-
-    channel.bind('pusher:subscription_succeeded', () => {
-      console.log(`[WebSocket] Subscribed to ${channelName}`);
-    });
-
-    channel.bind('pusher:subscription_error', (error: any) => {
-      console.error(`[WebSocket] Subscription error for ${channelName}:`, error);
-    });
   }
 
   // Bind to message events
-  // NOTE: Reverb sends event as 'message.sent' without leading dot
   const messageHandler = (data: { message: any }) => {
-    console.log('[WebSocket] Message received:', data);
     onMessage(data.message);
   };
   channel.bind('message.sent', messageHandler);
 
   // Bind to typing events
-  // NOTE: Reverb sends event as 'user.typing' without leading dot
   const typingHandler = (data: { user_id: number; user_name: string; is_typing: boolean }) => {
-    console.log('[WebSocket] Typing event:', data);
     onTyping?.(data);
   };
   if (onTyping) {
@@ -209,7 +182,6 @@ export function subscribeToUserChannel(
   const channelName = `private-user.${userId}`;
 
   if (!pusher) {
-    console.warn('[WebSocket] Pusher not initialized');
     return () => {};
   }
 
@@ -218,28 +190,16 @@ export function subscribeToUserChannel(
   if (!channel) {
     channel = pusher.subscribe(channelName);
     activeChannels.set(channelName, channel);
-
-    channel.bind('pusher:subscription_succeeded', () => {
-      console.log(`[WebSocket] Subscribed to ${channelName}`);
-    });
-
-    channel.bind('pusher:subscription_error', (error: any) => {
-      console.error(`[WebSocket] Subscription error for ${channelName}:`, error);
-    });
   }
 
   // Bind to message events
-  // NOTE: Reverb sends event as 'message.sent' without leading dot
   const messageHandler = (data: { message: any }) => {
-    console.log('[WebSocket] User channel message:', data);
     onMessage(data.message, data.message.conversation_id);
   };
   channel.bind('message.sent', messageHandler);
 
   // Bind to participant added events
-  // NOTE: Reverb sends events without leading dot
   const participantHandler = (data: any) => {
-    console.log('[WebSocket] Participant added:', data);
     onParticipantAdded?.(data);
   };
   if (onParticipantAdded) {
@@ -248,7 +208,6 @@ export function subscribeToUserChannel(
 
   // Bind to group avatar updated events
   const avatarHandler = (data: any) => {
-    console.log('[WebSocket] Group avatar updated:', data);
     onGroupAvatarUpdated?.(data);
   };
   if (onGroupAvatarUpdated) {
@@ -274,7 +233,6 @@ export function unsubscribeFromChannel(channelName: string): void {
   if (pusher && activeChannels.has(channelName)) {
     pusher.unsubscribe(channelName);
     activeChannels.delete(channelName);
-    console.log(`[WebSocket] Unsubscribed from ${channelName}`);
   }
 }
 

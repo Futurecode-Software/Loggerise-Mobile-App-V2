@@ -524,7 +524,8 @@ export function getConversationAvatar(
     const initials = conversation.name
       ? conversation.name
           .split(' ')
-          .map((w) => w[0])
+          .filter((w) => w.length > 0) // Filter out empty strings
+          .map((w) => w[0] || '')
           .join('')
           .slice(0, 2)
           .toUpperCase()

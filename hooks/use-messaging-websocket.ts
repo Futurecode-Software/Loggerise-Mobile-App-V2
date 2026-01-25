@@ -100,7 +100,8 @@ export function useMessagingWebSocket({
   const handleTyping = useCallback(
     (data: { user_id: number; user_name: string; is_typing: boolean }) => {
       // Don't show typing for current user
-      if (data.user_id === userId) return;
+      // Use Number() to handle type mismatch (string vs number)
+      if (Number(data.user_id) === Number(userId)) return;
 
       if (data.is_typing) {
         // Add typing user
@@ -170,10 +171,8 @@ export function useMessagingWebSocket({
       conversationId,
       (message: Message) => {
         // Don't show own messages (already added locally)
-        // Use Number() to handle type mismatch (string vs number)
         const messageUserId = Number(message.user_id);
         const currentUserId = Number(userId);
-        console.log(`[WebSocket] Message from user ${messageUserId}, current user ${currentUserId}, isMine: ${messageUserId === currentUserId}`);
 
         if (messageUserId !== currentUserId) {
           onNewMessageRef.current?.(message);
