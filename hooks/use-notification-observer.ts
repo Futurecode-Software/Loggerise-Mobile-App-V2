@@ -6,9 +6,46 @@
  */
 
 import { useEffect, useRef } from 'react';
-import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
+import Constants from 'expo-constants';
+import * as Device from 'expo-device';
+
+/**
+ * Check if running in Expo Go (push notifications not supported on Android SDK 53+)
+ */
+function isExpoGo(): boolean {
+  return Constants.appOwnership === 'expo';
+}
+
+/**
+ * Check if push notifications are supported
+ */
+function isPushNotificationsSupported(): boolean {
+  // Must be a physical device
+  if (!Device.isDevice) {
+    return false;
+  }
+
+  // Push notifications are not supported in Expo Go on Android (SDK 53+)
+  if (Platform.OS === 'android' && isExpoGo()) {
+    return false;
+  }
+
+  return true;
+}
+
+// Conditionally import notifications only if supported
+let Notifications: typeof import('expo-notifications') | null = null;
+
+if (isPushNotificationsSupported()) {
+  // Dynamic import to avoid loading the module in Expo Go
+  import('expo-notifications').then((module) => {
+    Notifications = module;
+  }).catch((error) => {
+    console.warn('Failed to load expo-notifications:', error);
+  });
+}
 
 /**
  * Notification data structure expected from backend
@@ -25,7 +62,7 @@ interface NotificationData {
 /**
  * Parse notification data and navigate to the appropriate screen
  */
-function handleNotificationNavigation(notification: Notifications.Notification) {
+function handleNotificationNavigation(notification: import('expo-notifications').Notification) {
   const data = notification.request.content.data as NotificationData;
 
   // If there's a direct URL, use it
@@ -83,38 +120,71 @@ export function useNotificationObserver() {
   const hasHandledInitial = useRef(false);
 
   useEffect(() => {
-    // Handle initial notification (app was opened from notification)
-    async function handleInitialNotification() {
-      if (hasHandledInitial.current) return;
-
-      const response = await Notifications.getLastNotificationResponseAsync();
-      if (response?.notification) {
-        hasHandledInitial.current = true;
-        // Small delay to ensure navigation is ready
-        setTimeout(() => {
-          handleNotificationNavigation(response.notification);
-        }, 500);
-      }
+    // Skip if push notifications are not supported
+    if (!isPushNotificationsSupported()) {
+      return;
     }
 
-    // Check on mount
-    handleInitialNotification();
+    // Ensure notifications module is loaded
+    let notificationsModule: typeof import('expo-notifications') | null = null;
+    let subscription: import('expo-notifications').EventSubscription | null = null;
+
+    // Load notifications module
+    import('expo-notifications').then((module) => {
+      notificationsModule = module;
+      Notifications = module;
+
+      // Handle initial notification (app was opened from notification)
+      async function handleInitialNotification() {
+        if (hasHandledInitial.current || !notificationsModule) return;
+
+        const response = await notificationsModule.getLastNotificationResponseAsync();
+        if (response?.notification) {
+          hasHandledInitial.current = true;
+          // Small delay to ensure navigation is ready
+          setTimeout(() => {
+            handleNotificationNavigation(response.notification);
+          }, 500);
+        }
+      }
+
+      // Check on mount
+      handleInitialNotification();
+
+      // Listen for notification taps while app is running
+      subscription = notificationsModule.addNotificationResponseReceivedListener((response) => {
+        handleNotificationNavigation(response.notification);
+      });
+    }).catch((error) => {
+      console.warn('Failed to load expo-notifications:', error);
+    });
 
     // Also check when app comes to foreground (cold start scenario)
-    const appStateSubscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+    const appStateSubscription = AppState.addEventListener('change', async (nextAppState: AppStateStatus) => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        handleInitialNotification();
+        if (!notificationsModule) {
+          try {
+            notificationsModule = await import('expo-notifications');
+            Notifications = notificationsModule;
+          } catch (error) {
+            console.warn('Failed to load expo-notifications:', error);
+            return;
+          }
+        }
+        if (notificationsModule) {
+          const response = await notificationsModule.getLastNotificationResponseAsync();
+          if (response?.notification) {
+            handleNotificationNavigation(response.notification);
+          }
+        }
       }
       appState.current = nextAppState;
     });
 
-    // Listen for notification taps while app is running
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      handleNotificationNavigation(response.notification);
-    });
-
     return () => {
-      subscription.remove();
+      if (subscription) {
+        subscription.remove();
+      }
       appStateSubscription.remove();
     };
   }, []);
@@ -149,9 +219,24 @@ export async function scheduleMessageNotification(
   conversationId: number,
   conversationType: 'private' | 'group' = 'private'
 ): Promise<string | null> {
+  // Skip if push notifications are not supported
+  if (!isPushNotificationsSupported()) {
+    return null;
+  }
+
   // Don't show notification if user is already in this conversation
   if (activeConversationId === conversationId) {
     return null;
+  }
+
+  // Ensure notifications module is loaded
+  if (!Notifications) {
+    try {
+      Notifications = await import('expo-notifications');
+    } catch (error) {
+      console.error('Error loading expo-notifications:', error);
+      return null;
+    }
   }
 
   try {

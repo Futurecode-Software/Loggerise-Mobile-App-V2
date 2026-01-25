@@ -6,16 +6,9 @@ import {
   TouchableOpacity,
   Animated,
   LayoutAnimation,
-  Platform,
-  UIManager,
 } from 'react-native';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/constants/theme';
-
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 interface MenuItem {
   id: string;

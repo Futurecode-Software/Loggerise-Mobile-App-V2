@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import {
   getUnreadCount,
   getRecentNotifications,
@@ -9,6 +10,30 @@ import {
   Notification,
   RecentNotificationsResponse,
 } from '@/services/endpoints/notifications';
+
+/**
+ * Check if running in Expo Go (push notifications not supported on Android SDK 53+)
+ */
+function isExpoGo(): boolean {
+  return Constants.appOwnership === 'expo';
+}
+
+/**
+ * Check if push notifications are supported
+ */
+function isPushNotificationsSupported(): boolean {
+  // Must be a physical device
+  if (!Device.isDevice) {
+    return false;
+  }
+
+  // Push notifications are not supported in Expo Go on Android (SDK 53+)
+  if (Platform.OS === 'android' && isExpoGo()) {
+    return false;
+  }
+
+  return true;
+}
 
 /**
  * Hook for handling notifications in the app
@@ -50,8 +75,8 @@ export function useNotifications() {
     // Get initial unread count from API
     await refreshUnreadCount();
 
-    // Initialize push notifications on physical devices
-    if (Device.isDevice && Platform.OS !== 'web') {
+    // Initialize push notifications on physical devices (not in Expo Go on Android)
+    if (isPushNotificationsSupported() && Platform.OS !== 'web') {
       try {
         const { initializePushNotifications } = await import('@/services/notifications');
         const token = await initializePushNotifications();
@@ -60,6 +85,8 @@ export function useNotifications() {
       } catch (error) {
         console.log('[Notifications] Push notifications not available:', error);
       }
+    } else if (Platform.OS === 'android' && isExpoGo()) {
+      console.log('[Notifications] Push notifications require a development build on Android (not supported in Expo Go)');
     }
 
     setIsInitialized(true);

@@ -96,7 +96,7 @@ function MessageInputComponent({ value, onChangeText, onSend, isSending }: Messa
           styles.inputContainer,
           {
             backgroundColor: '#F0F2F5',
-            paddingBottom: 0,
+            paddingBottom: insets.bottom,
           },
         ]}
       >

@@ -1,9 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Platform,
@@ -12,20 +11,11 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withDelay,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ChevronLeft,
   Plus,
@@ -33,355 +23,21 @@ import {
   Send,
   Trash2,
   Search,
-  Loader2,
   Bot,
-  User,
-  CheckCircle,
-  XCircle,
   MessageSquare,
   AlertCircle,
-  ChevronRight,
-  Building2,
-  Package,
-  Receipt,
-  Banknote,
-  Truck,
-  Warehouse,
-  Car,
-  BarChart3,
-  Users,
-  FileText,
-  Bell,
-  ArrowRight,
   KeyRound,
   Settings,
 } from 'lucide-react-native';
-import { Card } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import {
-  getConversations,
-  searchConversations,
-  createConversation,
-  getConversationMessages,
-  deleteConversation,
-  sendMessage,
-  confirmExecution,
-  cancelExecution,
-  getPendingExecutions,
-  formatConversationTime,
-  formatMessageTime,
-  AiConversation,
-  AiMessage,
-  AiToolExecution,
-} from '@/services/endpoints/loggy';
-
-type ViewMode = 'list' | 'chat';
-
-const STORAGE_KEY = 'loggy_last_conversation_id';
-
-// Kategorili Öneriler
-interface SuggestionCategory {
-  id: string;
-  label: string;
-  icon: any;
-  color: string;
-  suggestions: {
-    title: string;
-    prompt: string;
-    description: string;
-  }[];
-}
-
-const suggestionCategories: SuggestionCategory[] = [
-  {
-    id: 'contact',
-    label: 'Cari',
-    icon: Building2,
-    color: '#3b82f6',
-    suggestions: [
-      {
-        title: 'Cari Ara',
-        prompt: 'ABC firmasını ara',
-        description: 'Müşteri veya tedarikçi arama',
-      },
-      {
-        title: 'Yeni Cari Ekle',
-        prompt: 'XYZ Ltd. Şti. adında yeni bir müşteri ekle',
-        description: 'Yeni müşteri/tedarikçi oluştur',
-      },
-      {
-        title: 'Cari Bakiye',
-        prompt: 'ABC firmasının bakiyesi ne kadar?',
-        description: 'Alacak/borç durumu sorgula',
-      },
-    ],
-  },
-  {
-    id: 'product',
-    label: 'Ürün',
-    icon: Package,
-    color: '#10b981',
-    suggestions: [
-      {
-        title: 'Ürün Ara',
-        prompt: 'Monitör ürününü ara',
-        description: 'Stok kalemlerinde arama',
-      },
-      {
-        title: 'Stokta Ara',
-        prompt: 'Stokta olan ürünleri listele',
-        description: 'Sadece stokta olanlar',
-      },
-    ],
-  },
-  {
-    id: 'invoice',
-    label: 'Fatura',
-    icon: Receipt,
-    color: '#8b5cf6',
-    suggestions: [
-      {
-        title: 'Fatura Ara',
-        prompt: 'Son 10 satış faturasını göster',
-        description: 'Fatura listesi ve filtreleme',
-      },
-      {
-        title: 'Fatura Bakiye',
-        prompt: 'FTR-2025-001 faturasının bakiyesi ne kadar?',
-        description: 'Ödenen/kalan tutar sorgula',
-      },
-      {
-        title: 'Satış Faturası Kes',
-        prompt: 'ABC firmasına 100 adet kalem için satış faturası kes',
-        description: 'Yeni satış faturası oluştur',
-      },
-      {
-        title: 'Alış Faturası',
-        prompt: 'XYZ firmasından 50 adet monitör aldım, alış faturası oluştur',
-        description: 'Yeni alış faturası oluştur',
-      },
-    ],
-  },
-  {
-    id: 'payment',
-    label: 'Ödeme',
-    icon: Banknote,
-    color: '#f59e0b',
-    suggestions: [
-      {
-        title: 'Tahsilat Kaydet',
-        prompt: 'FTR-2025-001 faturasına 5000 TL tahsilat kaydet',
-        description: 'Satış faturası ödemesi al',
-      },
-      {
-        title: 'Ödeme Yap',
-        prompt: 'FTR-2025-002 faturasının tamamını öde',
-        description: 'Alış faturası ödemesi yap',
-      },
-    ],
-  },
-  {
-    id: 'logistics',
-    label: 'Lojistik',
-    icon: Truck,
-    color: '#ef4444',
-    suggestions: [
-      {
-        title: 'Yük Ara',
-        prompt: 'YK-2025-001 numaralı yükü ara',
-        description: 'Yük numarası veya detay ile arama',
-      },
-      {
-        title: 'Yük Oluştur',
-        prompt: "ABC firması için Almanya'ya ihracat yükü oluştur",
-        description: 'Yeni sevkiyat kaydı',
-      },
-      {
-        title: 'İthalat Yükü',
-        prompt: 'XYZ firmasından ithalat yükü oluştur',
-        description: 'İthalat sevkiyat kaydı',
-      },
-      {
-        title: 'Planlanmamış Yükler',
-        prompt: 'Araca atanmamış yükleri listele',
-        description: 'Henüz planlanmamış sevkiyatlar',
-      },
-      {
-        title: 'Yüke Kalem Ekle',
-        prompt: 'YK-2025-001 yüküne 50 adet monitör ekle',
-        description: 'Mevcut yüke ürün ekle',
-      },
-    ],
-  },
-  {
-    id: 'stock',
-    label: 'Stok',
-    icon: Warehouse,
-    color: '#14b8a6',
-    suggestions: [
-      {
-        title: 'Stok Durumu',
-        prompt: 'Laptop ürününün stok durumu nedir?',
-        description: 'Anlık stok miktarı sorgula',
-      },
-      {
-        title: 'Stok Hareketleri',
-        prompt: 'Son 7 günde stok hareketlerini göster',
-        description: 'Stok giriş/çıkış listesi',
-      },
-      {
-        title: 'Stok Transferi',
-        prompt: 'Ana depodan şube deposuna 50 adet monitör transfer et',
-        description: 'Depolar arası transfer',
-      },
-    ],
-  },
-  {
-    id: 'vehicle',
-    label: 'Araç',
-    icon: Car,
-    color: '#f97316',
-    suggestions: [
-      {
-        title: 'Araç Ara',
-        prompt: '34 ABC plakalı aracı ara',
-        description: 'Plaka veya marka ile arama',
-      },
-      {
-        title: 'Araç Ekle',
-        prompt: '34 XYZ 789 plakalı Mercedes Actros 2023 model çekici ekle',
-        description: 'Yeni araç kaydı oluştur',
-      },
-      {
-        title: 'Araç Durumu',
-        prompt: '34 ABC 123 plakalı aracın durumu nedir?',
-        description: 'Sigorta, muayene, bakım bilgileri',
-      },
-      {
-        title: 'Bakım Kaydı',
-        prompt: '34 ABC 123 plakalı araç için 150.000 km bakım kaydı oluştur',
-        description: 'Yeni bakım kaydı ekle',
-      },
-    ],
-  },
-  {
-    id: 'finance',
-    label: 'Finans',
-    icon: BarChart3,
-    color: '#6366f1',
-    suggestions: [
-      {
-        title: 'Gelir-Gider Raporu',
-        prompt: 'Bu ayın gelir-gider raporunu göster',
-        description: 'Aylık finansal özet',
-      },
-      {
-        title: 'Kar-Zarar Raporu',
-        prompt: '2025 yılının kar-zarar raporunu oluştur',
-        description: 'Detaylı kar/zarar analizi',
-      },
-      {
-        title: 'Vadesi Geçen Alacaklar',
-        prompt: 'Vadesi geçmiş alacaklarımız ne kadar?',
-        description: 'Yaşlandırma raporu',
-      },
-      {
-        title: 'Nakit Akışı',
-        prompt: 'Bu ayın nakit akış raporunu göster',
-        description: 'Banka/kasa hareketleri',
-      },
-    ],
-  },
-  {
-    id: 'hr',
-    label: 'İK',
-    icon: Users,
-    color: '#ec4899',
-    suggestions: [
-      {
-        title: 'Personel Ara',
-        prompt: 'Ahmet Yılmaz adlı personeli ara',
-        description: 'Ad veya pozisyona göre arama',
-      },
-      {
-        title: 'Personel Ekle',
-        prompt: 'Ali Veli adında yeni bir sürücü ekle. TC: 12345678901, Tel: 05551234567, E-posta: ali@firma.com',
-        description: 'Yeni personel kaydı oluştur',
-      },
-      {
-        title: 'Sürücü Belgeleri',
-        prompt: "Ahmet Yılmaz'ın belge durumunu kontrol et",
-        description: 'Ehliyet, SRC, ADR, vize durumu',
-      },
-      {
-        title: 'Aktif Sürücüler',
-        prompt: 'Aktif sürücüleri listele',
-        description: 'Sürücü pozisyonundaki personeller',
-      },
-    ],
-  },
-  {
-    id: 'uninvoiced',
-    label: 'Faturasız Yük',
-    icon: FileText,
-    color: '#dc2626',
-    suggestions: [
-      {
-        title: 'Faturasız Yükler',
-        prompt: 'Faturası kesilmemiş yüklerimiz var mı?',
-        description: 'Tamamlanmış ama faturalanmamış yükler',
-      },
-      {
-        title: 'Kritik Yükler',
-        prompt: '30 gündür faturalanmamış yükleri göster',
-        description: 'Uzun süredir bekleyen yükler',
-      },
-      {
-        title: 'Toplu Faturala',
-        prompt: "ABC Lojistik'in tüm faturalanmamış yüklerini faturala",
-        description: 'Müşterinin yüklerini toplu faturala',
-      },
-      {
-        title: 'Gelir Raporu',
-        prompt: 'Faturalanmamış toplam gelir ne kadar?',
-        description: 'Faturalanmayı bekleyen gelir analizi',
-      },
-    ],
-  },
-  {
-    id: 'reminder',
-    label: 'Hatırlatıcı',
-    icon: Bell,
-    color: '#06b6d4',
-    suggestions: [
-      {
-        title: 'Hatırlatıcı Oluştur',
-        prompt: 'Yarın saat 14:00\'de ABC firmasını aramayı hatırlat',
-        description: 'Belirli bir zaman için hatırlatıcı kur',
-      },
-      {
-        title: 'Aktif Hatırlatıcılar',
-        prompt: 'Aktif hatırlatıcılarımı göster',
-        description: 'Bekleyen hatırlatıcıları listele',
-      },
-      {
-        title: 'Hatırlatıcı İptal',
-        prompt: '3 numaralı hatırlatıcıyı iptal et',
-        description: 'Bir hatırlatıcıyı kaldır',
-      },
-      {
-        title: 'Bugünkü Hatırlatıcılar',
-        prompt: 'Bugün için hatırlatıcılarım var mı?',
-        description: 'Günlük hatırlatıcı özeti',
-      },
-      {
-        title: 'Fatura Hatırlatıcı',
-        prompt: '1 hafta sonra FTR-2025-001 faturasının ödemesini hatırlat',
-        description: 'Fatura takibi için hatırlatıcı',
-      },
-    ],
-  },
-];
+import { formatConversationTime, AiConversation } from '@/services/endpoints/loggy';
+import { useLoggyConversations } from '@/hooks/use-logy-conversations';
+import { useLoggyMessages } from '@/hooks/use-logy-messages';
+import { useLoggySearch } from '@/hooks/use-logy-search';
+import { ViewMode } from '@/components/loggy/constants';
+import { TypingIndicator } from '@/components/loggy/TypingIndicator';
+import { QuickSuggestions } from '@/components/loggy/QuickSuggestions';
+import { MessageBubble } from '@/components/loggy/MessageBubble';
 
 export default function LoggyScreen() {
   const colors = Colors.light;
@@ -391,96 +47,38 @@ export default function LoggyScreen() {
 
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-
-  // List state
-  const [conversations, setConversations] = useState<AiConversation[]>([]);
-  const [isLoadingList, setIsLoadingList] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
-
-  // Search state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<AiConversation[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Chat state
-  const [currentConversation, setCurrentConversation] = useState<AiConversation | null>(null);
-  const [messages, setMessages] = useState<AiMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [chatError, setChatError] = useState<string | null>(null);
+  const [isAiConfigured] = useState(true); // TODO: Get from API
 
-  // AI Configuration
-  const [isAiConfigured, setIsAiConfigured] = useState(true); // TODO: Get from API
-  const [pendingConfirmations, setPendingConfirmations] = useState<AiToolExecution[]>([]);
-  const [draftCount, setDraftCount] = useState(0);
+  // Custom hooks
+  const {
+    conversations,
+    currentConversation,
+    isLoading: isLoadingConversations,
+    refreshing,
+    error: conversationsError,
+    createNewConversation,
+    selectConversation,
+    handleDelete,
+    refresh,
+  } = useLoggyConversations();
 
-  // Fetch conversations
-  const fetchConversations = useCallback(async () => {
-    try {
-      setListError(null);
-      const data = await getConversations({ per_page: 20 });
-      setConversations(data);
-    } catch (err) {
-      console.error('Conversations fetch error:', err);
-      setListError(err instanceof Error ? err.message : 'Konuşmalar yüklenemedi');
-    } finally {
-      setIsLoadingList(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const {
+    messages,
+    isLoading: isLoadingMessages,
+    isSending,
+    error: messagesError,
+    sendMessage,
+    clearError,
+  } = useLoggyMessages({ conversation: currentConversation });
 
-  // Search conversations
-  const handleSearch = useCallback((query: string) => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    if (query.length < 2) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    setIsSearching(true);
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const results = await searchConversations(query);
-        setSearchResults(results);
-      } catch (err) {
-        console.error('Search error:', err);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 300);
-  }, []);
-
-  // Initial load
-  useEffect(() => {
-    setIsLoadingList(true);
-    fetchConversations();
-  }, [fetchConversations]);
-
-  // Load last conversation
-  useEffect(() => {
-    const loadLastConversation = async () => {
-      const lastConversationId = await AsyncStorage.getItem(STORAGE_KEY);
-      if (lastConversationId && conversations.length > 0) {
-        const lastConversation = conversations.find(
-          (c) => c.id === parseInt(lastConversationId)
-        );
-        if (lastConversation) {
-          selectConversation(lastConversation);
-        }
-      }
-    };
-    if (conversations.length > 0) {
-      loadLastConversation();
-    }
-  }, [conversations]);
+  const {
+    searchQuery,
+    searchResults,
+    isSearching,
+    setSearchQuery,
+    clearSearch,
+  } = useLoggySearch();
 
   // Inverted messages for FlatList (newest first)
   const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
@@ -490,247 +88,56 @@ export default function LoggyScreen() {
     paddingBottom: -keyboardHeight.value,
   }));
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchConversations();
-  };
-
-  // Create new conversation
-  const createNewConversation = async () => {
-    setIsLoading(true);
+  // Create new conversation handler
+  const handleCreateNewConversation = async () => {
     try {
-      const newConversation = await createConversation({ title: 'Yeni Konuşma' });
-      setConversations([newConversation, ...conversations]);
-      setCurrentConversation(newConversation);
-      setMessages([]);
-      await AsyncStorage.setItem(STORAGE_KEY, newConversation.id.toString());
+      const newConversation = await createNewConversation();
       setViewMode('chat');
     } catch (err) {
-      Alert.alert('Hata', err instanceof Error ? err.message : 'Konuşma oluşturulamadı');
-    } finally {
-      setIsLoading(false);
+      // Error already handled in hook
     }
   };
 
-  // Select conversation
-  const selectConversation = async (conversation: AiConversation) => {
-    setCurrentConversation(conversation);
-    setIsLoading(true);
-    setChatError(null);
-    await AsyncStorage.setItem(STORAGE_KEY, conversation.id.toString());
-    try {
-      const data = await getConversationMessages(conversation.id);
-      setMessages(data.messages);
-      setCurrentConversation(data.conversation);
-    } catch (err: any) {
-      if (err.response?.status === 403 || err.response?.status === 404) {
-        await AsyncStorage.removeItem(STORAGE_KEY);
-        setCurrentConversation(null);
-        setMessages([]);
-        Alert.alert('Hata', 'Bu konuşmaya erişim yetkiniz yok');
-      } else {
-        Alert.alert('Hata', 'Konuşma yüklenemedi');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+  // Select conversation handler
+  const handleSelectConversation = async (conversation: AiConversation) => {
+    selectConversation(conversation);
+    setViewMode('chat');
   };
 
-  // Delete conversation
-  const handleDelete = async (conversationId: number) => {
-    Alert.alert(
-      'Konuşmayı Sil',
-      'Bu işlem geri alınamaz. Konuşma ve tüm mesajları kalıcı olarak silinecektir.',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteConversation(conversationId);
-              setConversations((prev) => prev.filter((c) => c.id !== conversationId));
-              if (currentConversation?.id === conversationId) {
-                setCurrentConversation(null);
-                setMessages([]);
-                setViewMode('list');
-                await AsyncStorage.removeItem(STORAGE_KEY);
-              }
-            } catch (err) {
-              Alert.alert('Hata', 'Konuşma silinemedi');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  // Send message
+  // Send message handler
   const handleSend = async () => {
     if (!inputValue.trim() || !currentConversation || isSending) return;
-
     const messageContent = inputValue;
-    const userMessage: AiMessage = {
-      id: Date.now(),
-      conversation_id: currentConversation.id,
-      role: 'user',
-      content: messageContent,
-      tool_calls: null,
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
-    setIsSending(true);
-    setChatError(null);
-
-    try {
-      const result = await sendMessage(currentConversation.id, { content: messageContent });
-      setMessages((prev) => [...prev, result.message]);
-      if (result.conversation) {
-        setCurrentConversation(result.conversation);
-        setConversations((prev) =>
-          prev.map((c) => (c.id === result.conversation.id ? result.conversation : c))
-        );
-      }
-    } catch (err: any) {
-      setChatError(err instanceof Error ? err.message : 'Mesaj gönderilemedi');
-      setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
-    } finally {
-      setIsSending(false);
-    }
+    await sendMessage(messageContent);
   };
 
   // Handle suggestion click
   const handleSuggestionClick = async (prompt: string) => {
-    if (isLoading || !isAiConfigured) return;
+    if (isLoadingMessages || !isAiConfigured) return;
 
-    setIsLoading(true);
     try {
-      const newConversation = await createConversation({ title: 'Yeni Konuşma' });
-      setConversations([newConversation, ...conversations]);
-      setCurrentConversation(newConversation);
-      setMessages([]);
-      await AsyncStorage.setItem(STORAGE_KEY, newConversation.id.toString());
+      const newConversation = await createNewConversation();
       setViewMode('chat');
-
-      // Send the prompt
       setInputValue(prompt);
+      
+      // Send the prompt after a short delay
       setTimeout(async () => {
-        const userMessage: AiMessage = {
-          id: Date.now(),
-          conversation_id: newConversation.id,
-          role: 'user',
-          content: prompt,
-          tool_calls: null,
-          created_at: new Date().toISOString(),
-        };
-        setMessages([userMessage]);
         setInputValue('');
-        setIsSending(true);
-
-        try {
-          const result = await sendMessage(newConversation.id, { content: prompt });
-          setMessages((prev) => [...prev, result.message]);
-          if (result.conversation) {
-            setCurrentConversation(result.conversation);
-          }
-        } catch (err: any) {
-          setChatError(err instanceof Error ? err.message : 'Mesaj gönderilemedi');
-        } finally {
-          setIsSending(false);
-          setIsLoading(false);
-        }
+        await sendMessage(prompt);
       }, 100);
     } catch (err) {
-      Alert.alert('Hata', 'Konuşma oluşturulamadı');
-      setIsLoading(false);
+      // Error already handled in hook
     }
   };
 
   // Go back to list
   const goBackToList = () => {
     setViewMode('list');
-    setCurrentConversation(null);
-    setChatError(null);
-    setSearchQuery('');
-    setSearchResults([]);
-    fetchConversations();
+    clearError();
+    clearSearch();
+    refresh();
   };
-
-  // Render message
-  const renderMessage = useCallback(({ item: message }: { item: AiMessage }) => {
-    const isUser = message.role === 'user';
-    const isAssistant = message.role === 'assistant';
-    const hasConfirmation = message.content?.includes('onayınız gerekiyor');
-
-    return (
-      <View
-        style={[
-          styles.messageContainer,
-          isUser ? styles.userMessageContainer : styles.aiMessageContainer,
-        ]}
-      >
-        <View
-          style={[
-            styles.messageBubble,
-            isUser
-              ? [styles.userBubble, { backgroundColor: Brand.primary }]
-              : [styles.aiBubble, { backgroundColor: colors.surface }],
-          ]}
-        >
-          {!isUser && (
-            <View style={styles.aiHeader}>
-              <Bot size={14} color={Brand.primary} />
-              <Text style={[styles.aiLabel, { color: Brand.primary }]}>Loggy AI</Text>
-            </View>
-          )}
-          <Text
-            style={[
-              styles.messageText,
-              { color: isUser ? '#FFFFFF' : colors.text },
-            ]}
-          >
-            {message.content}
-          </Text>
-
-          {/* Confirmation buttons */}
-          {hasConfirmation && isAssistant && (
-            <View style={styles.confirmationButtons}>
-              <TouchableOpacity
-                style={[styles.confirmButton, { backgroundColor: '#10b981' }]}
-                onPress={() => {
-                  // TODO: Get execution ID from message
-                  Alert.alert('Bilgi', 'Onay özelliği yakında eklenecek');
-                }}
-              >
-                <CheckCircle size={14} color="#FFFFFF" />
-                <Text style={styles.confirmButtonText}>Onayla</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.cancelButton, { borderColor: colors.border }]}
-                onPress={() => {
-                  Alert.alert('Bilgi', 'İptal özelliği yakında eklenecek');
-                }}
-              >
-                <XCircle size={14} color={colors.danger} />
-                <Text style={[styles.cancelButtonText, { color: colors.danger }]}>İptal</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-        <Text
-          style={[
-            styles.timestamp,
-            { color: colors.textMuted },
-            isUser && styles.userTimestamp,
-          ]}
-        >
-          {formatMessageTime(message.created_at)}
-        </Text>
-      </View>
-    );
-  }, [colors]);
 
   // Render conversation list item
   const renderConversationItem = ({ item }: { item: AiConversation }) => (
@@ -745,10 +152,7 @@ export default function LoggyScreen() {
           backgroundColor: Brand.primary + '15',
         },
       ]}
-      onPress={() => {
-        selectConversation(item);
-        setViewMode('chat');
-      }}
+      onPress={() => handleSelectConversation(item)}
     >
       <View style={[styles.conversationIcon, { backgroundColor: Brand.primary + '15' }]}>
         <MessageSquare size={20} color={Brand.primary} />
@@ -775,7 +179,7 @@ export default function LoggyScreen() {
 
   // Render list empty state
   const renderListEmpty = () => {
-    if (isLoadingList) {
+    if (isLoadingConversations) {
       return (
         <View style={styles.centerState}>
           <ActivityIndicator size="large" color={Brand.primary} />
@@ -786,20 +190,19 @@ export default function LoggyScreen() {
       );
     }
 
-    if (listError) {
+    if (conversationsError) {
       return (
         <View style={styles.centerState}>
           <View style={[styles.stateIcon, { backgroundColor: colors.danger + '15' }]}>
             <AlertCircle size={48} color={colors.danger} />
           </View>
           <Text style={[styles.stateTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.stateText, { color: colors.textSecondary }]}>{listError}</Text>
+          <Text style={[styles.stateText, { color: colors.textSecondary }]}>
+            {conversationsError}
+          </Text>
           <TouchableOpacity
             style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => {
-              setIsLoadingList(true);
-              fetchConversations();
-            }}
+            onPress={() => refresh()}
           >
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
@@ -818,7 +221,7 @@ export default function LoggyScreen() {
         </Text>
         <TouchableOpacity
           style={[styles.startButton, { backgroundColor: Brand.primary }]}
-          onPress={createNewConversation}
+          onPress={handleCreateNewConversation}
         >
           <Sparkles size={18} color="#FFFFFF" />
           <Text style={styles.startButtonText}>Yeni Konuşma Başlat</Text>
@@ -847,7 +250,7 @@ export default function LoggyScreen() {
               AI Asistan
             </Text>
           </View>
-          <TouchableOpacity style={styles.newChatButton} onPress={createNewConversation}>
+          <TouchableOpacity style={styles.newChatButton} onPress={handleCreateNewConversation}>
             <Plus size={22} color={Brand.primary} />
           </TouchableOpacity>
         </View>
@@ -860,10 +263,7 @@ export default function LoggyScreen() {
             placeholder="Sohbetlerde ara..."
             placeholderTextColor={colors.placeholder}
             value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              handleSearch(text);
-            }}
+            onChangeText={setSearchQuery}
           />
           {isSearching && <ActivityIndicator size="small" color={Brand.primary} />}
         </View>
@@ -879,7 +279,7 @@ export default function LoggyScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={onRefresh}
+              onRefresh={refresh}
               tintColor={Brand.primary}
             />
           }
@@ -889,7 +289,7 @@ export default function LoggyScreen() {
         {conversations.length > 0 && (
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-            onPress={createNewConversation}
+            onPress={handleCreateNewConversation}
           >
             <Plus size={24} color="#FFFFFF" />
           </TouchableOpacity>
@@ -957,18 +357,18 @@ export default function LoggyScreen() {
       {/* Chat Content */}
       <View style={styles.chatContainer}>
         {/* Messages */}
-        {isLoading && messages.length === 0 ? (
+        {isLoadingMessages && messages.length === 0 ? (
           <View style={[styles.messagesContainer, styles.centerContainer]}>
             <ActivityIndicator size="large" color={Brand.primary} />
             <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
               Mesajlar yükleniyor...
             </Text>
           </View>
-        ) : chatError ? (
+        ) : messagesError ? (
           <View style={[styles.messagesContainer, styles.centerContainer]}>
             <AlertCircle size={64} color={colors.danger} />
             <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-            <Text style={[styles.errorText, { color: colors.textSecondary }]}>{chatError}</Text>
+            <Text style={[styles.errorText, { color: colors.textSecondary }]}>{messagesError}</Text>
           </View>
         ) : invertedMessages.length === 0 && !isSending ? (
           <View style={[styles.messagesContainer, styles.centerContainer]}>
@@ -978,10 +378,9 @@ export default function LoggyScreen() {
               Merhaba! Ben Loggy, sizin AI asistanınızım. Yük oluşturma, cari arama gibi
               işlemlerde size yardımcı olabilirim.
             </Text>
-            {/* Quick Suggestions */}
             <QuickSuggestions
               onSuggestionClick={handleSuggestionClick}
-              isLoading={isLoading}
+              isLoading={isLoadingMessages}
               isAiConfigured={isAiConfigured}
             />
           </View>
@@ -991,7 +390,7 @@ export default function LoggyScreen() {
               ref={flatListRef}
               data={invertedMessages}
               keyExtractor={(item) => String(item.id)}
-              renderItem={renderMessage}
+              renderItem={({ item }) => <MessageBubble message={item} />}
               inverted
               contentContainerStyle={styles.messagesList}
               showsVerticalScrollIndicator={false}
@@ -1009,10 +408,10 @@ export default function LoggyScreen() {
               ListHeaderComponent={
                 isSending ? (
                   <TypingIndicator />
-                ) : chatError ? (
+                ) : messagesError ? (
                   <View style={[styles.errorBanner, { backgroundColor: colors.danger + '15' }]}>
                     <AlertCircle size={16} color={colors.danger} />
-                    <Text style={[styles.errorText, { color: colors.danger }]}>{chatError}</Text>
+                    <Text style={[styles.errorText, { color: colors.danger }]}>{messagesError}</Text>
                   </View>
                 ) : null
               }
@@ -1021,11 +420,16 @@ export default function LoggyScreen() {
         )}
 
         {/* Input Bar */}
-        <KeyboardStickyView 
+        <KeyboardStickyView
           offset={{ closed: 0, opened: 0 }}
           style={styles.stickyContainer}
         >
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+          <View
+            style={[
+              styles.inputContainer,
+              { backgroundColor: colors.card, borderTopColor: colors.border },
+            ]}
+          >
             <TextInput
               ref={inputRef}
               style={[styles.input, { color: colors.text, backgroundColor: colors.surface }]}
@@ -1053,197 +457,16 @@ export default function LoggyScreen() {
               {isSending ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Send size={18} color={inputValue.trim() && isAiConfigured ? '#FFFFFF' : colors.textMuted} />
+                <Send
+                  size={18}
+                  color={inputValue.trim() && isAiConfigured ? '#FFFFFF' : colors.textMuted}
+                />
               )}
             </TouchableOpacity>
           </View>
         </KeyboardStickyView>
       </View>
     </SafeAreaView>
-  );
-}
-
-// Typing Indicator Component with Animated Dots
-function TypingIndicator() {
-  const colors = Colors.light;
-  const dot1 = useSharedValue(0);
-  const dot2 = useSharedValue(0);
-  const dot3 = useSharedValue(0);
-
-  useEffect(() => {
-    // Her nokta için sıralı animasyon
-    dot1.value = withRepeat(
-      withSequence(
-        withTiming(-8, { duration: 400, easing: Easing.out(Easing.quad) }),
-        withTiming(0, { duration: 400, easing: Easing.in(Easing.quad) })
-      ),
-      -1,
-      false
-    );
-
-    dot2.value = withDelay(
-      150,
-      withRepeat(
-        withSequence(
-          withTiming(-8, { duration: 400, easing: Easing.out(Easing.quad) }),
-          withTiming(0, { duration: 400, easing: Easing.in(Easing.quad) })
-        ),
-        -1,
-        false
-      )
-    );
-
-    dot3.value = withDelay(
-      300,
-      withRepeat(
-        withSequence(
-          withTiming(-8, { duration: 400, easing: Easing.out(Easing.quad) }),
-          withTiming(0, { duration: 400, easing: Easing.in(Easing.quad) })
-        ),
-        -1,
-        false
-      )
-    );
-  }, []);
-
-  const animatedStyle1 = useAnimatedStyle(() => ({
-    transform: [{ translateY: dot1.value }],
-  }));
-
-  const animatedStyle2 = useAnimatedStyle(() => ({
-    transform: [{ translateY: dot2.value }],
-  }));
-
-  const animatedStyle3 = useAnimatedStyle(() => ({
-    transform: [{ translateY: dot3.value }],
-  }));
-
-  return (
-    <View style={[styles.messageContainer, styles.aiMessageContainer]}>
-      <View style={[styles.messageBubble, styles.aiBubble, { backgroundColor: colors.surface }]}>
-        <View style={styles.aiHeader}>
-          <Bot size={14} color={Brand.primary} />
-          <Text style={[styles.aiLabel, { color: Brand.primary }]}>Loggy AI</Text>
-        </View>
-        <View style={styles.loadingDots}>
-          <Animated.View
-            style={[
-              styles.dot,
-              { backgroundColor: Brand.primary },
-              animatedStyle1,
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.dot,
-              { backgroundColor: Brand.primary },
-              animatedStyle2,
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.dot,
-              { backgroundColor: Brand.primary },
-              animatedStyle3,
-            ]}
-          />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-// Quick Suggestions Component
-function QuickSuggestions({
-  onSuggestionClick,
-  isLoading,
-  isAiConfigured,
-}: {
-  onSuggestionClick: (prompt: string) => void;
-  isLoading: boolean;
-  isAiConfigured: boolean;
-}) {
-  const colors = Colors.light;
-  const [activeCategory, setActiveCategory] = useState(suggestionCategories[0].id);
-
-  return (
-    <View style={styles.suggestionsContainer}>
-      <Text style={[styles.suggestionsTitle, { color: colors.textSecondary }]}>
-        Yapabileceklerim:
-      </Text>
-
-      {/* Category Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryTabs}
-        contentContainerStyle={styles.categoryTabsContent}
-      >
-        {suggestionCategories.map((cat) => {
-          const Icon = cat.icon;
-          const isActive = activeCategory === cat.id;
-          return (
-            <TouchableOpacity
-              key={cat.id}
-              style={[
-                styles.categoryTab,
-                {
-                  backgroundColor: isActive ? Brand.primary + '15' : colors.surface,
-                  borderColor: isActive ? Brand.primary : colors.border,
-                },
-              ]}
-              onPress={() => setActiveCategory(cat.id)}
-            >
-              <Icon size={14} color={isActive ? Brand.primary : colors.textMuted} />
-              <Text
-                style={[
-                  styles.categoryTabText,
-                  { color: isActive ? Brand.primary : colors.textMuted },
-                ]}
-              >
-                {cat.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* Suggestions List */}
-      <View style={styles.suggestionsList}>
-        {suggestionCategories
-          .find((cat) => cat.id === activeCategory)
-          ?.suggestions.map((suggestion, idx) => {
-            const Icon = suggestionCategories.find((cat) => cat.id === activeCategory)?.icon;
-            return (
-              <TouchableOpacity
-                key={idx}
-                style={[
-                  styles.suggestionCard,
-                  { backgroundColor: colors.card, ...Shadows.sm },
-                ]}
-                onPress={() => onSuggestionClick(suggestion.prompt)}
-                disabled={isLoading || !isAiConfigured}
-              >
-                <View style={[styles.suggestionIcon, { backgroundColor: activeCategory ? suggestionCategories.find((cat) => cat.id === activeCategory)?.color + '15' : Brand.primary + '15' }]}>
-                  {Icon && <Icon size={18} color={suggestionCategories.find((cat) => cat.id === activeCategory)?.color || Brand.primary} />}
-                </View>
-                <View style={styles.suggestionContent}>
-                  <Text style={[styles.suggestionTitle, { color: colors.text }]}>
-                    {suggestion.title}
-                  </Text>
-                  <Text style={[styles.suggestionDescription, { color: colors.textMuted }]}>
-                    {suggestion.description}
-                  </Text>
-                  <Text style={[styles.suggestionPrompt, { color: colors.textMuted }]} numberOfLines={1}>
-                    "{suggestion.prompt}"
-                  </Text>
-                </View>
-                <ArrowRight size={16} color={colors.textMuted} />
-              </TouchableOpacity>
-            );
-          })}
-      </View>
-    </View>
   );
 }
 
@@ -1400,105 +623,10 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     paddingBottom: Spacing.md,
   },
-  loadingContainer: {
-    paddingVertical: Spacing['2xl'],
+  centerContainer: {
     alignItems: 'center',
-  },
-  messageContainer: {
-    marginBottom: Spacing.md,
-  },
-  userMessageContainer: {
-    alignItems: 'flex-end',
-  },
-  aiMessageContainer: {
-    alignItems: 'flex-start',
-  },
-  messageBubble: {
-    maxWidth: '85%',
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-  },
-  userBubble: {
-    borderBottomRightRadius: BorderRadius.sm,
-  },
-  aiBubble: {
-    borderBottomLeftRadius: BorderRadius.sm,
-  },
-  aiHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
-  },
-  aiLabel: {
-    ...Typography.bodySM,
-    fontWeight: '600',
-  },
-  messageText: {
-    ...Typography.bodyMD,
-    lineHeight: 22,
-  },
-  timestamp: {
-    ...Typography.bodyXS,
-    marginTop: Spacing.xs,
-  },
-  userTimestamp: {
-    textAlign: 'right',
-  },
-  confirmationButtons: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-  },
-  confirmButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-  },
-  confirmButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodySM,
-    fontWeight: '600',
-  },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-  },
-  cancelButtonText: {
-    ...Typography.bodySM,
-    fontWeight: '600',
-  },
-  loadingDots: {
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
-  },
-  errorText: {
-    ...Typography.bodySM,
-    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
   },
   loadingText: {
     ...Typography.bodyMD,
@@ -1516,6 +644,18 @@ const styles = StyleSheet.create({
     ...Typography.bodyMD,
     textAlign: 'center',
     marginTop: Spacing.sm,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+  },
+  errorText: {
+    ...Typography.bodySM,
+    flex: 1,
   },
   overlay: {
     position: 'absolute',
@@ -1566,66 +706,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     ...Typography.bodyMD,
     fontWeight: '600',
-  },
-  suggestionsContainer: {
-    marginTop: Spacing.xl,
-  },
-  suggestionsTitle: {
-    ...Typography.headingSM,
-    marginBottom: Spacing.md,
-  },
-  categoryTabs: {
-    marginBottom: Spacing.md,
-  },
-  categoryTabsContent: {
-    gap: Spacing.sm,
-    paddingRight: Spacing.lg,
-  },
-  categoryTab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-  },
-  categoryTabText: {
-    ...Typography.bodyXS,
-    fontWeight: '500',
-  },
-  suggestionsList: {
-    gap: Spacing.md,
-  },
-  suggestionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    gap: Spacing.md,
-  },
-  suggestionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  suggestionContent: {
-    flex: 1,
-  },
-  suggestionTitle: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  suggestionDescription: {
-    ...Typography.bodyXS,
-    marginBottom: 4,
-  },
-  suggestionPrompt: {
-    ...Typography.bodyXS,
-    fontStyle: 'italic',
   },
   stickyContainer: {
     backgroundColor: '#FFFFFF',

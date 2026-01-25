@@ -112,7 +112,7 @@ export default function MessageDetailScreen() {
   const keyExtractor = useCallback((item: Message) => String(item.id), []);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#F0F2F5' }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#F0F2F5' }]} edges={['top', 'bottom']}>
       {/* Header */}
       <MessageHeader
         conversation={conversation}
