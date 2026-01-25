@@ -7,13 +7,21 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LogBox } from 'react-native';
 import Toast from 'react-native-toast-message';
 import 'react-native-reanimated';
+import { useState, useEffect } from 'react';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 
-import { AuthProvider } from '@/context/auth-context';
+import { AuthProvider, useAuth } from '@/context/auth-context';
 import { NotificationProvider } from '@/context/notification-context';
 import { MessageProvider } from '@/context/message-context';
-import { DashboardProvider } from '@/contexts/dashboard-context';
+import { DashboardProvider, useDashboard } from '@/contexts/dashboard-context';
 import { Colors } from '@/constants/theme';
 import { useNotificationObserver } from '@/hooks/use-notification-observer';
+import { SplashScreen } from '@/components/dashboard/splash-screen';
 
 // Suppress known non-critical warnings from dependencies
 // These warnings come from react-navigation and react-native-toast-message internals
@@ -64,6 +72,7 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={LoggeriseLight}>
+      <SplashScreenController />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
@@ -84,6 +93,41 @@ function RootLayoutNav() {
       <Toast position='top' topOffset={60} />
     </ThemeProvider>
   );
+}
+
+/**
+ * Splash Screen Controller Component
+ * Shows splash screen only on first app load until auth and dashboard data are ready
+ * Must be inside providers to access auth and dashboard context
+ */
+function SplashScreenController() {
+  const { isInitializing, isAuthenticated } = useAuth();
+  const { isLoadingAvailable } = useDashboard();
+  const [showSplash, setShowSplash] = useState(true);
+  const [hasShownOnce, setHasShownOnce] = useState(false);
+
+  // Determine if app is ready (auth initialized and dashboard data loaded if authenticated)
+  const isAppReady = !isInitializing && (!isAuthenticated || !isLoadingAvailable);
+
+  useEffect(() => {
+    // Only show splash on first load
+    if (isAppReady && !hasShownOnce) {
+      // Delay fade out slightly for smooth transition
+      const timer = setTimeout(() => {
+        setShowSplash(false);
+        setHasShownOnce(true);
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isAppReady, hasShownOnce]);
+
+  // Don't show splash if already shown once
+  if (hasShownOnce) {
+    return null;
+  }
+
+  return <SplashScreen visible={showSplash} />;
 }
 
 export default function RootLayout() {

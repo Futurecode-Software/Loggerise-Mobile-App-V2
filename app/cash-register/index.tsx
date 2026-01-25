@@ -1,23 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import {
-  Filter,
-  Plus,
-  Wallet,
-  User,
-  ChevronRight,
-  AlertCircle,
-} from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
+import { Filter, Plus, Wallet, User } from 'lucide-react-native';
+import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
@@ -121,177 +106,83 @@ export default function CashRegistersScreen() {
 
   const totals = getTotals();
 
-  const renderCashRegister = ({ item }: { item: CashRegister }) => (
-    <Card
-      style={styles.registerCard}
-      onPress={() => router.push(`/cash-register/${item.id}` as any)}
-    >
-      <View style={styles.registerHeader}>
-        <View style={[styles.registerIcon, { backgroundColor: colors.surface }]}>
-          <Wallet size={20} color={Brand.primary} />
-        </View>
-        <View style={styles.registerInfo}>
-          <Text style={[styles.registerName, { color: colors.text }]}>{item.name}</Text>
-          {item.code && (
-            <Text style={[styles.registerCode, { color: colors.textSecondary }]}>
-              {item.code}
-            </Text>
-          )}
-        </View>
-        <View
-          style={[
-            styles.statusDot,
-            { backgroundColor: item.is_active ? colors.success : colors.textMuted },
-          ]}
-        />
-      </View>
-
-      {item.location && (
-        <Text style={[styles.location, { color: colors.textSecondary }]}>
+  const renderCashRegister = (item: CashRegister) => {
+    const additionalInfo = [];
+    if (item.location) {
+      additionalInfo.push(
+        <Text key="location" style={[styles.location, { color: colors.textSecondary }]}>
           {item.location}
         </Text>
-      )}
-
-      {item.responsible_user && (
-        <View style={styles.responsibleRow}>
+      );
+    }
+    if (item.responsible_user) {
+      additionalInfo.push(
+        <View key="responsible" style={styles.responsibleRow}>
           <User size={14} color={colors.icon} />
           <Text style={[styles.responsibleText, { color: colors.textSecondary }]}>
             {item.responsible_user.name}
           </Text>
         </View>
-      )}
-
-      <View style={styles.balanceRow}>
-        <Text
-          style={[
-            styles.balance,
-            { color: item.balance >= 0 ? colors.success : colors.danger },
-          ]}
-        >
-          {formatBalance(item.balance, item.currency_type)}
-        </Text>
-        <Badge label={item.currency_type} variant="outline" size="sm" />
-      </View>
-
-      <View style={[styles.registerFooter, { borderTopColor: colors.border }]}>
-        <Text style={[styles.openingBalance, { color: colors.textMuted }]}>
-          Açılış: {formatBalance(item.opening_balance, item.currency_type)}
-        </Text>
-        <ChevronRight size={18} color={colors.icon} />
-      </View>
-    </Card>
-  );
-
-  const renderEmptyState = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Kasalar yükleniyor...
-          </Text>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            Bir hata oluştu
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {error}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => {
-              setIsLoading(true);
-              fetchCashRegisters(1, false);
-            }}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
       );
     }
 
     return (
-      <View style={styles.emptyState}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-          <Wallet size={64} color={colors.textMuted} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          Henüz kasa eklenmemiş
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          Yeni kasa eklemek için + butonuna tıklayın
-        </Text>
-      </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={Brand.primary} />
-      </View>
-    );
-  };
-
-  const renderHeader = () => (
-    <>
-      {Object.keys(totals).length > 0 && (
-        <View style={[styles.totalCard, { backgroundColor: Brand.primary }]}>
-          <Text style={styles.totalLabel}>Toplam Bakiye</Text>
-          <View style={styles.currencyBreakdown}>
-            {Object.entries(totals).map(([currency, total]) => (
-              <View key={currency} style={styles.currencyChip}>
-                <Text style={styles.currencyChipText}>
-                  {currency}: {formatBalance(total, currency as CurrencyType)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          data={CURRENCY_FILTERS}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor: activeFilter === item.id ? Brand.primary : colors.card,
-                  borderColor: activeFilter === item.id ? Brand.primary : colors.border,
-                },
-              ]}
-              onPress={() => setActiveFilter(item.id)}
-            >
+      <StandardListItem
+        icon={Wallet}
+        iconColor={Brand.primary}
+        title={item.name}
+        subtitle={item.code}
+        additionalInfo={
+          additionalInfo.length > 0 ? (
+            <View style={styles.additionalInfo}>{additionalInfo}</View>
+          ) : undefined
+        }
+        status={{
+          label: item.currency_type,
+          variant: 'outline',
+        }}
+        statusDot={
+          item.is_active ? { color: colors.success } : { color: colors.textMuted }
+        }
+        footer={{
+          left: (
+            <View style={styles.footerLeftContent}>
               <Text
                 style={[
-                  styles.filterChipText,
-                  { color: activeFilter === item.id ? '#FFFFFF' : colors.textSecondary },
+                  styles.balance,
+                  { color: item.balance >= 0 ? colors.success : colors.danger },
                 ]}
               >
-                {item.label}
+                {formatBalance(item.balance, item.currency_type)}
               </Text>
-            </TouchableOpacity>
-          )}
-        />
+              <Text style={[styles.openingBalance, { color: colors.textMuted }]}>
+                Açılış: {formatBalance(item.opening_balance, item.currency_type)}
+              </Text>
+            </View>
+          ),
+        }}
+        onPress={() => router.push(`/cash-register/${item.id}` as any)}
+      />
+    );
+  };
+
+  const renderHeader = () => {
+    if (Object.keys(totals).length === 0) return null;
+    return (
+      <View style={[styles.totalCard, { backgroundColor: Brand.primary }]}>
+        <Text style={styles.totalLabel}>Toplam Bakiye</Text>
+        <View style={styles.currencyBreakdown}>
+          {Object.entries(totals).map(([currency, total]) => (
+            <View key={currency} style={styles.currencyChip}>
+              <Text style={styles.currencyChipText}>
+                {currency}: {formatBalance(total, currency as CurrencyType)}
+              </Text>
+            </View>
+          ))}
+        </View>
       </View>
-    </>
-  );
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -311,24 +202,32 @@ export default function CashRegistersScreen() {
         }
       />
 
-      <FlatList
+      <StandardListContainer
         data={cashRegisters}
-        keyExtractor={(item) => String(item.id)}
         renderItem={renderCashRegister}
-        contentContainerStyle={styles.listContent}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Brand.primary}
-          />
-        }
+        keyExtractor={(item) => String(item.id)}
+        filters={{
+          items: CURRENCY_FILTERS,
+          activeId: activeFilter,
+          onChange: setActiveFilter,
+        }}
+        emptyState={{
+          icon: Wallet,
+          title: 'Henüz kasa eklenmemiş',
+          subtitle: 'Yeni kasa eklemek için + butonuna tıklayın',
+        }}
+        loading={isLoading}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onLoadMore={loadMore}
+        pagination={pagination || undefined}
+        isLoadingMore={isLoadingMore}
+        error={error}
+        onRetry={() => {
+          setIsLoading(true);
+          fetchCashRegisters(1, false);
+        }}
+        ListHeaderComponent={renderHeader()}
       />
 
       <TouchableOpacity
@@ -345,16 +244,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  listContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    paddingBottom: 100,
-    flexGrow: 1,
-  },
   totalCard: {
     borderRadius: BorderRadius.xl,
     padding: Spacing.xl,
     marginBottom: Spacing.md,
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
   },
   totalLabel: {
     ...Typography.bodyMD,
@@ -377,133 +272,33 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  filterContainer: {
-    marginBottom: Spacing.md,
-  },
-  filterContent: {
+  additionalInfo: {
     gap: Spacing.sm,
-  },
-  filterChip: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
-  },
-  registerCard: {
-    marginBottom: 0,
-  },
-  registerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  registerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  registerInfo: {
-    flex: 1,
-  },
-  registerName: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  registerCode: {
-    ...Typography.bodySM,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    marginTop: Spacing.sm,
   },
   location: {
     ...Typography.bodySM,
-    marginBottom: Spacing.sm,
+    color: Colors.light.textSecondary,
   },
   responsibleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginBottom: Spacing.md,
   },
   responsibleText: {
     ...Typography.bodySM,
+    color: Colors.light.textSecondary,
   },
-  balanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+  footerLeftContent: {
+    flexDirection: 'column',
+    gap: Spacing.xs,
   },
   balance: {
     ...Typography.headingLG,
   },
-  registerFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-  },
   openingBalance: {
     ...Typography.bodySM,
-  },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
-  },
-  emptyIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xl,
-  },
-  emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  loadingMore: {
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
+    color: Colors.light.textMuted,
   },
   fab: {
     position: 'absolute',

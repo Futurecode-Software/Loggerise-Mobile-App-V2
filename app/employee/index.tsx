@@ -1,27 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import {
-  Search,
-  Filter,
-  Plus,
-  User,
-  ChevronRight,
-  Truck,
-  Crown,
-  AlertCircle,
-} from 'lucide-react-native';
-import { Card, Badge, Avatar, Input } from '@/components/ui';
+import { Filter, Plus, User, Truck, Crown } from 'lucide-react-native';
+import { Badge, Avatar, StandardListContainer } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
 // useColorScheme kaldirildi - her zaman light mode kullanilir
 import {
   getEmployees,
@@ -146,7 +129,7 @@ export default function EmployeesScreen() {
     }
   };
 
-  const renderEmployee = ({ item }: { item: Employee }) => {
+  const renderEmployee = (item: Employee) => {
     const fullName = getFullName(item);
     const isDriver = item.position?.toLowerCase().includes('sürücü') ||
                      item.position?.toLowerCase().includes('şoför') ||
@@ -155,14 +138,26 @@ export default function EmployeesScreen() {
                       item.position?.toLowerCase().includes('manager') ||
                       item.position?.toLowerCase().includes('yönetici');
 
+    const additionalBadges = [];
+    if (isDriver) {
+      additionalBadges.push(
+        <View key="driver" style={[styles.badge, { backgroundColor: colors.infoLight }]}>
+          <Truck size={12} color={colors.info} />
+          <Text style={[styles.badgeText, { color: colors.info }]}>Sürücü</Text>
+        </View>
+      );
+    }
+    if (isManager) {
+      additionalBadges.push(
+        <View key="manager" style={[styles.badge, { backgroundColor: '#F3E8FF' }]}>
+          <Crown size={12} color="#8b5cf6" />
+          <Text style={[styles.badgeText, { color: '#8b5cf6' }]}>Yönetici</Text>
+        </View>
+      );
+    }
+
     return (
-      <TouchableOpacity
-        style={[
-          styles.employeeItem,
-          { backgroundColor: colors.card, borderBottomColor: colors.border },
-        ]}
-        onPress={() => router.push(`/employee/${item.id}` as any)}
-      >
+      <View style={styles.employeeItem}>
         <Avatar name={fullName} size="lg" />
         <View style={styles.employeeInfo}>
           <View style={styles.employeeHeader}>
@@ -192,87 +187,13 @@ export default function EmployeesScreen() {
               }
               size="sm"
             />
-            {isDriver && (
-              <View style={[styles.badge, { backgroundColor: colors.infoLight }]}>
-                <Truck size={12} color={colors.info} />
-                <Text style={[styles.badgeText, { color: colors.info }]}>Sürücü</Text>
-              </View>
-            )}
-            {isManager && (
-              <View style={[styles.badge, { backgroundColor: '#F3E8FF' }]}>
-                <Crown size={12} color="#8b5cf6" />
-                <Text style={[styles.badgeText, { color: '#8b5cf6' }]}>Yönetici</Text>
-              </View>
-            )}
+            {additionalBadges}
           </View>
         </View>
-        <ChevronRight size={20} color={colors.icon} />
-      </TouchableOpacity>
-    );
-  };
-
-  const renderEmptyState = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Çalışanlar yükleniyor...
-          </Text>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            Bir hata oluştu
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {error}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => {
-              setIsLoading(true);
-              fetchEmployees(1, false);
-            }}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.emptyState}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-          <User size={64} color={colors.textMuted} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {searchQuery ? 'Sonuç bulunamadı' : 'Henüz çalışan eklenmemiş'}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          {searchQuery
-            ? 'Farklı bir arama terimi deneyin'
-            : 'Yeni çalışan eklemek için + butonuna tıklayın'}
-        </Text>
       </View>
     );
   };
 
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={Brand.primary} />
-      </View>
-    );
-  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -292,67 +213,46 @@ export default function EmployeesScreen() {
         }
       />
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <Input
-          placeholder="İsim, e-posta veya telefon ile ara..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          leftIcon={<Search size={20} color={colors.icon} />}
-          containerStyle={styles.searchInput}
-        />
-      </View>
-
-      {/* Status Filters */}
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          data={STATUS_FILTERS}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor: activeFilter === item.id ? Brand.primary : colors.card,
-                  borderColor: activeFilter === item.id ? Brand.primary : colors.border,
-                },
-              ]}
-              onPress={() => setActiveFilter(item.id)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  { color: activeFilter === item.id ? '#FFFFFF' : colors.textSecondary },
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
-
-      {/* Employee List */}
-      <FlatList
+      <StandardListContainer
         data={employees}
+        renderItem={(item) => (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => router.push(`/employee/${item.id}` as any)}
+            style={styles.listItemWrapper}
+          >
+            {renderEmployee(item)}
+          </TouchableOpacity>
+        )}
         keyExtractor={(item) => String(item.id)}
-        renderItem={renderEmployee}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Brand.primary}
-          />
-        }
+        search={{
+          value: searchQuery,
+          onChange: setSearchQuery,
+          placeholder: 'İsim, e-posta veya telefon ile ara...',
+        }}
+        filters={{
+          items: STATUS_FILTERS,
+          activeId: activeFilter,
+          onChange: setActiveFilter,
+        }}
+        emptyState={{
+          icon: User,
+          title: searchQuery ? 'Sonuç bulunamadı' : 'Henüz çalışan eklenmemiş',
+          subtitle: searchQuery
+            ? 'Farklı bir arama terimi deneyin'
+            : 'Yeni çalışan eklemek için + butonuna tıklayın',
+        }}
+        loading={isLoading}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onLoadMore={loadMore}
+        pagination={pagination || undefined}
+        isLoadingMore={isLoadingMore}
+        error={error}
+        onRetry={() => {
+          setIsLoading(true);
+          fetchEmployees(1, false);
+        }}
       />
 
       {/* FAB */}
@@ -370,45 +270,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
-  searchInput: {
-    marginBottom: 0,
-  },
-  filterContainer: {
-    paddingVertical: Spacing.md,
-  },
-  filterContent: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  filterChip: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
-  },
-  listContent: {
-    flexGrow: 1,
-    paddingBottom: 100,
+  listItemWrapper: {
+    marginBottom: Spacing.md,
   },
   employeeItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
+    gap: Spacing.md,
+    padding: Spacing.lg,
+    backgroundColor: Colors.light.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   employeeInfo: {
     flex: 1,
-    marginLeft: Spacing.md,
-    marginRight: Spacing.sm,
   },
   employeeHeader: {
     flexDirection: 'row',
@@ -416,9 +297,10 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   employeeName: {
-    ...Typography.bodyMD,
+    fontSize: 14,
     fontWeight: '600',
     flex: 1,
+    color: Colors.light.text,
   },
   statusDot: {
     width: 8,
@@ -426,12 +308,14 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   employeePosition: {
-    ...Typography.bodySM,
+    fontSize: 12,
     marginTop: 2,
+    color: Colors.light.textSecondary,
   },
   employeeDepartment: {
-    ...Typography.bodyXS,
+    fontSize: 10,
     marginTop: 2,
+    color: Colors.light.textMuted,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -445,60 +329,11 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
-    borderRadius: BorderRadius.full,
+    borderRadius: 9999,
   },
   badgeText: {
-    ...Typography.bodyXS,
+    fontSize: 10,
     fontWeight: '500',
-  },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
-  },
-  emptyIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xl,
-  },
-  emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  loadingMore: {
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
   },
   fab: {
     position: 'absolute',

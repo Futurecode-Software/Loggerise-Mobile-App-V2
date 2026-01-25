@@ -12,6 +12,7 @@ export { SummaryCard } from './summary-card';
 export { ListCard } from './list-card';
 export { DashboardQuickActions } from './quick-actions';
 export { QuickActionButton } from './quick-action-button';
+export { SplashScreen } from './splash-screen';
 
 // Tab components
 export {

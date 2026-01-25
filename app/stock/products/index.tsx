@@ -1,26 +1,27 @@
 /**
- * Categories List Screen
+ * Products List Screen
  *
- * List all product categories with search, pagination, and CRUD operations.
- * Supports hierarchical categories with parent_id.
+ * List all products with search, pagination, and CRUD operations.
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { Plus, FolderTree, Trash2, CornerDownRight } from 'lucide-react-native';
+import { Plus, Package, Trash2 } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
 import {
-  getProductCategories,
-  deleteProductCategory,
-  ProductCategory,
+  getProducts,
+  deleteProduct,
+  Product,
   Pagination,
+  getProductTypeLabel,
+  getProductUnitLabel,
 } from '@/services/endpoints/products';
 import { useToast } from '@/hooks/use-toast';
 
-export default function CategoriesScreen() {
+export default function ProductsScreen() {
   const colors = Colors.light;
   const { success, error: showError } = useToast();
 
@@ -29,14 +30,14 @@ export default function CategoriesScreen() {
   const isInitialMount = useRef(true);
 
   // API state
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch categories from API
-  const fetchCategories = useCallback(
+  // Fetch products from API
+  const fetchProducts = useCallback(
     async (page: number = 1, append: boolean = false) => {
       try {
         setError(null);
@@ -47,17 +48,17 @@ export default function CategoriesScreen() {
           search: searchQuery.trim() || undefined,
         };
 
-        const response = await getProductCategories(filters);
+        const response = await getProducts(filters);
 
         if (append) {
-          setCategories((prev) => [...prev, ...response.categories]);
+          setProducts((prev) => [...prev, ...response.products]);
         } else {
-          setCategories(response.categories);
+          setProducts(response.products);
         }
         setPagination(response.pagination);
       } catch (err) {
-        console.error('Categories fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Kategoriler yüklenemedi');
+        console.error('Products fetch error:', err);
+        setError(err instanceof Error ? err.message : 'Ürünler yüklenemedi');
       } finally {
         setIsLoading(false);
         setIsLoadingMore(false);
@@ -73,7 +74,7 @@ export default function CategoriesScreen() {
     const loadData = async () => {
       if (!ignore) {
         setIsLoading(true);
-        await fetchCategories(1, false);
+        await fetchProducts(1, false);
       }
     };
 
@@ -93,73 +94,82 @@ export default function CategoriesScreen() {
       ignore = true;
       clearTimeout(timeoutId);
     };
-  }, [searchQuery]);
+  }, [searchQuery, fetchProducts]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchCategories(1, false);
+    await fetchProducts(1, false);
     setRefreshing(false);
   };
 
   const loadMore = () => {
     if (!isLoadingMore && pagination && pagination.current_page < pagination.last_page) {
       setIsLoadingMore(true);
-      fetchCategories(pagination.current_page + 1, true);
+      fetchProducts(pagination.current_page + 1, true);
     }
   };
 
-  const handleDelete = (category: ProductCategory) => {
-    Alert.alert(
-      'Kategori Sil',
-      `"${category.name}" kategorisini silmek istediğinize emin misiniz?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteProductCategory(category.id);
-              success('Başarılı', 'Kategori silindi.');
-              fetchCategories(1, false);
-            } catch (err) {
-              showError('Hata', err instanceof Error ? err.message : 'Kategori silinemedi');
-            }
-          },
+  const handleDelete = (product: Product) => {
+    Alert.alert('Ürün Sil', `"${product.name}" ürününü silmek istediğinize emin misiniz?`, [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteProduct(product.id);
+            success('Başarılı', 'Ürün silindi.');
+            fetchProducts(1, false);
+          } catch (err) {
+            showError('Hata', err instanceof Error ? err.message : 'Ürün silinemedi');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const renderCategory = (item: ProductCategory) => {
+  const renderProduct = (item: Product) => {
     const additionalInfo = [];
-    if (item.parent) {
-      additionalInfo.push(
-        <View key="parent" style={styles.parentInfo}>
-          <CornerDownRight size={12} color={colors.textMuted} />
-          <Text style={[styles.parentName, { color: colors.textMuted }]}>
-            {item.parent.name}
-          </Text>
-        </View>
-      );
-    }
-    if (item.description) {
+    
+    if (item.code) {
       additionalInfo.push(
         <Text
-          key="description"
-          style={[styles.categoryDescription, { color: colors.textSecondary }]}
+          key="code"
+          style={[styles.productCode, { color: colors.textSecondary }]}
           numberOfLines={1}
         >
-          {item.description}
+          Kod: {item.code}
         </Text>
       );
+    }
+    
+    if (item.brand || item.category) {
+      const infoParts = [];
+      if (item.brand) {
+        infoParts.push(item.brand.name);
+      }
+      if (item.category) {
+        infoParts.push(item.category.name);
+      }
+      if (infoParts.length > 0) {
+        additionalInfo.push(
+          <Text
+            key="brand-category"
+            style={[styles.productInfo, { color: colors.textMuted }]}
+            numberOfLines={1}
+          >
+            {infoParts.join(' • ')}
+          </Text>
+        );
+      }
     }
 
     return (
       <StandardListItem
-        icon={FolderTree}
+        icon={Package}
         iconColor={Brand.primary}
         title={item.name}
+        meta={item.description}
         additionalInfo={
           additionalInfo.length > 0 ? (
             <View style={styles.additionalInfo}>{additionalInfo}</View>
@@ -180,11 +190,9 @@ export default function CategoriesScreen() {
                 variant={item.is_active ? 'success' : 'default'}
                 size="sm"
               />
-              {item.children_count !== undefined && item.children_count > 0 && (
-                <Text style={[styles.childrenCount, { color: colors.textSecondary }]}>
-                  {item.children_count} alt kategori
-                </Text>
-              )}
+              <Text style={[styles.productType, { color: colors.textSecondary }]}>
+                {getProductTypeLabel(item.product_type)} • {getProductUnitLabel(item.unit)}
+              </Text>
             </View>
           ),
           right: (
@@ -199,35 +207,34 @@ export default function CategoriesScreen() {
             </TouchableOpacity>
           ),
         }}
-        onPress={() => router.push(`/stock/categories/${item.id}` as any)}
+        onPress={() => router.push(`/stock/products/${item.id}` as any)}
       />
     );
   };
 
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FullScreenHeader
-        title="Kategoriler"
-        subtitle={pagination ? `${pagination.total} kategori` : undefined}
+        title="Ürünler"
+        subtitle={pagination ? `${pagination.total} ürün` : undefined}
         showBackButton={true}
       />
 
       <StandardListContainer
-        data={categories}
-        renderItem={renderCategory}
+        data={products}
+        renderItem={renderProduct}
         keyExtractor={(item) => String(item.id)}
         search={{
           value: searchQuery,
           onChange: setSearchQuery,
-          placeholder: 'Kategori adı ile ara...',
+          placeholder: 'Ürün adı veya kodu ile ara...',
         }}
         emptyState={{
-          icon: FolderTree,
-          title: searchQuery ? 'Sonuç bulunamadı' : 'Henüz kategori eklenmemiş',
+          icon: Package,
+          title: searchQuery ? 'Sonuç bulunamadı' : 'Henüz ürün eklenmemiş',
           subtitle: searchQuery
             ? 'Farklı bir arama terimi deneyin'
-            : 'Yeni kategori eklemek için + butonuna tıklayın',
+            : 'Yeni ürün eklemek için + butonuna tıklayın',
         }}
         loading={isLoading}
         refreshing={refreshing}
@@ -238,13 +245,13 @@ export default function CategoriesScreen() {
         error={error}
         onRetry={() => {
           setIsLoading(true);
-          fetchCategories(1, false);
+          fetchProducts(1, false);
         }}
       />
 
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/stock/categories/new' as any)}
+        onPress={() => router.push('/stock/products/new' as any)}
       >
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
@@ -260,25 +267,20 @@ const styles = StyleSheet.create({
     gap: 2,
     marginTop: Spacing.sm,
   },
-  parentInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  parentName: {
-    fontSize: 10,
-    color: Colors.light.textMuted,
-  },
-  categoryDescription: {
+  productCode: {
     fontSize: 12,
     color: Colors.light.textSecondary,
+  },
+  productInfo: {
+    fontSize: 10,
+    color: Colors.light.textMuted,
   },
   footerLeftContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
   },
-  childrenCount: {
+  productType: {
     fontSize: 10,
     color: Colors.light.textSecondary,
   },

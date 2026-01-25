@@ -107,7 +107,7 @@ export default function DashboardScreen() {
 
   const TabComponent = TAB_COMPONENTS[activeTab] || BasicTab;
 
-  // Loading state
+  // Loading state - show simple loading indicator if still loading
   if (isLoadingAvailable) {
     return (
       <View style={styles.container}>

@@ -13,6 +13,9 @@ export default function StockLayout() {
       <Stack.Screen name="categories/index" />
       <Stack.Screen name="categories/new" />
       <Stack.Screen name="categories/[id]" />
+      <Stack.Screen name="products/index" />
+      <Stack.Screen name="products/new" />
+      <Stack.Screen name="products/[id]" />
       <Stack.Screen name="movements/index" />
       <Stack.Screen name="movements/new" />
       <Stack.Screen name="movements/[id]" />

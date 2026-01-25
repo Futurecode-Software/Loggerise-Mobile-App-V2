@@ -14,7 +14,6 @@ import {
   Filter,
   Plus,
   User,
-  ChevronRight,
   AlertCircle,
 } from 'lucide-react-native';
 import { Card, Badge, Avatar, Input, SkeletonList } from '@/components/ui';
@@ -178,46 +177,44 @@ export default function ContactsScreen() {
   };
 
   const renderContact = ({ item }: { item: Contact }) => (
-    <TouchableOpacity
-      style={[
-        styles.contactItem,
-        { backgroundColor: colors.card, borderBottomColor: colors.border },
-      ]}
+    <Card
+      style={styles.contactCard}
       onPress={() => router.push(`/contact/${item.id}` as any)}
     >
-      <Avatar
-        name={item.name}
-        size="md"
-        backgroundColor={
-          item.type === 'company' ? colors.successLight : colors.infoLight
-        }
-      />
-      <View style={styles.contactInfo}>
-        <View style={styles.contactHeader}>
-          <Text
-            style={[styles.contactName, { color: colors.text }]}
-            numberOfLines={1}
-          >
-            {item.name}
+      <View style={styles.contactContent}>
+        <Avatar
+          name={item.name}
+          size="md"
+          backgroundColor={
+            item.type === 'company' ? colors.successLight : colors.infoLight
+          }
+        />
+        <View style={styles.contactInfo}>
+          <View style={styles.contactHeader}>
+            <Text
+              style={[styles.contactName, { color: colors.text }]}
+              numberOfLines={1}
+            >
+              {item.name}
+            </Text>
+            {getRoleBadge(item)}
+          </View>
+          <Text style={[styles.contactDetail, { color: colors.textSecondary }]}>
+            {item.type === 'company'
+              ? `VKN: ${item.tax_number || '-'}`
+              : `TC: ${item.identity_number || '-'}`}
           </Text>
-          {getRoleBadge(item)}
+          {item.email && (
+            <Text
+              style={[styles.contactEmail, { color: colors.textMuted }]}
+              numberOfLines={1}
+            >
+              {item.email}
+            </Text>
+          )}
         </View>
-        <Text style={[styles.contactDetail, { color: colors.textSecondary }]}>
-          {item.type === 'company'
-            ? `VKN: ${item.tax_number || '-'}`
-            : `TC: ${item.identity_number || '-'}`}
-        </Text>
-        {item.email && (
-          <Text
-            style={[styles.contactEmail, { color: colors.textMuted }]}
-            numberOfLines={1}
-          >
-            {item.email}
-          </Text>
-        )}
       </View>
-      <ChevronRight size={20} color={colors.icon} />
-    </TouchableOpacity>
+    </Card>
   );
 
   const renderEmptyState = () => {
@@ -408,19 +405,20 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   listContent: {
+    padding: Spacing.lg,
+    gap: Spacing.md,
     flexGrow: 1,
   },
-  contactItem: {
+  contactCard: {
+    marginBottom: 0,
+  },
+  contactContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
+    gap: Spacing.md,
   },
   contactInfo: {
     flex: 1,
-    marginLeft: Spacing.md,
-    marginRight: Spacing.sm,
   },
   contactHeader: {
     flexDirection: 'row',

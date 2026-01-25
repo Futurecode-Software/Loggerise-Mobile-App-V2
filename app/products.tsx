@@ -141,7 +141,7 @@ export default function ProductsScreen() {
   const renderProduct = ({ item }: { item: Product }) => (
     <Card
       style={styles.productCard}
-      onPress={() => router.push(`/product/${item.id}` as any)}
+      onPress={() => router.push(`/stock/products/${item.id}` as any)}
     >
       <View style={styles.productHeader}>
         <View style={[styles.productIcon, { backgroundColor: colors.surface }]}>
@@ -360,7 +360,7 @@ export default function ProductsScreen() {
 
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/product/new' as any)}
+        onPress={() => router.push('/stock/products/new' as any)}
       >
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>

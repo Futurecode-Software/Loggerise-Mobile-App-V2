@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { Colors, Typography, Spacing, BorderRadius, Brand } from '@/constants/theme';
@@ -36,8 +36,17 @@ export function SelectInput({
   // Support both selectedValue and value props
   const externalValue = selectedValue ?? valueProp ?? null;
   const [value, setValue] = useState<string | null>(externalValue);
-  const [items, setItems] = useState(options.map((opt) => ({ label: opt.label, value: opt.value })));
   const colors = Colors.light;
+
+  // Memoize options to prevent infinite re-renders
+  // Compare by content (JSON stringify) instead of reference
+  const optionsKey = useMemo(
+    () => JSON.stringify(options.map((opt) => ({ label: opt.label, value: opt.value }))),
+    [options]
+  );
+  const prevOptionsKeyRef = useRef(optionsKey);
+
+  const [items, setItems] = useState(options.map((opt) => ({ label: opt.label, value: opt.value })));
 
   // Sync internal state with external selectedValue or value prop
   useEffect(() => {
@@ -45,10 +54,13 @@ export function SelectInput({
     setValue(newValue);
   }, [selectedValue, valueProp]);
 
-  // Sync items when options change
+  // Sync items when options content actually changes (not just reference)
   useEffect(() => {
-    setItems(options.map((opt) => ({ label: opt.label, value: opt.value })));
-  }, [options]);
+    if (prevOptionsKeyRef.current !== optionsKey) {
+      prevOptionsKeyRef.current = optionsKey;
+      setItems(options.map((opt) => ({ label: opt.label, value: opt.value })));
+    }
+  }, [optionsKey, options]);
 
   return (
     <View style={styles.container}>

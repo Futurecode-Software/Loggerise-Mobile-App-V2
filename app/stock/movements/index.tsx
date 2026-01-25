@@ -5,32 +5,12 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
-import {
-  Search,
-  Plus,
-  ArrowLeftRight,
-  ChevronRight,
-  AlertCircle,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Trash2,
-  Filter,
-  Repeat,
-} from 'lucide-react-native';
-import { Card, Badge, Input } from '@/components/ui';
+import { Plus, ArrowLeftRight, ArrowDownLeft, ArrowUpRight, Trash2, Filter, Repeat } from 'lucide-react-native';
+import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
+import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
 import {
   getStockMovements,
   deleteStockMovement,
@@ -170,37 +150,26 @@ export default function StockMovementsScreen() {
     return `${sign}${movement.quantity} ${unit}`;
   };
 
-  const renderMovement = ({ item }: { item: StockMovement }) => {
+  const renderMovement = (item: StockMovement) => {
     const isInbound = isInboundMovement(item.movement_type);
     const typeColor = getMovementTypeColor(item.movement_type);
     const isTransfer = item.movement_type === 'transfer_in' || item.movement_type === 'transfer_out';
 
+    const Icon = isTransfer ? Repeat : isInbound ? ArrowDownLeft : ArrowUpRight;
+    const warehouseText = item.warehouse?.name || `Depo #${item.warehouse_id}`;
+    const fullWarehouseText = isTransfer && item.reference_warehouse
+      ? `${warehouseText} → ${item.reference_warehouse.name}`
+      : warehouseText;
+
     return (
-      <Card
-        style={styles.movementCard}
-        onPress={() => router.push(`/stock/movements/${item.id}` as any)}
-      >
-        <View style={styles.movementHeader}>
-          <View style={[styles.movementIcon, { backgroundColor: `${typeColor}15` }]}>
-            {isTransfer ? (
-              <Repeat size={20} color={typeColor} />
-            ) : isInbound ? (
-              <ArrowDownLeft size={20} color={typeColor} />
-            ) : (
-              <ArrowUpRight size={20} color={typeColor} />
-            )}
-          </View>
-          <View style={styles.movementInfo}>
-            <Text style={[styles.productName, { color: colors.text }]}>
-              {item.product?.name || `Ürün #${item.product_id}`}
-            </Text>
-            <Text style={[styles.warehouseName, { color: colors.textSecondary }]}>
-              {item.warehouse?.name || `Depo #${item.warehouse_id}`}
-              {isTransfer && item.reference_warehouse && (
-                <Text> → {item.reference_warehouse.name}</Text>
-              )}
-            </Text>
-          </View>
+      <StandardListItem
+        icon={Icon}
+        iconColor={typeColor}
+        iconBg={`${typeColor}15`}
+        title={item.product?.name || `Ürün #${item.product_id}`}
+        subtitle={fullWarehouseText}
+        meta={item.notes}
+        additionalInfo={
           <Text
             style={[
               styles.quantity,
@@ -209,26 +178,25 @@ export default function StockMovementsScreen() {
           >
             {formatQuantity(item)}
           </Text>
-        </View>
-
-        {item.notes && (
-          <Text style={[styles.notes, { color: colors.textMuted }]} numberOfLines={1}>
-            {item.notes}
-          </Text>
-        )}
-
-        <View style={[styles.movementFooter, { borderTopColor: colors.border }]}>
-          <View style={styles.footerLeft}>
-            <Badge
-              label={getMovementTypeLabel(item.movement_type)}
-              variant={isInbound ? 'success' : 'danger'}
-              size="sm"
-            />
-            <Text style={[styles.dateText, { color: colors.textMuted }]}>
-              {formatDate(item.transaction_date)}
-            </Text>
-          </View>
-          <View style={styles.footerActions}>
+        }
+        status={{
+          label: getMovementTypeLabel(item.movement_type),
+          variant: isInbound ? 'success' : 'danger',
+        }}
+        footer={{
+          left: (
+            <View style={styles.footerLeftContent}>
+              <Badge
+                label={getMovementTypeLabel(item.movement_type)}
+                variant={isInbound ? 'success' : 'danger'}
+                size="sm"
+              />
+              <Text style={[styles.dateText, { color: colors.textMuted }]}>
+                {formatDate(item.transaction_date)}
+              </Text>
+            </View>
+          ),
+          right: (
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={(e) => {
@@ -238,71 +206,13 @@ export default function StockMovementsScreen() {
             >
               <Trash2 size={16} color={colors.danger} />
             </TouchableOpacity>
-            <ChevronRight size={18} color={colors.icon} />
-          </View>
-        </View>
-      </Card>
+          ),
+        }}
+        onPress={() => router.push(`/stock/movements/${item.id}` as any)}
+      />
     );
   };
 
-  const renderEmptyState = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Stok hareketleri yükleniyor...
-          </Text>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>{error}</Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => {
-              setIsLoading(true);
-              fetchMovements(1, false);
-            }}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.emptyState}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-          <ArrowLeftRight size={64} color={colors.textMuted} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {searchQuery ? 'Sonuç bulunamadı' : 'Henüz stok hareketi yok'}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          {searchQuery
-            ? 'Farklı bir arama terimi deneyin'
-            : 'Yeni hareket eklemek için + butonuna tıklayın'}
-        </Text>
-      </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={Brand.primary} />
-      </View>
-    );
-  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -322,29 +232,33 @@ export default function StockMovementsScreen() {
         }
       />
 
-      <View style={styles.searchContainer}>
-        <Input
-          placeholder="Ürün veya not ile ara..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          leftIcon={<Search size={20} color={colors.icon} />}
-          containerStyle={styles.searchInput}
-        />
-      </View>
-
-      <FlatList
+      <StandardListContainer
         data={movements}
-        keyExtractor={(item) => String(item.id)}
         renderItem={renderMovement}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
-        }
+        keyExtractor={(item) => String(item.id)}
+        search={{
+          value: searchQuery,
+          onChange: setSearchQuery,
+          placeholder: 'Ürün veya not ile ara...',
+        }}
+        emptyState={{
+          icon: ArrowLeftRight,
+          title: searchQuery ? 'Sonuç bulunamadı' : 'Henüz stok hareketi yok',
+          subtitle: searchQuery
+            ? 'Farklı bir arama terimi deneyin'
+            : 'Yeni hareket eklemek için + butonuna tıklayın',
+        }}
+        loading={isLoading}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onLoadMore={loadMore}
+        pagination={pagination || undefined}
+        isLoadingMore={isLoadingMore}
+        error={error}
+        onRetry={() => {
+          setIsLoading(true);
+          fetchMovements(1, false);
+        }}
       />
 
       <TouchableOpacity
@@ -361,126 +275,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.md,
-  },
-  searchInput: {
-    marginBottom: 0,
-  },
-  listContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    flexGrow: 1,
-  },
-  movementCard: {
-    marginBottom: 0,
-  },
-  movementHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  movementIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  movementInfo: {
-    flex: 1,
-  },
-  productName: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  warehouseName: {
-    ...Typography.bodySM,
-  },
   quantity: {
-    ...Typography.bodyMD,
+    fontSize: 14,
     fontWeight: '700',
+    marginTop: Spacing.sm,
   },
-  notes: {
-    ...Typography.bodySM,
-    marginBottom: Spacing.sm,
-    paddingLeft: 52, // Align with product name
-  },
-  movementFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    marginTop: Spacing.xs,
-  },
-  footerLeft: {
+  footerLeftContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
   },
   dateText: {
-    ...Typography.bodyXS,
-  },
-  footerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
+    fontSize: 10,
+    color: Colors.light.textMuted,
   },
   deleteButton: {
     padding: Spacing.xs,
-  },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
-  },
-  emptyIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xl,
-  },
-  emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  loadingMore: {
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
   },
   fab: {
     position: 'absolute',

@@ -1,24 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import {
-  Filter,
-  Plus,
-  Landmark,
-  Copy,
-  ChevronRight,
-  Check,
-  AlertCircle,
-} from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
+import { Filter, Plus, Landmark, Copy, Check } from 'lucide-react-native';
+import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 // useColorScheme kaldirildi - her zaman light mode kullanilir
@@ -135,187 +119,91 @@ export default function BankAccountsScreen() {
 
   const totals = getTotals();
 
-  const renderBankAccount = ({ item }: { item: Bank }) => (
-    <Card
-      style={styles.accountCard}
-      onPress={() => router.push(`/bank/${item.id}` as any)}
-    >
-      {/* Header */}
-      <View style={styles.accountHeader}>
-        <View style={[styles.bankIcon, { backgroundColor: colors.surface }]}>
-          <Landmark size={20} color={Brand.primary} />
-        </View>
-        <View style={styles.bankInfo}>
-          <Text style={[styles.bankName, { color: colors.text }]}>{item.name}</Text>
-          <Text style={[styles.branchName, { color: colors.textSecondary }]}>
-            {item.branch || '-'}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.statusDot,
-            { backgroundColor: item.is_active ? colors.success : colors.textMuted },
-          ]}
-        />
-      </View>
-
-      {/* Account Number & IBAN */}
-      <View style={styles.accountDetails}>
-        <Text style={[styles.accountNumber, { color: colors.textMuted }]}>
-          {item.account_number ? `**** **** ${item.account_number.slice(-4)}` : '-'}
+  const renderBankAccount = (item: Bank) => {
+    const accountDetails = [];
+    if (item.account_number) {
+      accountDetails.push(
+        <Text key="account" style={[styles.accountNumber, { color: colors.textMuted }]}>
+          {`**** **** ${item.account_number.slice(-4)}`}
         </Text>
-        {item.iban && (
-          <TouchableOpacity
-            style={styles.ibanRow}
-            onPress={() => handleCopyIban(item.id, item.iban!)}
-          >
-            <Text style={[styles.iban, { color: colors.textSecondary }]} numberOfLines={1}>
-              {item.iban}
-            </Text>
-            {copiedId === item.id ? (
-              <Check size={16} color={colors.success} />
-            ) : (
-              <Copy size={16} color={colors.icon} />
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Balance */}
-      <View style={styles.balanceRow}>
-        <Text
-          style={[
-            styles.balance,
-            { color: item.balance >= 0 ? colors.success : colors.danger },
-          ]}
+      );
+    }
+    if (item.iban) {
+      accountDetails.push(
+        <TouchableOpacity
+          key="iban"
+          style={styles.ibanRow}
+          onPress={() => handleCopyIban(item.id, item.iban!)}
         >
-          {formatBalance(item.balance, item.currency_type)}
-        </Text>
-        <Badge label={item.currency_type} variant="outline" size="sm" />
-      </View>
-
-      {/* Footer */}
-      <View style={[styles.accountFooter, { borderTopColor: colors.border }]}>
-        <Text style={[styles.openingBalance, { color: colors.textMuted }]}>
-          Açılış: {formatBalance(item.opening_balance, item.currency_type)}
-        </Text>
-        <ChevronRight size={18} color={colors.icon} />
-      </View>
-    </Card>
-  );
-
-  const renderEmptyState = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Banka hesapları yükleniyor...
+          <Text style={[styles.iban, { color: colors.textSecondary }]} numberOfLines={1}>
+            {item.iban}
           </Text>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            Bir hata oluştu
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {error}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => {
-              setIsLoading(true);
-              fetchBanks(1, false);
-            }}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
+          {copiedId === item.id ? (
+            <Check size={16} color={colors.success} />
+          ) : (
+            <Copy size={16} color={colors.icon} />
+          )}
+        </TouchableOpacity>
       );
     }
 
     return (
-      <View style={styles.emptyState}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-          <Landmark size={64} color={colors.textMuted} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          Henüz banka hesabı eklenmemiş
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          Yeni hesap eklemek için + butonuna tıklayın
-        </Text>
-      </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={Brand.primary} />
-      </View>
-    );
-  };
-
-  const renderHeader = () => (
-    <>
-      {/* Total Balance Card */}
-      {Object.keys(totals).length > 0 && (
-        <View style={[styles.totalCard, { backgroundColor: Brand.primary }]}>
-          <Text style={styles.totalLabel}>Toplam Bakiye</Text>
-          <View style={styles.currencyBreakdown}>
-            {Object.entries(totals).map(([currency, total]) => (
-              <View key={currency} style={styles.currencyChip}>
-                <Text style={styles.currencyChipText}>
-                  {currency}: {formatBalance(total, currency as CurrencyType)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Currency Filters */}
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          data={CURRENCY_FILTERS}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor: activeFilter === item.id ? Brand.primary : colors.card,
-                  borderColor: activeFilter === item.id ? Brand.primary : colors.border,
-                },
-              ]}
-              onPress={() => setActiveFilter(item.id)}
-            >
+      <StandardListItem
+        icon={Landmark}
+        iconColor={Brand.primary}
+        title={item.name}
+        subtitle={item.branch || undefined}
+        additionalInfo={
+          accountDetails.length > 0 ? (
+            <View style={styles.accountDetails}>{accountDetails}</View>
+          ) : undefined
+        }
+        status={{
+          label: item.currency_type,
+          variant: 'outline',
+        }}
+        statusDot={
+          item.is_active ? { color: colors.success } : { color: colors.textMuted }
+        }
+        footer={{
+          left: (
+            <View style={styles.footerLeftContent}>
               <Text
                 style={[
-                  styles.filterChipText,
-                  { color: activeFilter === item.id ? '#FFFFFF' : colors.textSecondary },
+                  styles.balance,
+                  { color: item.balance >= 0 ? colors.success : colors.danger },
                 ]}
               >
-                {item.label}
+                {formatBalance(item.balance, item.currency_type)}
               </Text>
-            </TouchableOpacity>
-          )}
-        />
+              <Text style={[styles.openingBalance, { color: colors.textMuted }]}>
+                Açılış: {formatBalance(item.opening_balance, item.currency_type)}
+              </Text>
+            </View>
+          ),
+        }}
+        onPress={() => router.push(`/bank/${item.id}` as any)}
+      />
+    );
+  };
+
+  const renderHeader = () => {
+    if (Object.keys(totals).length === 0) return null;
+    return (
+      <View style={[styles.totalCard, { backgroundColor: Brand.primary }]}>
+        <Text style={styles.totalLabel}>Toplam Bakiye</Text>
+        <View style={styles.currencyBreakdown}>
+          {Object.entries(totals).map(([currency, total]) => (
+            <View key={currency} style={styles.currencyChip}>
+              <Text style={styles.currencyChipText}>
+                {currency}: {formatBalance(total, currency as CurrencyType)}
+              </Text>
+            </View>
+          ))}
+        </View>
       </View>
-    </>
-  );
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -335,24 +223,32 @@ export default function BankAccountsScreen() {
         }
       />
 
-      <FlatList
+      <StandardListContainer
         data={banks}
-        keyExtractor={(item) => String(item.id)}
         renderItem={renderBankAccount}
-        contentContainerStyle={styles.listContent}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Brand.primary}
-          />
-        }
+        keyExtractor={(item) => String(item.id)}
+        filters={{
+          items: CURRENCY_FILTERS,
+          activeId: activeFilter,
+          onChange: setActiveFilter,
+        }}
+        emptyState={{
+          icon: Landmark,
+          title: 'Henüz banka hesabı eklenmemiş',
+          subtitle: 'Yeni hesap eklemek için + butonuna tıklayın',
+        }}
+        loading={isLoading}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onLoadMore={loadMore}
+        pagination={pagination || undefined}
+        isLoadingMore={isLoadingMore}
+        error={error}
+        onRetry={() => {
+          setIsLoading(true);
+          fetchBanks(1, false);
+        }}
+        ListHeaderComponent={renderHeader()}
       />
 
       {/* FAB */}
@@ -370,16 +266,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  listContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    paddingBottom: 100,
-    flexGrow: 1,
-  },
   totalCard: {
     borderRadius: BorderRadius.xl,
     padding: Spacing.xl,
     marginBottom: Spacing.md,
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
   },
   totalLabel: {
     ...Typography.bodyMD,
@@ -402,59 +294,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  filterContainer: {
-    marginBottom: Spacing.md,
-  },
-  filterContent: {
-    gap: Spacing.sm,
-  },
-  filterChip: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
-  },
-  accountCard: {
-    marginBottom: 0,
-  },
-  accountHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  bankIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  bankInfo: {
-    flex: 1,
-  },
-  bankName: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  branchName: {
-    ...Typography.bodySM,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
   accountDetails: {
-    marginBottom: Spacing.md,
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
   },
   accountNumber: {
     ...Typography.bodySM,
-    marginBottom: Spacing.xs,
+    color: Colors.light.textMuted,
   },
   ibanRow: {
     flexDirection: 'row',
@@ -464,74 +310,18 @@ const styles = StyleSheet.create({
   iban: {
     ...Typography.bodySM,
     flex: 1,
+    color: Colors.light.textSecondary,
   },
-  balanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+  footerLeftContent: {
+    flexDirection: 'column',
+    gap: Spacing.xs,
   },
   balance: {
     ...Typography.headingLG,
   },
-  accountFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-  },
   openingBalance: {
     ...Typography.bodySM,
-  },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
-  },
-  emptyIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xl,
-  },
-  emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  loadingMore: {
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
+    color: Colors.light.textMuted,
   },
   fab: {
     position: 'absolute',

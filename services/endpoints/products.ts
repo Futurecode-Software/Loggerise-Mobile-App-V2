@@ -48,12 +48,62 @@ export interface ProductModel {
 /**
  * Product type enum
  */
-export type ProductType = 'product' | 'service' | 'raw_material' | 'semi_finished';
+export type ProductType = 'goods' | 'service';
 
 /**
- * Product unit enum
+ * Product unit enum (UN/ECE Recommendation 20 codes)
  */
-export type ProductUnit = 'piece' | 'kg' | 'ton' | 'lt' | 'm' | 'm2' | 'm3' | 'box' | 'pallet';
+export type ProductUnit =
+  | 'NIU'
+  | 'DAY'
+  | 'MON'
+  | 'ANN'
+  | 'HUR'
+  | 'D61'
+  | 'D62'
+  | 'PA'
+  | 'BX'
+  | 'MGM'
+  | 'GRM'
+  | 'KGM'
+  | 'LTR'
+  | 'TNE'
+  | 'NT'
+  | 'GT'
+  | 'MMT'
+  | 'CMT'
+  | 'MTR'
+  | 'KTM'
+  | 'MLT'
+  | 'MMQ'
+  | 'CMK'
+  | 'CMQ'
+  | 'MTK'
+  | 'MTQ'
+  | 'KJO'
+  | 'CLT'
+  | 'CT'
+  | 'KWH'
+  | 'MWH'
+  | 'CCT'
+  | 'D30'
+  | 'D40'
+  | 'LPA'
+  | 'B32'
+  | 'NCL'
+  | 'PR'
+  | 'R9'
+  | 'SET'
+  | 'T3'
+  | 'Q37'
+  | 'Q39'
+  | 'J39'
+  | 'G52'
+  | 'DZN'
+  | 'DMK'
+  | 'DMT'
+  | 'HAR'
+  | 'LM';
 
 /**
  * Product entity
@@ -545,10 +595,8 @@ export async function deleteProductCategory(id: number): Promise<void> {
  */
 export function getProductTypeLabel(type: ProductType): string {
   const labels: Record<ProductType, string> = {
-    product: 'Urun',
+    goods: 'Mal',
     service: 'Hizmet',
-    raw_material: 'Hammadde',
-    semi_finished: 'Yari Mamul',
   };
   return labels[type] || type;
 }
@@ -557,16 +605,20 @@ export function getProductTypeLabel(type: ProductType): string {
  * Get product unit label in Turkish
  */
 export function getProductUnitLabel(unit: ProductUnit): string {
-  const labels: Record<ProductUnit, string> = {
-    piece: 'Adet',
-    kg: 'Kilogram',
-    ton: 'Ton',
-    lt: 'Litre',
-    m: 'Metre',
-    m2: 'Metrekare',
-    m3: 'Metrekup',
-    box: 'Kutu',
-    pallet: 'Palet',
+  const labels: Partial<Record<ProductUnit, string>> = {
+    NIU: 'Adet',
+    KGM: 'Kilogram',
+    TNE: 'Ton',
+    LTR: 'Litre',
+    MTR: 'Metre',
+    MTK: 'Metrekare',
+    MTQ: 'Metreküp',
+    BX: 'Kutu',
+    SET: 'Takım',
+    DAY: 'Gün',
+    MON: 'Ay',
+    ANN: 'Yıl',
+    HUR: 'Saat',
   };
   return labels[unit] || unit;
 }

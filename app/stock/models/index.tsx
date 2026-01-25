@@ -5,28 +5,12 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
-import {
-  Search,
-  Plus,
-  Layers,
-  ChevronRight,
-  AlertCircle,
-  Trash2,
-} from 'lucide-react-native';
-import { Card, Badge, Input } from '@/components/ui';
+import { Plus, Layers, Trash2 } from 'lucide-react-native';
+import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
+import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
 import {
   getProductModels,
   deleteProductModel,
@@ -142,35 +126,28 @@ export default function ModelsScreen() {
     ]);
   };
 
-  const renderModel = ({ item }: { item: ProductModel }) => (
-    <Card style={styles.modelCard} onPress={() => router.push(`/stock/models/${item.id}` as any)}>
-      <View style={styles.modelHeader}>
-        <View style={[styles.modelIcon, { backgroundColor: colors.surface }]}>
-          <Layers size={20} color={Brand.primary} />
-        </View>
-        <View style={styles.modelInfo}>
-          <Text style={[styles.modelName, { color: colors.text }]}>{item.name}</Text>
-          {item.description && (
-            <Text style={[styles.modelDescription, { color: colors.textSecondary }]} numberOfLines={1}>
-              {item.description}
-            </Text>
-          )}
-        </View>
-        <View
-          style={[
-            styles.statusDot,
-            { backgroundColor: item.is_active ? colors.success : colors.textMuted },
-          ]}
-        />
-      </View>
-
-      <View style={[styles.modelFooter, { borderTopColor: colors.border }]}>
-        <Badge
-          label={item.is_active ? 'Aktif' : 'Pasif'}
-          variant={item.is_active ? 'success' : 'default'}
-          size="sm"
-        />
-        <View style={styles.footerActions}>
+  const renderModel = (item: ProductModel) => (
+    <StandardListItem
+      icon={Layers}
+      iconColor={Brand.primary}
+      title={item.name}
+      meta={item.description}
+      status={{
+        label: item.is_active ? 'Aktif' : 'Pasif',
+        variant: item.is_active ? 'success' : 'default',
+      }}
+      statusDot={
+        item.is_active ? { color: colors.success } : { color: colors.textMuted }
+      }
+      footer={{
+        left: (
+          <Badge
+            label={item.is_active ? 'Aktif' : 'Pasif'}
+            variant={item.is_active ? 'success' : 'default'}
+            size="sm"
+          />
+        ),
+        right: (
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={(e) => {
@@ -180,70 +157,12 @@ export default function ModelsScreen() {
           >
             <Trash2 size={16} color={colors.danger} />
           </TouchableOpacity>
-          <ChevronRight size={18} color={colors.icon} />
-        </View>
-      </View>
-    </Card>
+        ),
+      }}
+      onPress={() => router.push(`/stock/models/${item.id}` as any)}
+    />
   );
 
-  const renderEmptyState = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Modeller yükleniyor...
-          </Text>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>{error}</Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => {
-              setIsLoading(true);
-              fetchModels(1, false);
-            }}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.emptyState}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-          <Layers size={64} color={colors.textMuted} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {searchQuery ? 'Sonuç bulunamadı' : 'Henüz model eklenmemiş'}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          {searchQuery
-            ? 'Farklı bir arama terimi deneyin'
-            : 'Yeni model eklemek için + butonuna tıklayın'}
-        </Text>
-      </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={Brand.primary} />
-      </View>
-    );
-  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -253,29 +172,33 @@ export default function ModelsScreen() {
         showBackButton={true}
       />
 
-      <View style={styles.searchContainer}>
-        <Input
-          placeholder="Model adı ile ara..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          leftIcon={<Search size={20} color={colors.icon} />}
-          containerStyle={styles.searchInput}
-        />
-      </View>
-
-      <FlatList
+      <StandardListContainer
         data={models}
-        keyExtractor={(item) => String(item.id)}
         renderItem={renderModel}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
-        }
+        keyExtractor={(item) => String(item.id)}
+        search={{
+          value: searchQuery,
+          onChange: setSearchQuery,
+          placeholder: 'Model adı ile ara...',
+        }}
+        emptyState={{
+          icon: Layers,
+          title: searchQuery ? 'Sonuç bulunamadı' : 'Henüz model eklenmemiş',
+          subtitle: searchQuery
+            ? 'Farklı bir arama terimi deneyin'
+            : 'Yeni model eklemek için + butonuna tıklayın',
+        }}
+        loading={isLoading}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onLoadMore={loadMore}
+        pagination={pagination || undefined}
+        isLoadingMore={isLoadingMore}
+        error={error}
+        onRetry={() => {
+          setIsLoading(true);
+          fetchModels(1, false);
+        }}
       />
 
       <TouchableOpacity
@@ -292,115 +215,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.md,
-  },
-  searchInput: {
-    marginBottom: 0,
-  },
-  listContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    flexGrow: 1,
-  },
-  modelCard: {
-    marginBottom: 0,
-  },
-  modelHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  modelIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  modelInfo: {
-    flex: 1,
-  },
-  modelName: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  modelDescription: {
-    ...Typography.bodySM,
-    marginTop: 2,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  modelFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    marginTop: Spacing.sm,
-  },
-  footerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
   deleteButton: {
     padding: Spacing.xs,
-  },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
-  },
-  emptyIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xl,
-  },
-  emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  loadingMore: {
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
   },
   fab: {
     position: 'absolute',
