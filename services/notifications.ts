@@ -28,6 +28,13 @@ Notifications.setNotificationHandler({
 const PUSH_TOKEN_KEY = 'push_token';
 
 /**
+ * Check if running in Expo Go (push notifications not supported on Android SDK 53+)
+ */
+function isExpoGo(): boolean {
+  return Constants.appOwnership === 'expo';
+}
+
+/**
  * Get the Expo push token
  */
 export async function getExpoPushToken(): Promise<string | null> {
@@ -37,9 +44,15 @@ export async function getExpoPushToken(): Promise<string | null> {
     return null;
   }
 
+  // Push notifications are not supported in Expo Go on Android (SDK 53+)
+  if (Platform.OS === 'android' && isExpoGo()) {
+    console.warn('Push notifications require a development build on Android (not supported in Expo Go)');
+    return null;
+  }
+
   try {
     // Get project ID from Constants
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 
     if (!projectId) {
       console.warn('No project ID found for push notifications');
@@ -143,7 +156,7 @@ export async function registerPushToken(token: string): Promise<boolean> {
     });
 
     // Save token locally
-    await storage.setItem(PUSH_TOKEN_KEY, token);
+    await storage.set(PUSH_TOKEN_KEY, token);
 
     console.log('Push token registered successfully');
     return true;
@@ -158,14 +171,14 @@ export async function registerPushToken(token: string): Promise<boolean> {
  */
 export async function unregisterPushToken(): Promise<boolean> {
   try {
-    const token = await storage.getItem(PUSH_TOKEN_KEY);
+    const token = await storage.get<string>(PUSH_TOKEN_KEY);
     if (!token) return true;
 
     await api.delete('/device-tokens', {
       data: { token },
     });
 
-    await storage.removeItem(PUSH_TOKEN_KEY);
+    await storage.remove(PUSH_TOKEN_KEY);
 
     console.log('Push token unregistered successfully');
     return true;

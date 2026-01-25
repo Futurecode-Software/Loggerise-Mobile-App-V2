@@ -8,15 +8,8 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { DashboardTab, useDashboardQuickActions } from '@/hooks/use-dashboard-quick-actions';
+import { DashboardTheme } from '@/constants/dashboard-theme';
 import { QuickActionButton } from './quick-action-button';
-
-/**
- * Corporate Light Theme Colors (matches dashboard theme)
- */
-const Theme = {
-  surface: '#FFFFFF',
-  border: '#EBEDF0',
-};
 
 /**
  * Dashboard Quick Actions Props
@@ -48,7 +41,7 @@ export const DashboardQuickActions: React.FC<DashboardQuickActionsProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Theme.surface,
+    backgroundColor: DashboardTheme.surface,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.04)',

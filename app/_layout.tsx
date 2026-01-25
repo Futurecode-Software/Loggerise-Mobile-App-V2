@@ -9,6 +9,8 @@ import 'react-native-reanimated';
 
 import { AuthProvider } from '@/context/auth-context';
 import { NotificationProvider } from '@/context/notification-context';
+import { MessageProvider } from '@/context/message-context';
+import { DashboardProvider } from '@/contexts/dashboard-context';
 import { Colors } from '@/constants/theme';
 import { useNotificationObserver } from '@/hooks/use-notification-observer';
 
@@ -74,6 +76,8 @@ function RootLayoutNav() {
         <Stack.Screen name="vehicle" />
         <Stack.Screen name="stock" />
         <Stack.Screen name="finance" />
+        <Stack.Screen name="positions" />
+        <Stack.Screen name="messages" />
       </Stack>
       <StatusBar style="dark" />
       <Toast position='top' topOffset={60} />
@@ -87,7 +91,11 @@ export default function RootLayout() {
       <KeyboardProvider>
         <AuthProvider>
           <NotificationProvider>
-            <RootLayoutNav />
+            <MessageProvider>
+              <DashboardProvider>
+                <RootLayoutNav />
+              </DashboardProvider>
+            </MessageProvider>
           </NotificationProvider>
         </AuthProvider>
       </KeyboardProvider>

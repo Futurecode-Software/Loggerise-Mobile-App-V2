@@ -23,6 +23,7 @@ import {
   Car,
   Route,
   Truck,
+  MapPin,
   // Management
   Users,
   Handshake,
@@ -114,6 +115,7 @@ const MENU_SECTIONS = [
         color: '#f59e0b',
         route: '/domestic/orders',
       },
+      { id: 'positions', label: 'Pozisyonlar', icon: MapPin, color: '#10b981', route: '/positions' },
     ],
   },
   {
@@ -133,7 +135,7 @@ const MENU_SECTIONS = [
     icon: MessageCircle,
     iconColor: '#0ea5e9',
     items: [
-      { id: 'messages', label: 'Mesajlar', icon: MessageCircle, color: '#0ea5e9', route: '/messages' },
+      // Mesajlar artık tab'da - More menüsünden kaldırıldı
       { id: 'ai', label: 'Loggy AI', icon: Sparkles, color: Brand.primary, route: '/ai-reports' },
     ],
   },
