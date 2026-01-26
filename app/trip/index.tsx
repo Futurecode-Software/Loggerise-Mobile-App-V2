@@ -1,43 +1,43 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { FullScreenHeader } from '@/components/header';
+import { Badge, Card, Input } from '@/components/ui';
+import { BorderRadius, Brand, Colors, Spacing, Typography } from '@/constants/theme';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+    getDriverFullName,
+    getTrips,
+    getTripStatusLabel,
+    getTripStatusVariant,
+    getTripTypeLabel,
+    getVehicleOwnerTypeLabel,
+    Pagination,
+    Trip,
+    TripFilters,
+    TripStatus,
+} from '@/services/endpoints/trips';
 import { router } from 'expo-router';
 import {
-  Search,
-  Filter,
-  Truck,
-  MapPin,
-  User,
-  Calendar,
-  ArrowRight,
-  AlertCircle,
-  Route,
-  Ship,
-  Train,
-  Container,
+    AlertCircle,
+    ArrowRight,
+    Calendar,
+    Container,
+    Filter,
+    MapPin,
+    Route,
+    Search,
+    Ship,
+    Train,
+    Truck,
+    User,
 } from 'lucide-react-native';
-import { Card, Badge, Input } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  getTrips,
-  Trip,
-  TripStatus,
-  TripFilters,
-  Pagination,
-  getTripStatusLabel,
-  getTripStatusVariant,
-  getVehicleOwnerTypeLabel,
-  getDriverFullName,
-  getTripTypeLabel,
-} from '@/services/endpoints/trips';
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'Tümü', color: undefined },
@@ -207,105 +207,105 @@ export default function TripsScreen() {
       <View style={styles.tripHeader}>
         <View style={styles.tripNumberContainer}>
           <Text style={[styles.tripNumber, { color: colors.text }]}>
-            {item.trip_number}
+            {item.trip_number || '-'}
           </Text>
-          {item.trip_type && (
+          {item.trip_type ? (
             <Text style={[styles.tripType, { color: colors.textSecondary }]}>
               {getTripTypeLabel(item.trip_type)}
             </Text>
-          )}
+          ) : null}
         </View>
         {getStatusBadge(item.status)}
       </View>
 
       {/* Transport Type Icons */}
-      {(item.is_roro || item.is_train || item.is_mafi) && (
+      {(item.is_roro || item.is_train || item.is_mafi) ? (
         <View style={styles.transportIcons}>
-          {item.is_roro && (
+          {item.is_roro ? (
             <View style={[styles.transportBadge, { backgroundColor: '#3b82f6' + '20' }]}>
               <Ship size={14} color="#3b82f6" />
               <Text style={[styles.transportText, { color: '#3b82f6' }]}>RoRo</Text>
             </View>
-          )}
-          {item.is_train && (
+          ) : null}
+          {item.is_train ? (
             <View style={[styles.transportBadge, { backgroundColor: '#8b5cf6' + '20' }]}>
               <Train size={14} color="#8b5cf6" />
               <Text style={[styles.transportText, { color: '#8b5cf6' }]}>Tren</Text>
             </View>
-          )}
-          {item.is_mafi && (
+          ) : null}
+          {item.is_mafi ? (
             <View style={[styles.transportBadge, { backgroundColor: '#f59e0b' + '20' }]}>
               <Container size={14} color="#f59e0b" />
               <Text style={[styles.transportText, { color: '#f59e0b' }]}>Mafi</Text>
             </View>
-          )}
+          ) : null}
         </View>
-      )}
+      ) : null}
 
       {/* Route */}
-      {item.route && (
+      {item.route ? (
         <View style={styles.routeContainer}>
           <Route size={16} color={colors.icon} />
           <Text style={[styles.routeText, { color: colors.textSecondary }]} numberOfLines={1}>
             {item.route}
           </Text>
         </View>
-      )}
+      ) : null}
 
       {/* Vehicle Info */}
       <View style={styles.vehicleContainer}>
-        {item.truck_tractor && (
+        {item.truck_tractor ? (
           <View style={styles.vehicleItem}>
             <Truck size={14} color={colors.icon} />
             <Text style={[styles.vehicleText, { color: colors.textSecondary }]}>
-              {item.truck_tractor.plate}
+              {item.truck_tractor.plate || '-'}
             </Text>
           </View>
-        )}
-        {item.trailer && (
+        ) : null}
+        {item.trailer ? (
           <View style={styles.vehicleItem}>
             <ArrowRight size={12} color={colors.icon} style={{ marginHorizontal: 4 }} />
             <Text style={[styles.vehicleText, { color: colors.textSecondary }]}>
-              {item.trailer.plate}
+              {item.trailer.plate || '-'}
             </Text>
           </View>
-        )}
+        ) : null}
       </View>
 
       {/* Driver Info */}
-      {item.driver && (
+      {item.driver ? (
         <View style={styles.driverContainer}>
           <User size={14} color={colors.icon} />
           <Text style={[styles.driverText, { color: colors.textSecondary }]}>
             {getDriverFullName(item.driver)}
           </Text>
-          {item.second_driver && (
+          {item.second_driver ? (
             <Text style={[styles.driverText, { color: colors.textMuted }]}>
-              {' + '}{getDriverFullName(item.second_driver)}
+              {` + ${getDriverFullName(item.second_driver)}`}
             </Text>
-          )}
+          ) : null}
         </View>
-      )}
+      ) : null}
 
       {/* Location */}
-      {item.manual_location && (
+      {item.manual_location ? (
         <View style={styles.locationContainer}>
           <MapPin size={14} color={colors.success} />
           <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>
             {item.manual_location}
           </Text>
         </View>
-      )}
+      ) : null}
 
       {/* Dates */}
-      {item.estimated_arrival_date && (
+      {item.estimated_arrival_date ? (
         <View style={styles.dateContainer}>
           <Calendar size={14} color={colors.icon} />
           <Text style={[styles.dateText, { color: colors.textMuted }]}>
             Tahmini: {formatDate(item.estimated_arrival_date)}
           </Text>
         </View>
-      )}
+      ) : null}
 
       {/* Footer Info */}
       <View style={[styles.footerContainer, { borderTopColor: colors.border }]}>
@@ -315,14 +315,14 @@ export default function TripsScreen() {
             {getVehicleOwnerTypeLabel(item.vehicle_owner_type)}
           </Text>
         </View>
-        {item.loads && item.loads.length > 0 && (
+        {item.loads && item.loads.length > 0 ? (
           <View style={styles.footerItem}>
             <Text style={[styles.footerLabel, { color: colors.textMuted }]}>Yük:</Text>
             <Text style={[styles.footerValue, { color: Brand.primary }]}>
               {item.loads.length} adet
             </Text>
           </View>
-        )}
+        ) : null}
       </View>
     </Card>
   );
@@ -394,12 +394,14 @@ export default function TripsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FullScreenHeader
         title="Seferler"
+        showBackButton
         onBackPress={() => router.back()}
-        subtitle={pagination ? `${pagination.total} sefer` : undefined}
-        rightAction={{
-          icon: <Filter size={22} color="#FFFFFF" />,
-          onPress: () => {},
-        }}
+        subtitle={pagination && pagination.total ? `${pagination.total} sefer` : undefined}
+        rightIcons={
+          <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
+            <Filter size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
       />
 
       {/* Search */}

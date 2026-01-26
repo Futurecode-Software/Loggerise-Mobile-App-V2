@@ -35,6 +35,7 @@ import {
   AlertTriangle,
   ArrowRight,
   ArrowRightLeft,
+  ChevronRight,
 } from 'lucide-react-native';
 import { Card, Badge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -52,6 +53,13 @@ import {
   getDriverFullName,
   getTripTypeLabel,
 } from '@/services/endpoints/trips';
+import {
+  getPositions,
+  Position,
+  getPositionTypeLabel,
+  getVehicleOwnerTypeLabel as getPositionVehicleOwnerTypeLabel,
+  getDriverFullName as getPositionDriverFullName,
+} from '@/services/endpoints/positions';
 
 // Tab types
 type TabId = 'info' | 'loads' | 'positions';
@@ -68,7 +76,9 @@ export default function TripDetailScreen() {
   const { success, error: showError } = useToast();
 
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPositions, setIsLoadingPositions] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('info');
@@ -92,14 +102,35 @@ export default function TripDetailScreen() {
     }
   }, [id]);
 
+  // Fetch positions for this trip
+  const fetchPositions = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      setIsLoadingPositions(true);
+      const response = await getPositions({
+        trip_id: parseInt(id, 10),
+        per_page: 100, // Get all positions for this trip
+      });
+      setPositions(response.positions);
+    } catch (err) {
+      console.error('Positions fetch error:', err);
+      // Don't set error - just show empty state
+    } finally {
+      setIsLoadingPositions(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchTrip();
+    fetchPositions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchTrip();
+    fetchPositions();
   };
 
   // Delete trip - open confirm dialog
@@ -303,7 +334,7 @@ export default function TripDetailScreen() {
                   variant={
                     load.status === 'delivered' ? 'success' :
                     load.status === 'in_transit' ? 'info' :
-                    load.status === 'cancelled' ? 'destructive' : 'warning'
+                    load.status === 'cancelled' ? 'danger' : 'warning'
                   }
                   size="sm"
                 />
@@ -327,14 +358,176 @@ export default function TripDetailScreen() {
     );
   };
 
-  // Render positions tab (placeholder)
+  // Navigate to position detail
+  const navigateToPosition = (position: Position) => {
+    // Route based on position type (export or import)
+    const basePath = position.position_type === 'export'
+      ? '/exports/positions'
+      : '/imports/positions';
+    router.push(`${basePath}/${position.id}` as any);
+  };
+
+  // Get position status color
+  const getPositionStatusColor = (status?: string): string => {
+    switch (status) {
+      case 'active':
+        return '#22c55e';
+      case 'completed':
+        return '#3b82f6';
+      case 'cancelled':
+        return '#ef4444';
+      case 'draft':
+        return '#f59e0b';
+      default:
+        return '#6B7280';
+    }
+  };
+
+  // Get position status label
+  const getPositionStatusLabel = (status?: string): string => {
+    const labels: Record<string, string> = {
+      active: 'Aktif',
+      completed: 'Tamamlandı',
+      cancelled: 'İptal',
+      draft: 'Taslak',
+    };
+    return status ? labels[status] || status : 'Aktif';
+  };
+
+  // Render positions tab
   const renderPositionsTab = () => {
+    if (isLoadingPositions) {
+      return (
+        <View style={styles.emptyTab}>
+          <ActivityIndicator size="large" color={Brand.primary} />
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            Pozisyonlar yükleniyor...
+          </Text>
+        </View>
+      );
+    }
+
+    if (positions.length === 0) {
+      return (
+        <View style={styles.emptyTab}>
+          <MapPin size={48} color={colors.textMuted} />
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            Bu sefere henüz pozisyon eklenmemiş
+          </Text>
+        </View>
+      );
+    }
+
     return (
-      <View style={styles.emptyTab}>
-        <MapPin size={48} color={colors.textMuted} />
-        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-          Pozisyon detayları için web uygulamasını kullanın
-        </Text>
+      <View style={styles.tabContent}>
+        {positions.map((position) => {
+          const driverName = position.driver
+            ? `${position.driver.first_name} ${position.driver.last_name}`.trim()
+            : null;
+          const vehiclePlate = position.truck_tractor?.plate || position.trailer?.plate;
+
+          return (
+            <TouchableOpacity
+              key={position.id}
+              activeOpacity={0.7}
+              onPress={() => navigateToPosition(position)}
+            >
+              <Card style={styles.positionCard}>
+                <View style={styles.positionHeader}>
+                  <View style={styles.positionTitleRow}>
+                    <View style={[styles.positionIcon, { backgroundColor: Brand.primary + '15' }]}>
+                      <MapPin size={18} color={Brand.primary} />
+                    </View>
+                    <View style={styles.positionInfo}>
+                      <Text style={[styles.positionNumber, { color: colors.text }]}>
+                        {position.position_number || 'Taslak'}
+                      </Text>
+                      <View style={styles.positionTypeBadge}>
+                        <Text style={[styles.positionTypeText, {
+                          color: position.position_type === 'export' ? '#3b82f6' : '#8b5cf6'
+                        }]}>
+                          {getPositionTypeLabel(position.position_type)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={styles.positionRight}>
+                    <View style={[
+                      styles.statusDot,
+                      { backgroundColor: getPositionStatusColor(position.status) }
+                    ]} />
+                    <ChevronRight size={20} color={colors.textMuted} />
+                  </View>
+                </View>
+
+                {/* Position Details */}
+                <View style={styles.positionDetails}>
+                  {position.route && (
+                    <View style={styles.positionDetailRow}>
+                      <Route size={14} color={colors.icon} />
+                      <Text style={[styles.positionDetailText, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {position.route}
+                      </Text>
+                    </View>
+                  )}
+                  {vehiclePlate && (
+                    <View style={styles.positionDetailRow}>
+                      <Truck size={14} color={colors.icon} />
+                      <Text style={[styles.positionDetailText, { color: colors.textSecondary }]}>
+                        {vehiclePlate}
+                        {position.trailer?.plate && position.truck_tractor?.plate &&
+                          ` / ${position.trailer.plate}`}
+                      </Text>
+                    </View>
+                  )}
+                  {driverName && (
+                    <View style={styles.positionDetailRow}>
+                      <User size={14} color={colors.icon} />
+                      <Text style={[styles.positionDetailText, { color: colors.textSecondary }]}>
+                        {driverName}
+                      </Text>
+                    </View>
+                  )}
+                  {position.loads_count !== undefined && position.loads_count > 0 && (
+                    <View style={styles.positionDetailRow}>
+                      <Package size={14} color={colors.icon} />
+                      <Text style={[styles.positionDetailText, { color: colors.textSecondary }]}>
+                        {position.loads_count} yük
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Status Badge */}
+                <View style={styles.positionFooter}>
+                  <Badge
+                    label={getPositionStatusLabel(position.status)}
+                    variant={
+                      position.status === 'active' ? 'success' :
+                      position.status === 'completed' ? 'info' :
+                      position.status === 'cancelled' ? 'danger' : 'warning'
+                    }
+                    size="sm"
+                  />
+                  {(position.is_roro || position.is_train) && (
+                    <View style={styles.transportBadges}>
+                      {position.is_roro && (
+                        <View style={[styles.miniTransportBadge, { backgroundColor: '#3b82f6' + '20' }]}>
+                          <Ship size={12} color="#3b82f6" />
+                        </View>
+                      )}
+                      {position.is_train && (
+                        <View style={[styles.miniTransportBadge, { backgroundColor: '#8b5cf6' + '20' }]}>
+                          <Train size={12} color="#8b5cf6" />
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
+              </Card>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     );
   };
@@ -540,6 +733,7 @@ export default function TripDetailScreen() {
             // Count items for badge
             let count = 0;
             if (tab.id === 'loads') count = trip.loads?.length || 0;
+            if (tab.id === 'positions') count = positions.length;
 
             return (
               <TouchableOpacity
@@ -831,5 +1025,83 @@ const styles = StyleSheet.create({
   },
   loadType: {
     ...Typography.bodyXS,
+  },
+  // Position card styles
+  positionCard: {
+    padding: Spacing.md,
+  },
+  positionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  positionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: Spacing.sm,
+  },
+  positionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  positionInfo: {
+    flex: 1,
+  },
+  positionNumber: {
+    ...Typography.bodyMD,
+    fontWeight: '600',
+  },
+  positionTypeBadge: {
+    marginTop: 2,
+  },
+  positionTypeText: {
+    ...Typography.bodyXS,
+    fontWeight: '500',
+  },
+  positionRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  positionDetails: {
+    marginTop: Spacing.sm,
+    marginLeft: 44, // Align with text after icon
+    gap: Spacing.xs,
+  },
+  positionDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  positionDetailText: {
+    ...Typography.bodySM,
+    flex: 1,
+  },
+  positionFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.md,
+    marginLeft: 44,
+  },
+  transportBadges: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  miniTransportBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
