@@ -372,6 +372,13 @@ export default function NewCrmCustomerScreen() {
                 }
                 placeholder="Vergi dairesi seçiniz"
                 loading={loadingTaxOffices}
+                onSearch={async (query) => {
+                  const results = await searchTaxOffices(query);
+                  return results.map((office) => ({
+                    label: office.name,
+                    value: office.id.toString(),
+                  }));
+                }}
               />
             )}
 

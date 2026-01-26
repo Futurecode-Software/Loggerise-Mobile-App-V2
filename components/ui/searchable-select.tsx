@@ -17,10 +17,27 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
+  StatusBar as RNStatusBar,
+  Dimensions,
 } from 'react-native';
-import { Search, X, ChevronDown, Check } from 'lucide-react-native';
+import Constants from 'expo-constants';
+import { StatusBar } from 'expo-status-bar';
+import { Search, X, ChevronDown, Check, ChevronLeft } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+
+// iOS status bar yüksekliği hesaplama
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const getStatusBarHeight = (): number => {
+  if (Platform.OS === 'android') {
+    return Constants.statusBarHeight || 24;
+  }
+  // iOS için - notch'lu cihazlar için daha yüksek değer
+  // iPhone X ve sonrası: ~44-50px, eski iPhone: ~20px
+  if (SCREEN_HEIGHT >= 812) {
+    return 47; // iPhone X, 11, 12, 13, 14, 15 serisi (notch'lu)
+  }
+  return 20; // Eski iPhone modelleri
+};
 
 export interface SearchableSelectOption {
   label: string;
@@ -273,27 +290,48 @@ export function SearchableSelect({
 
       <Modal
         visible={isOpen}
-        transparent={true}
+        transparent={false}
         animationType="slide"
         onRequestClose={() => setIsOpen(false)}
       >
-        <KeyboardAvoidingView
-          style={styles.modalContainer}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <Pressable style={styles.modalOverlay} onPress={() => setIsOpen(false)} />
+        {/* StatusBar - Yeşil arka plan, beyaz içerik */}
+        <StatusBar style="light" backgroundColor={Brand.primary} />
+        {Platform.OS === 'android' && (
+          <RNStatusBar
+            barStyle="light-content"
+            backgroundColor={Brand.primary}
+            translucent={false}
+          />
+        )}
 
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            {/* Header */}
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
+        <View style={styles.modalWrapper}>
+          {/* Yeşil Header - Status bar dahil */}
+          <View
+            style={[
+              styles.greenHeader,
+              { paddingTop: getStatusBarHeight() },
+            ]}
+          >
+            <View style={styles.greenHeaderContent}>
+              <TouchableOpacity
+                onPress={() => setIsOpen(false)}
+                style={styles.backButton}
+                activeOpacity={0.7}
+              >
+                <ChevronLeft size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <Text style={styles.greenHeaderTitle} numberOfLines={1}>
                 {label || 'Seçim Yap'}
               </Text>
-              <TouchableOpacity onPress={() => setIsOpen(false)} style={styles.closeButton}>
-                <X size={24} color={colors.icon} />
-              </TouchableOpacity>
+              <View style={styles.headerRightPlaceholder} />
             </View>
+          </View>
 
+          {/* İçerik alanı */}
+          <KeyboardAvoidingView
+            style={[styles.modalContent, { backgroundColor: colors.background }]}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
             {/* Search Input */}
             <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
               <Search size={20} color={colors.icon} />
@@ -339,8 +377,8 @@ export function SearchableSelect({
                 keyboardShouldPersistTaps="handled"
               />
             )}
-          </View>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
     </View>
   );
@@ -390,33 +428,42 @@ const styles = StyleSheet.create({
     ...Typography.bodyXS,
     marginTop: Spacing.xs,
   },
-  modalContainer: {
+  modalWrapper: {
     flex: 1,
-    justifyContent: 'flex-end',
+    backgroundColor: Brand.primary,
   },
-  modalOverlay: {
-    height: 60,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  greenHeader: {
+    backgroundColor: Brand.primary,
+    width: '100%',
   },
-  modalContent: {
-    flex: 1,
-    borderTopLeftRadius: BorderRadius.lg,
-    borderTopRightRadius: BorderRadius.lg,
-    ...Shadows.lg,
-  },
-  modalHeader: {
+  greenHeaderContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
+    minHeight: 56,
+    backgroundColor: Brand.primary,
   },
-  modalTitle: {
-    ...Typography.headingMD,
-  },
-  closeButton: {
+  backButton: {
     padding: Spacing.sm,
+    marginLeft: -Spacing.sm,
+  },
+  greenHeaderTitle: {
+    ...Typography.headingMD,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: Spacing.md,
+  },
+  headerRightPlaceholder: {
+    width: 40, // Back button ile dengelemek için
+  },
+  modalContent: {
+    flex: 1,
   },
   searchContainer: {
     flexDirection: 'row',
