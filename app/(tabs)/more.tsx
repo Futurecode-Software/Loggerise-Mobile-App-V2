@@ -23,6 +23,10 @@ import {
   Route,
   Truck,
   MapPin,
+  // Exports (İhracatlar)
+  Ship,
+  ClipboardList,
+  Boxes,
   // Management
   Users,
   Handshake,
@@ -96,21 +100,44 @@ const MENU_SECTIONS = [
     ],
   },
   {
+    id: 'exports',
+    title: 'İhracatlar',
+    icon: Ship,
+    iconColor: '#0ea5e9',
+    items: [
+      { id: 'export-operations', label: 'Operasyonlar', icon: ClipboardList, color: '#0ea5e9', route: '/exports/operations' },
+      { id: 'export-disposition', label: 'Dispozisyon', icon: Boxes, color: '#8b5cf6', route: '/exports/disposition' },
+      { id: 'export-positions', label: 'Pozisyonlar', icon: MapPin, color: '#10b981', route: '/exports/positions' },
+      { id: 'export-loads', label: 'Yükler', icon: Package, color: '#f59e0b', route: '/exports/loads' },
+    ],
+  },
+  {
+    id: 'imports',
+    title: 'İthalatlar',
+    icon: Ship,
+    iconColor: '#6366f1',
+    items: [
+      { id: 'import-operations', label: 'Operasyonlar', icon: ClipboardList, color: '#6366f1', route: '/imports/operations' },
+      { id: 'import-disposition', label: 'Dispozisyon', icon: Boxes, color: '#8b5cf6', route: '/imports/disposition' },
+      { id: 'import-positions', label: 'Pozisyonlar', icon: MapPin, color: '#10b981', route: '/imports/positions' },
+      { id: 'import-loads', label: 'Yükler', icon: Package, color: '#f59e0b', route: '/imports/loads' },
+    ],
+  },
+  {
     id: 'logistics',
     title: 'Lojistik',
     icon: Truck,
     iconColor: '#3b82f6',
     items: [
       { id: 'vehicles', label: 'Araçlar', icon: Car, color: '#3b82f6', route: '/vehicle' },
-      { id: 'trips', label: 'Seferler', icon: Route, color: '#8b5cf6', route: '/trips' },
+      { id: 'trips', label: 'Seferler', icon: Route, color: '#8b5cf6', route: '/trip' },
       {
         id: 'domestic',
         label: 'Yurtiçi İş Emirleri',
         icon: Truck,
         color: '#f59e0b',
-        route: '/domestic/orders',
+        route: '/domestic',
       },
-      { id: 'positions', label: 'Pozisyonlar', icon: MapPin, color: '#10b981', route: '/positions' },
     ],
   },
   {

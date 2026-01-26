@@ -114,6 +114,8 @@ function RootLayoutNav() {
         <Stack.Screen name="bank" />
         <Stack.Screen name="cash-register" />
         <Stack.Screen name="vehicle" />
+        <Stack.Screen name="trip" />
+        <Stack.Screen name="domestic" />
         <Stack.Screen name="stock" />
         <Stack.Screen name="finance" />
         <Stack.Screen name="positions" />
