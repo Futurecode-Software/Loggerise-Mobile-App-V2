@@ -1,5 +1,5 @@
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, router, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -63,12 +63,42 @@ export const unstable_settings = {
 };
 
 /**
+ * Auth Guard Hook
+ * Redirects to login when not authenticated, to tabs when authenticated
+ */
+function useAuthGuard() {
+  const { isAuthenticated, isInitializing } = useAuth();
+  const segments = useSegments();
+  const navigationState = useRootNavigationState();
+
+  useEffect(() => {
+    // Wait for navigation to be ready and auth to initialize
+    if (!navigationState?.key || isInitializing) {
+      return;
+    }
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!isAuthenticated && !inAuthGroup) {
+      // Not authenticated and not in auth group - redirect to login
+      router.replace('/(auth)/login');
+    } else if (isAuthenticated && inAuthGroup) {
+      // Authenticated but still in auth group - redirect to tabs
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isInitializing, segments, navigationState?.key]);
+}
+
+/**
  * Inner layout component that uses notification observer
  * Must be inside providers to access auth context
  */
 function RootLayoutNav() {
   // Handle notification tap responses for navigation
   useNotificationObserver();
+
+  // Handle auth-based navigation
+  useAuthGuard();
 
   return (
     <ThemeProvider value={LoggeriseLight}>

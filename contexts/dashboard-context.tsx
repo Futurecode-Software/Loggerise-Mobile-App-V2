@@ -39,6 +39,7 @@ import {
   StockStats,
   HRStats,
 } from '@/services/endpoints/dashboard';
+import { useAuth } from '@/context/auth-context';
 
 // Dashboard Tab Types
 export type DashboardTab =
@@ -167,6 +168,9 @@ export const useDashboard = () => {
  * Dashboard Provider Component
  */
 export const DashboardProvider = ({ children }: { children: ReactNode }) => {
+  // Get auth state
+  const { isAuthenticated, isInitializing } = useAuth();
+
   // Available dashboards state
   const [availableDashboards, setAvailableDashboards] =
     useState<AvailableDashboards>(DEFAULT_AVAILABLE);
@@ -355,8 +359,12 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     hrStats,
   ]);
 
-  // Refresh all data
+  // Refresh all data - only when authenticated
   const onRefresh = useCallback(async () => {
+    if (!isAuthenticated) {
+      return;
+    }
+
     setRefreshing(true);
 
     // Clear all cached stats
@@ -375,20 +383,47 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     await fetchTabData(activeTab);
 
     setRefreshing(false);
-  }, [fetchAvailableDashboards, fetchBasicStats, fetchTabData, activeTab]);
+  }, [fetchAvailableDashboards, fetchBasicStats, fetchTabData, activeTab, isAuthenticated]);
 
-  // Initial data load
+  // Clear all data when user logs out
   useEffect(() => {
+    if (!isAuthenticated && !isInitializing) {
+      // Reset all state to defaults
+      setAvailableDashboards(DEFAULT_AVAILABLE);
+      setBasicStats(DEFAULT_STATS);
+      setOverviewStats(null);
+      setLogisticsStats(null);
+      setWarehouseStats(null);
+      setDomesticStats(null);
+      setFinanceStats(null);
+      setCrmStats(null);
+      setFleetStats(null);
+      setStockStats(null);
+      setHrStats(null);
+      setIsLoadingAvailable(false);
+      setError(null);
+      setActiveTab('logistics');
+    }
+  }, [isAuthenticated, isInitializing]);
+
+  // Initial data load - only when authenticated
+  useEffect(() => {
+    // Don't fetch if still initializing or not authenticated
+    if (isInitializing || !isAuthenticated) {
+      return;
+    }
+
+    setIsLoadingAvailable(true);
     fetchAvailableDashboards();
     fetchBasicStats();
-  }, [fetchAvailableDashboards, fetchBasicStats]);
+  }, [fetchAvailableDashboards, fetchBasicStats, isAuthenticated, isInitializing]);
 
-  // Load tab data when active tab changes
+  // Load tab data when active tab changes - only when authenticated
   useEffect(() => {
-    if (!isLoadingAvailable && availableDashboards[activeTab]) {
+    if (!isLoadingAvailable && availableDashboards[activeTab] && isAuthenticated) {
       fetchTabData(activeTab);
     }
-  }, [activeTab, isLoadingAvailable, availableDashboards, fetchTabData]);
+  }, [activeTab, isLoadingAvailable, availableDashboards, fetchTabData, isAuthenticated]);
 
   const value = useMemo(
     () => ({
