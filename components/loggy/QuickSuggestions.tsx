@@ -115,11 +115,12 @@ export function QuickSuggestions({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: Spacing.xl,
+    width: '100%',
   },
   title: {
     ...Typography.headingSM,
     marginBottom: Spacing.md,
+    fontWeight: '600',
   },
   categoryTabs: {
     marginBottom: Spacing.md,
@@ -147,9 +148,10 @@ const styles = StyleSheet.create({
   suggestionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.md,
+    padding: Spacing.lg,
     borderRadius: BorderRadius.lg,
     gap: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   suggestionIcon: {
     width: 36,

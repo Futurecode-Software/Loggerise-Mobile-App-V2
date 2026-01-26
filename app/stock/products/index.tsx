@@ -24,7 +24,6 @@ export default function ProductsScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const isInitialMount = useRef(true);
 
   // API state
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,76 +32,96 @@ export default function ProductsScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch products from API
-  const fetchProducts = useCallback(
-    async (page: number = 1, append: boolean = false) => {
+  // Refs to prevent duplicate calls
+  const isMountedRef = useRef(true);
+  const fetchIdRef = useRef(0);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const hasInitialFetchRef = useRef(false);
+
+  // Core fetch function - no dependencies on state
+  const executeFetch = useCallback(
+    async (search: string, page: number = 1, append: boolean = false) => {
+      const currentFetchId = ++fetchIdRef.current;
+
       try {
         setError(null);
 
         const filters = {
           page,
           per_page: 20,
-          search: searchQuery.trim() || undefined,
+          search: search.trim() || undefined,
         };
 
         const response = await getProducts(filters);
 
-        if (append) {
-          setProducts((prev) => [...prev, ...response.products]);
-        } else {
-          setProducts(response.products);
+        // Only update if this is still the latest request
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          if (append) {
+            setProducts((prev) => [...prev, ...response.products]);
+          } else {
+            setProducts(response.products);
+          }
+          setPagination(response.pagination);
+          hasInitialFetchRef.current = true;
         }
-        setPagination(response.pagination);
       } catch (err) {
-        console.error('Products fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Ürünler yüklenemedi');
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          console.error('Products fetch error:', err);
+          setError(err instanceof Error ? err.message : 'Ürünler yüklenemedi');
+        }
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          setRefreshing(false);
+        }
       }
     },
-    [searchQuery]
+    []
   );
 
-  // Single useEffect for both initial load and search
+  // Initial fetch - only once on mount
   useEffect(() => {
-    let ignore = false;
+    isMountedRef.current = true;
+    executeFetch(searchQuery, 1, false);
 
-    const loadData = async () => {
-      if (!ignore) {
-        setIsLoading(true);
-        await fetchProducts(1, false);
+    return () => {
+      isMountedRef.current = false;
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
       }
     };
+  }, []); // Empty deps - only run on mount
 
-    // Initial mount - fetch immediately
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      loadData();
-      return;
+  // Search with debounce
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return;
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
 
-    // Search change - debounce
-    const timeoutId = setTimeout(() => {
-      loadData();
+    debounceTimeoutRef.current = setTimeout(() => {
+      setIsLoading(true);
+      executeFetch(searchQuery, 1, false);
     }, 500);
 
     return () => {
-      ignore = true;
-      clearTimeout(timeoutId);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
     };
-  }, [searchQuery, fetchProducts]);
+  }, [searchQuery]); // Only searchQuery
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchProducts(1, false);
-    setRefreshing(false);
+    await executeFetch(searchQuery, 1, false);
   };
 
   const loadMore = () => {
     if (!isLoadingMore && pagination && pagination.current_page < pagination.last_page) {
       setIsLoadingMore(true);
-      fetchProducts(pagination.current_page + 1, true);
+      executeFetch(searchQuery, pagination.current_page + 1, true);
     }
   };
 
@@ -212,7 +231,7 @@ export default function ProductsScreen() {
         error={error}
         onRetry={() => {
           setIsLoading(true);
-          fetchProducts(1, false);
+          executeFetch(searchQuery, 1, false);
         }}
       />
 

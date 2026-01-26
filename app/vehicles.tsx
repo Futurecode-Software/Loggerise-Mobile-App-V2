@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -108,9 +108,26 @@ export default function VehiclesScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch vehicles from API
-  const fetchVehicles = useCallback(
-    async (page: number = 1, append: boolean = false) => {
+  // Refs to prevent duplicate calls
+  const isMountedRef = useRef(true);
+  const fetchIdRef = useRef(0);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const hasInitialFetchRef = useRef(false);
+  const isFirstFocusRef = useRef(true);
+
+  // Core fetch function - doesn't depend on search/filter state
+  const executeFetch = useCallback(
+    async (
+      search: string,
+      typeFilter: string,
+      status: string,
+      ownership: string,
+      page: number = 1,
+      append: boolean = false,
+      isRefresh: boolean = false
+    ) => {
+      const currentFetchId = ++fetchIdRef.current;
+
       try {
         setError(null);
 
@@ -122,71 +139,113 @@ export default function VehiclesScreen() {
         };
 
         // Add search filter
-        if (searchQuery.trim()) {
-          filters.search = searchQuery.trim();
+        if (search.trim()) {
+          filters.search = search.trim();
         }
 
         // Add type filter
-        if (activeFilter !== 'all') {
-          filters.vehicle_type = activeFilter as VehicleType;
+        if (typeFilter !== 'all') {
+          filters.vehicle_type = typeFilter as VehicleType;
         }
 
         // Add status filter
-        if (statusFilter !== 'all') {
-          filters.status = statusFilter as VehicleStatus;
+        if (status !== 'all') {
+          filters.status = status as VehicleStatus;
         }
 
         // Add ownership filter
-        if (ownershipFilter !== 'all') {
-          filters.ownership_type = ownershipFilter;
+        if (ownership !== 'all') {
+          filters.ownership_type = ownership;
         }
 
         const response = await getVehicles(filters);
 
-        if (append) {
-          setVehicles((prev) => [...prev, ...response.vehicles]);
-        } else {
-          setVehicles(response.vehicles);
+        // Only update if this is still the latest request
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          if (append) {
+            setVehicles((prev) => [...prev, ...response.vehicles]);
+          } else {
+            setVehicles(response.vehicles);
+          }
+          setPagination(response.pagination);
+          hasInitialFetchRef.current = true;
         }
-        setPagination(response.pagination);
       } catch (err) {
-        console.error('Vehicles fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Araçlar yüklenemedi');
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          console.error('Vehicles fetch error:', err);
+          setError(err instanceof Error ? err.message : 'Araçlar yüklenemedi');
+        }
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          setRefreshing(false);
+        }
       }
     },
-    [searchQuery, activeFilter, statusFilter, ownershipFilter]
+    []
   );
 
-  // Initial load and filter changes
+  // Initial fetch - only once on mount
   useEffect(() => {
+    isMountedRef.current = true;
+    executeFetch(searchQuery, activeFilter, statusFilter, ownershipFilter, 1, false);
+
+    return () => {
+      isMountedRef.current = false;
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []); // Empty deps - only run on mount
+
+  // Filter changes - immediate fetch
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return;
+
     setIsLoading(true);
-    fetchVehicles(1, false);
-  }, [activeFilter, statusFilter, ownershipFilter]);
+    executeFetch(searchQuery, activeFilter, statusFilter, ownershipFilter, 1, false);
+  }, [activeFilter, statusFilter, ownershipFilter]); // Only filter deps
 
   // Search with debounce
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    if (!hasInitialFetchRef.current) return;
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
       setIsLoading(true);
-      fetchVehicles(1, false);
+      executeFetch(searchQuery, activeFilter, statusFilter, ownershipFilter, 1, false);
     }, 500);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]); // Only searchQuery
 
   // Refresh when screen comes into focus (e.g., after adding a new vehicle)
+  // Skip on first render to avoid double-fetching
   useFocusEffect(
     useCallback(() => {
-      fetchVehicles(1, false);
-    }, [fetchVehicles])
+      if (isFirstFocusRef.current) {
+        isFirstFocusRef.current = false;
+        return;
+      }
+
+      // Only refresh if we've already fetched once
+      if (hasInitialFetchRef.current) {
+        executeFetch(searchQuery, activeFilter, statusFilter, ownershipFilter, 1, false);
+      }
+    }, [searchQuery, activeFilter, statusFilter, ownershipFilter, executeFetch])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchVehicles(1, false);
-    setRefreshing(false);
+    await executeFetch(searchQuery, activeFilter, statusFilter, ownershipFilter, 1, false, true);
   };
 
   const loadMore = () => {
@@ -196,7 +255,7 @@ export default function VehiclesScreen() {
       pagination.current_page < pagination.last_page
     ) {
       setIsLoadingMore(true);
-      fetchVehicles(pagination.current_page + 1, true);
+      executeFetch(searchQuery, activeFilter, statusFilter, ownershipFilter, pagination.current_page + 1, true);
     }
   };
 
@@ -351,7 +410,7 @@ export default function VehiclesScreen() {
             style={[styles.retryButton, { backgroundColor: Brand.primary }]}
             onPress={() => {
               setIsLoading(true);
-              fetchVehicles(1, false);
+              executeFetch(searchQuery, activeFilter, statusFilter, ownershipFilter, 1, false);
             }}
           >
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>

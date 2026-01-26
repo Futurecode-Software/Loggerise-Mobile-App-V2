@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Filter, Plus, Landmark, Copy, Check } from 'lucide-react-native';
@@ -39,9 +39,16 @@ export default function BankAccountsScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch banks from API
-  const fetchBanks = useCallback(
-    async (page: number = 1, append: boolean = false) => {
+  // Refs to prevent duplicate calls
+  const isMountedRef = useRef(true);
+  const fetchIdRef = useRef(0);
+  const hasInitialFetchRef = useRef(false);
+
+  // Core fetch function - no dependencies on state
+  const executeFetch = useCallback(
+    async (filter: string, page: number = 1, append: boolean = false) => {
+      const currentFetchId = ++fetchIdRef.current;
+
       try {
         setError(null);
 
@@ -53,39 +60,59 @@ export default function BankAccountsScreen() {
         };
 
         // Add currency filter
-        if (activeFilter !== 'all') {
-          filters.currency_type = activeFilter as CurrencyType;
+        if (filter !== 'all') {
+          filters.currency_type = filter as CurrencyType;
         }
 
         const response = await getBanks(filters);
 
-        if (append) {
-          setBanks((prev) => [...prev, ...response.banks]);
-        } else {
-          setBanks(response.banks);
+        // Only update if this is still the latest request
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          if (append) {
+            setBanks((prev) => [...prev, ...response.banks]);
+          } else {
+            setBanks(response.banks);
+          }
+          setPagination(response.pagination);
+          hasInitialFetchRef.current = true;
         }
-        setPagination(response.pagination);
       } catch (err) {
-        console.error('Banks fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Banka hesapları yüklenemedi');
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          console.error('Banks fetch error:', err);
+          setError(err instanceof Error ? err.message : 'Banka hesapları yüklenemedi');
+        }
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          setRefreshing(false);
+        }
       }
     },
-    [activeFilter]
+    []
   );
 
-  // Initial load and filter changes
+  // Initial fetch - only once on mount
   useEffect(() => {
+    isMountedRef.current = true;
+    executeFetch(activeFilter, 1, false);
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []); // Empty deps - only run on mount
+
+  // Filter change - immediate fetch
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return;
+
     setIsLoading(true);
-    fetchBanks(1, false);
-  }, [activeFilter]);
+    executeFetch(activeFilter, 1, false);
+  }, [activeFilter]); // Only activeFilter
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchBanks(1, false);
-    setRefreshing(false);
+    await executeFetch(activeFilter, 1, false);
   };
 
   const loadMore = () => {
@@ -95,7 +122,7 @@ export default function BankAccountsScreen() {
       pagination.current_page < pagination.last_page
     ) {
       setIsLoadingMore(true);
-      fetchBanks(pagination.current_page + 1, true);
+      executeFetch(activeFilter, pagination.current_page + 1, true);
     }
   };
 
@@ -246,7 +273,7 @@ export default function BankAccountsScreen() {
         error={error}
         onRetry={() => {
           setIsLoading(true);
-          fetchBanks(1, false);
+          executeFetch(activeFilter, 1, false);
         }}
         ListHeaderComponent={renderHeader()}
       />

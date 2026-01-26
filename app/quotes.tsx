@@ -45,7 +45,6 @@ const STATUS_FILTERS = [
 
 export default function QuotesScreen() {
   const colors = Colors.light;
-  const isFirstRender = useRef(true);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -58,9 +57,24 @@ export default function QuotesScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch quotes from API
-  const fetchQuotes = useCallback(
-    async (page: number = 1, append: boolean = false) => {
+  // Refs to prevent duplicate calls
+  const isMountedRef = useRef(true);
+  const fetchIdRef = useRef(0);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const hasInitialFetchRef = useRef(false);
+  const isFirstFocusRef = useRef(true);
+
+  // Core fetch function - doesn't depend on search/filter state
+  const executeFetch = useCallback(
+    async (
+      search: string,
+      filter: string,
+      page: number = 1,
+      append: boolean = false,
+      isRefresh: boolean = false
+    ) => {
+      const currentFetchId = ++fetchIdRef.current;
+
       try {
         setError(null);
 
@@ -70,64 +84,102 @@ export default function QuotesScreen() {
           is_active: true,
         };
 
-        if (searchQuery.trim()) {
-          filters.search = searchQuery.trim();
+        if (search.trim()) {
+          filters.search = search.trim();
         }
 
-        if (activeFilter !== 'all') {
-          filters.status = activeFilter as QuoteStatus;
+        if (filter !== 'all') {
+          filters.status = filter as QuoteStatus;
         }
 
         const response = await getQuotes(filters);
 
-        if (append) {
-          setQuotes((prev) => [...prev, ...response.quotes]);
-        } else {
-          setQuotes(response.quotes);
+        // Only update if this is still the latest request
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          if (append) {
+            setQuotes((prev) => [...prev, ...response.quotes]);
+          } else {
+            setQuotes(response.quotes);
+          }
+          setPagination(response.pagination);
+          hasInitialFetchRef.current = true;
         }
-        setPagination(response.pagination);
       } catch (err) {
-        console.error('Quotes fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Teklifler yüklenemedi');
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          console.error('Quotes fetch error:', err);
+          setError(err instanceof Error ? err.message : 'Teklifler yüklenemedi');
+        }
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          setRefreshing(false);
+        }
       }
     },
-    [searchQuery, activeFilter]
+    []
   );
 
+  // Initial fetch - only once on mount
   useEffect(() => {
-    setIsLoading(true);
-    fetchQuotes(1, false);
-  }, [activeFilter]);
+    isMountedRef.current = true;
+    executeFetch(searchQuery, activeFilter, 1, false);
 
+    return () => {
+      isMountedRef.current = false;
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []); // Empty deps - only run on mount
+
+  // Filter change - immediate fetch
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    if (!hasInitialFetchRef.current) return;
+
+    setIsLoading(true);
+    executeFetch(searchQuery, activeFilter, 1, false);
+  }, [activeFilter]); // Only activeFilter
+
+  // Search change - with debounce
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return;
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
       setIsLoading(true);
-      fetchQuotes(1, false);
+      executeFetch(searchQuery, activeFilter, 1, false);
     }, 500);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]); // Only searchQuery
 
   // Refresh list when screen comes into focus (e.g., after duplicating a quote)
   // Skip on first render to avoid double-fetching
   useFocusEffect(
     useCallback(() => {
-      if (isFirstRender.current) {
-        isFirstRender.current = false;
+      if (isFirstFocusRef.current) {
+        isFirstFocusRef.current = false;
         return;
       }
 
-      fetchQuotes(1, false);
-    }, [fetchQuotes])
+      // Only refresh if we've already fetched once (screen was previously mounted)
+      if (hasInitialFetchRef.current) {
+        executeFetch(searchQuery, activeFilter, 1, false);
+      }
+    }, [searchQuery, activeFilter, executeFetch])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchQuotes(1, false);
-    setRefreshing(false);
+    await executeFetch(searchQuery, activeFilter, 1, false, true);
   };
 
   const loadMore = () => {
@@ -137,7 +189,7 @@ export default function QuotesScreen() {
       pagination.current_page < pagination.last_page
     ) {
       setIsLoadingMore(true);
-      fetchQuotes(pagination.current_page + 1, true);
+      executeFetch(searchQuery, activeFilter, pagination.current_page + 1, true);
     }
   };
 
@@ -222,7 +274,7 @@ export default function QuotesScreen() {
             style={[styles.retryButton, { backgroundColor: Brand.primary }]}
             onPress={() => {
               setIsLoading(true);
-              fetchQuotes(1, false);
+              executeFetch(searchQuery, activeFilter, 1, false);
             }}
           >
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>

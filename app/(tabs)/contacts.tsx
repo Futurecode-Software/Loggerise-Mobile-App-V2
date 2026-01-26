@@ -50,9 +50,24 @@ export default function ContactsScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch contacts from API
-  const fetchContacts = useCallback(
-    async (page: number = 1, append: boolean = false) => {
+  // Refs to prevent duplicate calls
+  const isMountedRef = useRef(true);
+  const fetchIdRef = useRef(0);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const hasInitialFetchRef = useRef(false);
+  const isFirstFocusRef = useRef(true);
+
+  // Core fetch function - doesn't depend on search/filter state
+  const executeFetch = useCallback(
+    async (
+      search: string,
+      filter: string,
+      page: number = 1,
+      append: boolean = false,
+      isRefresh: boolean = false
+    ) => {
+      const currentFetchId = ++fetchIdRef.current;
+
       try {
         setError(null);
 
@@ -64,81 +79,109 @@ export default function ContactsScreen() {
         };
 
         // Add search filter
-        if (searchQuery.trim()) {
-          filters.search = searchQuery.trim();
+        if (search.trim()) {
+          filters.search = search.trim();
         }
 
         // Add type/role filter
-        if (activeFilter === 'customer') {
+        if (filter === 'customer') {
           // is_customer filter not available, use type filter logic in UI
-        } else if (activeFilter === 'supplier') {
+        } else if (filter === 'supplier') {
           // is_supplier filter not available, use type filter logic in UI
-        } else if (activeFilter === 'company') {
+        } else if (filter === 'company') {
           filters.type = 'company';
-        } else if (activeFilter === 'individual') {
+        } else if (filter === 'individual') {
           filters.type = 'individual';
         }
 
         const response = await getContacts(filters);
 
-        if (append) {
-          setContacts((prev) => [...prev, ...response.contacts]);
-        } else {
-          setContacts(response.contacts);
+        // Only update if this is still the latest request
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          if (append) {
+            setContacts((prev) => [...prev, ...response.contacts]);
+          } else {
+            setContacts(response.contacts);
+          }
+          setPagination(response.pagination);
+          hasInitialFetchRef.current = true;
         }
-        setPagination(response.pagination);
       } catch (err) {
-        console.error('Contacts fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Cariler yüklenemedi');
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          console.error('Contacts fetch error:', err);
+          setError(err instanceof Error ? err.message : 'Cariler yüklenemedi');
+        }
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          setRefreshing(false);
+        }
       }
     },
-    [searchQuery, activeFilter]
+    []
   );
 
-  // Track if initial mount has completed
-  const isInitialMount = useRef(true);
-  const hasLoadedOnce = useRef(false);
-
-  // Initial load and filter changes
+  // Initial fetch - only once on mount
   useEffect(() => {
+    isMountedRef.current = true;
+    executeFetch(searchQuery, activeFilter, 1, false);
+
+    return () => {
+      isMountedRef.current = false;
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []); // Empty deps - only run on mount
+
+  // Filter change - immediate fetch
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return;
+
     setIsLoading(true);
-    fetchContacts(1, false);
-    hasLoadedOnce.current = true;
-  }, [activeFilter]); // Don't include searchQuery to avoid too many requests
+    executeFetch(searchQuery, activeFilter, 1, false);
+  }, [activeFilter]); // Only activeFilter
 
-  // Search with debounce - skip on initial mount to prevent double fetch
+  // Search with debounce
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
+    if (!hasInitialFetchRef.current) return;
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
 
-    const timeoutId = setTimeout(() => {
+    debounceTimeoutRef.current = setTimeout(() => {
       setIsLoading(true);
-      fetchContacts(1, false);
+      executeFetch(searchQuery, activeFilter, 1, false);
     }, 500);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]); // Only searchQuery
 
   // Sayfa odaklandığında listeyi yenile (detay sayfasından dönüşte)
   useFocusEffect(
     useCallback(() => {
-      // İlk yüklemede çalışmasın, sadece geri dönüşlerde
-      if (hasLoadedOnce.current) {
-        // Loading göstermeden sessizce yenile
-        fetchContacts(1, false);
+      if (isFirstFocusRef.current) {
+        isFirstFocusRef.current = false;
+        return;
       }
-    }, [fetchContacts])
+
+      // Only refresh if we've already fetched once
+      if (hasInitialFetchRef.current) {
+        // Loading göstermeden sessizce yenile
+        executeFetch(searchQuery, activeFilter, 1, false);
+      }
+    }, [searchQuery, activeFilter, executeFetch])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchContacts(1, false);
-    setRefreshing(false);
+    await executeFetch(searchQuery, activeFilter, 1, false, true);
   };
 
   const loadMore = () => {
@@ -148,7 +191,7 @@ export default function ContactsScreen() {
       pagination.current_page < pagination.last_page
     ) {
       setIsLoadingMore(true);
-      fetchContacts(pagination.current_page + 1, true);
+      executeFetch(searchQuery, activeFilter, pagination.current_page + 1, true);
     }
   };
 
@@ -238,7 +281,7 @@ export default function ContactsScreen() {
             style={[styles.retryButton, { backgroundColor: Brand.primary }]}
             onPress={() => {
               setIsLoading(true);
-              fetchContacts(1, false);
+              executeFetch(searchQuery, activeFilter, 1, false);
             }}
           >
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>

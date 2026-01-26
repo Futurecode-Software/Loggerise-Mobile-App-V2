@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Plus, User, Phone, Mail, Users } from 'lucide-react-native';
@@ -39,9 +39,23 @@ export default function CrmCustomersListScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch customers from API
-  const fetchCustomers = useCallback(
-    async (page: number = 1, append: boolean = false) => {
+  // Refs to prevent duplicate calls
+  const isMountedRef = useRef(true);
+  const fetchIdRef = useRef(0);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const hasInitialFetchRef = useRef(false);
+
+  // Core fetch function - doesn't depend on search/filter state
+  const executeFetch = useCallback(
+    async (
+      search: string,
+      filter: string,
+      page: number = 1,
+      append: boolean = false,
+      isRefresh: boolean = false
+    ) => {
+      const currentFetchId = ++fetchIdRef.current;
+
       try {
         setError(null);
 
@@ -51,42 +65,86 @@ export default function CrmCustomersListScreen() {
           is_active: true,
         };
 
-        if (searchQuery.trim()) {
-          filters.search = searchQuery.trim();
+        if (search.trim()) {
+          filters.search = search.trim();
         }
 
-        if (activeFilter !== 'all') {
-          filters.status = activeFilter as CrmCustomerStatus;
+        if (filter !== 'all') {
+          filters.status = filter as CrmCustomerStatus;
         }
 
         const response = await getCrmCustomers(filters);
 
-        if (append) {
-          setCustomers((prev) => [...prev, ...response.customers]);
-        } else {
-          setCustomers(response.customers);
+        // Only update if this is still the latest request
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          if (append) {
+            setCustomers((prev) => [...prev, ...response.customers]);
+          } else {
+            setCustomers(response.customers);
+          }
+          setPagination(response.pagination);
+          hasInitialFetchRef.current = true;
         }
-        setPagination(response.pagination);
       } catch (err) {
-        console.error('CRM customers fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Müşteriler yüklenemedi');
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          console.error('CRM customers fetch error:', err);
+          setError(err instanceof Error ? err.message : 'Müşteriler yüklenemedi');
+        }
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          setRefreshing(false);
+        }
       }
     },
-    [searchQuery, activeFilter]
+    []
   );
 
+  // Initial fetch - only once on mount
   useEffect(() => {
+    isMountedRef.current = true;
+    executeFetch(searchQuery, activeFilter, 1, false);
+
+    return () => {
+      isMountedRef.current = false;
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []); // Empty deps - only run on mount
+
+  // Filter change - immediate fetch
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return;
+
     setIsLoading(true);
-    fetchCustomers();
-  }, [fetchCustomers]);
+    executeFetch(searchQuery, activeFilter, 1, false);
+  }, [activeFilter]); // Only activeFilter, not search (search has debounce)
+
+  // Search change - with debounce
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return;
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      setIsLoading(true);
+      executeFetch(searchQuery, activeFilter, 1, false);
+    }, 500);
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]); // Only searchQuery
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchCustomers(1, false);
-    setRefreshing(false);
+    await executeFetch(searchQuery, activeFilter, 1, false, true);
   };
 
   const loadMore = () => {
@@ -97,7 +155,7 @@ export default function CrmCustomersListScreen() {
       !isLoading
     ) {
       setIsLoadingMore(true);
-      fetchCustomers(pagination.current_page + 1, true);
+      executeFetch(searchQuery, activeFilter, pagination.current_page + 1, true);
     }
   };
 
@@ -214,7 +272,7 @@ export default function CrmCustomersListScreen() {
         error={error}
         onRetry={() => {
           setIsLoading(true);
-          fetchCustomers(1, false);
+          executeFetch(searchQuery, activeFilter, 1, false);
         }}
       />
     </View>

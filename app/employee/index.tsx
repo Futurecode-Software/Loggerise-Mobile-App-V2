@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Filter, Plus, User, Truck, Crown } from 'lucide-react-native';
@@ -40,9 +40,23 @@ export default function EmployeesScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch employees from API
-  const fetchEmployees = useCallback(
-    async (page: number = 1, append: boolean = false) => {
+  // Refs to prevent duplicate calls
+  const isMountedRef = useRef(true);
+  const fetchIdRef = useRef(0);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const hasInitialFetchRef = useRef(false);
+
+  // Core fetch function - doesn't depend on search/filter state
+  const executeFetch = useCallback(
+    async (
+      search: string,
+      filter: string,
+      page: number = 1,
+      append: boolean = false,
+      isRefresh: boolean = false
+    ) => {
+      const currentFetchId = ++fetchIdRef.current;
+
       try {
         setError(null);
 
@@ -53,54 +67,87 @@ export default function EmployeesScreen() {
         };
 
         // Add search filter
-        if (searchQuery.trim()) {
-          filters.search = searchQuery.trim();
+        if (search.trim()) {
+          filters.search = search.trim();
         }
 
         // Add status filter
-        if (activeFilter !== 'all') {
-          filters.employment_status = activeFilter as EmploymentStatus;
+        if (filter !== 'all') {
+          filters.employment_status = filter as EmploymentStatus;
         }
 
         const response = await getEmployees(filters);
 
-        if (append) {
-          setEmployees((prev) => [...prev, ...response.employees]);
-        } else {
-          setEmployees(response.employees);
+        // Only update if this is still the latest request
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          if (append) {
+            setEmployees((prev) => [...prev, ...response.employees]);
+          } else {
+            setEmployees(response.employees);
+          }
+          setPagination(response.pagination);
+          hasInitialFetchRef.current = true;
         }
-        setPagination(response.pagination);
       } catch (err) {
-        console.error('Employees fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Çalışanlar yüklenemedi');
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          console.error('Employees fetch error:', err);
+          setError(err instanceof Error ? err.message : 'Çalışanlar yüklenemedi');
+        }
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          setRefreshing(false);
+        }
       }
     },
-    [searchQuery, activeFilter]
+    []
   );
 
-  // Initial load and filter changes
+  // Initial fetch - only once on mount
   useEffect(() => {
+    isMountedRef.current = true;
+    executeFetch(searchQuery, activeFilter, 1, false);
+
+    return () => {
+      isMountedRef.current = false;
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []); // Empty deps - only run on mount
+
+  // Filter change - immediate fetch
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return;
+
     setIsLoading(true);
-    fetchEmployees(1, false);
-  }, [activeFilter]);
+    executeFetch(searchQuery, activeFilter, 1, false);
+  }, [activeFilter]); // Only activeFilter, not search (search has debounce)
 
   // Search with debounce
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    if (!hasInitialFetchRef.current) return;
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
       setIsLoading(true);
-      fetchEmployees(1, false);
+      executeFetch(searchQuery, activeFilter, 1, false);
     }, 500);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]); // Only searchQuery
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchEmployees(1, false);
-    setRefreshing(false);
+    await executeFetch(searchQuery, activeFilter, 1, false, true);
   };
 
   const loadMore = () => {
@@ -110,7 +157,7 @@ export default function EmployeesScreen() {
       pagination.current_page < pagination.last_page
     ) {
       setIsLoadingMore(true);
-      fetchEmployees(pagination.current_page + 1, true);
+      executeFetch(searchQuery, activeFilter, pagination.current_page + 1, true);
     }
   };
 
@@ -251,7 +298,7 @@ export default function EmployeesScreen() {
         error={error}
         onRetry={() => {
           setIsLoading(true);
-          fetchEmployees(1, false);
+          executeFetch(searchQuery, activeFilter, 1, false);
         }}
       />
 

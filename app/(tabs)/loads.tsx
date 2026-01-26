@@ -67,9 +67,23 @@ export default function LoadsScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch loads from API
-  const fetchLoads = useCallback(
-    async (page: number = 1, append: boolean = false) => {
+  // Refs to prevent duplicate calls
+  const isMountedRef = useRef(true);
+  const fetchIdRef = useRef(0);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const hasInitialFetchRef = useRef(false);
+
+  // Core fetch function - no dependencies on state
+  const executeFetch = useCallback(
+    async (
+      search: string,
+      statusFilter: string,
+      directionFilter: string,
+      page: number = 1,
+      append: boolean = false
+    ) => {
+      const currentFetchId = ++fetchIdRef.current;
+
       try {
         setError(null);
 
@@ -81,67 +95,92 @@ export default function LoadsScreen() {
         };
 
         // Add search filter
-        if (searchQuery.trim()) {
-          filters.search = searchQuery.trim();
+        if (search.trim()) {
+          filters.search = search.trim();
         }
 
         // Add status filter
-        if (activeStatusFilter !== 'all') {
-          filters.status = activeStatusFilter as LoadStatus;
+        if (statusFilter !== 'all') {
+          filters.status = statusFilter as LoadStatus;
         }
 
         // Add direction filter
-        if (activeDirectionFilter !== 'all') {
-          filters.direction = activeDirectionFilter as 'import' | 'export';
+        if (directionFilter !== 'all') {
+          filters.direction = directionFilter as 'import' | 'export';
         }
 
         const response = await getLoads(filters);
 
-        if (append) {
-          setLoads((prev) => [...prev, ...response.loads]);
-        } else {
-          setLoads(response.loads);
+        // Only update if this is still the latest request
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          if (append) {
+            setLoads((prev) => [...prev, ...response.loads]);
+          } else {
+            setLoads(response.loads);
+          }
+          setPagination(response.pagination);
+          hasInitialFetchRef.current = true;
         }
-        setPagination(response.pagination);
       } catch (err) {
-        console.error('Loads fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Yükler yüklenemedi');
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          console.error('Loads fetch error:', err);
+          setError(err instanceof Error ? err.message : 'Yükler yüklenemedi');
+        }
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          setRefreshing(false);
+        }
       }
     },
-    [searchQuery, activeStatusFilter, activeDirectionFilter]
+    []
   );
 
-  // Track if initial mount has completed
-  const isInitialMount = useRef(true);
-
-  // Initial load and filter changes
+  // Initial fetch - only once on mount
   useEffect(() => {
+    isMountedRef.current = true;
+    executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
+
+    return () => {
+      isMountedRef.current = false;
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []); // Empty deps - only run on mount
+
+  // Filter change - immediate fetch
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return;
+
     setIsLoading(true);
-    fetchLoads(1, false);
-  }, [activeStatusFilter, activeDirectionFilter]);
+    executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
+  }, [activeStatusFilter, activeDirectionFilter]); // Only filters
 
-  // Search with debounce - skip on initial mount to prevent double fetch
+  // Search with debounce
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
+    if (!hasInitialFetchRef.current) return;
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
 
-    const timeoutId = setTimeout(() => {
+    debounceTimeoutRef.current = setTimeout(() => {
       setIsLoading(true);
-      fetchLoads(1, false);
+      executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
     }, 500);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]); // Only searchQuery
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchLoads(1, false);
-    setRefreshing(false);
+    await executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
   };
 
   const loadMore = () => {
@@ -151,7 +190,7 @@ export default function LoadsScreen() {
       pagination.current_page < pagination.last_page
     ) {
       setIsLoadingMore(true);
-      fetchLoads(pagination.current_page + 1, true);
+      executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, pagination.current_page + 1, true);
     }
   };
 
@@ -333,7 +372,7 @@ export default function LoadsScreen() {
             style={[styles.retryButton, { backgroundColor: Brand.primary }]}
             onPress={() => {
               setIsLoading(true);
-              fetchLoads(1, false);
+              executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
             }}
           >
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>

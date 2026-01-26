@@ -3,9 +3,11 @@
  *
  * Manages quote fetching, delete, send, duplicate, and export operations.
  * Following React patterns from Context7 documentation.
+ *
+ * FIXED: Prevents duplicate API calls using proper useEffect dependency tracking.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { router } from 'expo-router';
 import { useToast } from './use-toast';
 import {
@@ -64,36 +66,67 @@ export function useQuoteDetail({ id }: UseQuoteDetailOptions): UseQuoteDetailRet
   // Dialog state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Fetch quote data
-  const fetchQuote = useCallback(async () => {
+  // Refs to prevent duplicate calls and track mount state
+  const isMountedRef = useRef(true);
+  const fetchIdRef = useRef(0);
+  const hasFetchedRef = useRef(false);
+
+  // Fetch quote data - using ref pattern to avoid stale closures
+  const fetchQuote = useCallback(async (isRefresh = false) => {
     if (!id) return;
+
+    const currentFetchId = ++fetchIdRef.current;
 
     try {
       setError(null);
+      if (isRefresh) {
+        setRefreshing(true);
+      }
+
       const data = await getQuote(parseInt(id, 10));
-      setQuote(data);
+
+      // Only update state if this is the latest fetch and component is mounted
+      if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+        setQuote(data);
+        hasFetchedRef.current = true;
+      }
     } catch (err) {
-      console.error('Quote fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Teklif bilgileri yüklenemedi');
+      if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+        console.error('Quote fetch error:', err);
+        setError(err instanceof Error ? err.message : 'Teklif bilgileri yüklenemedi');
+      }
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+        setIsLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [id]);
 
-  // Initial fetch
+  // Initial fetch - only run once when id is available
+  // Using id directly as dependency, not the callback function
   useEffect(() => {
+    if (!id) return;
+
+    // Prevent duplicate fetch in StrictMode
+    if (hasFetchedRef.current) return;
+
+    isMountedRef.current = true;
     fetchQuote();
-  }, [fetchQuote]);
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [id]); // Only depend on id, not fetchQuote
 
   // Refresh handler
   const refresh = useCallback(() => {
-    setRefreshing(true);
-    fetchQuote();
+    fetchQuote(true);
   }, [fetchQuote]);
 
   // Retry fetch handler
   const retryFetch = useCallback(() => {
+    hasFetchedRef.current = false; // Allow refetch
     setIsLoading(true);
     fetchQuote();
   }, [fetchQuote]);

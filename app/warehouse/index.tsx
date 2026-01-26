@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Filter, Plus, Warehouse, MapPin, User } from 'lucide-react-native';
@@ -25,9 +25,17 @@ export default function WarehouseScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch warehouses from API
-  const fetchWarehouses = useCallback(
-    async (page: number = 1, append: boolean = false) => {
+  // Refs to prevent duplicate calls
+  const isMountedRef = useRef(true);
+  const fetchIdRef = useRef(0);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const hasInitialFetchRef = useRef(false);
+
+  // Core fetch function - no dependencies on state
+  const executeFetch = useCallback(
+    async (search: string, page: number = 1, append: boolean = false) => {
+      const currentFetchId = ++fetchIdRef.current;
+
       try {
         setError(null);
 
@@ -37,47 +45,74 @@ export default function WarehouseScreen() {
           is_active: true,
         };
 
-        if (searchQuery.trim()) {
-          filters.search = searchQuery.trim();
+        if (search.trim()) {
+          filters.search = search.trim();
         }
 
         const response = await getWarehouses(filters);
 
-        if (append) {
-          setWarehouses((prev) => [...prev, ...response.warehouses]);
-        } else {
-          setWarehouses(response.warehouses);
+        // Only update if this is still the latest request
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          if (append) {
+            setWarehouses((prev) => [...prev, ...response.warehouses]);
+          } else {
+            setWarehouses(response.warehouses);
+          }
+          setPagination(response.pagination);
+          hasInitialFetchRef.current = true;
         }
-        setPagination(response.pagination);
       } catch (err) {
-        console.error('Warehouses fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Depolar yüklenemedi');
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          console.error('Warehouses fetch error:', err);
+          setError(err instanceof Error ? err.message : 'Depolar yüklenemedi');
+        }
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+          setRefreshing(false);
+        }
       }
     },
-    [searchQuery]
+    []
   );
 
+  // Initial fetch - only once on mount
   useEffect(() => {
-    setIsLoading(true);
-    fetchWarehouses(1, false);
-  }, []);
+    isMountedRef.current = true;
+    executeFetch(searchQuery, 1, false);
 
+    return () => {
+      isMountedRef.current = false;
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []); // Empty deps - only run on mount
+
+  // Search with debounce
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    if (!hasInitialFetchRef.current) return;
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
       setIsLoading(true);
-      fetchWarehouses(1, false);
+      executeFetch(searchQuery, 1, false);
     }, 500);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]); // Only searchQuery
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchWarehouses(1, false);
-    setRefreshing(false);
+    await executeFetch(searchQuery, 1, false);
   };
 
   const loadMore = () => {
@@ -87,7 +122,7 @@ export default function WarehouseScreen() {
       pagination.current_page < pagination.last_page
     ) {
       setIsLoadingMore(true);
-      fetchWarehouses(pagination.current_page + 1, true);
+      executeFetch(searchQuery, pagination.current_page + 1, true);
     }
   };
 
@@ -175,7 +210,7 @@ export default function WarehouseScreen() {
         error={error}
         onRetry={() => {
           setIsLoading(true);
-          fetchWarehouses(1, false);
+          executeFetch(searchQuery, 1, false);
         }}
       />
 

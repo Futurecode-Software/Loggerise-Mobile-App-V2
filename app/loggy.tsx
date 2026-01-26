@@ -9,18 +9,15 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
-  Alert,
+  Pressable,
+  Keyboard,
 } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { router } from 'expo-router';
 import {
-  ChevronLeft,
   Plus,
   Sparkles,
-  Send,
   Trash2,
   Search,
   Bot,
@@ -30,7 +27,7 @@ import {
   Settings,
 } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { formatConversationTime, AiConversation } from '@/services/endpoints/loggy';
+import { formatConversationTime, AiConversation, deleteConversation } from '@/services/endpoints/loggy';
 import { useLoggyConversations } from '@/hooks/use-logy-conversations';
 import { useLoggyMessages } from '@/hooks/use-logy-messages';
 import { useLoggySearch } from '@/hooks/use-logy-search';
@@ -38,18 +35,21 @@ import { ViewMode } from '@/components/loggy/constants';
 import { TypingIndicator } from '@/components/loggy/TypingIndicator';
 import { QuickSuggestions } from '@/components/loggy/QuickSuggestions';
 import { MessageBubble } from '@/components/loggy/MessageBubble';
+import { LoggyInput } from '@/components/loggy/LoggyInput';
 import { FullScreenHeader } from '@/components/header';
+import { ConfirmDialog } from '@/components/ui';
 
 export default function LoggyScreen() {
   const colors = Colors.light;
   const flatListRef = useRef<FlatList>(null);
-  const inputRef = useRef<TextInput>(null);
   const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
 
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [inputValue, setInputValue] = useState('');
   const [isAiConfigured] = useState(true); // TODO: Get from API
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<number | null>(null);
 
   // Custom hooks
   const {
@@ -140,9 +140,35 @@ export default function LoggyScreen() {
     refresh();
   };
 
+  // Handle delete click - show dialog
+  const handleDeleteClick = (conversationId: number) => {
+    setConversationToDelete(conversationId);
+    setShowDeleteDialog(true);
+  };
+
+  // Confirm delete
+  const confirmDelete = async () => {
+    if (conversationToDelete) {
+      try {
+        await deleteConversation(conversationToDelete);
+        // If deleted conversation was current, go back to list
+        if (currentConversation?.id === conversationToDelete) {
+          setViewMode('list');
+        }
+        // Refresh the list to reflect the deletion
+        refresh();
+      } catch (err) {
+        console.error('Delete conversation error:', err);
+      } finally {
+        setShowDeleteDialog(false);
+        setConversationToDelete(null);
+      }
+    }
+  };
+
   // Render conversation list item
   const renderConversationItem = ({ item }: { item: AiConversation }) => (
-    <TouchableOpacity
+    <View
       style={[
         styles.conversationItem,
         {
@@ -153,29 +179,33 @@ export default function LoggyScreen() {
           backgroundColor: Brand.primary + '15',
         },
       ]}
-      onPress={() => handleSelectConversation(item)}
     >
-      <View style={[styles.conversationIcon, { backgroundColor: Brand.primary + '15' }]}>
-        <MessageSquare size={20} color={Brand.primary} />
-      </View>
-      <View style={styles.conversationContent}>
-        <Text style={[styles.conversationTitle, { color: colors.text }]} numberOfLines={1}>
-          {item.title}
-        </Text>
-        <Text style={[styles.conversationTime, { color: colors.textMuted }]}>
-          {formatConversationTime(item.created_at)}
-        </Text>
-      </View>
+      <TouchableOpacity
+        style={styles.conversationTouchable}
+        onPress={() => handleSelectConversation(item)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.conversationIcon, { backgroundColor: Brand.primary + '15' }]}>
+          <MessageSquare size={20} color={Brand.primary} />
+        </View>
+        <View style={styles.conversationContent}>
+          <Text style={[styles.conversationTitle, { color: colors.text }]} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <Text style={[styles.conversationTime, { color: colors.textMuted }]}>
+            {formatConversationTime(item.created_at)}
+          </Text>
+        </View>
+      </TouchableOpacity>
       <TouchableOpacity
         style={styles.deleteButton}
-        onPress={(e) => {
-          e.stopPropagation();
-          handleDelete(item.id);
-        }}
+        onPress={() => handleDeleteClick(item.id)}
+        activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Trash2 size={18} color={colors.danger} />
       </TouchableOpacity>
-    </TouchableOpacity>
+    </View>
   );
 
   // Render list empty state
@@ -225,7 +255,9 @@ export default function LoggyScreen() {
           onPress={handleCreateNewConversation}
         >
           <Sparkles size={18} color="#FFFFFF" />
-          <Text style={styles.startButtonText}>Yeni Konuşma Başlat</Text>
+          <Text style={styles.startButtonText} numberOfLines={1}>
+            Yeni Konuşma Başlat
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -251,7 +283,7 @@ export default function LoggyScreen() {
         />
 
         {/* Search */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Search size={18} color={colors.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
@@ -289,6 +321,21 @@ export default function LoggyScreen() {
             <Plus size={24} color="#FFFFFF" />
           </TouchableOpacity>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmDialog
+          visible={showDeleteDialog}
+          title="Konuşmayı Sil"
+          message="Bu konuşmayı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+          confirmText="Sil"
+          cancelText="İptal"
+          isDangerous
+          onConfirm={confirmDelete}
+          onCancel={() => {
+            setShowDeleteDialog(false);
+            setConversationToDelete(null);
+          }}
+        />
       </View>
     );
   }
@@ -310,7 +357,7 @@ export default function LoggyScreen() {
         rightIcons={
           currentConversation ? (
             <TouchableOpacity
-              onPress={() => handleDelete(currentConversation.id)}
+              onPress={() => handleDeleteClick(currentConversation.id)}
               activeOpacity={0.7}
             >
               <Trash2 size={20} color="#FFFFFF" />
@@ -345,7 +392,11 @@ export default function LoggyScreen() {
       )}
 
       {/* Chat Content */}
-      <View style={styles.chatContainer}>
+      <Pressable 
+        style={styles.chatContainer}
+        onPress={() => Keyboard.dismiss()}
+        android_disableSound
+      >
         {/* Messages */}
         {isLoadingMessages && messages.length === 0 ? (
           <View style={[styles.messagesContainer, styles.centerContainer]}>
@@ -361,18 +412,24 @@ export default function LoggyScreen() {
             <Text style={[styles.errorText, { color: colors.textSecondary }]}>{messagesError}</Text>
           </View>
         ) : invertedMessages.length === 0 && !isSending ? (
-          <View style={[styles.messagesContainer, styles.centerContainer]}>
-            <Sparkles size={64} color={colors.textMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Henüz mesaj yok</Text>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              Merhaba! Ben Loggy, sizin AI asistanınızım. Yük oluşturma, cari arama gibi
-              işlemlerde size yardımcı olabilirim.
-            </Text>
-            <QuickSuggestions
-              onSuggestionClick={handleSuggestionClick}
-              isLoading={isLoadingMessages}
-              isAiConfigured={isAiConfigured}
-            />
+          <View style={[styles.messagesContainer, styles.emptyStateContainer]}>
+            <View style={styles.emptyStateContent}>
+              <View style={[styles.emptyStateIcon, { backgroundColor: Brand.primary + '15' }]}>
+                <Sparkles size={48} color={Brand.primary} />
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>Henüz mesaj yok</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]} numberOfLines={0}>
+                Merhaba! Ben Loggy, sizin AI asistanınızım.{'\n'}
+                Yük oluşturma, cari arama gibi işlemlerde size yardımcı olabilirim.
+              </Text>
+            </View>
+            <View style={styles.quickSuggestionsWrapper}>
+              <QuickSuggestions
+                onSuggestionClick={handleSuggestionClick}
+                isLoading={isLoadingMessages}
+                isAiConfigured={isAiConfigured}
+              />
+            </View>
           </View>
         ) : (
           <Animated.View style={[styles.messagesContainer, animatedListStyle]}>
@@ -410,52 +467,29 @@ export default function LoggyScreen() {
         )}
 
         {/* Input Bar */}
-        <KeyboardStickyView
-          offset={{ closed: 0, opened: 0 }}
-          style={styles.stickyContainer}
-        >
-          <View
-            style={[
-              styles.inputContainer,
-              { backgroundColor: colors.card, borderTopColor: colors.border },
-            ]}
-          >
-            <TextInput
-              ref={inputRef}
-              style={[styles.input, { color: colors.text, backgroundColor: colors.surface }]}
-              placeholder="Mesajınızı yazın..."
-              placeholderTextColor={colors.placeholder}
-              value={inputValue}
-              onChangeText={setInputValue}
-              multiline
-              maxLength={1000}
-              editable={!isSending && isAiConfigured}
-            />
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                {
-                  backgroundColor:
-                    inputValue.trim() && !isSending && isAiConfigured
-                      ? Brand.primary
-                      : colors.surface,
-                },
-              ]}
-              onPress={handleSend}
-              disabled={!inputValue.trim() || isSending || !isAiConfigured}
-            >
-              {isSending ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Send
-                  size={18}
-                  color={inputValue.trim() && isAiConfigured ? '#FFFFFF' : colors.textMuted}
-                />
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardStickyView>
-      </View>
+        <LoggyInput
+          value={inputValue}
+          onChangeText={setInputValue}
+          onSend={handleSend}
+          isSending={isSending}
+          disabled={!isAiConfigured}
+        />
+      </Pressable>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Konuşmayı Sil"
+        message="Bu konuşmayı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setShowDeleteDialog(false);
+          setConversationToDelete(null);
+        }}
+      />
     </View>
   );
 }
@@ -473,6 +507,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     gap: Spacing.sm,
+    borderWidth: 1,
+    borderBottomWidth: 1,
   },
   searchInput: {
     flex: 1,
@@ -485,8 +521,15 @@ const styles = StyleSheet.create({
   conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingLeft: Spacing.lg,
+    paddingRight: Spacing.sm,
     borderBottomWidth: 1,
+  },
+  conversationTouchable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   conversationIcon: {
     width: 40,
@@ -512,7 +555,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
+    paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing['4xl'],
   },
   stateIcon: {
@@ -547,16 +590,26 @@ const styles = StyleSheet.create({
   startButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: Spacing.sm,
     marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: Spacing['5xl'],
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
+    minWidth: 320,
+    ...(Platform.OS === 'android' && {
+      flexShrink: 0,
+    }),
   },
   startButtonText: {
     color: '#FFFFFF',
     ...Typography.bodyMD,
     fontWeight: '600',
+    flexShrink: 0,
+    ...(Platform.OS === 'android' && {
+      includeFontPadding: false,
+      textAlignVertical: 'center',
+    }),
   },
   fab: {
     position: 'absolute',
@@ -595,14 +648,38 @@ const styles = StyleSheet.create({
     ...Typography.headingMD,
     marginTop: Spacing.lg,
   },
+  emptyStateContainer: {
+    flex: 1,
+    paddingTop: Spacing['3xl'],
+    paddingBottom: Spacing.xl,
+  },
+  emptyStateContent: {
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.xl,
+  },
+  emptyStateIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.lg,
+  },
   emptyTitle: {
     ...Typography.headingMD,
-    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
   },
   emptyText: {
     ...Typography.bodyMD,
     textAlign: 'center',
-    marginTop: Spacing.sm,
+    lineHeight: 22,
+    paddingHorizontal: Spacing.md,
+  },
+  quickSuggestionsWrapper: {
+    flex: 1,
+    paddingHorizontal: Spacing.lg,
   },
   errorBanner: {
     flexDirection: 'row',
@@ -665,31 +742,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     ...Typography.bodyMD,
     fontWeight: '600',
-  },
-  stickyContainer: {
-    backgroundColor: '#FFFFFF',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: Spacing.md,
-    borderTopWidth: 1,
-    gap: Spacing.sm,
-  },
-  input: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 120,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    ...Typography.bodyMD,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

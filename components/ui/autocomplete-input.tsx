@@ -73,19 +73,28 @@ export function AutocompleteInput({
   const inputRef = useRef<TextInput>(null);
   const containerRef = useRef<View>(null);
 
-  // Load initial options or find selected option
+  // Ref to track if initial options have been loaded
+  const hasLoadedInitialRef = useRef(false);
+  const loadOptionsRef = useRef(loadOptions);
+  loadOptionsRef.current = loadOptions;
+
+  // Load initial options or find selected option - only once when value changes
   useEffect(() => {
-    if (value && !selectedOption) {
+    if (value && !selectedOption && !hasLoadedInitialRef.current) {
+      hasLoadedInitialRef.current = true;
       // Try to load and find the selected option
-      loadOptions('').then((opts) => {
+      loadOptionsRef.current('').then((opts) => {
         const found = opts.find((opt) => opt.value === value);
         if (found) {
           setSelectedOption(found);
           setInputValue(found.label);
         }
       });
+    } else if (!value) {
+      // Reset when value is cleared
+      hasLoadedInitialRef.current = false;
     }
-  }, [value]);
+  }, [value, selectedOption]);
 
   // Debounced search
   useEffect(() => {
