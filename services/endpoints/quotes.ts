@@ -6,6 +6,7 @@
  */
 
 import api, { getErrorMessage } from '../api';
+import { formatCurrency, getCurrencySymbol as getSymbol, formatDate as formatDateUtil } from '@/utils/formatters';
 import { API_BASE_URL } from '../config';
 import { secureStorage } from '../storage';
 import { Directory, File, Paths } from 'expo-file-system';
@@ -461,58 +462,35 @@ export function getQuoteStatusVariant(
 
 /**
  * Get currency symbol
+ * @deprecated Use getCurrencySymbol from @/utils/formatters instead
  */
 export function getCurrencySymbol(currency: CurrencyType): string {
-  const symbols: Record<CurrencyType, string> = {
-    TRY: '₺',
-    USD: '$',
-    EUR: '€',
-    GBP: '£',
-  };
-  return symbols[currency] || currency;
+  return getSymbol(currency);
 }
 
 /**
  * Format amount with currency (safe for undefined/null/string values)
+ * @deprecated Use formatCurrency from @/utils/formatters instead
  */
 export function formatAmount(
   amount: number | string | undefined | null,
   currency: CurrencyType
 ): string {
-  if (amount === undefined || amount === null) {
-    return '-';
-  }
-
   // Convert string to number (Laravel decimal cast returns string)
   const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-
-  if (isNaN(numericAmount)) {
-    return '-';
-  }
-
-  const symbol = getCurrencySymbol(currency);
-  const formatted = numericAmount.toLocaleString('tr-TR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${formatted} ${symbol}`;
+  return formatCurrency(numericAmount, currency);
 }
 
 /**
  * Format date for display
+ * @deprecated Use formatDate from @/utils/formatters instead
  */
 export function formatDate(dateString?: string): string {
-  if (!dateString) return '-';
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('tr-TR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return dateString;
-  }
+  return formatDateUtil(dateString, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 /**

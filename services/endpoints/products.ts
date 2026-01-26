@@ -5,6 +5,7 @@
  */
 
 import api, { getErrorMessage } from '../api';
+import { formatCurrency } from '@/utils/formatters';
 
 /**
  * Product brand entity
@@ -626,20 +627,10 @@ export function getProductUnitLabel(unit: ProductUnit): string {
 /**
  * Format price with currency (safe for undefined/null values)
  */
+/**
+ * Format price with currency
+ * @deprecated Use formatCurrency from @/utils/formatters instead
+ */
 export function formatPrice(amount: number | undefined | null, currency: string = 'TRY'): string {
-  if (amount === undefined || amount === null || isNaN(amount)) {
-    return '-';
-  }
-  const symbols: Record<string, string> = {
-    TRY: '₺',
-    USD: '$',
-    EUR: '€',
-    GBP: '£',
-  };
-  const symbol = symbols[currency] || currency;
-  const formatted = amount.toLocaleString('tr-TR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${formatted} ${symbol}`;
+  return formatCurrency(amount, currency, 2);
 }

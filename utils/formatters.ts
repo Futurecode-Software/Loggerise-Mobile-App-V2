@@ -90,10 +90,25 @@ export const formatCurrency = (
     return '-';
   }
 
-  const formatted = amount.toLocaleString('tr-TR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: decimals,
-  });
+  // Ensure amount is a number
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+
+  if (isNaN(numAmount)) {
+    return '-';
+  }
+
+  // Manual formatting for React Native compatibility (Hermes engine)
+  // Split integer and decimal parts
+  const fixedAmount = numAmount.toFixed(decimals);
+  const [integerPart, decimalPart] = fixedAmount.split('.');
+
+  // Add thousand separators (Turkish format: dot for thousands)
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+  // Combine with comma as decimal separator (Turkish format)
+  const formatted = decimals > 0
+    ? `${formattedInteger},${decimalPart}`
+    : formattedInteger;
 
   const symbol = getCurrencySymbol(currency);
   return `${formatted} ${symbol}`;

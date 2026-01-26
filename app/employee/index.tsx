@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Filter, Plus, User, Truck, Crown } from 'lucide-react-native';
+import { Filter, Plus, User, Truck, Crown, Layers, UserCheck, Coffee, UserX } from 'lucide-react-native';
 import { Badge, Avatar, StandardListContainer } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
@@ -19,10 +19,10 @@ import {
 } from '@/services/endpoints/employees';
 
 const STATUS_FILTERS = [
-  { id: 'all', label: 'Tümü' },
-  { id: 'active', label: 'Aktif' },
-  { id: 'on_leave', label: 'İzinde' },
-  { id: 'terminated', label: 'Ayrıldı' },
+  { id: 'all', label: 'Tümü', icon: Layers },
+  { id: 'active', label: 'Aktif', icon: UserCheck },
+  { id: 'on_leave', label: 'İzinde', icon: Coffee },
+  { id: 'terminated', label: 'Ayrıldı', icon: UserX },
 ];
 
 export default function EmployeesScreen() {
@@ -242,12 +242,26 @@ export default function EmployeesScreen() {
   };
 
 
+  // Prepare tabs for header
+  const headerTabs = STATUS_FILTERS.map((filter) => {
+    const Icon = filter.icon;
+    const isActive = activeFilter === filter.id;
+    return {
+      id: filter.id,
+      label: filter.label,
+      icon: <Icon size={16} color="#FFFFFF" strokeWidth={isActive ? 2.5 : 2} />,
+      isActive,
+      onPress: () => setActiveFilter(filter.id),
+    };
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FullScreenHeader
         title="Çalışanlar"
         subtitle={pagination ? `${pagination.total} kişi` : undefined}
         showBackButton={true}
+        tabs={headerTabs}
         rightIcons={
           <TouchableOpacity
             onPress={() => {
@@ -276,11 +290,6 @@ export default function EmployeesScreen() {
           value: searchQuery,
           onChange: setSearchQuery,
           placeholder: 'İsim, e-posta veya telefon ile ara...',
-        }}
-        filters={{
-          items: STATUS_FILTERS,
-          activeId: activeFilter,
-          onChange: setActiveFilter,
         }}
         emptyState={{
           icon: User,

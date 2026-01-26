@@ -30,6 +30,11 @@ import {
   CheckCircle,
   XCircle,
   ArrowRight,
+  Layers,
+  FileText,
+  ClipboardList,
+  Activity,
+  Ban,
 } from 'lucide-react-native';
 import { Card, Badge, Input } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
@@ -49,13 +54,13 @@ import {
 } from '@/services/endpoints/domestic-orders';
 
 const STATUS_FILTERS = [
-  { id: 'all', label: 'Tümü', color: undefined },
-  { id: 'draft', label: 'Taslak', color: '#6B7280' },
-  { id: 'planned', label: 'Planlandı', color: '#f5a623' },
-  { id: 'assigned', label: 'Atandı', color: '#3b82f6' },
-  { id: 'in_transit', label: 'Yolda', color: '#8b5cf6' },
-  { id: 'completed', label: 'Tamamlandı', color: '#22c55e' },
-  { id: 'cancelled', label: 'İptal', color: '#ef4444' },
+  { id: 'all', label: 'Tümü', color: undefined, icon: Layers },
+  { id: 'draft', label: 'Taslak', color: '#6B7280', icon: FileText },
+  { id: 'planned', label: 'Planlandı', color: '#f5a623', icon: ClipboardList },
+  { id: 'assigned', label: 'Atandı', color: '#3b82f6', icon: User },
+  { id: 'in_transit', label: 'Yolda', color: '#8b5cf6', icon: Activity },
+  { id: 'completed', label: 'Tamamlandı', color: '#22c55e', icon: CheckCircle },
+  { id: 'cancelled', label: 'İptal', color: '#ef4444', icon: Ban },
 ];
 
 export default function DomesticOrdersScreen() {
@@ -360,16 +365,32 @@ export default function DomesticOrdersScreen() {
     );
   };
 
+  // Prepare tabs for header - similar to position detail and trip pages
+  const headerTabs = STATUS_FILTERS.map((filter) => {
+    const Icon = filter.icon;
+    const isActive = activeFilter === filter.id;
+    return {
+      id: filter.id,
+      label: filter.label,
+      icon: <Icon size={16} color="#FFFFFF" strokeWidth={isActive ? 2.5 : 2} />,
+      isActive,
+      onPress: () => setActiveFilter(filter.id),
+    };
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FullScreenHeader
         title="Yurtiçi İş Emirleri"
+        showBackButton
         onBackPress={() => router.back()}
         subtitle={pagination ? `${pagination.total} iş emri` : undefined}
-        rightAction={{
-          icon: <Filter size={22} color="#FFFFFF" />,
-          onPress: () => {},
-        }}
+        tabs={headerTabs}
+        rightIcons={
+          <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
+            <Filter size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
       />
 
       {/* Search */}
@@ -380,46 +401,6 @@ export default function DomesticOrdersScreen() {
           onChangeText={setSearchQuery}
           leftIcon={<Search size={20} color={colors.icon} />}
           containerStyle={styles.searchInput}
-        />
-      </View>
-
-      {/* Status Filters */}
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          data={STATUS_FILTERS}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor:
-                    activeFilter === item.id
-                      ? item.color || Brand.primary
-                      : colors.card,
-                  borderColor:
-                    activeFilter === item.id
-                      ? item.color || Brand.primary
-                      : colors.border,
-                },
-              ]}
-              onPress={() => setActiveFilter(item.id)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  {
-                    color: activeFilter === item.id ? '#FFFFFF' : colors.textSecondary,
-                  },
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
         />
       </View>
 
@@ -464,23 +445,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     marginBottom: 0,
-  },
-  filterContainer: {
-    paddingVertical: Spacing.md,
-  },
-  filterContent: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  filterChip: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
   },
   listContent: {
     padding: Spacing.lg,

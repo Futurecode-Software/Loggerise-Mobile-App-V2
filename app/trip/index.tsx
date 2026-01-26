@@ -27,6 +27,11 @@ import {
     Train,
     Truck,
     User,
+    Layers,
+    Clock,
+    Activity,
+    CheckCircle,
+    XCircle,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -40,11 +45,11 @@ import {
 } from 'react-native';
 
 const STATUS_FILTERS = [
-  { id: 'all', label: 'Tümü', color: undefined },
-  { id: 'planning', label: 'Planlama', color: '#f5a623' },
-  { id: 'active', label: 'Aktif', color: '#3b82f6' },
-  { id: 'completed', label: 'Tamamlandı', color: '#22c55e' },
-  { id: 'cancelled', label: 'İptal', color: '#ef4444' },
+  { id: 'all', label: 'Tümü', color: undefined, icon: Layers },
+  { id: 'planning', label: 'Planlama', color: '#f5a623', icon: Clock },
+  { id: 'active', label: 'Aktif', color: '#3b82f6', icon: Activity },
+  { id: 'completed', label: 'Tamamlandı', color: '#22c55e', icon: CheckCircle },
+  { id: 'cancelled', label: 'İptal', color: '#ef4444', icon: XCircle },
 ];
 
 export default function TripsScreen() {
@@ -390,6 +395,19 @@ export default function TripsScreen() {
     );
   };
 
+  // Prepare tabs for header - similar to position detail page
+  const headerTabs = STATUS_FILTERS.map((filter) => {
+    const Icon = filter.icon;
+    const isActive = activeFilter === filter.id;
+    return {
+      id: filter.id,
+      label: filter.label,
+      icon: <Icon size={16} color="#FFFFFF" strokeWidth={isActive ? 2.5 : 2} />,
+      isActive,
+      onPress: () => setActiveFilter(filter.id),
+    };
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FullScreenHeader
@@ -397,6 +415,7 @@ export default function TripsScreen() {
         showBackButton
         onBackPress={() => router.back()}
         subtitle={pagination && pagination.total ? `${pagination.total} sefer` : undefined}
+        tabs={headerTabs}
         rightIcons={
           <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
             <Filter size={22} color="#FFFFFF" />
@@ -412,46 +431,6 @@ export default function TripsScreen() {
           onChangeText={setSearchQuery}
           leftIcon={<Search size={20} color={colors.icon} />}
           containerStyle={styles.searchInput}
-        />
-      </View>
-
-      {/* Status Filters */}
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          data={STATUS_FILTERS}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor:
-                    activeFilter === item.id
-                      ? item.color || Brand.primary
-                      : colors.card,
-                  borderColor:
-                    activeFilter === item.id
-                      ? item.color || Brand.primary
-                      : colors.border,
-                },
-              ]}
-              onPress={() => setActiveFilter(item.id)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  {
-                    color: activeFilter === item.id ? '#FFFFFF' : colors.textSecondary,
-                  },
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
         />
       </View>
 
@@ -489,23 +468,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     marginBottom: 0,
-  },
-  filterContainer: {
-    paddingVertical: Spacing.md,
-  },
-  filterContent: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  filterChip: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
   },
   listContent: {
     padding: Spacing.lg,

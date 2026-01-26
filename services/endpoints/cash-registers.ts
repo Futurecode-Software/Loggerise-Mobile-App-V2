@@ -5,6 +5,7 @@
  */
 
 import api, { getErrorMessage } from '../api';
+import { formatCurrency, getCurrencySymbol as getSymbol } from '@/utils/formatters';
 
 /**
  * Currency type enum
@@ -179,28 +180,16 @@ export function getCurrencyLabel(currency: CurrencyType): string {
 
 /**
  * Get currency symbol
+ * @deprecated Use getCurrencySymbol from @/utils/formatters instead
  */
 export function getCurrencySymbol(currency: CurrencyType): string {
-  const symbols: Record<CurrencyType, string> = {
-    TRY: '₺',
-    USD: '$',
-    EUR: '€',
-    GBP: '£',
-  };
-  return symbols[currency] || currency;
+  return getSymbol(currency);
 }
 
 /**
  * Format balance with currency (safe for undefined/null values)
+ * @deprecated Use formatCurrency from @/utils/formatters instead
  */
 export function formatBalance(amount: number | undefined | null, currency: CurrencyType): string {
-  if (amount === undefined || amount === null || isNaN(amount)) {
-    return '-';
-  }
-  const symbol = getCurrencySymbol(currency);
-  const formatted = amount.toLocaleString('tr-TR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${formatted} ${symbol}`;
+  return formatCurrency(amount, currency);
 }

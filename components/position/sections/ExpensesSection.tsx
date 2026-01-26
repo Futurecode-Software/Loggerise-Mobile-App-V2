@@ -33,6 +33,7 @@ import {
   getExpenseTypeLabel,
 } from '@/services/endpoints/positions';
 import { showToast } from '@/utils/toast';
+import { formatCurrency } from '@/utils/formatters';
 
 interface ExpensesSectionProps {
   position: Position;
@@ -170,11 +171,6 @@ export function ExpensesSection({ position, onUpdate }: ExpensesSectionProps) {
     }
   };
 
-  const formatNumber = (value: string | number): string => {
-    const num = typeof value === 'string' ? parseFloat(value) : value;
-    return num.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
   return (
     <View style={styles.container}>
       {/* Header with Add Button */}
@@ -239,7 +235,7 @@ export function ExpensesSection({ position, onUpdate }: ExpensesSectionProps) {
               <View style={styles.detailRow}>
                 <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Tutar:</Text>
                 <Text style={[styles.detailValue, { color: colors.text }]}>
-                  {formatNumber(expense.amount)} {expense.currency || expense.currency_type}
+                  {formatCurrency(parseFloat(expense.amount as any), expense.currency || expense.currency_type)}
                 </Text>
               </View>
               {expense.description && (

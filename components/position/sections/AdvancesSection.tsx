@@ -34,6 +34,7 @@ import {
   getPaymentMethodLabel,
 } from '@/services/endpoints/positions';
 import { showToast } from '@/utils/toast';
+import { formatCurrency } from '@/utils/formatters';
 
 interface AdvancesSectionProps {
   position: Position;
@@ -181,11 +182,6 @@ export function AdvancesSection({ position, onUpdate }: AdvancesSectionProps) {
     }
   };
 
-  const formatNumber = (value: string | number): string => {
-    const num = typeof value === 'string' ? parseFloat(value) : value;
-    return num.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
   return (
     <View style={styles.container}>
       {/* Header with Add Button */}
@@ -250,7 +246,7 @@ export function AdvancesSection({ position, onUpdate }: AdvancesSectionProps) {
               <View style={styles.detailRow}>
                 <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Tutar:</Text>
                 <Text style={[styles.detailValue, { color: colors.text }]}>
-                  {formatNumber(advance.amount)} {advance.currency || advance.currency_type}
+                  {formatCurrency(parseFloat(advance.amount as any), advance.currency || advance.currency_type)}
                 </Text>
               </View>
               {advance.description && (

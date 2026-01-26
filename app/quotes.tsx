@@ -19,6 +19,10 @@ import {
   Calendar,
   ChevronRight,
   AlertCircle,
+  Layers,
+  Send,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react-native';
 import { Card, Badge, Input } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
@@ -36,11 +40,11 @@ import {
 } from '@/services/endpoints/quotes';
 
 const STATUS_FILTERS = [
-  { id: 'all', label: 'Tümü' },
-  { id: 'draft', label: 'Taslak' },
-  { id: 'sent', label: 'Gönderildi' },
-  { id: 'accepted', label: 'Kabul' },
-  { id: 'rejected', label: 'Red' },
+  { id: 'all', label: 'Tümü', icon: Layers },
+  { id: 'draft', label: 'Taslak', icon: FileText },
+  { id: 'sent', label: 'Gönderildi', icon: Send },
+  { id: 'accepted', label: 'Kabul', icon: CheckCircle },
+  { id: 'rejected', label: 'Red', icon: XCircle },
 ];
 
 export default function QuotesScreen() {
@@ -309,12 +313,26 @@ export default function QuotesScreen() {
     );
   };
 
+  // Prepare tabs for header
+  const headerTabs = STATUS_FILTERS.map((filter) => {
+    const Icon = filter.icon;
+    const isActive = activeFilter === filter.id;
+    return {
+      id: filter.id,
+      label: filter.label,
+      icon: <Icon size={16} color="#FFFFFF" strokeWidth={isActive ? 2.5 : 2} />,
+      isActive,
+      onPress: () => setActiveFilter(filter.id),
+    };
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FullScreenHeader
         title="Teklifler"
         subtitle={pagination ? `${pagination.total} teklif` : undefined}
         showBackButton={true}
+        tabs={headerTabs}
         rightIcons={
           <TouchableOpacity
             onPress={() => {
@@ -334,37 +352,6 @@ export default function QuotesScreen() {
           onChangeText={setSearchQuery}
           leftIcon={<Search size={20} color={colors.icon} />}
           containerStyle={styles.searchInput}
-        />
-      </View>
-
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          data={STATUS_FILTERS}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor: activeFilter === item.id ? Brand.primary : colors.card,
-                  borderColor: activeFilter === item.id ? Brand.primary : colors.border,
-                },
-              ]}
-              onPress={() => setActiveFilter(item.id)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  { color: activeFilter === item.id ? '#FFFFFF' : colors.textSecondary },
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
         />
       </View>
 
@@ -407,23 +394,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     marginBottom: 0,
-  },
-  filterContainer: {
-    paddingVertical: Spacing.md,
-  },
-  filterContent: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  filterChip: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
   },
   listContent: {
     padding: Spacing.lg,

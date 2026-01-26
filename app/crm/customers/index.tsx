@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Plus, User, Phone, Mail, Users } from 'lucide-react-native';
+import { Plus, User, Phone, Mail, Users, Layers, UserCheck, UserMinus, UserX, ArrowRightLeft } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
@@ -18,11 +18,11 @@ import {
 } from '@/services/endpoints/crm-customers';
 
 const STATUS_FILTERS = [
-  { id: 'all', label: 'Tümü' },
-  { id: 'active', label: 'Aktif' },
-  { id: 'passive', label: 'Pasif' },
-  { id: 'lost', label: 'Kaybedildi' },
-  { id: 'converted', label: 'Dönüştürüldü' },
+  { id: 'all', label: 'Tümü', icon: Layers },
+  { id: 'active', label: 'Aktif', icon: UserCheck },
+  { id: 'passive', label: 'Pasif', icon: UserMinus },
+  { id: 'lost', label: 'Kaybedildi', icon: UserX },
+  { id: 'converted', label: 'Dönüştürüldü', icon: ArrowRightLeft },
 ];
 
 export default function CrmCustomersListScreen() {
@@ -227,11 +227,26 @@ export default function CrmCustomersListScreen() {
   };
 
 
+  // Prepare tabs for header
+  const headerTabs = STATUS_FILTERS.map((filter) => {
+    const Icon = filter.icon;
+    const isActive = activeFilter === filter.id;
+    return {
+      id: filter.id,
+      label: filter.label,
+      icon: <Icon size={16} color="#FFFFFF" strokeWidth={isActive ? 2.5 : 2} />,
+      isActive,
+      onPress: () => setActiveFilter(filter.id),
+    };
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FullScreenHeader
         title="CRM Müşterileri"
         showBackButton={true}
+        subtitle={pagination ? `${pagination.total} müşteri` : undefined}
+        tabs={headerTabs}
         rightIcons={
           <TouchableOpacity
             onPress={() => router.push('/crm/customers/new' as any)}
@@ -250,11 +265,6 @@ export default function CrmCustomersListScreen() {
           value: searchQuery,
           onChange: setSearchQuery,
           placeholder: 'Müşteri ara...',
-        }}
-        filters={{
-          items: STATUS_FILTERS,
-          activeId: activeFilter,
-          onChange: setActiveFilter,
         }}
         emptyState={{
           icon: Users,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Filter, Plus, Wallet, User } from 'lucide-react-native';
+import { Filter, Plus, Wallet, User, Layers, DollarSign, Euro, PoundSterling } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
@@ -15,11 +15,11 @@ import {
 } from '@/services/endpoints/cash-registers';
 
 const CURRENCY_FILTERS = [
-  { id: 'all', label: 'Tümü' },
-  { id: 'TRY', label: 'TRY' },
-  { id: 'USD', label: 'USD' },
-  { id: 'EUR', label: 'EUR' },
-  { id: 'GBP', label: 'GBP' },
+  { id: 'all', label: 'Tümü', icon: Layers },
+  { id: 'TRY', label: 'TRY', icon: DollarSign },
+  { id: 'USD', label: 'USD', icon: DollarSign },
+  { id: 'EUR', label: 'EUR', icon: Euro },
+  { id: 'GBP', label: 'GBP', icon: PoundSterling },
 ];
 
 export default function CashRegistersScreen() {
@@ -212,12 +212,26 @@ export default function CashRegistersScreen() {
     );
   };
 
+  // Prepare tabs for header
+  const headerTabs = CURRENCY_FILTERS.map((filter) => {
+    const Icon = filter.icon;
+    const isActive = activeFilter === filter.id;
+    return {
+      id: filter.id,
+      label: filter.label,
+      icon: <Icon size={16} color="#FFFFFF" strokeWidth={isActive ? 2.5 : 2} />,
+      isActive,
+      onPress: () => setActiveFilter(filter.id),
+    };
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FullScreenHeader
         title="Kasalar"
         subtitle={pagination ? `${pagination.total} kasa` : undefined}
         showBackButton={true}
+        tabs={headerTabs}
         rightIcons={
           <TouchableOpacity
             onPress={() => {
@@ -234,11 +248,6 @@ export default function CashRegistersScreen() {
         data={cashRegisters}
         renderItem={renderCashRegister}
         keyExtractor={(item) => String(item.id)}
-        filters={{
-          items: CURRENCY_FILTERS,
-          activeId: activeFilter,
-          onChange: setActiveFilter,
-        }}
         emptyState={{
           icon: Wallet,
           title: 'Henüz kasa eklenmemiş',

@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Plus, Package } from 'lucide-react-native';
+import { Plus, Package, Layers, CheckCircle, XCircle, Filter } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
@@ -19,10 +19,17 @@ import {
   getProductUnitLabel,
 } from '@/services/endpoints/products';
 
+const STATUS_FILTERS = [
+  { id: 'all', label: 'Tümü', icon: Layers },
+  { id: 'active', label: 'Aktif', icon: CheckCircle },
+  { id: 'passive', label: 'Pasif', icon: XCircle },
+];
+
 export default function ProductsScreen() {
   const colors = Colors.light;
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
   // API state
@@ -40,17 +47,24 @@ export default function ProductsScreen() {
 
   // Core fetch function - no dependencies on state
   const executeFetch = useCallback(
-    async (search: string, page: number = 1, append: boolean = false) => {
+    async (search: string, filter: string, page: number = 1, append: boolean = false) => {
       const currentFetchId = ++fetchIdRef.current;
 
       try {
         setError(null);
 
-        const filters = {
+        const filters: any = {
           page,
           per_page: 20,
           search: search.trim() || undefined,
         };
+
+        // Add active filter
+        if (filter === 'active') {
+          filters.is_active = true;
+        } else if (filter === 'passive') {
+          filters.is_active = false;
+        }
 
         const response = await getProducts(filters);
 
@@ -83,7 +97,7 @@ export default function ProductsScreen() {
   // Initial fetch - only once on mount
   useEffect(() => {
     isMountedRef.current = true;
-    executeFetch(searchQuery, 1, false);
+    executeFetch(searchQuery, activeFilter, 1, false);
 
     return () => {
       isMountedRef.current = false;
@@ -92,6 +106,14 @@ export default function ProductsScreen() {
       }
     };
   }, []); // Empty deps - only run on mount
+
+  // Filter change - immediate fetch
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return;
+
+    setIsLoading(true);
+    executeFetch(searchQuery, activeFilter, 1, false);
+  }, [activeFilter]); // Only activeFilter
 
   // Search with debounce
   useEffect(() => {
@@ -103,7 +125,7 @@ export default function ProductsScreen() {
 
     debounceTimeoutRef.current = setTimeout(() => {
       setIsLoading(true);
-      executeFetch(searchQuery, 1, false);
+      executeFetch(searchQuery, activeFilter, 1, false);
     }, 500);
 
     return () => {
@@ -115,13 +137,13 @@ export default function ProductsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await executeFetch(searchQuery, 1, false);
+    await executeFetch(searchQuery, activeFilter, 1, false);
   };
 
   const loadMore = () => {
     if (!isLoadingMore && pagination && pagination.current_page < pagination.last_page) {
       setIsLoadingMore(true);
-      executeFetch(searchQuery, pagination.current_page + 1, true);
+      executeFetch(searchQuery, activeFilter, pagination.current_page + 1, true);
     }
   };
 
@@ -198,12 +220,31 @@ export default function ProductsScreen() {
     );
   };
 
+  // Prepare tabs for header
+  const headerTabs = STATUS_FILTERS.map((filter) => {
+    const Icon = filter.icon;
+    const isActive = activeFilter === filter.id;
+    return {
+      id: filter.id,
+      label: filter.label,
+      icon: <Icon size={16} color="#FFFFFF" strokeWidth={isActive ? 2.5 : 2} />,
+      isActive,
+      onPress: () => setActiveFilter(filter.id),
+    };
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FullScreenHeader
         title="Ürünler"
         subtitle={pagination ? `${pagination.total} ürün` : undefined}
         showBackButton={true}
+        tabs={headerTabs}
+        rightIcons={
+          <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
+            <Filter size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
       />
 
       <StandardListContainer
@@ -231,7 +272,7 @@ export default function ProductsScreen() {
         error={error}
         onRetry={() => {
           setIsLoading(true);
-          executeFetch(searchQuery, 1, false);
+          executeFetch(searchQuery, activeFilter, 1, false);
         }}
       />
 
