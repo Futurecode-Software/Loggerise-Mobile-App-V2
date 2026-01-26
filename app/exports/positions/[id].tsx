@@ -1,8 +1,8 @@
 /**
  * Position Detail Screen
  *
- * Shows position details with loads, vehicle info and driver info.
- * Matches web version at /lojistik-yonetimi/ihracatlar/pozisyonlar/{id}
+ * Shows comprehensive position details with 12 sections matching web version.
+ * URL: /lojistik-yonetimi/seferler/1?position=1
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -16,34 +16,54 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import {
-  MapPin,
-  Truck,
-  User,
-  Package,
-  Calendar,
-  AlertTriangle,
-  Ship,
-  Train,
-} from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
+import { AlertTriangle } from 'lucide-react-native';
+import { Badge } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
-  getPositions,
+  getPosition,
   Position,
   getPositionTypeLabel,
-  getVehicleOwnerTypeLabel,
-  getDriverFullName,
 } from '@/services/endpoints/positions';
 
-// Position status labels
-const POSITION_STATUS_LABELS: Record<string, string> = {
-  active: 'Aktif',
-  completed: 'Tamamlandı',
-  cancelled: 'İptal',
-  draft: 'Taslak',
-};
+// Import section components
+import { GeneralInfoSection } from '@/components/position/sections/GeneralInfoSection';
+import { LoadsSection } from '@/components/position/sections/LoadsSection';
+import { TransportDetailsSection } from '@/components/position/sections/TransportDetailsSection';
+import { VehicleInfoSection } from '@/components/position/sections/VehicleInfoSection';
+import { BorderCrossingSection } from '@/components/position/sections/BorderCrossingSection';
+import { InsuranceFuelSection } from '@/components/position/sections/InsuranceFuelSection';
+import { FuelRecordsSection } from '@/components/position/sections/FuelRecordsSection';
+import { AdvancesSection } from '@/components/position/sections/AdvancesSection';
+import { ExpensesSection } from '@/components/position/sections/ExpensesSection';
+import { DocumentsSection } from '@/components/position/sections/DocumentsSection';
+
+// Section type
+type SectionType =
+  | 'general'
+  | 'loads'
+  | 'transport_details'
+  | 'vehicle_info'
+  | 'border_crossing'
+  | 'insurance_fuel'
+  | 'fuel_records'
+  | 'advances'
+  | 'expenses'
+  | 'documents';
+
+// Section tabs
+const SECTIONS: { key: SectionType; label: string }[] = [
+  { key: 'general', label: 'Genel' },
+  { key: 'loads', label: 'Yükler' },
+  { key: 'transport_details', label: 'Taşıma' },
+  { key: 'vehicle_info', label: 'Araç' },
+  { key: 'border_crossing', label: 'Sınır' },
+  { key: 'insurance_fuel', label: 'Sigorta' },
+  { key: 'fuel_records', label: 'Yakıt' },
+  { key: 'advances', label: 'Avanslar' },
+  { key: 'expenses', label: 'Masraflar' },
+  { key: 'documents', label: 'Evraklar' },
+];
 
 export default function PositionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -53,6 +73,7 @@ export default function PositionDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<SectionType>('general');
 
   // Fetch position data
   const fetchPosition = useCallback(async () => {
@@ -60,14 +81,8 @@ export default function PositionDetailScreen() {
 
     try {
       setError(null);
-      // API'de tekil pozisyon endpoint'i yoksa, liste endpoint'i kullanıp filtrele
-      const { positions } = await getPositions({ search: id });
-      const found = positions.find((p) => p.id === parseInt(id, 10));
-      if (found) {
-        setPosition(found);
-      } else {
-        setError('Pozisyon bulunamadı');
-      }
+      const data = await getPosition(parseInt(id, 10));
+      setPosition(data);
     } catch (err) {
       console.error('Position fetch error:', err);
       setError(err instanceof Error ? err.message : 'Pozisyon bilgileri yüklenemedi');
@@ -84,35 +99,6 @@ export default function PositionDetailScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchPosition();
-  };
-
-  // Format date
-  const formatDate = (dateString?: string): string => {
-    if (!dateString) return '-';
-    try {
-      return new Date(dateString).toLocaleDateString('tr-TR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  // Render info row
-  const renderInfoRow = (label: string, value?: string | number | boolean, icon?: any) => {
-    if (value === undefined || value === null || value === '') return null;
-    const Icon = icon;
-    const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayır') : String(value);
-
-    return (
-      <View style={styles.infoRow}>
-        {Icon && <Icon size={16} color={colors.textMuted} />}
-        <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}:</Text>
-        <Text style={[styles.infoValue, { color: colors.text }]}>{displayValue}</Text>
-      </View>
-    );
   };
 
   // Loading state
@@ -160,19 +146,70 @@ export default function PositionDetailScreen() {
     );
   }
 
-  const driverName = getDriverFullName(position.driver);
-  const vehicleInfo = position.truck_tractor
-    ? `${position.truck_tractor.plate}${position.trailer ? ' / ' + position.trailer.plate : ''}`
-    : position.trailer?.plate || '-';
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <FullScreenHeader
-        title={position.position_number || 'Pozisyon Detayı'}
-        showBackButton
-        onBackPress={() => router.back()}
-      />
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <FullScreenHeader
+          title={position.position_number || 'Pozisyon Detayı'}
+          showBackButton
+          onBackPress={() => router.back()}
+        />
 
+        {/* Summary Bar */}
+        <View style={styles.summaryBar}>
+          <Badge
+            label={getPositionTypeLabel(position.position_type)}
+            variant={position.position_type === 'import' ? 'success' : 'info'}
+            size="sm"
+          />
+          <Badge
+            label={position.is_active ? 'Aktif' : 'Pasif'}
+            variant={position.is_active ? 'success' : 'default'}
+            size="sm"
+          />
+          {position.is_roro && <Badge label="RoRo" variant="info" size="sm" />}
+          {position.is_train && <Badge label="Tren" variant="warning" size="sm" />}
+          {position.is_mafi && <Badge label="MAFI" variant="default" size="sm" />}
+        </View>
+
+        {/* Tab Navigation */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabsContainer}
+          contentContainerStyle={styles.tabsContent}
+        >
+          {SECTIONS.map((section) => (
+            <TouchableOpacity
+              key={section.key}
+              style={[
+                styles.tab,
+                activeSection === section.key && [
+                  styles.tabActive,
+                  { borderBottomColor: Brand.primary },
+                ],
+              ]}
+              onPress={() => setActiveSection(section.key)}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: colors.textSecondary },
+                  activeSection === section.key && [
+                    styles.tabTextActive,
+                    { color: Brand.primary },
+                  ],
+                ]}
+              >
+                {section.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Content */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -181,103 +218,33 @@ export default function PositionDetailScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
         }
       >
-        {/* Summary Card */}
-        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.summaryHeader}>
-            <View style={[styles.typeIconLarge, { backgroundColor: Brand.primary + '15' }]}>
-              <MapPin size={32} color={Brand.primary} />
-            </View>
-            <View style={styles.summaryInfo}>
-              <Text style={[styles.summaryTitle, { color: colors.text }]}>
-                {position.position_number || 'Taslak Pozisyon'}
-              </Text>
-              {position.name && (
-                <Text style={[styles.summarySubtitle, { color: colors.textSecondary }]}>
-                  {position.name}
-                </Text>
-              )}
-            </View>
-          </View>
-          <View style={styles.badgeRow}>
-            <Badge
-              label={POSITION_STATUS_LABELS[position.status || 'active'] || 'Aktif'}
-              variant={position.status === 'active' ? 'success' : 'default'}
-              size="sm"
-            />
-            {position.is_roro && (
-              <Badge label="RoRo" variant="info" size="sm" />
-            )}
-            {position.is_train && (
-              <Badge label="Tren" variant="info" size="sm" />
-            )}
-            {position.is_mafi && (
-              <Badge label="MAFI" variant="info" size="sm" />
-            )}
-          </View>
-        </View>
-
-        {/* Araç Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Araç Bilgileri</Text>
-          {renderInfoRow('Çekici', position.truck_tractor?.plate, Truck)}
-          {renderInfoRow('Römork', position.trailer?.plate, Package)}
-          {renderInfoRow('Römork Sınıfı', position.trailer_class)}
-          {renderInfoRow('Araç Sahibi', getVehicleOwnerTypeLabel(position.vehicle_owner_type))}
-          {position.manual_location && renderInfoRow('Manuel Konum', position.manual_location, MapPin)}
-        </Card>
-
-        {/* Sürücü Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Sürücü Bilgileri</Text>
-          {renderInfoRow('Sürücü', driverName, User)}
-          {position.second_driver && renderInfoRow(
-            '2. Sürücü',
-            `${position.second_driver.first_name} ${position.second_driver.last_name}`,
-            User
-          )}
-        </Card>
-
-        {/* Rota Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Rota Bilgileri</Text>
-          {renderInfoRow('Rota', position.route, MapPin)}
-          {renderInfoRow('Tahmini Varış', formatDate(position.estimated_arrival_date), Calendar)}
-          {renderInfoRow('Gerçek Varış', formatDate(position.actual_arrival_date), Calendar)}
-        </Card>
-
-        {/* Taşıma Türü */}
-        {(position.is_roro || position.is_train || position.is_mafi) && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Taşıma Türü</Text>
-            {position.is_roro && (
-              <View style={styles.transportTypeRow}>
-                <Ship size={20} color={colors.info} />
-                <Text style={[styles.transportTypeText, { color: colors.text }]}>RoRo Taşımacılık</Text>
-              </View>
-            )}
-            {position.is_train && (
-              <View style={styles.transportTypeRow}>
-                <Train size={20} color={colors.warning} />
-                <Text style={[styles.transportTypeText, { color: colors.text }]}>Tren Taşımacılık</Text>
-              </View>
-            )}
-            {position.is_mafi && (
-              <View style={styles.transportTypeRow}>
-                <Package size={20} color={colors.success} />
-                <Text style={[styles.transportTypeText, { color: colors.text }]}>MAFI Taşımacılık</Text>
-              </View>
-            )}
-          </Card>
+        {activeSection === 'general' && <GeneralInfoSection position={position} />}
+        {activeSection === 'loads' && (
+          <LoadsSection position={position} onUpdate={fetchPosition} />
         )}
-
-        {/* Garaj Bilgileri */}
-        {(position.garage_location || position.garage_entry_date) && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Garaj Bilgileri</Text>
-            {renderInfoRow('Garaj Konumu', position.garage_location)}
-            {renderInfoRow('Giriş Tarihi', formatDate(position.garage_entry_date), Calendar)}
-            {renderInfoRow('Çıkış Tarihi', formatDate(position.garage_exit_date), Calendar)}
-          </Card>
+        {activeSection === 'transport_details' && (
+          <TransportDetailsSection position={position} onUpdate={fetchPosition} />
+        )}
+        {activeSection === 'vehicle_info' && (
+          <VehicleInfoSection position={position} onUpdate={fetchPosition} />
+        )}
+        {activeSection === 'border_crossing' && (
+          <BorderCrossingSection position={position} onUpdate={fetchPosition} />
+        )}
+        {activeSection === 'insurance_fuel' && (
+          <InsuranceFuelSection position={position} onUpdate={fetchPosition} />
+        )}
+        {activeSection === 'fuel_records' && (
+          <FuelRecordsSection position={position} onUpdate={fetchPosition} />
+        )}
+        {activeSection === 'advances' && (
+          <AdvancesSection position={position} onUpdate={fetchPosition} />
+        )}
+        {activeSection === 'expenses' && (
+          <ExpensesSection position={position} onUpdate={fetchPosition} />
+        )}
+        {activeSection === 'documents' && (
+          <DocumentsSection position={position} onUpdate={fetchPosition} />
         )}
       </ScrollView>
     </View>
@@ -287,6 +254,39 @@ export default function PositionDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    borderBottomWidth: 1,
+  },
+  summaryBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+  },
+  tabsContainer: {
+    flexGrow: 0,
+  },
+  tabsContent: {
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  tab: {
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+  },
+  tabText: {
+    ...Typography.bodyMD,
+    fontWeight: '500',
+  },
+  tabTextActive: {
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
@@ -327,72 +327,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.lg,
+    paddingTop: Spacing.xl,
     paddingBottom: Spacing['2xl'],
-    gap: Spacing.md,
-  },
-  summaryCard: {
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    gap: Spacing.md,
-  },
-  summaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  typeIconLarge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  summaryInfo: {
-    flex: 1,
-  },
-  summaryTitle: {
-    ...Typography.headingLG,
-  },
-  summarySubtitle: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.xs,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  sectionCard: {
-    padding: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.headingSM,
-    marginBottom: Spacing.md,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.xs,
-    gap: Spacing.sm,
-  },
-  infoLabel: {
-    ...Typography.bodySM,
-    minWidth: 100,
-  },
-  infoValue: {
-    ...Typography.bodySM,
-    flex: 1,
-    fontWeight: '500',
-  },
-  transportTypeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  transportTypeText: {
-    ...Typography.bodyMD,
-    fontWeight: '500',
   },
 });

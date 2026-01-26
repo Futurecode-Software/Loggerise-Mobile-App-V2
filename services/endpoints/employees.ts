@@ -112,6 +112,8 @@ export interface EmployeeFilters {
   search?: string;
   employment_status?: EmploymentStatus;
   contract_type?: ContractType;
+  position?: Position; // Pozisyon filtresi (örn: 'driver' - sürücüler için)
+  status?: boolean; // Aktif/Pasif filtresi
   page?: number;
   per_page?: number;
   sort_by?: string;
