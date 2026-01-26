@@ -95,7 +95,18 @@ export default function TripDetailScreen() {
       setTrip(data);
     } catch (err) {
       console.error('Trip fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Sefer bilgileri yüklenemedi');
+      // Provide more specific error messages
+      let errorMessage = 'Sefer bilgileri yüklenemedi';
+      if (err instanceof Error) {
+        if (err.message.includes('status code 500')) {
+          errorMessage = 'Sunucu hatası: Sefer kaydı alınamadı. Lütfen daha sonra tekrar deneyin veya yöneticinize başvurun.';
+        } else if (err.message.includes('status code 404')) {
+          errorMessage = 'Sefer bulunamadı. Silinmiş veya artık mevcut olmayan bir sefer olabilir.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -172,9 +183,14 @@ export default function TripDetailScreen() {
 
   // Render info section
   const renderInfoRow = (label: string, value?: string | number | boolean, icon?: any) => {
-    if (value === undefined || value === null || value === '') return null;
+    // Return null for undefined, null, empty string, false boolean, or dash
+    if (value === undefined || value === null || value === '' || value === false || value === '-') return null;
     const Icon = icon;
-    const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayır') : String(value);
+    // Safely convert value to string
+    const displayValue = typeof value === 'boolean' ? 'Evet' : String(value);
+
+    // Don't render if displayValue is empty or just whitespace
+    if (!displayValue || displayValue.trim() === '') return null;
 
     return (
       <View style={styles.infoRow}>
@@ -203,7 +219,7 @@ export default function TripDetailScreen() {
         </Card>
 
         {/* Taşıma Tipi */}
-        {(trip.is_roro || trip.is_train || trip.is_mafi) && (
+        {!!(trip.is_roro || trip.is_train || trip.is_mafi) && (
           <Card style={styles.sectionCard}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Taşıma Tipi</Text>
             {renderInfoRow('RoRo', trip.is_roro)}
@@ -230,7 +246,7 @@ export default function TripDetailScreen() {
         </Card>
 
         {/* Garaj Bilgileri */}
-        {(trip.garage_location || trip.garage_entry_date || trip.garage_exit_date) && (
+        {!!(trip.garage_location || trip.garage_entry_date || trip.garage_exit_date) && (
           <Card style={styles.sectionCard}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Garaj Bilgileri</Text>
             {renderInfoRow('Garaj Konumu', trip.garage_location)}
@@ -240,7 +256,7 @@ export default function TripDetailScreen() {
         )}
 
         {/* Sınır Kapısı - Çıkış */}
-        {(trip.border_exit_gate || trip.border_exit_date) && (
+        {!!(trip.border_exit_gate || trip.border_exit_date) && (
           <Card style={styles.sectionCard}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Sınır Kapısı - Çıkış</Text>
             {renderInfoRow('Çıkış Kapısı', trip.border_exit_gate)}
@@ -251,7 +267,7 @@ export default function TripDetailScreen() {
         )}
 
         {/* Sınır Kapısı - Giriş */}
-        {(trip.border_entry_gate || trip.border_entry_date) && (
+        {!!(trip.border_entry_gate || trip.border_entry_date) && (
           <Card style={styles.sectionCard}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Sınır Kapısı - Giriş</Text>
             {renderInfoRow('Giriş Kapısı', trip.border_entry_gate)}
@@ -262,7 +278,7 @@ export default function TripDetailScreen() {
         )}
 
         {/* Mühür Bilgileri */}
-        {(trip.seal_no || trip.sealing_person) && (
+        {!!(trip.seal_no || trip.sealing_person) && (
           <Card style={styles.sectionCard}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Mühür Bilgileri</Text>
             {renderInfoRow('Mühür No', trip.seal_no)}
@@ -271,7 +287,7 @@ export default function TripDetailScreen() {
         )}
 
         {/* Sigorta Bilgileri */}
-        {(trip.insurance_status || trip.insurance_date || trip.insurance_amount) && (
+        {!!(trip.insurance_status || trip.insurance_date || trip.insurance_amount) && (
           <Card style={styles.sectionCard}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Sigorta Bilgileri</Text>
             {renderInfoRow('Sigorta Durumu', trip.insurance_status)}
@@ -281,7 +297,7 @@ export default function TripDetailScreen() {
         )}
 
         {/* Yakıt Bilgileri */}
-        {(trip.current_fuel_liters || trip.fuel_added_liters || trip.remaining_fuel_liters) && (
+        {!!(trip.current_fuel_liters || trip.fuel_added_liters || trip.remaining_fuel_liters) && (
           <Card style={styles.sectionCard}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Yakıt Bilgileri</Text>
             {renderInfoRow('Mevcut Yakıt', trip.current_fuel_liters ? `${trip.current_fuel_liters} L` : undefined)}
@@ -292,7 +308,7 @@ export default function TripDetailScreen() {
         )}
 
         {/* Kiralama Bilgileri */}
-        {trip.vehicle_owner_type === 'rental' && trip.rental_fee && (
+        {trip.vehicle_owner_type === 'rental' && !!trip.rental_fee && (
           <Card style={styles.sectionCard}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Kiralama Bilgileri</Text>
             {renderInfoRow('Kiralama Ücreti', formatCurrency(trip.rental_fee, trip.rental_currency))}
@@ -475,8 +491,7 @@ export default function TripDetailScreen() {
                       <Truck size={14} color={colors.icon} />
                       <Text style={[styles.positionDetailText, { color: colors.textSecondary }]}>
                         {vehiclePlate}
-                        {position.trailer?.plate && position.truck_tractor?.plate &&
-                          ` / ${position.trailer.plate}`}
+                        {(position.trailer?.plate && position.truck_tractor?.plate) && ` / ${position.trailer.plate}`}
                       </Text>
                     </View>
                   )}
@@ -488,7 +503,7 @@ export default function TripDetailScreen() {
                       </Text>
                     </View>
                   )}
-                  {position.loads_count !== undefined && position.loads_count > 0 && (
+                  {!!(position.loads_count !== undefined && position.loads_count > 0) && (
                     <View style={styles.positionDetailRow}>
                       <Package size={14} color={colors.icon} />
                       <Text style={[styles.positionDetailText, { color: colors.textSecondary }]}>
@@ -509,7 +524,7 @@ export default function TripDetailScreen() {
                     }
                     size="sm"
                   />
-                  {(position.is_roro || position.is_train) && (
+                  {!!(position.is_roro || position.is_train) && (
                     <View style={styles.transportBadges}>
                       {position.is_roro && (
                         <View style={[styles.miniTransportBadge, { backgroundColor: '#3b82f6' + '20' }]}>
@@ -586,6 +601,12 @@ export default function TripDetailScreen() {
           >
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: colors.surface, marginTop: Spacing.sm, borderWidth: 1, borderColor: colors.border }]}
+            onPress={() => router.back()}
+          >
+            <Text style={[styles.retryButtonText, { color: colors.text }]}>Geri Dön</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -640,7 +661,7 @@ export default function TripDetailScreen() {
         </View>
 
         {/* Transport Type Badges */}
-        {(trip.is_roro || trip.is_train || trip.is_mafi) && (
+        {!!(trip.is_roro || trip.is_train || trip.is_mafi) && (
           <View style={styles.transportIcons}>
             {trip.is_roro && (
               <View style={[styles.transportBadge, { backgroundColor: '#3b82f6' + '20' }]}>
@@ -685,9 +706,9 @@ export default function TripDetailScreen() {
         </View>
 
         {/* Vehicle Info */}
-        {(trip.truck_tractor || trip.trailer) && (
+        {((trip.truck_tractor?.plate) || (trip.trailer?.plate)) && (
           <View style={styles.vehicleRow}>
-            {trip.truck_tractor && (
+            {trip.truck_tractor?.plate && (
               <View style={styles.vehicleItem}>
                 <Truck size={14} color={colors.icon} />
                 <Text style={[styles.vehicleText, { color: colors.text }]}>
@@ -695,10 +716,10 @@ export default function TripDetailScreen() {
                 </Text>
               </View>
             )}
-            {trip.truck_tractor && trip.trailer && (
+            {trip.truck_tractor?.plate && trip.trailer?.plate && (
               <ArrowRight size={12} color={colors.icon} />
             )}
-            {trip.trailer && (
+            {trip.trailer?.plate && (
               <View style={styles.vehicleItem}>
                 <Text style={[styles.vehicleText, { color: colors.text }]}>
                   {trip.trailer.plate}
