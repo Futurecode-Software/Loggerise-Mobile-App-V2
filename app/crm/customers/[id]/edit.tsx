@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Save, AlertCircle } from 'lucide-react-native';
-import { Input, Button, Card } from '@/components/ui';
+import { Input, Button, Card, Select } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
   getCrmCustomer,
@@ -21,6 +21,18 @@ import {
   CrmCustomerFormData,
   CrmCustomerStatus,
 } from '@/services/endpoints/crm-customers';
+import {
+  searchCountries,
+  searchStates,
+  searchCities,
+  searchTaxOffices,
+  TURKEY_ID,
+  FOREIGN_DEFAULT_TAX_NUMBER,
+  Country,
+  State,
+  City,
+  TaxOffice,
+} from '@/services/endpoints/locations';
 
 export default function EditCrmCustomerScreen() {
   const colors = Colors.light;
@@ -31,6 +43,7 @@ export default function EditCrmCustomerScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isTurkish, setIsTurkish] = useState(true);
   const [formData, setFormData] = useState<CrmCustomerFormData>({
     legal_type: 'company',
     name: '',
@@ -40,31 +53,82 @@ export default function EditCrmCustomerScreen() {
     category: '',
     status: 'active',
     is_active: true,
+    currency_type: 'TRY',
+    country_id: TURKEY_ID,
+    tax_number: '',
+    main_address: '',
+    risk_limit: 0,
+    notes: '',
   });
+
+  // Location states
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [states, setStates] = useState<State[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [taxOffices, setTaxOffices] = useState<TaxOffice[]>([]);
+
+  // Loading states
+  const [loadingCountries, setLoadingCountries] = useState(false);
+  const [loadingStates, setLoadingStates] = useState(false);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingTaxOffices, setLoadingTaxOffices] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Fetch customer data on mount
+  // Fetch customer data and initial location data on mount
   useEffect(() => {
-    const fetchCustomer = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const customer = await getCrmCustomer(customerId);
+
+        // Load countries and tax offices in parallel
+        const [customerData, countriesData, taxOfficesData] = await Promise.all([
+          getCrmCustomer(customerId),
+          searchCountries(),
+          searchTaxOffices(),
+        ]);
+
+        setCountries(countriesData);
+        setTaxOffices(taxOfficesData);
+
+        // Determine if customer is domestic (Turkey) or foreign
+        const customerIsTurkish =
+          !customerData.country_id || customerData.country_id === TURKEY_ID;
+        setIsTurkish(customerIsTurkish);
+
+        // Load states for the customer's country
+        const countryIdToUse = customerData.country_id || TURKEY_ID;
+        const statesData = await searchStates(countryIdToUse);
+        setStates(statesData);
+
+        // Load cities if customer has a state
+        if (customerData.main_state_id) {
+          const citiesData = await searchCities(customerData.main_state_id);
+          setCities(citiesData);
+        }
 
         // Pre-populate form with customer data
         setFormData({
-          legal_type: customer.legal_type || 'company',
-          name: customer.name || '',
-          short_name: customer.short_name || '',
-          code: customer.code || '',
-          email: customer.email || '',
-          phone: customer.phone || '',
-          fax: customer.fax || '',
-          category: customer.category || '',
-          tax_number: customer.tax_number || '',
-          status: customer.status || 'active',
-          is_active: customer.is_active ?? true,
+          legal_type: customerData.legal_type || 'company',
+          name: customerData.name || '',
+          short_name: customerData.short_name || '',
+          code: customerData.code || '',
+          email: customerData.email || '',
+          phone: customerData.phone || '',
+          fax: customerData.fax || '',
+          category: customerData.category || '',
+          tax_number: customerData.tax_number || '',
+          tax_office_id: customerData.tax_office_id,
+          status: customerData.status || 'active',
+          is_active: customerData.is_active ?? true,
+          currency_type: customerData.currency_type || 'TRY',
+          country_id: customerData.country_id || TURKEY_ID,
+          main_address: customerData.main_address || '',
+          main_state_id: customerData.main_state_id,
+          main_city_id: customerData.main_city_id,
+          risk_limit: customerData.risk_limit,
+          notes: customerData.notes || '',
         });
       } catch (err) {
         console.error('Fetch customer error:', err);
@@ -74,8 +138,84 @@ export default function EditCrmCustomerScreen() {
       }
     };
 
-    fetchCustomer();
+    fetchData();
   }, [customerId]);
+
+  // Load states when country changes (after initial load)
+  const handleCountryChange = async (countryId: number | undefined) => {
+    if (countryId) {
+      setFormData((prev) => ({
+        ...prev,
+        country_id: countryId,
+        main_state_id: undefined,
+        main_city_id: undefined,
+      }));
+      setLoadingStates(true);
+      try {
+        const data = await searchStates(countryId);
+        setStates(data);
+        setCities([]);
+      } catch (err) {
+        console.error('Failed to load states:', err);
+      } finally {
+        setLoadingStates(false);
+      }
+    }
+  };
+
+  // Load cities when state changes
+  const handleStateChange = async (stateId: number | undefined) => {
+    if (stateId) {
+      setFormData((prev) => ({ ...prev, main_state_id: stateId, main_city_id: undefined }));
+      setLoadingCities(true);
+      try {
+        const data = await searchCities(stateId);
+        setCities(data);
+      } catch (err) {
+        console.error('Failed to load cities:', err);
+      } finally {
+        setLoadingCities(false);
+      }
+    }
+  };
+
+  const handleLocationToggle = async (isDomestic: boolean) => {
+    setIsTurkish(isDomestic);
+
+    if (isDomestic) {
+      // Domestic: Set Turkey, clear tax number if it was foreign default
+      setFormData((prev) => ({
+        ...prev,
+        country_id: TURKEY_ID,
+        tax_number: prev.tax_number === FOREIGN_DEFAULT_TAX_NUMBER ? '' : prev.tax_number,
+        main_state_id: undefined,
+        main_city_id: undefined,
+      }));
+      // Load Turkey states
+      setLoadingStates(true);
+      try {
+        const data = await searchStates(TURKEY_ID);
+        setStates(data);
+        setCities([]);
+      } catch (err) {
+        console.error('Failed to load states:', err);
+      } finally {
+        setLoadingStates(false);
+      }
+    } else {
+      // Foreign: Clear country, set default tax number, clear tax office, clear state/city
+      setFormData((prev) => ({
+        ...prev,
+        country_id: undefined,
+        tax_number: !prev.tax_number ? FOREIGN_DEFAULT_TAX_NUMBER : prev.tax_number,
+        tax_office_id: undefined,
+        main_state_id: undefined,
+        main_city_id: undefined,
+      }));
+      setStates([]);
+      setCities([]);
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -108,10 +248,7 @@ export default function EditCrmCustomerScreen() {
       success('Başarılı', 'CRM müşterisi başarıyla güncellendi');
       setTimeout(() => router.back(), 1000);
     } catch (err) {
-      showError(
-        'Hata',
-        err instanceof Error ? err.message : 'Müşteri güncellenemedi'
-      );
+      showError('Hata', err instanceof Error ? err.message : 'Müşteri güncellenemedi');
     } finally {
       setIsSubmitting(false);
     }
@@ -205,71 +342,92 @@ export default function EditCrmCustomerScreen() {
           <Card style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
 
-            {/* Legal Type */}
-            <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                Yasal Tip <Text style={{ color: colors.danger }}>*</Text>
-              </Text>
-              <View style={styles.radioGroup}>
-                <TouchableOpacity
-                  style={[
-                    styles.radioButton,
-                    formData.legal_type === 'company' && [
-                      styles.radioButtonActive,
-                      { backgroundColor: Brand.primary + '15', borderColor: Brand.primary },
-                    ],
-                  ]}
-                  onPress={() => setFormData({ ...formData, legal_type: 'company' })}
-                >
-                  <View
+            {/* Legal Type & Location Toggle */}
+            <View style={styles.toggleRow}>
+              {/* Legal Type */}
+              <View style={styles.toggleGroup}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>
+                  Yasal Tip <Text style={{ color: colors.danger }}>*</Text>
+                </Text>
+                <View style={styles.radioGroup}>
+                  <TouchableOpacity
                     style={[
-                      styles.radioCircle,
+                      styles.toggleButton,
                       formData.legal_type === 'company' && [
-                        styles.radioCircleActive,
-                        { backgroundColor: Brand.primary },
+                        styles.toggleButtonActive,
+                        { backgroundColor: '#2196F3' + '20', borderColor: '#2196F3' },
                       ],
                     ]}
-                  />
-                  <Text
-                    style={[
-                      styles.radioText,
-                      { color: formData.legal_type === 'company' ? Brand.primary : colors.text },
-                    ]}
+                    onPress={() => setFormData({ ...formData, legal_type: 'company' })}
                   >
-                    Şirket
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.radioButton,
-                    formData.legal_type === 'individual' && [
-                      styles.radioButtonActive,
-                      { backgroundColor: Brand.primary + '15', borderColor: Brand.primary },
-                    ],
-                  ]}
-                  onPress={() => setFormData({ ...formData, legal_type: 'individual' })}
-                >
-                  <View
+                    <Text
+                      style={[
+                        styles.toggleText,
+                        { color: formData.legal_type === 'company' ? '#2196F3' : colors.text },
+                      ]}
+                    >
+                      Şirket
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[
-                      styles.radioCircle,
+                      styles.toggleButton,
                       formData.legal_type === 'individual' && [
-                        styles.radioCircleActive,
-                        { backgroundColor: Brand.primary },
+                        styles.toggleButtonActive,
+                        { backgroundColor: '#2196F3' + '20', borderColor: '#2196F3' },
                       ],
                     ]}
-                  />
-                  <Text
-                    style={[
-                      styles.radioText,
-                      {
-                        color:
-                          formData.legal_type === 'individual' ? Brand.primary : colors.text,
-                      },
-                    ]}
+                    onPress={() => setFormData({ ...formData, legal_type: 'individual' })}
                   >
-                    Bireysel
-                  </Text>
-                </TouchableOpacity>
+                    <Text
+                      style={[
+                        styles.toggleText,
+                        { color: formData.legal_type === 'individual' ? '#2196F3' : colors.text },
+                      ]}
+                    >
+                      Bireysel
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Location Toggle */}
+              <View style={styles.toggleGroup}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Konum</Text>
+                <View style={styles.radioGroup}>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      isTurkish && [
+                        styles.toggleButtonActive,
+                        { backgroundColor: '#FF9800' + '20', borderColor: '#FF9800' },
+                      ],
+                    ]}
+                    onPress={() => handleLocationToggle(true)}
+                  >
+                    <Text
+                      style={[styles.toggleText, { color: isTurkish ? '#FF9800' : colors.text }]}
+                    >
+                      Yurtiçi
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      !isTurkish && [
+                        styles.toggleButtonActive,
+                        { backgroundColor: '#FF9800' + '20', borderColor: '#FF9800' },
+                      ],
+                    ]}
+                    onPress={() => handleLocationToggle(false)}
+                  >
+                    <Text
+                      style={[styles.toggleText, { color: !isTurkish ? '#FF9800' : colors.text }]}
+                    >
+                      Yurtdışı
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -305,6 +463,89 @@ export default function EditCrmCustomerScreen() {
             />
           </Card>
 
+          {/* Tax & Location Information */}
+          <Card style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Vergi ve Konum Bilgileri
+            </Text>
+
+            {/* Tax Office - Only for domestic */}
+            {isTurkish && (
+              <Select
+                label="Vergi Dairesi"
+                data={taxOffices.map((office) => ({
+                  label: office.name,
+                  value: office.id.toString(),
+                }))}
+                value={formData.tax_office_id?.toString()}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, tax_office_id: value ? Number(value) : undefined })
+                }
+                placeholder="Vergi dairesi seçiniz"
+                loading={loadingTaxOffices}
+              />
+            )}
+
+            <Input
+              label="Vergi Numarası"
+              placeholder="XXXXXXXXXX"
+              value={formData.tax_number}
+              onChangeText={(value) => setFormData({ ...formData, tax_number: value })}
+              keyboardType="numeric"
+            />
+
+            {/* Country - Only for foreign */}
+            {!isTurkish && (
+              <Select
+                label="Ülke"
+                data={countries.map((country) => ({
+                  label: country.name,
+                  value: country.id.toString(),
+                }))}
+                value={formData.country_id?.toString()}
+                onValueChange={(value) => handleCountryChange(value ? Number(value) : undefined)}
+                placeholder="Ülke seçiniz"
+                loading={loadingCountries}
+              />
+            )}
+
+            <Input
+              label="Ana Adres"
+              placeholder="Adres giriniz"
+              value={formData.main_address}
+              onChangeText={(value) => setFormData({ ...formData, main_address: value })}
+              multiline
+              numberOfLines={3}
+            />
+
+            <Select
+              label={isTurkish ? 'İl' : 'Eyalet/Bölge'}
+              data={states.map((state) => ({
+                label: state.name,
+                value: state.id.toString(),
+              }))}
+              value={formData.main_state_id?.toString()}
+              onValueChange={(value) => handleStateChange(value ? Number(value) : undefined)}
+              placeholder={isTurkish ? 'İl seçiniz' : 'Eyalet seçiniz'}
+              loading={loadingStates}
+            />
+
+            <Select
+              label={isTurkish ? 'İlçe' : 'Şehir'}
+              data={cities.map((city) => ({
+                label: city.name,
+                value: city.id.toString(),
+              }))}
+              value={formData.main_city_id?.toString()}
+              onValueChange={(value) =>
+                setFormData({ ...formData, main_city_id: value ? Number(value) : undefined })
+              }
+              placeholder={isTurkish ? 'İlçe seçiniz' : 'Şehir seçiniz'}
+              loading={loadingCities}
+              disabled={!formData.main_state_id}
+            />
+          </Card>
+
           {/* Contact Information */}
           <Card style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>İletişim Bilgileri</Text>
@@ -336,25 +577,42 @@ export default function EditCrmCustomerScreen() {
             />
           </Card>
 
-          {/* Company Information */}
-          {formData.legal_type === 'company' && (
-            <Card style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Firma Bilgileri</Text>
+          {/* Financial Information */}
+          <Card style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Finansal Bilgiler</Text>
 
-              <Input
-                label="Vergi Numarası"
-                placeholder="XXXXXXXXXX"
-                value={formData.tax_number}
-                onChangeText={(value) => setFormData({ ...formData, tax_number: value })}
-                keyboardType="numeric"
-              />
+            <Select
+              label="Para Birimi"
+              data={[
+                { label: 'TRY - Türk Lirası', value: 'TRY' },
+                { label: 'USD - Amerikan Doları', value: 'USD' },
+                { label: 'EUR - Euro', value: 'EUR' },
+                { label: 'GBP - İngiliz Sterlini', value: 'GBP' },
+              ]}
+              value={formData.currency_type}
+              onValueChange={(value) => setFormData({ ...formData, currency_type: value })}
+              placeholder="Para birimi seçiniz"
+            />
 
-              {/* Note: Tax Office ID would require an AsyncSelect component */}
-              <Text style={[styles.noteText, { color: colors.textMuted }]}>
-                * Vergi dairesi seçimi için web uygulamasını kullanınız
-              </Text>
-            </Card>
-          )}
+            <Input
+              label={`Risk Limiti (${formData.currency_type || 'TRY'})`}
+              placeholder="Sınırsız kredi için boş bırakın"
+              value={formData.risk_limit?.toString()}
+              onChangeText={(value) =>
+                setFormData({ ...formData, risk_limit: value ? Number(value) : undefined })
+              }
+              keyboardType="numeric"
+            />
+
+            <Input
+              label="Notlar"
+              placeholder="Bu müşteri hakkında dahili notlar..."
+              value={formData.notes}
+              onChangeText={(value) => setFormData({ ...formData, notes: value })}
+              multiline
+              numberOfLines={4}
+            />
+          </Card>
 
           {/* Status */}
           <Card style={styles.section}>
@@ -366,6 +624,7 @@ export default function EditCrmCustomerScreen() {
                 {[
                   { value: 'active', label: 'Aktif', color: colors.success },
                   { value: 'passive', label: 'Pasif', color: colors.textMuted },
+                  { value: 'blacklist', label: 'Kara Liste', color: colors.danger },
                 ].map((status) => (
                   <TouchableOpacity
                     key={status.value}
@@ -384,8 +643,7 @@ export default function EditCrmCustomerScreen() {
                       style={[
                         styles.statusButtonText,
                         {
-                          color:
-                            formData.status === status.value ? status.color : colors.text,
+                          color: formData.status === status.value ? status.color : colors.text,
                         },
                       ]}
                     >
@@ -461,44 +719,40 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: Spacing.sm,
   },
+  toggleRow: {
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  toggleGroup: {
+    flex: 1,
+  },
   radioGroup: {
     flexDirection: 'row',
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
-  radioButton: {
+  toggleButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.light.border,
+    alignItems: 'center',
   },
-  radioButtonActive: {
+  toggleButtonActive: {
     borderWidth: 2,
   },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.light.border,
-    marginRight: Spacing.sm,
-  },
-  radioCircleActive: {
-    borderWidth: 6,
-    borderColor: '#FFFFFF',
-  },
-  radioText: {
-    ...Typography.bodyMD,
-    fontWeight: '500',
+  toggleText: {
+    ...Typography.bodySM,
+    fontWeight: '600',
   },
   statusButtons: {
     flexDirection: 'row',
-    gap: Spacing.md,
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
   },
   statusButton: {
     flex: 1,
+    minWidth: '30%',
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
@@ -509,13 +763,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   statusButtonText: {
-    ...Typography.bodyMD,
+    ...Typography.bodySM,
     fontWeight: '600',
-  },
-  noteText: {
-    ...Typography.bodyXS,
-    fontStyle: 'italic',
-    marginTop: Spacing.sm,
   },
   submitButton: {
     marginTop: Spacing.lg,

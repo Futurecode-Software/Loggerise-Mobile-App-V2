@@ -9,7 +9,7 @@ import api, { getErrorMessage } from '../api';
 /**
  * CRM Customer status enum
  */
-export type CrmCustomerStatus = 'active' | 'passive' | 'lost' | 'converted';
+export type CrmCustomerStatus = 'active' | 'passive' | 'blacklist' | 'lost' | 'converted';
 
 /**
  * Customer segment enum
@@ -45,6 +45,20 @@ export interface CrmCustomer {
   currency_type?: string;
   status: CrmCustomerStatus;
   is_active: boolean;
+
+  // Location fields
+  country_id?: number;
+  main_address?: string;
+  main_state_id?: number;
+  main_city_id?: number;
+  main_latitude?: number;
+  main_longitude?: number;
+  main_place_id?: string;
+  main_formatted_address?: string;
+
+  // Financial fields
+  risk_limit?: number;
+  notes?: string;
 
   // CRM-specific fields
   interactions_count?: number;
@@ -132,10 +146,18 @@ export interface CrmCustomerFormData {
   currency_type?: string;
   status?: CrmCustomerStatus;
   is_active?: boolean;
-  main_address?: string;
+  // Location fields
   country_id?: number;
+  main_address?: string;
   main_state_id?: number;
   main_city_id?: number;
+  main_latitude?: number;
+  main_longitude?: number;
+  main_place_id?: string;
+  main_formatted_address?: string;
+  // Financial fields
+  risk_limit?: number;
+  notes?: string;
 }
 
 /**
@@ -216,6 +238,7 @@ export function getCrmCustomerStatusLabel(status: CrmCustomerStatus): string {
   const labels: Record<CrmCustomerStatus, string> = {
     active: 'Aktif',
     passive: 'Pasif',
+    blacklist: 'Kara Liste',
     lost: 'Kaybedildi',
     converted: 'Dönüştürüldü',
   };
@@ -231,6 +254,7 @@ export function getCrmCustomerStatusVariant(
   const variants: Record<CrmCustomerStatus, 'default' | 'info' | 'success' | 'danger' | 'warning'> = {
     active: 'success',
     passive: 'default',
+    blacklist: 'danger',
     lost: 'danger',
     converted: 'info',
   };
