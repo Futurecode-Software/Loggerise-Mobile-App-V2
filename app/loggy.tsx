@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { router } from 'expo-router';

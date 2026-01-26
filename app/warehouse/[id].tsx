@@ -14,10 +14,8 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  ChevronLeft,
   Edit,
   Trash2,
   Warehouse,
@@ -30,6 +28,7 @@ import {
 } from 'lucide-react-native';
 import { Card, Badge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -117,28 +116,31 @@ export default function WarehouseDetailScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader
+          title="Depo Detayı"
+          showBackButton
+          onBackPress={() => router.back()}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Depo bilgileri yükleniyor...
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   // Error state
   if (error || !warehouse) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Depo Detayı</Text>
-          <View style={{ width: 40 }} />
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader
+          title="Depo Detayı"
+          showBackButton
+          onBackPress={() => router.back()}
+        />
         <View style={styles.errorContainer}>
           <AlertCircle size={64} color={colors.danger} />
           <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
@@ -152,40 +154,38 @@ export default function WarehouseDetailScreen() {
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-          {warehouse.name}
-        </Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => router.push(`/warehouse/${warehouse.id}/edit` as any)}
-          >
-            <Edit size={20} color={colors.icon} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleDelete}
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <ActivityIndicator size="small" color={colors.danger} />
-            ) : (
-              <Trash2 size={20} color={colors.danger} />
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title={warehouse.name}
+        showBackButton
+        onBackPress={() => router.back()}
+        rightIcons={
+          <>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => router.push(`/warehouse/${warehouse.id}/edit` as any)}
+            >
+              <Edit size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Trash2 size={20} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+          </>
+        }
+      />
 
       {/* Warehouse Summary Card */}
       <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -258,33 +258,13 @@ export default function WarehouseDetailScreen() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setShowDeleteConfirm(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingMD,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
   },
   headerButton: {
     padding: Spacing.sm,

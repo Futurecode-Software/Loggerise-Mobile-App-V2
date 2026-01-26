@@ -10,9 +10,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useToast } from '@/hooks/use-toast';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { FullScreenHeader } from '@/components/ui';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, Save, AlertCircle } from 'lucide-react-native';
+import { Save, AlertCircle } from 'lucide-react-native';
 import { Input, Button, Card, Select } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
@@ -257,39 +257,23 @@ export default function EditCrmCustomerScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            CRM Müşterisi Düzenle
-          </Text>
-          <View style={styles.saveButton} />
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader title="CRM Müşterisi Düzenle" onBack={() => router.back()} />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Müşteri bilgileri yükleniyor...
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            CRM Müşterisi Düzenle
-          </Text>
-          <View style={styles.saveButton} />
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader title="CRM Müşterisi Düzenle" onBack={() => router.back()} />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
             <AlertCircle size={64} color={colors.danger} />
@@ -303,31 +287,24 @@ export default function EditCrmCustomerScreen() {
             <Text style={styles.retryButtonText}>Geri Dön</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          CRM Müşterisi Düzenle
-        </Text>
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            { backgroundColor: isSubmitting ? colors.border : Brand.primary },
-          ]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
-          <Save size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      <FullScreenHeader
+        title="CRM Müşterisi Düzenle"
+        onBack={() => router.back()}
+        rightIcons={[
+          {
+            icon: <Save size={20} color="#FFFFFF" />,
+            onPress: handleSubmit,
+            disabled: isSubmitting,
+          },
+        ]}
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -672,33 +649,13 @@ export default function EditCrmCustomerScreen() {
           />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  saveButton: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
   },
   keyboardView: {
     flex: 1,

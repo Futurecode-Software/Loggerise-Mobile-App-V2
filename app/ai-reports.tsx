@@ -12,10 +12,8 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  ChevronLeft,
   Plus,
   Sparkles,
   Send,
@@ -27,6 +25,7 @@ import {
   AlertCircle,
   ChevronRight,
 } from 'lucide-react-native';
+import { FullScreenHeader } from '@/components/ui';
 import { Card } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 // useColorScheme kaldirildi - her zaman light mode kullanilir
@@ -438,25 +437,20 @@ export default function AIReportsScreen() {
   // ============ LIST VIEW ============
   if (viewMode === 'list') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <View style={styles.headerTitleRow}>
-              <Sparkles size={20} color={Brand.primary} />
-              <Text style={[styles.headerTitle, { color: colors.text }]}>Loggy AI</Text>
-            </View>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              {pagination ? `${pagination.total} rapor` : 'Verilerinizi doğal dille sorgula'}
-            </Text>
-          </View>
-          <TouchableOpacity style={styles.newChatButton} onPress={startNewChat}>
-            <Plus size={22} color={Brand.primary} />
-          </TouchableOpacity>
-        </View>
+        <FullScreenHeader
+          title="Loggy AI"
+          subtitle={pagination ? `${pagination.total} rapor` : 'Verilerinizi doğal dille sorgula'}
+          onBack={() => router.back()}
+          leftIcon={<Sparkles size={20} color="#FFFFFF" />}
+          rightIcons={[
+            {
+              icon: <Plus size={22} color="#FFFFFF" />,
+              onPress: startNewChat,
+            },
+          ]}
+        />
 
         {/* Report List */}
         <FlatList
@@ -487,7 +481,7 @@ export default function AIReportsScreen() {
             <Plus size={24} color="#FFFFFF" />
           </TouchableOpacity>
         )}
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -495,32 +489,24 @@ export default function AIReportsScreen() {
   const messages = currentReport?.messages || [];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={goBackToList} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <View style={styles.headerTitleRow}>
-            <Sparkles size={20} color={Brand.primary} />
-            <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-              {currentReport?.title || 'Yeni Sorgu'}
-            </Text>
-          </View>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {currentReport ? formatReportTime(currentReport.created_at) : 'Doğal dille sorgula'}
-          </Text>
-        </View>
-        {currentReport && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDelete(currentReport.id)}
-          >
-            <Trash2 size={20} color={colors.danger} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <FullScreenHeader
+        title={currentReport?.title || 'Yeni Sorgu'}
+        subtitle={currentReport ? formatReportTime(currentReport.created_at) : 'Doğal dille sorgula'}
+        onBack={goBackToList}
+        leftIcon={<Sparkles size={20} color="#FFFFFF" />}
+        rightIcons={
+          currentReport
+            ? [
+                {
+                  icon: <Trash2 size={20} color="#FFFFFF" />,
+                  onPress: () => handleDelete(currentReport.id),
+                },
+              ]
+            : undefined
+        }
+      />
 
       {/* Chat Content */}
       <KeyboardAvoidingView
@@ -628,47 +614,13 @@ export default function AIReportsScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerContent: {
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingMD,
-    flex: 1,
-  },
-  headerSubtitle: {
-    ...Typography.bodySM,
-    marginTop: 2,
-  },
-  newChatButton: {
-    padding: Spacing.sm,
-  },
-  deleteButton: {
-    padding: Spacing.sm,
   },
   // List styles
   listContent: {

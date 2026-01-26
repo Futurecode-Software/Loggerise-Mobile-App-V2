@@ -16,11 +16,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ChevronLeft, Save } from 'lucide-react-native';
+import { Save } from 'lucide-react-native';
 import { Input, Card, Checkbox } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
+import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import { createBank, BankFormData, CurrencyType } from '@/services/endpoints/banks';
@@ -148,29 +148,29 @@ export default function NewBankAccountScreen() {
   }, [formData, validateForm, success, showError]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Yeni Banka Hesabı</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title="Yeni Banka Hesabı"
+        showBackButton
+        rightIcons={
           <TouchableOpacity
             onPress={handleSubmit}
             style={styles.headerButton}
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <ActivityIndicator size="small" color={Brand.primary} />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Save size={22} color={Brand.primary} />
+              <Save size={22} color="#FFFFFF" />
             )}
           </TouchableOpacity>
-        </View>
+        }
+      />
+
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
 
         {/* Form Content */}
         <ScrollView
@@ -295,7 +295,7 @@ export default function NewBankAccountScreen() {
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -305,22 +305,6 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
   },
   headerButton: {
     padding: Spacing.sm,

@@ -9,9 +9,9 @@ import {
   Platform,
 } from 'react-native';
 import { useToast } from '@/hooks/use-toast';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { FullScreenHeader } from '@/components/ui';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, Save, Users, Phone, Mail, Clock } from 'lucide-react-native';
+import { Save, Users, Phone, Mail, Clock } from 'lucide-react-native';
 import { Input, Button, Card } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
@@ -97,24 +97,19 @@ export default function NewInteractionScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Yeni Görüşme</Text>
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            { backgroundColor: isSubmitting ? colors.border : Brand.primary },
-          ]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
-          <Save size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      <FullScreenHeader
+        title="Yeni Görüşme"
+        onBack={() => router.back()}
+        rightIcons={[
+          {
+            icon: <Save size={20} color="#FFFFFF" />,
+            onPress: handleSubmit,
+            disabled: isSubmitting,
+          },
+        ]}
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -273,33 +268,13 @@ export default function NewInteractionScreen() {
           />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  saveButton: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
   },
   keyboardView: {
     flex: 1,

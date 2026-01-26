@@ -10,15 +10,14 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { router, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, Save, Trash2, FolderTree, CornerDownRight } from 'lucide-react-native';
-import { Input, Card, Badge, Checkbox, SelectInput, ConfirmDialog } from '@/components/ui';
+import { Save, Trash2, FolderTree, CornerDownRight } from 'lucide-react-native';
+import { Input, Card, Badge, Checkbox, SelectInput, ConfirmDialog, FullScreenHeader } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -206,30 +205,26 @@ export default function CategoryDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Kategori Detayı</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader
+          title="Kategori Detayı"
+          onBackPress={() => router.back()}
+        />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Yükleniyor...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error || !category) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Kategori Detayı</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader
+          title="Kategori Detayı"
+          onBackPress={() => router.back()}
+        />
         <View style={styles.errorState}>
           <Text style={[styles.errorText, { color: colors.danger }]}>
             {error || 'Kategori bulunamadı'}
@@ -241,46 +236,36 @@ export default function CategoryDetailScreen() {
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity
-            onPress={isEditing ? handleCancelEdit : () => router.back()}
-            style={styles.backButton}
-          >
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {isEditing ? 'Kategoriyi Düzenle' : 'Kategori Detayı'}
-          </Text>
-          <View style={styles.headerActions}>
-            {!isEditing && (
-              <TouchableOpacity style={styles.headerButton} onPress={handleDelete}>
-                <Trash2 size={22} color={colors.danger} />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              onPress={isEditing ? handleSubmit : () => setIsEditing(true)}
-              style={styles.headerButton}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color={Brand.primary} />
-              ) : (
-                <Save size={22} color={Brand.primary} />
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
+        <FullScreenHeader
+          title={isEditing ? 'Kategoriyi Düzenle' : 'Kategori Detayı'}
+          onBackPress={isEditing ? handleCancelEdit : () => router.back()}
+          leftActions={
+            !isEditing
+              ? [
+                  {
+                    icon: <Trash2 size={22} color={colors.danger} />,
+                    onPress: handleDelete,
+                  },
+                ]
+              : undefined
+          }
+          rightAction={{
+            icon: isSubmitting ? undefined : <Save size={22} color={Brand.primary} />,
+            onPress: isEditing ? handleSubmit : () => setIsEditing(true),
+            disabled: isSubmitting,
+            loading: isSubmitting,
+          }}
+        />
 
         <ScrollView
           style={styles.content}
@@ -443,7 +428,7 @@ export default function CategoryDetailScreen() {
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteDialog(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -453,30 +438,6 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  headerButton: {
-    padding: Spacing.sm,
   },
   content: {
     flex: 1,

@@ -9,11 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ChevronLeft, Save, AlertCircle, Truck, Link2 } from 'lucide-react-native';
+import { Save, AlertCircle, Truck, Link2 } from 'lucide-react-native';
 import { Input, Card, Badge, Checkbox, DateInput } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
+import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import api from '@/services/api';
 import { getErrorMessage, getValidationErrors } from '@/services/api';
@@ -994,29 +994,29 @@ export default function NewVehicleScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView 
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Yeni Araç Ekle</Text>
-          <TouchableOpacity 
-            onPress={handleSubmit} 
-            style={styles.headerButton} 
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title="Yeni Araç Ekle"
+        showBackButton
+        onBackPress={() => router.back()}
+        rightIcons={
+          <TouchableOpacity
+            onPress={handleSubmit}
+            style={styles.headerButton}
             disabled={isSubmitting || !formData.vehicle_type}
           >
             {isSubmitting ? (
-              <ActivityIndicator size="small" color={Brand.primary} />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Save size={22} color={formData.vehicle_type ? Brand.primary : colors.textMuted} />
+              <Save size={22} color={formData.vehicle_type ? '#FFFFFF' : 'rgba(255, 255, 255, 0.5)'} />
             )}
           </TouchableOpacity>
-        </View>
+        }
+      />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
 
         {/* Tabs */}
         <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
@@ -1086,7 +1086,7 @@ export default function NewVehicleScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1096,22 +1096,6 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
   },
   headerButton: {
     padding: Spacing.sm,

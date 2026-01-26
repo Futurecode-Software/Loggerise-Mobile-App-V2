@@ -16,9 +16,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, Save } from 'lucide-react-native';
+import { Save } from 'lucide-react-native';
+import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Input, Checkbox } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
@@ -150,31 +150,33 @@ export default function WarehouseEditScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader
+          title="Depo Düzenle"
+          showBackButton
+          onBackPress={() => router.back()}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Depo bilgileri yükleniyor...
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
-      <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Depo Düzenle</Text>
-          <View style={{ width: 40 }} />
-        </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title="Depo Düzenle"
+        showBackButton
+        onBackPress={() => router.back()}
+      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+      >
 
         {/* Form Content */}
         <ScrollView
@@ -312,8 +314,8 @@ export default function WarehouseEditScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -321,7 +323,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  safeArea: {
+  keyboardAvoidingView: {
     flex: 1,
   },
   loadingContainer: {
@@ -332,22 +334,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...Typography.bodyMD,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingMD,
-    flex: 1,
-    textAlign: 'center',
   },
   formContainer: {
     flex: 1,

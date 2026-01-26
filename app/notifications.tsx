@@ -8,7 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { router } from 'expo-router';
 import {
   Bell,
@@ -23,11 +23,10 @@ import {
   CalendarClock,
   MessageCircle,
   AlertTriangle,
-  ChevronLeft,
   CheckCheck,
   Trash2,
 } from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
+import { Card, Badge, FullScreenHeader } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 // useColorScheme import kaldirildi - her zaman light mode kullanilir
 import { useNotificationContext } from '@/context/notification-context';
@@ -330,19 +329,19 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ChevronLeft size={24} color={colors.icon} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Bildirimler</Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity style={styles.markAllButton} onPress={handleMarkAllAsRead}>
-            <CheckCheck size={20} color={colors.primary} />
-          </TouchableOpacity>
-        )}
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title="Bildirimler"
+        onBackPress={() => router.back()}
+        rightAction={
+          unreadCount > 0
+            ? {
+                icon: <CheckCheck size={20} color={colors.primary} />,
+                onPress: handleMarkAllAsRead,
+              }
+            : undefined
+        }
+      />
 
       {/* Content */}
       {isLoading ? (
@@ -374,31 +373,13 @@ export default function NotificationsScreen() {
           )}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.xs,
-    marginRight: Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingMD,
-    flex: 1,
-  },
-  markAllButton: {
-    padding: Spacing.xs,
   },
   loadingContainer: {
     flex: 1,

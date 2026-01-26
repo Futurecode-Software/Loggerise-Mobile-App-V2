@@ -10,14 +10,12 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
 import { Colors, Typography, Spacing } from '@/constants/theme';
+import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { useToast } from '@/hooks/use-toast';
 import LoadFormProgress from '@/components/load-form/LoadFormProgress';
 import LoadFormNavigation from '@/components/load-form/LoadFormNavigation';
@@ -361,28 +359,26 @@ export default function NewLoadScreen() {
     }
   };
 
+  const headerTitle = formData.direction === 'export'
+    ? 'Yeni İhracat Yükü'
+    : formData.direction === 'import'
+      ? 'Yeni İthalat Yükü'
+      : 'Yeni Yük Ekle';
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title={headerTitle}
+        subtitle={`Adım ${currentStep} / ${STEPS.length}: ${STEPS[currentStep - 1].description}`}
+        showBackButton
+        onBackPress={() => router.back()}
+      />
+
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <ArrowLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>
-              {formData.direction === 'export' ? 'Yeni İhracat Yükü' : formData.direction === 'import' ? 'Yeni İthalat Yükü' : 'Yeni Yük Ekle'}
-            </Text>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              Adım {currentStep} / {STEPS.length}: {STEPS[currentStep - 1].description}
-            </Text>
-          </View>
-        </View>
-
         {/* Progress Steps */}
         <LoadFormProgress steps={STEPS} currentStep={currentStep} onStepClick={handleStepClick} />
 
@@ -406,7 +402,7 @@ export default function NewLoadScreen() {
           isSubmitting={isSubmitting}
         />
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -416,29 +412,6 @@ const styles = StyleSheet.create({
   },
   keyboardAvoid: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.xs,
-    marginRight: Spacing.sm,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    ...Typography.headingMD,
-    fontSize: 18,
-  },
-  headerSubtitle: {
-    ...Typography.bodySM,
-    fontSize: 12,
-    marginTop: 2,
   },
   scrollView: {
     flex: 1,

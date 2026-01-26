@@ -22,10 +22,11 @@ import {
 } from 'react-native';
 import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, X, ChevronDown, Check, ChevronLeft } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 
-// iOS status bar yüksekliği hesaplama
+// Status bar yüksekliği hesaplama
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const getStatusBarHeight = (): number => {
   if (Platform.OS === 'android') {
@@ -75,6 +76,7 @@ export function SearchableSelect({
   renderOption,
 }: SearchableSelectProps) {
   const colors = Colors.light;
+  const insets = useSafeAreaInsets();
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -293,25 +295,29 @@ export function SearchableSelect({
         transparent={false}
         animationType="slide"
         onRequestClose={() => setIsOpen(false)}
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
       >
-        {/* StatusBar - Yeşil arka plan, beyaz içerik */}
-        <StatusBar style="light" backgroundColor={Brand.primary} />
+        {/* StatusBar - Transparent, yeşil View arkasından görünür */}
+        <StatusBar style="light" />
         {Platform.OS === 'android' && (
           <RNStatusBar
             barStyle="light-content"
-            backgroundColor={Brand.primary}
-            translucent={false}
+            backgroundColor="transparent"
+            translucent={true}
           />
         )}
 
-        <View style={styles.modalWrapper}>
-          {/* Yeşil Header - Status bar dahil */}
-          <View
-            style={[
-              styles.greenHeader,
-              { paddingTop: getStatusBarHeight() },
-            ]}
-          >
+        {/* Status bar yüksekliği - FullScreenHeader ile aynı yaklaşım */}
+        {(() => {
+          const statusBarHeight = Platform.OS === 'ios' ? insets.top : insets.top || 24;
+          const extraTopPadding = Platform.OS === 'ios' ? 0 : 0;
+          const totalTopPadding = statusBarHeight + extraTopPadding;
+
+          return (
+            <View style={[styles.modalWrapper, { paddingTop: totalTopPadding }]}>
+              {/* Yeşil Header */}
+              <View style={styles.greenHeader}>
             <View style={styles.greenHeaderContent}>
               <TouchableOpacity
                 onPress={() => setIsOpen(false)}
@@ -333,7 +339,7 @@ export function SearchableSelect({
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
             {/* Search Input */}
-            <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
+            <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Search size={20} color={colors.icon} />
               <TextInput
                 style={[styles.searchInput, { color: colors.text }]}
@@ -378,7 +384,9 @@ export function SearchableSelect({
               />
             )}
           </KeyboardAvoidingView>
-        </View>
+            </View>
+          );
+        })()}
       </Modal>
     </View>
   );
@@ -431,10 +439,13 @@ const styles = StyleSheet.create({
   modalWrapper: {
     flex: 1,
     backgroundColor: Brand.primary,
+    width: '100%',
+    height: '100%',
   },
   greenHeader: {
     backgroundColor: Brand.primary,
     width: '100%',
+    paddingTop: 0,
   },
   greenHeaderContent: {
     flexDirection: 'row',
@@ -473,6 +484,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     margin: Spacing.md,
     borderRadius: BorderRadius.md,
+    borderWidth: 1,
   },
   searchInput: {
     flex: 1,

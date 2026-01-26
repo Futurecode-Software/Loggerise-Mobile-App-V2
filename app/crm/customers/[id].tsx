@@ -10,11 +10,9 @@ import {
   Linking,
 } from 'react-native';
 import { useToast } from '@/hooks/use-toast';
-import { ConfirmDialog } from '@/components/ui';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ConfirmDialog, FullScreenHeader } from '@/components/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  ChevronLeft,
   Edit,
   Trash2,
   Phone,
@@ -283,32 +281,22 @@ export default function CrmCustomerDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Müşteri Detayı</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader title="Müşteri Detayı" onBack={() => router.back()} />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Müşteri bilgisi yükleniyor...
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error || !customer) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Müşteri Detayı</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader title="Müşteri Detayı" onBack={() => router.back()} />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
             <AlertCircle size={64} color={colors.danger} />
@@ -327,32 +315,27 @@ export default function CrmCustomerDetailScreen() {
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-          {customer.name}
-        </Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => router.push(`/crm/customers/${customerId}/edit` as any)}
-          >
-            <Edit size={20} color={Brand.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton} onPress={handleDelete}>
-            <Trash2 size={20} color={colors.danger} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <FullScreenHeader
+        title={customer.name}
+        onBack={() => router.back()}
+        rightIcons={[
+          {
+            icon: <Edit size={20} color="#FFFFFF" />,
+            onPress: () => router.push(`/crm/customers/${customerId}/edit` as any),
+          },
+          {
+            icon: <Trash2 size={20} color="#FFFFFF" />,
+            onPress: handleDelete,
+          },
+        ]}
+      />
 
       {/* Customer Summary Card */}
       <View style={[styles.summaryCard, { backgroundColor: Brand.primary }]}>
@@ -487,36 +470,13 @@ export default function CrmCustomerDetailScreen() {
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteDialog(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingMD,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  headerButton: {
-    padding: Spacing.sm,
   },
   summaryCard: {
     padding: Spacing.xl,

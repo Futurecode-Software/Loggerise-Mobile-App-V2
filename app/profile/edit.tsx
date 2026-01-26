@@ -4,16 +4,16 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { router } from 'expo-router';
-import { ChevronLeft, User, Mail, Phone, Check } from 'lucide-react-native';
+import { User, Mail, Phone, Check } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { FullScreenHeader } from '@/components/ui';
 import { useAuth } from '@/context/auth-context';
 import { updateProfile, ProfileUpdateData } from '@/services/endpoints/profile';
 import { useToast } from '@/hooks/use-toast';
@@ -94,28 +94,19 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ChevronLeft size={24} color={colors.icon} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Profil Duzenle</Text>
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            (!hasChanges() || isLoading) && styles.saveButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={!hasChanges() || isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Check size={20} color="#FFFFFF" />
-          )}
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title="Profil Duzenle"
+        onBackPress={() => router.back()}
+        rightAction={{
+          icon: isLoading ? undefined : <Check size={20} color="#FFFFFF" />,
+          onPress: handleSave,
+          disabled: !hasChanges() || isLoading,
+          loading: isLoading,
+          backgroundColor: Brand.primary,
+          iconColor: '#FFFFFF',
+        }}
+      />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -224,7 +215,7 @@ export default function EditProfileScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -234,32 +225,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.xs,
-    marginRight: Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingMD,
-    flex: 1,
-  },
-  saveButton: {
-    backgroundColor: Brand.primary,
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
   },
   content: {
     flex: 1,

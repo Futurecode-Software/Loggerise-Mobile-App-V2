@@ -10,13 +10,11 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  ChevronLeft,
   Trash2,
   ArrowLeftRight,
   ArrowDownLeft,
@@ -28,7 +26,7 @@ import {
   Hash,
   FileText,
 } from 'lucide-react-native';
-import { Card, Badge, ConfirmDialog } from '@/components/ui';
+import { Card, Badge, ConfirmDialog, FullScreenHeader } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -117,30 +115,26 @@ export default function MovementDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Hareket Detayı</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader
+          title="Hareket Detayı"
+          onBackPress={() => router.back()}
+        />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Yükleniyor...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error || !movement) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Hareket Detayı</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader
+          title="Hareket Detayı"
+          onBackPress={() => router.back()}
+        />
         <View style={styles.errorState}>
           <Text style={[styles.errorText, { color: colors.danger }]}>
             {error || 'Hareket bulunamadı'}
@@ -152,7 +146,7 @@ export default function MovementDetailScreen() {
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -162,17 +156,17 @@ export default function MovementDetailScreen() {
     movement.movement_type === 'transfer_in' || movement.movement_type === 'transfer_out';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Hareket Detayı</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={handleDelete}>
-          <Trash2 size={22} color={colors.danger} />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title="Hareket Detayı"
+        onBackPress={() => router.back()}
+        leftActions={[
+          {
+            icon: <Trash2 size={22} color={colors.danger} />,
+            onPress: handleDelete,
+          },
+        ]}
+      />
 
       <ScrollView
         style={styles.content}
@@ -328,32 +322,13 @@ export default function MovementDetailScreen() {
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteDialog(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  headerButton: {
-    padding: Spacing.sm,
   },
   content: {
     flex: 1,

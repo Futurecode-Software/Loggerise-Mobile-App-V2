@@ -13,12 +13,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ChevronLeft, Save, Send } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
+import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmDialog } from '@/components/ui';
 import { QuoteFormStepper } from '@/components/quote/quote-form-stepper';
@@ -212,28 +210,19 @@ export default function CreateMultiStepQuoteScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <FullScreenHeader
+        title="Yeni Teklif"
+        subtitle={`Adım ${currentStep} / 5`}
+        showBackButton
+        onBackPress={() => currentStep > 1 ? goToPreviousStep() : router.back()}
+      />
+
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={100}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={goToPreviousStep}
-            style={styles.backButton}
-            activeOpacity={0.7}
-          >
-            <ChevronLeft size={24} color={colors.text} />
-            <Text style={styles.backButtonText}>
-              {currentStep > 1 ? 'Geri' : 'İptal'}
-            </Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Yeni Teklif</Text>
-          <View style={styles.headerRight} />
-        </View>
-
         {/* Stepper */}
         <QuoteFormStepper
           currentStep={currentStep}
@@ -263,7 +252,7 @@ export default function CreateMultiStepQuoteScreen() {
         onConfirm={handleSendConfirm}
         onCancel={() => setShowSendConfirmDialog(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -275,47 +264,8 @@ const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.xs,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: Brand.primary,
-    marginLeft: Spacing.xs / 2,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  headerRight: {
-    width: 60,
-  },
   content: {
     flex: 1,
-  },
-  placeholderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: '#9CA3AF',
-    textAlign: 'center',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

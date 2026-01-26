@@ -10,10 +10,8 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  ChevronLeft,
   Search,
   Plus,
   Truck,
@@ -24,6 +22,7 @@ import {
   X,
   Settings2,
 } from 'lucide-react-native';
+import { FullScreenHeader } from '@/components/ui';
 import { Card, Badge, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { formatNumber } from '@/utils/formatters';
@@ -388,30 +387,19 @@ export default function VehiclesScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Araçlar</Text>
-        <View style={styles.headerActions}>
-          {pagination && (
-            <Text style={[styles.countText, { color: colors.textSecondary }]}>
-              {pagination.total} araç
-            </Text>
-          )}
-          <TouchableOpacity
-            style={[
-              styles.headerButton,
-              showFilters && { backgroundColor: Brand.primary + '15' },
-            ]}
-            onPress={() => setShowFilters(!showFilters)}
-          >
-            <Settings2 size={22} color={showFilters ? Brand.primary : colors.icon} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <FullScreenHeader
+        title="Araçlar"
+        subtitle={pagination ? `${pagination.total} araç` : undefined}
+        onBack={() => router.back()}
+        rightIcons={[
+          {
+            icon: <Settings2 size={22} color="#FFFFFF" />,
+            onPress: () => setShowFilters(!showFilters),
+          },
+        ]}
+      />
 
       {/* Advanced Filters */}
       {showFilters && (
@@ -567,40 +555,13 @@ export default function VehiclesScreen() {
       >
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  headerButton: {
-    padding: Spacing.sm,
-  },
-  countText: {
-    ...Typography.bodySM,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,

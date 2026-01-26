@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
   Search,
@@ -21,9 +20,8 @@ import {
   ArrowRight,
   AlertCircle,
   Route,
-  ChevronLeft,
 } from 'lucide-react-native';
-import { Card, Badge, Input } from '@/components/ui';
+import { Card, Badge, Input, FullScreenHeader } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   getPositions,
@@ -312,24 +310,16 @@ export default function PositionsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header with back button */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Pozisyonlar</Text>
-        <View style={styles.headerActions}>
-          {pagination && (
-            <Text style={[styles.countText, { color: colors.textSecondary }]}>
-              {pagination.total} kayıt
-            </Text>
-          )}
-          <TouchableOpacity style={styles.headerButton}>
-            <Filter size={22} color={colors.icon} />
-          </TouchableOpacity>
-        </View>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader
+        title="Pozisyonlar"
+        onBackPress={() => router.back()}
+        subtitle={pagination ? `${pagination.total} kayıt` : undefined}
+        rightAction={{
+          icon: <Filter size={22} color={colors.icon} />,
+          onPress: () => {},
+        }}
+      />
 
       {/* Search */}
       <View style={styles.searchContainer}>
@@ -409,40 +399,13 @@ export default function PositionsScreen() {
       >
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-    marginRight: Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  headerButton: {
-    padding: Spacing.sm,
-  },
-  countText: {
-    ...Typography.bodySM,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,

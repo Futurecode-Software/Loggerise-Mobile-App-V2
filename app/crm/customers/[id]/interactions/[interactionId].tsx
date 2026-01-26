@@ -10,11 +10,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useToast } from '@/hooks/use-toast';
-import { ConfirmDialog } from '@/components/ui';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ConfirmDialog, FullScreenHeader } from '@/components/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  ChevronLeft,
   Save,
   Trash2,
   CheckCircle,
@@ -209,33 +207,23 @@ export default function InteractionDetailScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Görüşme Detayı</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader title="Görüşme Detayı" onBack={() => router.back()} />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Görüşme yükleniyor...
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Görüşme Detayı</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader title="Görüşme Detayı" onBack={() => router.back()} />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
             <AlertCircle size={64} color={colors.danger} />
@@ -249,38 +237,33 @@ export default function InteractionDetailScreen() {
             <Text style={styles.retryButtonText}>Geri Dön</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Görüşme Detayı</Text>
-        {isEditing ? (
-          <TouchableOpacity
-            style={[
-              styles.saveButton,
-              { backgroundColor: isSubmitting ? colors.border : Brand.primary },
-            ]}
-            onPress={handleUpdate}
-            disabled={isSubmitting}
-          >
-            <Save size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={handleDelete}
-          >
-            <Trash2 size={20} color={colors.danger} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <FullScreenHeader
+        title="Görüşme Detayı"
+        onBack={() => router.back()}
+        rightIcons={
+          isEditing
+            ? [
+                {
+                  icon: <Save size={20} color="#FFFFFF" />,
+                  onPress: handleUpdate,
+                  disabled: isSubmitting,
+                },
+              ]
+            : [
+                {
+                  icon: <Trash2 size={20} color="#FFFFFF" />,
+                  onPress: handleDelete,
+                },
+              ]
+        }
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -485,36 +468,13 @@ export default function InteractionDetailScreen() {
         onConfirm={confirmDelete}
         onCancel={() => setShowDeleteDialog(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  saveButton: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
-  },
-  deleteButton: {
-    padding: Spacing.sm,
   },
   keyboardView: {
     flex: 1,
