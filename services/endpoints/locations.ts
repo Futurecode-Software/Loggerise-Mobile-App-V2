@@ -119,3 +119,62 @@ export const TURKEY_ID = 228;
  * Foreign company default tax number (constant)
  */
 export const FOREIGN_DEFAULT_TAX_NUMBER = '22222222222';
+
+/**
+ * Port interface
+ */
+export interface Port {
+  id: number;
+  name: string;
+  name_en?: string;
+  port_code?: string;
+  city?: string;
+  country_id?: number;
+  country_name?: string;
+  country_iso2?: string;
+}
+
+/**
+ * Ferry company interface
+ */
+export interface FerryCompany {
+  id: number;
+  name: string;
+  short_code?: string;
+}
+
+/**
+ * Search ports by name
+ */
+export async function searchPorts(query?: string, countryId?: number): Promise<Port[]> {
+  try {
+    const response = await api.get<LocationSearchResponse<Port>>('/locations/ports', {
+      params: {
+        search: query || '',
+        country_id: countryId,
+      },
+    });
+    return response.data.data;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Search ferry companies by name
+ */
+export async function searchFerryCompanies(query?: string): Promise<FerryCompany[]> {
+  try {
+    const response = await api.get<LocationSearchResponse<FerryCompany>>(
+      '/locations/ferry-companies',
+      {
+        params: { search: query || '' },
+      }
+    );
+    return response.data.data;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}

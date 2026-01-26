@@ -1,15 +1,33 @@
 /**
- * Transport Details Section (Editable)
+ * Transport Details Section (Always Editable)
  *
- * Allows editing RoRo and Train transport details.
+ * Comprehensive transport management for positions matching web functionality.
+ * Supports Route selection, RoRo operations, Train operations, and position arrival dates.
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { Ship, Train } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Switch,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { Ship, Train, Package, Clock, MapPin } from 'lucide-react-native';
 import { Card, Button, Input, DateInput, Select } from '@/components/ui';
-import { Colors, Typography, Spacing } from '@/constants/theme';
-import { Position, updatePosition, DeckType } from '@/services/endpoints/positions';
+import { Colors, Typography, Spacing, BorderRadius, Brand } from '@/constants/theme';
+import {
+  Position,
+  updatePosition,
+  DeckType,
+} from '@/services/endpoints/positions';
+import {
+  searchPorts,
+  searchFerryCompanies,
+  Country,
+} from '@/services/endpoints/locations';
 import { showToast } from '@/utils/toast';
 
 interface TransportDetailsSectionProps {
@@ -22,15 +40,98 @@ const DECK_TYPES: { label: string; value: DeckType }[] = [
   { label: 'Üst Güverte', value: 'ust_guverte' },
 ];
 
-export function TransportDetailsSection({ position, onUpdate }: TransportDetailsSectionProps) {
+// Section header component
+const SectionHeader = ({
+  icon: Icon,
+  title,
+  color,
+}: {
+  icon: React.ComponentType<any>;
+  title: string;
+  color?: string;
+}) => {
   const colors = Colors.light;
-  const [isEditing, setIsEditing] = useState(false);
+  return (
+    <View style={styles.sectionHeader}>
+      <Icon size={18} color={color || colors.textMuted} />
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+    </View>
+  );
+};
+
+// Subsection header
+const SubsectionHeader = ({ title }: { title: string }) => {
+  const colors = Colors.light;
+  return (
+    <View style={styles.subsectionHeader}>
+      <View style={[styles.subsectionDot, { backgroundColor: Brand.primary }]} />
+      <Text style={[styles.subsectionTitle, { color: colors.text }]}>{title}</Text>
+    </View>
+  );
+};
+
+export function TransportDetailsSection({
+  position,
+  onUpdate,
+}: TransportDetailsSectionProps) {
+  const colors = Colors.light;
   const [isSaving, setIsSaving] = useState(false);
+
+  // Route (countries list)
+  const [routeCountries, setRouteCountries] = useState<Country[]>(() => {
+    if (position.route) {
+      const iso2Codes = position.route.split('-');
+      return iso2Codes.map((code, index) => ({
+        id: index,
+        name: code.toUpperCase(),
+        code: code.toUpperCase(),
+        phone_code: '',
+      }));
+    }
+    return [];
+  });
+
+  // Transport type flags
+  const [isRoro, setIsRoro] = useState(!!position.is_roro);
+  const [isTrain, setIsTrain] = useState(!!position.is_train);
+  const [isMafi, setIsMafi] = useState(!!position.is_mafi);
+
+  // Selected ports/company for display
+  const [selectedDeparturePort, setSelectedDeparturePort] = useState(
+    position.departurePort ? { id: position.departurePort.id, name: position.departurePort.name } : null
+  );
+  const [selectedArrivalPort, setSelectedArrivalPort] = useState(
+    position.arrivalPort ? { id: position.arrivalPort.id, name: position.arrivalPort.name } : null
+  );
+  const [selectedFerryCompany, setSelectedFerryCompany] = useState(
+    position.ferryCompany ? { id: position.ferryCompany.id, name: position.ferryCompany.name } : null
+  );
 
   // RoRo form data
   const [roroData, setRoroData] = useState({
+    departure_port_id: position.departure_port_id || null,
+    arrival_port_id: position.arrival_port_id || null,
+    ferry_company_id: position.ferry_company_id || null,
+    roro_country_code: position.roro_country_code || '',
     roro_booking_reference: position.roro_booking_reference || '',
+    roro_ship_name: position.roro_ship_name || '',
+    roro_imo_number: position.roro_imo_number || '',
     roro_voyage_number: position.roro_voyage_number || '',
+    roro_deck_type: position.roro_deck_type || '',
+    roro_entry_location: position.roro_entry_location || '',
+    roro_expected_entry_date: position.roro_expected_entry_date
+      ? new Date(position.roro_expected_entry_date).toISOString().split('T')[0]
+      : '',
+    roro_entry_date: position.roro_entry_date
+      ? new Date(position.roro_entry_date).toISOString().split('T')[0]
+      : '',
+    roro_exit_location: position.roro_exit_location || '',
+    roro_expected_exit_date: position.roro_expected_exit_date
+      ? new Date(position.roro_expected_exit_date).toISOString().split('T')[0]
+      : '',
+    roro_exit_date: position.roro_exit_date
+      ? new Date(position.roro_exit_date).toISOString().split('T')[0]
+      : '',
     roro_cutoff_date: position.roro_cutoff_date
       ? new Date(position.roro_cutoff_date).toISOString().split('T')[0]
       : '',
@@ -40,7 +141,6 @@ export function TransportDetailsSection({ position, onUpdate }: TransportDetails
     roro_arrival_date: position.roro_arrival_date
       ? new Date(position.roro_arrival_date).toISOString().split('T')[0]
       : '',
-    roro_deck_type: position.roro_deck_type || '',
     roro_notes: position.roro_notes || '',
   });
 
@@ -50,31 +150,52 @@ export function TransportDetailsSection({ position, onUpdate }: TransportDetails
     train_wagon_number: position.train_wagon_number || '',
     train_seal_number: position.train_seal_number || '',
     train_departure_terminal: position.train_departure_terminal || '',
+    train_expected_departure_date: position.train_expected_departure_date
+      ? new Date(position.train_expected_departure_date).toISOString().split('T')[0]
+      : '',
     train_departure_date: position.train_departure_date
       ? new Date(position.train_departure_date).toISOString().split('T')[0]
       : '',
     train_arrival_terminal: position.train_arrival_terminal || '',
+    train_expected_arrival_date: position.train_expected_arrival_date
+      ? new Date(position.train_expected_arrival_date).toISOString().split('T')[0]
+      : '',
     train_arrival_date: position.train_arrival_date
       ? new Date(position.train_arrival_date).toISOString().split('T')[0]
+      : '',
+  });
+
+  // Position arrival dates
+  const [arrivalDates, setArrivalDates] = useState({
+    estimated_arrival_date: position.estimated_arrival_date
+      ? new Date(position.estimated_arrival_date).toISOString().split('T')[0]
+      : '',
+    actual_arrival_date: position.actual_arrival_date
+      ? new Date(position.actual_arrival_date).toISOString().split('T')[0]
       : '',
   });
 
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      const updateData: Partial<Position> = {};
+      const updateData: Partial<Position> = {
+        route: routeCountries.map((c) => c.code).join('-'),
+        is_roro: isRoro,
+        is_train: isTrain,
+        is_mafi: isMafi,
+        ...arrivalDates,
+      };
 
-      if (position.is_roro) {
+      if (isRoro) {
         Object.assign(updateData, roroData);
       }
 
-      if (position.is_train) {
+      if (isTrain) {
         Object.assign(updateData, trainData);
       }
 
       await updatePosition(position.id, updateData);
       showToast({ type: 'success', message: 'Taşıma bilgileri güncellendi' });
-      setIsEditing(false);
       onUpdate();
     } catch (error) {
       showToast({
@@ -86,236 +207,414 @@ export function TransportDetailsSection({ position, onUpdate }: TransportDetails
     }
   };
 
-  if (!position.is_roro && !position.is_train) {
-    return (
-      <Card style={styles.card}>
-        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-          Bu pozisyon RoRo veya Tren taşımacılığı değil
-        </Text>
-      </Card>
-    );
-  }
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* RoRo Section */}
-      {position.is_roro && (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.keyboardView}
+    >
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        {/* Güzergah & Taşıma Tipleri */}
         <Card style={styles.card}>
-          <View style={styles.header}>
-            <Ship size={20} color={colors.primary} />
-            <Text style={[styles.title, { color: colors.text }]}>RoRo Bilgileri</Text>
+          <SectionHeader icon={MapPin} title="Güzergah & Taşıma Tipleri" />
+
+          <Input
+            label="Güzergah (Ülke kodları)"
+            value={routeCountries.map((c) => c.code).join('-')}
+            onChangeText={(text) => {
+              const codes = text.toUpperCase().split('-');
+              setRouteCountries(
+                codes.map((code, index) => ({
+                  id: index,
+                  name: code,
+                  code: code,
+                  phone_code: '',
+                }))
+              );
+            }}
+            placeholder="TR-BG-RO-DE"
+            containerStyle={styles.inputContainer}
+          />
+
+          <View style={styles.switchGroup}>
+            <View style={[styles.switchRow, { borderColor: colors.border }]}>
+              <View style={styles.switchLabel}>
+                <Ship size={18} color="#2563EB" />
+                <Text style={[styles.switchText, { color: colors.text }]}>Ro-Ro</Text>
+              </View>
+              <Switch
+                value={isRoro}
+                onValueChange={setIsRoro}
+                trackColor={{ false: colors.border, true: '#93C5FD' }}
+                thumbColor={isRoro ? '#2563EB' : colors.surface}
+              />
+            </View>
+            <View style={[styles.switchRow, { borderColor: colors.border }]}>
+              <View style={styles.switchLabel}>
+                <Train size={18} color="#D97706" />
+                <Text style={[styles.switchText, { color: colors.text }]}>Tren</Text>
+              </View>
+              <Switch
+                value={isTrain}
+                onValueChange={setIsTrain}
+                trackColor={{ false: colors.border, true: '#FDE68A' }}
+                thumbColor={isTrain ? '#D97706' : colors.surface}
+              />
+            </View>
+            <View style={[styles.switchRow, { borderColor: colors.border, borderBottomWidth: 0 }]}>
+              <View style={styles.switchLabel}>
+                <Package size={18} color="#16A34A" />
+                <Text style={[styles.switchText, { color: colors.text }]}>Mafi</Text>
+              </View>
+              <Switch
+                value={isMafi}
+                onValueChange={setIsMafi}
+                trackColor={{ false: colors.border, true: '#BBF7D0' }}
+                thumbColor={isMafi ? '#16A34A' : colors.surface}
+              />
+            </View>
           </View>
-
-          {isEditing ? (
-            <View style={styles.form}>
-              <Input
-                label="Rezervasyon Referansı"
-                value={roroData.roro_booking_reference}
-                onChangeText={(text) =>
-                  setRoroData({ ...roroData, roro_booking_reference: text })
-                }
-                placeholder="Rezervasyon numarası"
-              />
-
-              <Input
-                label="Sefer Numarası"
-                value={roroData.roro_voyage_number}
-                onChangeText={(text) =>
-                  setRoroData({ ...roroData, roro_voyage_number: text })
-                }
-                placeholder="Sefer no"
-              />
-
-              <Select
-                label="Güverte Tipi"
-                value={roroData.roro_deck_type}
-                data={DECK_TYPES.map((d) => ({ label: d.label, value: d.value }))}
-                onValueChange={(value) =>
-                  setRoroData({ ...roroData, roro_deck_type: value as DeckType })
-                }
-                placeholder="Güverte seçiniz"
-              />
-
-              <DateInput
-                label="Cut-off Tarihi"
-                value={roroData.roro_cutoff_date}
-                onChange={(value) =>
-                  setRoroData({ ...roroData, roro_cutoff_date: value })
-                }
-              />
-
-              <DateInput
-                label="Kalkış Tarihi"
-                value={roroData.roro_departure_date}
-                onChange={(value) =>
-                  setRoroData({ ...roroData, roro_departure_date: value })
-                }
-              />
-
-              <DateInput
-                label="Varış Tarihi"
-                value={roroData.roro_arrival_date}
-                onChange={(value) =>
-                  setRoroData({ ...roroData, roro_arrival_date: value })
-                }
-              />
-
-              <Input
-                label="Notlar"
-                value={roroData.roro_notes}
-                onChangeText={(text) => setRoroData({ ...roroData, roro_notes: text })}
-                multiline
-                numberOfLines={3}
-                placeholder="RoRo notları"
-              />
-            </View>
-          ) : (
-            <View style={styles.readOnly}>
-              {position.roro_booking_reference && (
-                <View style={styles.infoRow}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    Rezervasyon:
-                  </Text>
-                  <Text style={[styles.value, { color: colors.text }]}>
-                    {position.roro_booking_reference}
-                  </Text>
-                </View>
-              )}
-              {position.roro_voyage_number && (
-                <View style={styles.infoRow}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    Sefer No:
-                  </Text>
-                  <Text style={[styles.value, { color: colors.text }]}>
-                    {position.roro_voyage_number}
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
         </Card>
-      )}
 
-      {/* Train Section */}
-      {position.is_train && (
+        {/* Pozisyon Varış Tarihleri */}
         <Card style={styles.card}>
-          <View style={styles.header}>
-            <Train size={20} color={colors.warning} />
-            <Text style={[styles.title, { color: colors.text }]}>Tren Bilgileri</Text>
+          <SectionHeader icon={Clock} title="Pozisyon Varış Tarihleri" />
+
+          <View style={styles.row}>
+            <View style={styles.halfColumn}>
+              <DateInput
+                label="Tahmini Varış"
+                value={arrivalDates.estimated_arrival_date}
+                onChange={(value) => setArrivalDates({ ...arrivalDates, estimated_arrival_date: value })}
+              />
+            </View>
+            <View style={styles.halfColumn}>
+              <DateInput
+                label="Gerçek Varış"
+                value={arrivalDates.actual_arrival_date}
+                onChange={(value) => setArrivalDates({ ...arrivalDates, actual_arrival_date: value })}
+              />
+            </View>
           </View>
-
-          {isEditing ? (
-            <View style={styles.form}>
-              <Input
-                label="Sefer Numarası"
-                value={trainData.train_voyage_number}
-                onChangeText={(text) =>
-                  setTrainData({ ...trainData, train_voyage_number: text })
-                }
-                placeholder="Sefer no"
-              />
-
-              <Input
-                label="Vagon Numarası"
-                value={trainData.train_wagon_number}
-                onChangeText={(text) =>
-                  setTrainData({ ...trainData, train_wagon_number: text })
-                }
-                placeholder="Vagon no"
-              />
-
-              <Input
-                label="Mühür Numarası"
-                value={trainData.train_seal_number}
-                onChangeText={(text) =>
-                  setTrainData({ ...trainData, train_seal_number: text })
-                }
-                placeholder="Mühür no"
-              />
-
-              <Input
-                label="Kalkış Terminali"
-                value={trainData.train_departure_terminal}
-                onChangeText={(text) =>
-                  setTrainData({ ...trainData, train_departure_terminal: text })
-                }
-                placeholder="Kalkış terminali"
-              />
-
-              <DateInput
-                label="Kalkış Tarihi"
-                value={trainData.train_departure_date}
-                onChange={(value) =>
-                  setTrainData({ ...trainData, train_departure_date: value })
-                }
-              />
-
-              <Input
-                label="Varış Terminali"
-                value={trainData.train_arrival_terminal}
-                onChangeText={(text) =>
-                  setTrainData({ ...trainData, train_arrival_terminal: text })
-                }
-                placeholder="Varış terminali"
-              />
-
-              <DateInput
-                label="Varış Tarihi"
-                value={trainData.train_arrival_date}
-                onChange={(value) =>
-                  setTrainData({ ...trainData, train_arrival_date: value })
-                }
-              />
-            </View>
-          ) : (
-            <View style={styles.readOnly}>
-              {position.train_voyage_number && (
-                <View style={styles.infoRow}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    Sefer No:
-                  </Text>
-                  <Text style={[styles.value, { color: colors.text }]}>
-                    {position.train_voyage_number}
-                  </Text>
-                </View>
-              )}
-              {position.train_wagon_number && (
-                <View style={styles.infoRow}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    Vagon No:
-                  </Text>
-                  <Text style={[styles.value, { color: colors.text }]}>
-                    {position.train_wagon_number}
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
         </Card>
-      )}
 
-      {/* Action Buttons */}
-      <View style={styles.actions}>
-        {isEditing ? (
-          <>
-            <Button
-              label="İptal"
-              variant="outline"
-              onPress={() => setIsEditing(false)}
-              style={styles.button}
+        {/* RoRo Detayları */}
+        {isRoro && (
+          <Card style={[styles.card, styles.roroCard]}>
+            <SectionHeader icon={Ship} title="RoRo Detayları" color="#2563EB" />
+
+            {/* Liman Seçimi */}
+            <SubsectionHeader title="Liman Bilgileri" />
+
+            <Select
+              label="Kalkış Limanı"
+              value={roroData.departure_port_id?.toString() || ''}
+              data={selectedDeparturePort ? [{ label: selectedDeparturePort.name, value: selectedDeparturePort.id.toString() }] : []}
+              onValueChange={(value) => {
+                setRoroData({ ...roroData, departure_port_id: value ? Number(value) : null });
+              }}
+              onSearch={async (query) => {
+                const results = await searchPorts(query);
+                return results.map((p) => ({
+                  label: `${p.name}${p.port_code ? ` (${p.port_code})` : ''}`,
+                  value: p.id.toString(),
+                }));
+              }}
+              placeholder="Liman ara..."
             />
-            <Button
-              label="Kaydet"
-              onPress={handleSave}
-              loading={isSaving}
-              style={styles.button}
+
+            <Select
+              label="Varış Limanı"
+              value={roroData.arrival_port_id?.toString() || ''}
+              data={selectedArrivalPort ? [{ label: selectedArrivalPort.name, value: selectedArrivalPort.id.toString() }] : []}
+              onValueChange={(value) => {
+                setRoroData({ ...roroData, arrival_port_id: value ? Number(value) : null });
+              }}
+              onSearch={async (query) => {
+                const results = await searchPorts(query);
+                return results.map((p) => ({
+                  label: `${p.name}${p.port_code ? ` (${p.port_code})` : ''}`,
+                  value: p.id.toString(),
+                }));
+              }}
+              placeholder="Liman ara..."
             />
-          </>
-        ) : (
-          <Button label="Düzenle" onPress={() => setIsEditing(true)} />
+
+            <Select
+              label="Feribot Şirketi"
+              value={roroData.ferry_company_id?.toString() || ''}
+              data={selectedFerryCompany ? [{ label: selectedFerryCompany.name, value: selectedFerryCompany.id.toString() }] : []}
+              onValueChange={(value) => {
+                setRoroData({ ...roroData, ferry_company_id: value ? Number(value) : null });
+              }}
+              onSearch={async (query) => {
+                const results = await searchFerryCompanies(query);
+                return results.map((f) => ({
+                  label: `${f.name}${f.short_code ? ` (${f.short_code})` : ''}`,
+                  value: f.id.toString(),
+                }));
+              }}
+              placeholder="Şirket ara..."
+            />
+
+            {/* Gemi & Sefer Bilgileri */}
+            <SubsectionHeader title="Gemi & Sefer Bilgileri" />
+
+            <View style={styles.row}>
+              <View style={styles.halfColumn}>
+                <Input
+                  label="Ülke Kodu"
+                  value={roroData.roro_country_code}
+                  onChangeText={(text) => setRoroData({ ...roroData, roro_country_code: text })}
+                  placeholder="ALBANIA"
+                />
+              </View>
+              <View style={styles.halfColumn}>
+                <Input
+                  label="Rezervasyon No"
+                  value={roroData.roro_booking_reference}
+                  onChangeText={(text) => setRoroData({ ...roroData, roro_booking_reference: text })}
+                  placeholder="UND-2025-12345"
+                />
+              </View>
+            </View>
+
+            <View style={styles.row}>
+              <View style={styles.halfColumn}>
+                <Input
+                  label="Gemi Adı"
+                  value={roroData.roro_ship_name}
+                  onChangeText={(text) => setRoroData({ ...roroData, roro_ship_name: text })}
+                  placeholder="UN Marmara"
+                />
+              </View>
+              <View style={styles.halfColumn}>
+                <Input
+                  label="IMO Numarası"
+                  value={roroData.roro_imo_number}
+                  onChangeText={(text) => setRoroData({ ...roroData, roro_imo_number: text })}
+                  placeholder="1234567"
+                />
+              </View>
+            </View>
+
+            <View style={styles.row}>
+              <View style={styles.halfColumn}>
+                <Input
+                  label="Sefer No"
+                  value={roroData.roro_voyage_number}
+                  onChangeText={(text) => setRoroData({ ...roroData, roro_voyage_number: text })}
+                  placeholder="VOY-2025-001"
+                />
+              </View>
+              <View style={styles.halfColumn}>
+                <Select
+                  label="Güverte Tipi"
+                  value={roroData.roro_deck_type}
+                  data={DECK_TYPES}
+                  onValueChange={(value) => setRoroData({ ...roroData, roro_deck_type: value as DeckType })}
+                  placeholder="Seçiniz"
+                />
+              </View>
+            </View>
+
+            {/* Giriş Bilgileri */}
+            <SubsectionHeader title="Giriş Bilgileri" />
+
+            <Input
+              label="Giriş Yeri"
+              value={roroData.roro_entry_location}
+              onChangeText={(text) => setRoroData({ ...roroData, roro_entry_location: text })}
+              placeholder="Giriş yeri"
+              containerStyle={styles.inputContainer}
+            />
+
+            <View style={styles.row}>
+              <View style={styles.halfColumn}>
+                <DateInput
+                  label="Beklenen Giriş"
+                  value={roroData.roro_expected_entry_date}
+                  onChange={(value) => setRoroData({ ...roroData, roro_expected_entry_date: value })}
+                />
+              </View>
+              <View style={styles.halfColumn}>
+                <DateInput
+                  label="Gerçek Giriş"
+                  value={roroData.roro_entry_date}
+                  onChange={(value) => setRoroData({ ...roroData, roro_entry_date: value })}
+                />
+              </View>
+            </View>
+
+            {/* Çıkış Bilgileri */}
+            <SubsectionHeader title="Çıkış Bilgileri" />
+
+            <Input
+              label="Çıkış Yeri"
+              value={roroData.roro_exit_location}
+              onChangeText={(text) => setRoroData({ ...roroData, roro_exit_location: text })}
+              placeholder="Çıkış yeri"
+              containerStyle={styles.inputContainer}
+            />
+
+            <View style={styles.row}>
+              <View style={styles.halfColumn}>
+                <DateInput
+                  label="Beklenen Çıkış"
+                  value={roroData.roro_expected_exit_date}
+                  onChange={(value) => setRoroData({ ...roroData, roro_expected_exit_date: value })}
+                />
+              </View>
+              <View style={styles.halfColumn}>
+                <DateInput
+                  label="Gerçek Çıkış"
+                  value={roroData.roro_exit_date}
+                  onChange={(value) => setRoroData({ ...roroData, roro_exit_date: value })}
+                />
+              </View>
+            </View>
+
+            {/* Gemi Tarihleri */}
+            <SubsectionHeader title="Gemi Tarihleri" />
+
+            <DateInput
+              label="Cut-off Tarihi"
+              value={roroData.roro_cutoff_date}
+              onChange={(value) => setRoroData({ ...roroData, roro_cutoff_date: value })}
+              containerStyle={styles.inputContainer}
+            />
+
+            <View style={styles.row}>
+              <View style={styles.halfColumn}>
+                <DateInput
+                  label="Gemi Kalkış"
+                  value={roroData.roro_departure_date}
+                  onChange={(value) => setRoroData({ ...roroData, roro_departure_date: value })}
+                />
+              </View>
+              <View style={styles.halfColumn}>
+                <DateInput
+                  label="Gemi Varış"
+                  value={roroData.roro_arrival_date}
+                  onChange={(value) => setRoroData({ ...roroData, roro_arrival_date: value })}
+                />
+              </View>
+            </View>
+
+            {/* Notlar */}
+            <Input
+              label="RoRo Notları"
+              value={roroData.roro_notes}
+              onChangeText={(text) => setRoroData({ ...roroData, roro_notes: text })}
+              multiline
+              numberOfLines={3}
+              placeholder="Notlar..."
+              containerStyle={styles.inputContainer}
+            />
+          </Card>
         )}
-      </View>
-    </ScrollView>
+
+        {/* Tren Detayları */}
+        {isTrain && (
+          <Card style={[styles.card, styles.trainCard]}>
+            <SectionHeader icon={Train} title="Tren Detayları" color="#D97706" />
+
+            {/* Sefer & Vagon Bilgileri */}
+            <SubsectionHeader title="Sefer & Vagon Bilgileri" />
+
+            <View style={styles.row}>
+              <View style={styles.halfColumn}>
+                <Input
+                  label="Sefer No"
+                  value={trainData.train_voyage_number}
+                  onChangeText={(text) => setTrainData({ ...trainData, train_voyage_number: text })}
+                  placeholder="TRN-2025-001"
+                />
+              </View>
+              <View style={styles.halfColumn}>
+                <Input
+                  label="Vagon No"
+                  value={trainData.train_wagon_number}
+                  onChangeText={(text) => setTrainData({ ...trainData, train_wagon_number: text })}
+                  placeholder="WAG-123456"
+                />
+              </View>
+            </View>
+
+            <Input
+              label="Mühür No"
+              value={trainData.train_seal_number}
+              onChangeText={(text) => setTrainData({ ...trainData, train_seal_number: text })}
+              placeholder="SEAL-12345"
+              containerStyle={styles.inputContainer}
+            />
+
+            {/* Kalkış Bilgileri */}
+            <SubsectionHeader title="Kalkış Bilgileri" />
+
+            <Input
+              label="Kalkış Terminali"
+              value={trainData.train_departure_terminal}
+              onChangeText={(text) => setTrainData({ ...trainData, train_departure_terminal: text })}
+              placeholder="Terminal adı"
+              containerStyle={styles.inputContainer}
+            />
+
+            <View style={styles.row}>
+              <View style={styles.halfColumn}>
+                <DateInput
+                  label="Beklenen Kalkış"
+                  value={trainData.train_expected_departure_date}
+                  onChange={(value) => setTrainData({ ...trainData, train_expected_departure_date: value })}
+                />
+              </View>
+              <View style={styles.halfColumn}>
+                <DateInput
+                  label="Gerçek Kalkış"
+                  value={trainData.train_departure_date}
+                  onChange={(value) => setTrainData({ ...trainData, train_departure_date: value })}
+                />
+              </View>
+            </View>
+
+            {/* Varış Bilgileri */}
+            <SubsectionHeader title="Varış Bilgileri" />
+
+            <Input
+              label="Varış Terminali"
+              value={trainData.train_arrival_terminal}
+              onChangeText={(text) => setTrainData({ ...trainData, train_arrival_terminal: text })}
+              placeholder="Terminal adı"
+              containerStyle={styles.inputContainer}
+            />
+
+            <View style={styles.row}>
+              <View style={styles.halfColumn}>
+                <DateInput
+                  label="Beklenen Varış"
+                  value={trainData.train_expected_arrival_date}
+                  onChange={(value) => setTrainData({ ...trainData, train_expected_arrival_date: value })}
+                />
+              </View>
+              <View style={styles.halfColumn}>
+                <DateInput
+                  label="Gerçek Varış"
+                  value={trainData.train_arrival_date}
+                  onChange={(value) => setTrainData({ ...trainData, train_arrival_date: value })}
+                />
+              </View>
+            </View>
+          </Card>
+        )}
+
+        {/* Kaydet Butonu */}
+        <Button
+          title="Kaydet"
+          onPress={handleSave}
+          loading={isSaving}
+          fullWidth
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -323,50 +622,98 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardView: {
+    flex: 1,
+  },
   content: {
     gap: Spacing.md,
+    paddingBottom: Spacing.xxl,
   },
   card: {
     padding: Spacing.md,
-    gap: Spacing.md,
   },
-  header: {
+  roroCard: {
+    borderColor: '#DBEAFE',
+    borderWidth: 1,
+    backgroundColor: '#EFF6FF',
+  },
+  trainCard: {
+    borderColor: '#FEF3C7',
+    borderWidth: 1,
+    backgroundColor: '#FFFBEB',
+  },
+
+  // Section header
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    ...Typography.headingSM,
+    fontWeight: '600',
+  },
+
+  // Subsection header
+  subsectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  subsectionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  subsectionTitle: {
+    ...Typography.bodySM,
+    fontWeight: '600',
+  },
+
+  // Switch group
+  switchGroup: {
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    borderBottomWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  switchLabel: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  title: {
-    ...Typography.headingMD,
-  },
-  form: {
-    gap: Spacing.md,
-  },
-  readOnly: {
-    gap: Spacing.sm,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  label: {
-    ...Typography.bodySM,
-    minWidth: 100,
-  },
-  value: {
-    ...Typography.bodySM,
-    fontWeight: '500',
-    flex: 1,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  button: {
-    flex: 1,
-  },
-  emptyText: {
+  switchText: {
     ...Typography.bodyMD,
-    textAlign: 'center',
-    padding: Spacing.xl,
+    fontWeight: '500',
+  },
+
+  // Row layout (side by side inputs)
+  row: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  halfColumn: {
+    flex: 1,
+  },
+
+  // Input container
+  inputContainer: {
+    marginBottom: Spacing.sm,
   },
 });
