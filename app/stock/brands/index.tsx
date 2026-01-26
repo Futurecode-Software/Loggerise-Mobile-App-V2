@@ -5,23 +5,20 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Plus, Tag, Trash2 } from 'lucide-react-native';
+import { Plus, Tag } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
 import {
   getProductBrands,
-  deleteProductBrand,
   ProductBrand,
   Pagination,
 } from '@/services/endpoints/products';
-import { useToast } from '@/hooks/use-toast';
 
 export default function BrandsScreen() {
   const colors = Colors.light;
-  const { success, error: showError } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -107,25 +104,6 @@ export default function BrandsScreen() {
     }
   };
 
-  const handleDelete = (brand: ProductBrand) => {
-    Alert.alert('Marka Sil', `"${brand.name}" markasını silmek istediğinize emin misiniz?`, [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteProductBrand(brand.id);
-            success('Başarılı', 'Marka silindi.');
-            fetchBrands(1, false);
-          } catch (err) {
-            showError('Hata', err instanceof Error ? err.message : 'Marka silinemedi');
-          }
-        },
-      },
-    ]);
-  };
-
   const renderBrand = (item: ProductBrand) => (
     <StandardListItem
       icon={Tag}
@@ -146,17 +124,6 @@ export default function BrandsScreen() {
             variant={item.is_active ? 'success' : 'default'}
             size="sm"
           />
-        ),
-        right: (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              handleDelete(item);
-            }}
-          >
-            <Trash2 size={16} color={colors.danger} />
-          </TouchableOpacity>
         ),
       }}
       onPress={() => router.push(`/stock/brands/${item.id}` as any)}
@@ -214,9 +181,6 @@ export default function BrandsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  deleteButton: {
-    padding: Spacing.xs,
   },
   fab: {
     position: 'absolute',

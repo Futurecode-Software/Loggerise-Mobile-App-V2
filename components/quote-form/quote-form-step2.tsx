@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { Plus, Edit2, Trash2, Package } from 'lucide-react-native';
-import { Card, Button } from '@/components/ui';
+import { Card, Button, ConfirmDialog } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import CargoItemForm, { CargoItem } from './cargo-item-form';
+import { useToast } from '@/hooks/use-toast';
 
 interface QuoteFormStep2Props {
   cargoItems: CargoItem[];
@@ -17,9 +18,12 @@ export default function QuoteFormStep2({
   errors,
 }: QuoteFormStep2Props) {
   const colors = Colors.light;
+  const toast = useToast();
 
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingItem, setEditingItem] = useState<CargoItem | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   const handleAddItem = () => {
     setEditingItem(null);
@@ -32,16 +36,16 @@ export default function QuoteFormStep2({
   };
 
   const handleDeleteItem = (itemId: string) => {
-    Alert.alert('Yük Kalemini Sil', 'Bu yük kalemini silmek istediğinizden emin misiniz?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: () => {
-          setCargoItems(cargoItems.filter((item) => item.id !== itemId));
-        },
-      },
-    ]);
+    setDeletingItemId(itemId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deletingItemId) {
+      setCargoItems(cargoItems.filter((item) => item.id !== deletingItemId));
+      setDeleteDialogOpen(false);
+      setDeletingItemId(null);
+    }
   };
 
   const handleSaveItem = (item: CargoItem) => {
@@ -184,6 +188,18 @@ export default function QuoteFormStep2({
           setEditingItem(null);
         }}
         onSave={handleSaveItem}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={deleteDialogOpen}
+        title="Yük Kalemini Sil"
+        message="Bu yük kalemini silmek istediğinizden emin misiniz?"
+        confirmText="Sil"
+        cancelText="İptal"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteDialogOpen(false)}
+        variant="destructive"
       />
     </View>
   );

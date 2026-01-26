@@ -5,11 +5,12 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Bot, CheckCircle, XCircle } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { AiMessage } from '@/services/endpoints/loggy';
 import { formatMessageTime } from '@/services/endpoints/loggy';
+import { useToast } from '@/hooks/use-toast';
 
 interface MessageBubbleProps {
   message: AiMessage;
@@ -17,6 +18,7 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message }: MessageBubbleProps) {
   const colors = Colors.light;
+  const toast = useToast();
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
   const hasConfirmation = message.content?.includes('onayınız gerekiyor');
@@ -58,7 +60,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               style={[styles.confirmButton, { backgroundColor: '#10b981' }]}
               onPress={() => {
                 // TODO: Get execution ID from message
-                Alert.alert('Bilgi', 'Onay özelliği yakında eklenecek');
+                toast.info('Onay özelliği yakında eklenecek');
               }}
             >
               <CheckCircle size={14} color="#FFFFFF" />
@@ -67,7 +69,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             <TouchableOpacity
               style={[styles.cancelButton, { borderColor: colors.border }]}
               onPress={() => {
-                Alert.alert('Bilgi', 'İptal özelliği yakında eklenecek');
+                toast.info('İptal özelliği yakında eklenecek');
               }}
             >
               <XCircle size={14} color={colors.danger} />

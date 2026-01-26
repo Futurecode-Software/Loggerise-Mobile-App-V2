@@ -7,7 +7,6 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +18,7 @@ import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/con
 import { createGroup, getAvailableUsers, UserBasic } from '@/services/endpoints/messaging';
 import { UserListItem } from './UserListItem';
 import { FullScreenHeader } from '@/components/header';
+import { useToast } from '@/hooks/use-toast';
 
 interface GroupCreationModalProps {
   isOpen: boolean;
@@ -36,6 +36,7 @@ export function GroupCreationModal({
   onSuccess,
 }: GroupCreationModalProps) {
   const colors = Colors.light;
+  const toast = useToast();
 
   // State
   const [groupName, setGroupName] = useState('');
@@ -58,12 +59,12 @@ export function GroupCreationModal({
       if (onError) {
         onError(errorMessage);
       } else {
-        Alert.alert('Hata', errorMessage);
+        toast.showError(errorMessage);
       }
     } finally {
       setIsLoadingUsers(false);
     }
-  }, [onError]);
+  }, [onError, toast]);
 
   // Load users when modal opens
   useEffect(() => {
@@ -98,7 +99,7 @@ export function GroupCreationModal({
       if (onError) {
         onError(errorMsg);
       } else {
-        Alert.alert('Hata', errorMsg);
+        toast.showError(errorMsg);
       }
       return;
     }
@@ -108,7 +109,7 @@ export function GroupCreationModal({
       if (onError) {
         onError(errorMsg);
       } else {
-        Alert.alert('Hata', errorMsg);
+        toast.showError(errorMsg);
       }
       return;
     }
@@ -125,7 +126,7 @@ export function GroupCreationModal({
       if (onSuccess) {
         onSuccess(successMsg);
       } else {
-        Alert.alert('Başarılı', successMsg);
+        toast.success(successMsg);
       }
 
       onGroupCreated(conversation.id);
@@ -136,7 +137,7 @@ export function GroupCreationModal({
       if (onError) {
         onError(errorMessage);
       } else {
-        Alert.alert('Hata', errorMessage);
+        toast.showError(errorMessage);
       }
     } finally {
       setIsLoading(false);

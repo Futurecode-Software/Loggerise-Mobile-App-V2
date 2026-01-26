@@ -5,14 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ChevronLeft, Save } from 'lucide-react-native';
+import { Save } from 'lucide-react-native';
 import { Input, Button, Card } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
   createContact,
@@ -22,12 +22,14 @@ import {
   ContactStatus,
   BusinessType,
 } from '@/services/endpoints/contacts';
+import { useToast } from '@/hooks/use-toast';
 
 // Default Turkey country ID
 const DEFAULT_TURKEY_ID = 228;
 
 export default function NewContactScreen() {
   const colors = Colors.light;
+  const { success, error: showError } = useToast();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<ContactFormData>({
@@ -91,21 +93,17 @@ export default function NewContactScreen() {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      Alert.alert('Hata', 'Lütfen formu eksiksiz doldurunuz');
+      showError('Hata', 'Lütfen formu eksiksiz doldurunuz');
       return;
     }
 
     setIsSubmitting(true);
     try {
       const contact = await createContact(formData);
-      Alert.alert('Başarılı', 'Cari başarıyla oluşturuldu', [
-        {
-          text: 'Tamam',
-          onPress: () => router.replace(`/contact/${contact.id}` as any),
-        },
-      ]);
+      success('Başarılı', 'Cari başarıyla oluşturuldu');
+      setTimeout(() => router.replace(`/contact/${contact.id}` as any), 1000);
     } catch (err) {
-      Alert.alert('Hata', err instanceof Error ? err.message : 'Cari oluşturulamadı');
+      showError('Hata', err instanceof Error ? err.message : 'Cari oluşturulamadı');
     } finally {
       setIsSubmitting(false);
     }
@@ -138,24 +136,26 @@ export default function NewContactScreen() {
   ];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Yeni Cari</Text>
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            { backgroundColor: isSubmitting ? colors.border : Brand.primary },
-          ]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
-          <Save size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title="Yeni Cari"
+        showBackButton
+        rightIcons={
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+            activeOpacity={0.7}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Save size={20} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+        }
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -438,7 +438,7 @@ export default function NewContactScreen() {
           />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -446,25 +446,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
+  headerButton: {
     padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  saveButton: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
   },
   keyboardView: {
     flex: 1,

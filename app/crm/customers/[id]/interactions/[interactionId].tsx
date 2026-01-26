@@ -5,11 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { useToast } from '@/hooks/use-toast';
+import { ConfirmDialog } from '@/components/ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -50,6 +51,7 @@ const INTERACTION_TYPES = [
 
 export default function InteractionDetailScreen() {
   const colors = Colors.light;
+  const { success, error: showError } = useToast();
   const { id, interactionId } = useLocalSearchParams<{ id: string; interactionId: string }>();
   const customerId = parseInt(id, 10);
   const interactionIdNum = parseInt(interactionId, 10);
@@ -69,6 +71,11 @@ export default function InteractionDetailScreen() {
 
   const [originalData, setOriginalData] = useState<InteractionFormData | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Dialog states
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Fetch interaction data
   useEffect(() => {
@@ -121,79 +128,74 @@ export default function InteractionDetailScreen() {
 
   const handleUpdate = async () => {
     if (!validateForm()) {
-      Alert.alert('Hata', 'Lütfen formu eksiksiz doldurunuz');
+      showError('Hata', 'Lütfen formu eksiksiz doldurunuz');
       return;
     }
 
     setIsSubmitting(true);
     try {
       await updateInteraction(customerId, interactionIdNum, formData);
-      Alert.alert('Başarılı', 'Görüşme başarıyla güncellendi');
+      success('Başarılı', 'Görüşme başarıyla güncellendi');
       setIsEditing(false);
       setOriginalData(formData);
     } catch (err) {
-      Alert.alert('Hata', err instanceof Error ? err.message : 'Görüşme güncellenemedi');
+      showError('Hata', err instanceof Error ? err.message : 'Görüşme güncellenemedi');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleComplete = async () => {
-    Alert.alert('Görüşmeyi Tamamla', 'Bu görüşmeyi tamamlandı olarak işaretlemek istiyor musunuz?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Tamamla',
-        onPress: async () => {
-          try {
-            const updated = await completeInteraction(customerId, interactionIdNum);
-            setFormData((prev) => ({ ...prev, status: updated.status }));
-            setOriginalData((prev) => (prev ? { ...prev, status: updated.status } : null));
-            Alert.alert('Başarılı', 'Görüşme tamamlandı olarak işaretlendi');
-          } catch (err) {
-            Alert.alert('Hata', err instanceof Error ? err.message : 'İşlem başarısız');
-          }
-        },
-      },
-    ]);
+  // Show complete dialog
+  const handleComplete = () => {
+    setShowCompleteDialog(true);
   };
 
-  const handleCancel = async () => {
-    Alert.alert('Görüşmeyi İptal Et', 'Bu görüşmeyi iptal etmek istiyor musunuz?', [
-      { text: 'Hayır', style: 'cancel' },
-      {
-        text: 'İptal Et',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const updated = await cancelInteraction(customerId, interactionIdNum);
-            setFormData((prev) => ({ ...prev, status: updated.status }));
-            setOriginalData((prev) => (prev ? { ...prev, status: updated.status } : null));
-            Alert.alert('Başarılı', 'Görüşme iptal edildi');
-          } catch (err) {
-            Alert.alert('Hata', err instanceof Error ? err.message : 'İşlem başarısız');
-          }
-        },
-      },
-    ]);
+  // Confirm complete
+  const confirmComplete = async () => {
+    try {
+      const updated = await completeInteraction(customerId, interactionIdNum);
+      setFormData((prev) => ({ ...prev, status: updated.status }));
+      setOriginalData((prev) => (prev ? { ...prev, status: updated.status } : null));
+      setShowCompleteDialog(false);
+      success('Başarılı', 'Görüşme tamamlandı olarak işaretlendi');
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'İşlem başarısız');
+    }
   };
 
-  const handleDelete = async () => {
-    Alert.alert('Görüşmeyi Sil', 'Bu görüşmeyi silmek istediğinizden emin misiniz?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteInteraction(customerId, interactionIdNum);
-            Alert.alert('Başarılı', 'Görüşme silindi');
-            router.back();
-          } catch (err) {
-            Alert.alert('Hata', err instanceof Error ? err.message : 'Görüşme silinemedi');
-          }
-        },
-      },
-    ]);
+  // Show cancel dialog
+  const handleCancel = () => {
+    setShowCancelDialog(true);
+  };
+
+  // Confirm cancel interaction
+  const confirmCancelInteraction = async () => {
+    try {
+      const updated = await cancelInteraction(customerId, interactionIdNum);
+      setFormData((prev) => ({ ...prev, status: updated.status }));
+      setOriginalData((prev) => (prev ? { ...prev, status: updated.status } : null));
+      setShowCancelDialog(false);
+      success('Başarılı', 'Görüşme iptal edildi');
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'İşlem başarısız');
+    }
+  };
+
+  // Show delete dialog
+  const handleDelete = () => {
+    setShowDeleteDialog(true);
+  };
+
+  // Confirm delete
+  const confirmDelete = async () => {
+    try {
+      await deleteInteraction(customerId, interactionIdNum);
+      setShowDeleteDialog(false);
+      success('Başarılı', 'Görüşme silindi');
+      setTimeout(() => router.back(), 1000);
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'Görüşme silinemedi');
+    }
   };
 
   const cancelEdit = () => {
@@ -448,6 +450,41 @@ export default function InteractionDetailScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Complete Dialog */}
+      <ConfirmDialog
+        visible={showCompleteDialog}
+        title="Görüşmeyi Tamamla"
+        message="Bu görüşmeyi tamamlandı olarak işaretlemek istiyor musunuz?"
+        confirmText="Tamamla"
+        cancelText="İptal"
+        onConfirm={confirmComplete}
+        onCancel={() => setShowCompleteDialog(false)}
+      />
+
+      {/* Cancel Interaction Dialog */}
+      <ConfirmDialog
+        visible={showCancelDialog}
+        title="Görüşmeyi İptal Et"
+        message="Bu görüşmeyi iptal etmek istiyor musunuz?"
+        confirmText="İptal Et"
+        cancelText="Hayır"
+        isDangerous
+        onConfirm={confirmCancelInteraction}
+        onCancel={() => setShowCancelDialog(false)}
+      />
+
+      {/* Delete Dialog */}
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Görüşmeyi Sil"
+        message="Bu görüşmeyi silmek istediğinizden emin misiniz?"
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
     </SafeAreaView>
   );
 }

@@ -12,7 +12,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -29,7 +28,7 @@ import {
   Hash,
   FileText,
 } from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
+import { Card, Badge, ConfirmDialog } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -49,6 +48,10 @@ export default function MovementDetailScreen() {
   const [movement, setMovement] = useState<StockMovement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch movement data
   const fetchMovement = useCallback(async () => {
@@ -71,28 +74,29 @@ export default function MovementDetailScreen() {
     fetchMovement();
   }, [fetchMovement]);
 
-  // Delete handler
+  // Delete handler - opens dialog
   const handleDelete = useCallback(() => {
     if (!movement) return;
+    setShowDeleteDialog(true);
+  }, [movement]);
 
-    Alert.alert('Hareketi Sil', `Bu stok hareketini silmek istediğinize emin misiniz?`, [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteStockMovement(movement.id);
-            success('Başarılı', 'Stok hareketi silindi.');
-            setTimeout(() => {
-              router.back();
-            }, 1000);
-          } catch (err) {
-            showError('Hata', err instanceof Error ? err.message : 'Hareket silinemedi');
-          }
-        },
-      },
-    ]);
+  // Confirm delete
+  const confirmDelete = useCallback(async () => {
+    if (!movement) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteStockMovement(movement.id);
+      setShowDeleteDialog(false);
+      success('Başarılı', 'Stok hareketi silindi.');
+      setTimeout(() => {
+        router.back();
+      }, 1000);
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'Hareket silinemedi');
+    } finally {
+      setIsDeleting(false);
+    }
   }, [movement, success, showError]);
 
   const formatDate = (dateString: string) => {
@@ -311,6 +315,19 @@ export default function MovementDetailScreen() {
           )}
         </Card>
       </ScrollView>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Stok Hareketi Sil"
+        message="Bu stok hareketini silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous={true}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
     </SafeAreaView>
   );
 }

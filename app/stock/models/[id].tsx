@@ -12,14 +12,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Save, Trash2, Layers } from 'lucide-react-native';
-import { Input, Card, Badge, Checkbox } from '@/components/ui';
+import { Input, Card, Badge, Checkbox, ConfirmDialog } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -41,6 +40,10 @@ export default function ModelDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState<ModelFormData>({
@@ -132,28 +135,29 @@ export default function ModelDetailScreen() {
     }
   }, [formData, validateForm, model, success, showError]);
 
-  // Delete handler
+  // Delete handler - opens dialog
   const handleDelete = useCallback(() => {
     if (!model) return;
+    setShowDeleteDialog(true);
+  }, [model]);
 
-    Alert.alert('Model Sil', `"${model.name}" modelini silmek istediğinize emin misiniz?`, [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteProductModel(model.id);
-            success('Başarılı', 'Model silindi.');
-            setTimeout(() => {
-              router.back();
-            }, 1000);
-          } catch (err) {
-            showError('Hata', err instanceof Error ? err.message : 'Model silinemedi');
-          }
-        },
-      },
-    ]);
+  // Confirm delete
+  const confirmDelete = useCallback(async () => {
+    if (!model) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteProductModel(model.id);
+      setShowDeleteDialog(false);
+      success('Başarılı', 'Model silindi.');
+      setTimeout(() => {
+        router.back();
+      }, 1000);
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'Model silinemedi');
+    } finally {
+      setIsDeleting(false);
+    }
   }, [model, success, showError]);
 
   // Cancel editing
@@ -346,6 +350,19 @@ export default function ModelDetailScreen() {
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Model Sil"
+        message={`"${model?.name}" modelini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`}
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous={true}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
     </SafeAreaView>
   );
 }

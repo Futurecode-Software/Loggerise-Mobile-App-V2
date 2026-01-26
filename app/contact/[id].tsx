@@ -7,14 +7,11 @@ import {
   TouchableOpacity,
   RefreshControl,
   Linking,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import {
-  ChevronLeft,
   Edit,
   Trash2,
   Phone,
@@ -33,9 +30,11 @@ import {
   RefreshCw,
   MoreVertical,
 } from 'lucide-react-native';
-import { Card, Badge, Avatar, Button, Skeleton } from '@/components/ui';
+import { Card, Badge, Avatar, Button, Skeleton, ConfirmDialog } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { AddressFormSheet, AuthorityFormSheet } from '@/components/contact';
 import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
+import { useToast } from '@/hooks/use-toast';
 // useColorScheme kaldirildi - her zaman light mode kullanilir
 import {
   getContact,
@@ -53,6 +52,7 @@ export default function ContactDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   // Her zaman light mode kullanilir
   const colors = Colors.light;
+  const { success, error: showError } = useToast();
 
   const [contact, setContact] = useState<ContactDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +61,13 @@ export default function ContactDetailScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('info');
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Delete dialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeleteAddressDialog, setShowDeleteAddressDialog] = useState(false);
+  const [showDeleteAuthorityDialog, setShowDeleteAuthorityDialog] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState<ContactAddress | null>(null);
+  const [authorityToDelete, setAuthorityToDelete] = useState<ContactAuthority | null>(null);
 
   // Adres form sheet state
   const [addressSheetOpen, setAddressSheetOpen] = useState(false);
@@ -121,28 +128,21 @@ export default function ContactDetailScreen() {
 
   // Cari Silme
   const handleDelete = () => {
-    Alert.alert(
-      'Cariyi Sil',
-      `"${contact?.name}" adlı cariyi silmek istediğinize emin misiniz?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            if (!id) return;
-            setDeleting(true);
-            try {
-              await deleteContact(Number(id));
-              router.back();
-            } catch (err) {
-              Alert.alert('Hata', err instanceof Error ? err.message : 'Silme işlemi başarısız');
-              setDeleting(false);
-            }
-          },
-        },
-      ]
-    );
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteContact = async () => {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await deleteContact(Number(id));
+      setShowDeleteDialog(false);
+      success('Başarılı', 'Cari silindi.');
+      setTimeout(() => router.back(), 1000);
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'Silme işlemi başarısız');
+      setDeleting(false);
+    }
   };
 
   // ============================================
@@ -163,22 +163,21 @@ export default function ContactDetailScreen() {
 
   // Adres sil
   const handleDeleteAddress = (address: ContactAddress) => {
-    Alert.alert('Adresi Sil', `"${address.title}" adresini silmek istediğinize emin misiniz?`, [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          if (!id) return;
-          try {
-            await deleteContactAddress(Number(id), address.id);
-            fetchContact(); // Listeyi yenile
-          } catch (err) {
-            Alert.alert('Hata', err instanceof Error ? err.message : 'Silme işlemi başarısız');
-          }
-        },
-      },
-    ]);
+    setAddressToDelete(address);
+    setShowDeleteAddressDialog(true);
+  };
+
+  const confirmDeleteAddress = async () => {
+    if (!id || !addressToDelete) return;
+    try {
+      await deleteContactAddress(Number(id), addressToDelete.id);
+      setShowDeleteAddressDialog(false);
+      setAddressToDelete(null);
+      success('Başarılı', 'Adres silindi.');
+      fetchContact();
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'Silme işlemi başarısız');
+    }
   };
 
   // Adres form başarılı
@@ -204,26 +203,21 @@ export default function ContactDetailScreen() {
 
   // Yetkili sil
   const handleDeleteAuthority = (authority: ContactAuthority) => {
-    Alert.alert(
-      'Yetkiliyi Sil',
-      `"${authority.name}" adlı yetkiliyi silmek istediğinize emin misiniz?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            if (!id) return;
-            try {
-              await deleteContactAuthority(Number(id), authority.id);
-              fetchContact(); // Listeyi yenile
-            } catch (err) {
-              Alert.alert('Hata', err instanceof Error ? err.message : 'Silme işlemi başarısız');
-            }
-          },
-        },
-      ]
-    );
+    setAuthorityToDelete(authority);
+    setShowDeleteAuthorityDialog(true);
+  };
+
+  const confirmDeleteAuthority = async () => {
+    if (!id || !authorityToDelete) return;
+    try {
+      await deleteContactAuthority(Number(id), authorityToDelete.id);
+      setShowDeleteAuthorityDialog(false);
+      setAuthorityToDelete(null);
+      success('Başarılı', 'Yetkili silindi.');
+      fetchContact();
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'Silme işlemi başarısız');
+    }
   };
 
   // Yetkili form başarılı
@@ -729,39 +723,52 @@ export default function ContactDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-          {loading ? 'Yükleniyor...' : contact?.name || 'Cari Detay'}
-        </Text>
-        {contact && (
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => {
-                // TODO: Düzenleme sayfasına yönlendir
-              }}
-            >
-              <Edit size={20} color={colors.icon} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={handleDelete}
-              disabled={deleting}
-            >
-              {deleting ? (
-                <ActivityIndicator size="small" color={colors.danger} />
-              ) : (
-                <Trash2 size={20} color={colors.danger} />
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title={loading ? 'Yükleniyor...' : contact?.name || 'Cari Detay'}
+        subtitle={
+          contact
+            ? `${contact.code} • ${getContactRoleLabel(contact)}`
+            : undefined
+        }
+        showBackButton
+        leftIcon={
+          contact ? (
+            <Avatar
+              name={contact.name}
+              size="sm"
+            />
+          ) : undefined
+        }
+        rightIcons={
+          contact ? (
+            <>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={() => {
+                  // TODO: Düzenleme sayfasına yönlendir
+                }}
+                activeOpacity={0.7}
+              >
+                <Edit size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.headerButton}
+                onPress={handleDelete}
+                disabled={deleting}
+                activeOpacity={0.7}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Trash2 size={20} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            </>
+          ) : null
+        }
+      />
 
       {/* Content */}
       {loading ? (
@@ -897,7 +904,50 @@ export default function ContactDetailScreen() {
           authority={editingAuthority}
         />
       )}
-    </SafeAreaView>
+
+      {/* Delete Contact Confirmation */}
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Cariyi Sil"
+        message={`"${contact?.name}" adlı cariyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`}
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous={true}
+        isLoading={deleting}
+        onConfirm={confirmDeleteContact}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
+
+      {/* Delete Address Confirmation */}
+      <ConfirmDialog
+        visible={showDeleteAddressDialog}
+        title="Adresi Sil"
+        message={`"${addressToDelete?.title}" adresini silmek istediğinize emin misiniz?`}
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous={true}
+        onConfirm={confirmDeleteAddress}
+        onCancel={() => {
+          setShowDeleteAddressDialog(false);
+          setAddressToDelete(null);
+        }}
+      />
+
+      {/* Delete Authority Confirmation */}
+      <ConfirmDialog
+        visible={showDeleteAuthorityDialog}
+        title="Yetkiliyi Sil"
+        message={`"${authorityToDelete?.name}" adlı yetkiliyi silmek istediğinize emin misiniz?`}
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous={true}
+        onConfirm={confirmDeleteAuthority}
+        onCancel={() => {
+          setShowDeleteAuthorityDialog(false);
+          setAuthorityToDelete(null);
+        }}
+      />
+    </View>
   );
 }
 
@@ -949,26 +999,6 @@ function InfoRow({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingMD,
-    flex: 1,
-    marginHorizontal: Spacing.sm,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
   },
   headerButton: {
     padding: Spacing.sm,

@@ -8,8 +8,9 @@ import {
   RefreshControl,
   ActivityIndicator,
   Linking,
-  Alert,
 } from 'react-native';
+import { useToast } from '@/hooks/use-toast';
+import { ConfirmDialog } from '@/components/ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -44,6 +45,7 @@ type TabType = 'general' | 'interactions' | 'quotes';
 
 export default function CrmCustomerDetailScreen() {
   const colors = Colors.light;
+  const { success, error: showError } = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const customerId = parseInt(id);
 
@@ -52,6 +54,10 @@ export default function CrmCustomerDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Dialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchCustomer = useCallback(async () => {
     try {
@@ -84,29 +90,26 @@ export default function CrmCustomerDetailScreen() {
     Linking.openURL(`mailto:${email}`);
   };
 
+  // Show delete dialog
   const handleDelete = () => {
-    Alert.alert(
-      'Müşteriyi Sil',
-      'Bu müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteCrmCustomer(customerId);
-              router.back();
-            } catch (err) {
-              Alert.alert(
-                'Hata',
-                err instanceof Error ? err.message : 'Müşteri silinemedi'
-              );
-            }
-          },
-        },
-      ]
-    );
+    setShowDeleteDialog(true);
+  };
+
+  // Confirm delete
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteCrmCustomer(customerId);
+      setShowDeleteDialog(false);
+      success('Başarılı', 'Müşteri silindi');
+      setTimeout(() => router.back(), 1000);
+    } catch (err) {
+      showError(
+        'Hata',
+        err instanceof Error ? err.message : 'Müşteri silinemedi'
+      );
+      setIsDeleting(false);
+    }
   };
 
   const renderGeneralTab = () => (
@@ -471,6 +474,19 @@ export default function CrmCustomerDetailScreen() {
           )}
         </View>
       )}
+
+      {/* Delete Customer Dialog */}
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Müşteriyi Sil"
+        message="Bu müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
     </SafeAreaView>
   );
 }

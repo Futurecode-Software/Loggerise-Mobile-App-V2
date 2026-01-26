@@ -6,7 +6,6 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import {
   getAvailableUsers,
@@ -14,6 +13,7 @@ import {
   createGroup,
   UserBasic,
 } from '@/services/endpoints/messaging';
+import { useToast } from './use-toast';
 
 type Mode = 'select' | 'group';
 
@@ -55,6 +55,8 @@ interface UseNewConversationReturn {
 export function useNewConversation({
   currentUserId,
 }: UseNewConversationOptions): UseNewConversationReturn {
+  const { error: showError, warning } = useToast();
+
   // Mode state
   const [mode, setMode] = useState<Mode>('select');
 
@@ -129,24 +131,24 @@ export function useNewConversation({
           router.replace(`/message/${result.conversation.id}` as any);
         } catch (err) {
           console.error('Create conversation error:', err);
-          Alert.alert('Hata', 'Konuşma başlatılamadı. Lütfen tekrar deneyin.');
+          showError('Hata', 'Konuşma başlatılamadı. Lütfen tekrar deneyin.');
         } finally {
           setIsCreating(false);
         }
       }
     },
-    [mode, toggleUserSelection]
+    [mode, toggleUserSelection, showError]
   );
 
   // Create group
   const handleCreateGroup = useCallback(async () => {
     if (!groupName.trim()) {
-      Alert.alert('Uyarı', 'Lütfen bir grup adı girin.');
+      warning('Uyarı', 'Lütfen bir grup adı girin.');
       return;
     }
 
     if (selectedUsers.length < 1) {
-      Alert.alert('Uyarı', 'Lütfen en az bir katılımcı seçin.');
+      warning('Uyarı', 'Lütfen en az bir katılımcı seçin.');
       return;
     }
 
@@ -160,11 +162,11 @@ export function useNewConversation({
       router.replace(`/message/${result.id}` as any);
     } catch (err) {
       console.error('Create group error:', err);
-      Alert.alert('Hata', 'Grup oluşturulamadı. Lütfen tekrar deneyin.');
+      showError('Hata', 'Grup oluşturulamadı. Lütfen tekrar deneyin.');
     } finally {
       setIsCreating(false);
     }
-  }, [groupName, groupDescription, selectedUsers]);
+  }, [groupName, groupDescription, selectedUsers, warning, showError]);
 
   // Refetch function
   const refetch = useCallback(() => {

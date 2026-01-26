@@ -13,7 +13,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +20,7 @@ import { router } from 'expo-router';
 import { ChevronLeft, Save, Send } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
+import { ConfirmDialog } from '@/components/ui';
 import { QuoteFormStepper } from '@/components/quote/quote-form-stepper';
 import { NewQuoteFormData, validateStep } from '@/services/endpoints/quotes-new-format';
 import api from '@/services/api';
@@ -40,6 +40,7 @@ export default function CreateMultiStepQuoteScreen() {
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
 
   // Form data state
   const [quoteData, setQuoteData] = useState<Partial<NewQuoteFormData>>({
@@ -147,20 +148,15 @@ export default function CreateMultiStepQuoteScreen() {
     [quoteData, showError, success]
   );
 
-  // Confirm send action
+  // Confirm send action - show dialog
   const confirmSendQuote = useCallback(() => {
-    Alert.alert(
-      'Teklif Gönder',
-      'Teklif müşteriye e-posta ile gönderilecektir. Onaylıyor musunuz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Gönder',
-          style: 'default',
-          onPress: () => handleSubmit('send'),
-        },
-      ]
-    );
+    setShowSendConfirmDialog(true);
+  }, []);
+
+  // Handle send confirm
+  const handleSendConfirm = useCallback(() => {
+    setShowSendConfirmDialog(false);
+    handleSubmit('send');
   }, [handleSubmit]);
 
   // Render current step content
@@ -256,6 +252,17 @@ export default function CreateMultiStepQuoteScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
+
+      {/* Send Confirmation Dialog */}
+      <ConfirmDialog
+        visible={showSendConfirmDialog}
+        title="Teklif Gönder"
+        message="Teklif müşteriye e-posta ile gönderilecektir. Onaylıyor musunuz?"
+        confirmText="Gönder"
+        cancelText="İptal"
+        onConfirm={handleSendConfirm}
+        onCancel={() => setShowSendConfirmDialog(false)}
+      />
     </SafeAreaView>
   );
 }

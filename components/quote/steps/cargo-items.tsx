@@ -4,20 +4,20 @@
  * Dinamik cargo items listesi
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { Plus, Trash2, Package } from 'lucide-react-native';
-import { Input, Card, Checkbox } from '@/components/ui';
+import { Input, Card, Checkbox, ConfirmDialog } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
 import { Colors, Spacing, Brand } from '@/constants/theme';
 import { NewQuoteFormData, NewCargoItem } from '@/services/endpoints/quotes-new-format';
+import { useToast } from '@/hooks/use-toast';
 
 interface QuoteCreateCargoItemsScreenProps {
   data: Partial<NewQuoteFormData>;
@@ -52,6 +52,9 @@ export function QuoteCreateCargoItemsScreen({
 }: QuoteCreateCargoItemsScreenProps) {
   const colors = Colors.light;
   const cargoItems = data.cargo_items || [];
+  const toast = useToast();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
 
   // Add new cargo item
   const addCargoItem = useCallback(() => {
@@ -63,24 +66,24 @@ export function QuoteCreateCargoItemsScreen({
   const removeCargoItem = useCallback(
     (index: number) => {
       if (cargoItems.length === 1) {
-        Alert.alert('Uyarı', 'En az bir kargo kalemi olmalıdır.');
+        toast.warning('En az bir kargo kalemi olmalıdır.');
         return;
       }
 
-      Alert.alert('Kalem Sil', 'Bu kargo kalemini silmek istediğinizden emin misiniz?', [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: () => {
-            const newItems = cargoItems.filter((_, i) => i !== index);
-            onChange({ cargo_items: newItems });
-          },
-        },
-      ]);
+      setDeletingIndex(index);
+      setDeleteDialogOpen(true);
     },
-    [cargoItems, onChange]
+    [cargoItems, toast]
   );
+
+  const confirmDelete = useCallback(() => {
+    if (deletingIndex !== null) {
+      const newItems = cargoItems.filter((_, i) => i !== deletingIndex);
+      onChange({ cargo_items: newItems });
+      setDeleteDialogOpen(false);
+      setDeletingIndex(null);
+    }
+  }, [deletingIndex, cargoItems, onChange]);
 
   // Update cargo item field
   const updateCargoItem = useCallback(
@@ -280,6 +283,18 @@ export function QuoteCreateCargoItemsScreen({
           <Text style={styles.nextButtonText}>Sonraki Adım</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={deleteDialogOpen}
+        title="Kalem Sil"
+        message="Bu kargo kalemini silmek istediğinizden emin misiniz?"
+        confirmText="Sil"
+        cancelText="İptal"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteDialogOpen(false)}
+        variant="destructive"
+      />
     </View>
   );
 }

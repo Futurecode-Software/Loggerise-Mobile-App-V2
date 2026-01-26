@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -17,10 +16,12 @@ import { ChevronLeft, User, Mail, Phone, Check } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { updateProfile, ProfileUpdateData } from '@/services/endpoints/profile';
+import { useToast } from '@/hooks/use-toast';
 
 export default function EditProfileScreen() {
   const colors = Colors.light;
   const { user, refreshUser } = useAuth();
+  const { success, error: showError } = useToast();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -73,12 +74,11 @@ export default function EditProfileScreen() {
 
       await updateProfile(data);
       await refreshUser();
-      Alert.alert('Basarili', 'Profil bilgileriniz guncellendi.', [
-        { text: 'Tamam', onPress: () => router.back() },
-      ]);
+      success('Başarılı', 'Profil bilgileriniz güncellendi.');
+      setTimeout(() => router.back(), 1000);
     } catch (error: any) {
       console.error('Profile update error:', error);
-      Alert.alert('Hata', error.message || 'Profil guncellenirken bir hata olustu.');
+      showError('Hata', error.message || 'Profil güncellenirken bir hata oluştu.');
     } finally {
       setIsLoading(false);
     }

@@ -12,14 +12,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Save, Trash2, Package } from 'lucide-react-native';
-import { Input, Card, Badge, Checkbox, SelectInput } from '@/components/ui';
+import { Input, Card, Badge, Checkbox, SelectInput, ConfirmDialog } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -56,6 +55,10 @@ export default function ProductDetailScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
     code: '',
@@ -191,28 +194,29 @@ export default function ProductDetailScreen() {
     }
   }, [formData, validateForm, product, success, showError]);
 
-  // Delete handler
+  // Delete handler - opens dialog
   const handleDelete = useCallback(() => {
     if (!product) return;
+    setShowDeleteDialog(true);
+  }, [product]);
 
-    Alert.alert('Ürün Sil', `"${product.name}" ürününü silmek istediğinize emin misiniz?`, [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteProduct(product.id);
-            success('Başarılı', 'Ürün silindi.');
-            setTimeout(() => {
-              router.back();
-            }, 1000);
-          } catch (err) {
-            showError('Hata', err instanceof Error ? err.message : 'Ürün silinemedi');
-          }
-        },
-      },
-    ]);
+  // Confirm delete
+  const confirmDelete = useCallback(async () => {
+    if (!product) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteProduct(product.id);
+      setShowDeleteDialog(false);
+      success('Başarılı', 'Ürün silindi.');
+      setTimeout(() => {
+        router.back();
+      }, 1000);
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'Ürün silinemedi');
+    } finally {
+      setIsDeleting(false);
+    }
   }, [product, success, showError]);
 
   // Cancel editing
@@ -720,6 +724,19 @@ export default function ProductDetailScreen() {
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Ürün Sil"
+        message={`"${product?.name}" ürününü silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`}
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous={true}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
     </SafeAreaView>
   );
 }

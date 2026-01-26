@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { X } from 'lucide-react-native';
 import { Input, Button } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
@@ -8,6 +8,7 @@ import {
   createQuoteNote,
   updateQuoteNote,
 } from '@/services/endpoints/quote-notes';
+import { useToast } from '@/hooks/use-toast';
 
 interface NoteFormModalProps {
   visible: boolean;
@@ -25,6 +26,7 @@ export default function NoteFormModal({
   onSave,
 }: NoteFormModalProps) {
   const colors = Colors.light;
+  const toast = useToast();
 
   const [content, setContent] = useState('');
   const [isPinned, setIsPinned] = useState(false);
@@ -74,7 +76,7 @@ export default function NoteFormModal({
       onSave();
       onClose();
     } catch (err) {
-      Alert.alert('Hata', err instanceof Error ? err.message : 'İşlem başarısız');
+      toast.showError(err instanceof Error ? err.message : 'İşlem başarısız');
     } finally {
       setIsSubmitting(false);
     }

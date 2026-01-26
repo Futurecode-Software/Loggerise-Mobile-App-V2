@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useToast } from '@/hooks/use-toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Save, Users, Phone, Mail, Clock } from 'lucide-react-native';
@@ -30,6 +30,7 @@ const INTERACTION_TYPES = [
 
 export default function NewInteractionScreen() {
   const colors = Colors.light;
+  const { success, error: showError } = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const customerId = parseInt(id, 10);
 
@@ -79,21 +80,17 @@ export default function NewInteractionScreen() {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      Alert.alert('Hata', 'Lütfen formu eksiksiz doldurunuz');
+      showError('Hata', 'Lütfen formu eksiksiz doldurunuz');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const interaction = await createInteraction(customerId, formData);
-      Alert.alert('Başarılı', 'Görüşme başarıyla oluşturuldu', [
-        {
-          text: 'Tamam',
-          onPress: () => router.back(),
-        },
-      ]);
+      await createInteraction(customerId, formData);
+      success('Başarılı', 'Görüşme başarıyla oluşturuldu');
+      setTimeout(() => router.back(), 1000);
     } catch (err) {
-      Alert.alert('Hata', err instanceof Error ? err.message : 'Görüşme oluşturulamadı');
+      showError('Hata', err instanceof Error ? err.message : 'Görüşme oluşturulamadı');
     } finally {
       setIsSubmitting(false);
     }

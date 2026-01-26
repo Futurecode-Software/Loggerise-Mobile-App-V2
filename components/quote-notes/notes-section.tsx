@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Plus, Pin, Edit2, Trash2, MessageSquare } from 'lucide-react-native';
-import { Card } from '@/components/ui';
+import { Card, ConfirmDialog } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
   QuoteNote,
@@ -10,6 +10,7 @@ import {
   formatRelativeTime,
 } from '@/services/endpoints/quote-notes';
 import NoteFormModal from './note-form-modal';
+import { useToast } from '@/hooks/use-toast';
 
 interface NotesSectionProps {
   quoteId: number;
@@ -19,9 +20,12 @@ interface NotesSectionProps {
 
 export default function NotesSection({ quoteId, notes, onNotesChange }: NotesSectionProps) {
   const colors = Colors.light;
+  const toast = useToast();
 
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [editingNote, setEditingNote] = useState<QuoteNote | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingNote, setDeletingNote] = useState<QuoteNote | null>(null);
 
   // Sort notes: pinned first, then by date
   const sortedNotes = [...notes].sort((a, b) => {
@@ -41,22 +45,23 @@ export default function NotesSection({ quoteId, notes, onNotesChange }: NotesSec
   };
 
   const handleDeleteNote = (note: QuoteNote) => {
-    Alert.alert('Notu Sil', 'Bu notu silmek istediğinizden emin misiniz?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteQuoteNote(quoteId, note.id);
-            Alert.alert('Başarılı', 'Not silindi');
-            onNotesChange();
-          } catch (err) {
-            Alert.alert('Hata', err instanceof Error ? err.message : 'Not silinemedi');
-          }
-        },
-      },
-    ]);
+    setDeletingNote(note);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingNote) return;
+
+    try {
+      await deleteQuoteNote(quoteId, deletingNote.id);
+      toast.success('Not silindi');
+      onNotesChange();
+    } catch (err) {
+      toast.showError(err instanceof Error ? err.message : 'Not silinemedi');
+    } finally {
+      setDeleteDialogOpen(false);
+      setDeletingNote(null);
+    }
   };
 
   const handleTogglePin = async (note: QuoteNote) => {
@@ -64,7 +69,7 @@ export default function NotesSection({ quoteId, notes, onNotesChange }: NotesSec
       await toggleNotePin(quoteId, note.id);
       onNotesChange();
     } catch (err) {
-      Alert.alert('Hata', err instanceof Error ? err.message : 'İşlem başarısız');
+      toast.showError(err instanceof Error ? err.message : 'İşlem başarısız');
     }
   };
 
@@ -162,6 +167,18 @@ export default function NotesSection({ quoteId, notes, onNotesChange }: NotesSec
           setEditingNote(null);
         }}
         onSave={handleSave}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={deleteDialogOpen}
+        title="Notu Sil"
+        message="Bu notu silmek istediğinizden emin misiniz?"
+        confirmText="Sil"
+        cancelText="İptal"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteDialogOpen(false)}
+        variant="destructive"
       />
     </View>
   );

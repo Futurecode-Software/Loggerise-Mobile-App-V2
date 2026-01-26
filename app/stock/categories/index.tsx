@@ -6,23 +6,20 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Plus, FolderTree, Trash2, CornerDownRight } from 'lucide-react-native';
+import { Plus, FolderTree, CornerDownRight } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
 import {
   getProductCategories,
-  deleteProductCategory,
   ProductCategory,
   Pagination,
 } from '@/services/endpoints/products';
-import { useToast } from '@/hooks/use-toast';
 
 export default function CategoriesScreen() {
   const colors = Colors.light;
-  const { success, error: showError } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -108,29 +105,6 @@ export default function CategoriesScreen() {
     }
   };
 
-  const handleDelete = (category: ProductCategory) => {
-    Alert.alert(
-      'Kategori Sil',
-      `"${category.name}" kategorisini silmek istediğinize emin misiniz?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteProductCategory(category.id);
-              success('Başarılı', 'Kategori silindi.');
-              fetchCategories(1, false);
-            } catch (err) {
-              showError('Hata', err instanceof Error ? err.message : 'Kategori silinemedi');
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const renderCategory = (item: ProductCategory) => {
     const additionalInfo = [];
     if (item.parent) {
@@ -186,17 +160,6 @@ export default function CategoriesScreen() {
                 </Text>
               )}
             </View>
-          ),
-          right: (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                handleDelete(item);
-              }}
-            >
-              <Trash2 size={16} color={colors.danger} />
-            </TouchableOpacity>
           ),
         }}
         onPress={() => router.push(`/stock/categories/${item.id}` as any)}
@@ -281,9 +244,6 @@ const styles = StyleSheet.create({
   childrenCount: {
     fontSize: 10,
     color: Colors.light.textSecondary,
-  },
-  deleteButton: {
-    padding: Spacing.xs,
   },
   fab: {
     position: 'absolute',

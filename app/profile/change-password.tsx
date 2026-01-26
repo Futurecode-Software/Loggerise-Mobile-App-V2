@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -16,9 +15,11 @@ import { router } from 'expo-router';
 import { ChevronLeft, Lock, Eye, EyeOff, Check } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { changePassword, PasswordChangeData } from '@/services/endpoints/profile';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ChangePasswordScreen() {
   const colors = Colors.light;
+  const { success, error: showError } = useToast();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -74,16 +75,15 @@ export default function ChangePasswordScreen() {
       };
 
       await changePassword(data);
-      Alert.alert('Basarili', 'Sifreniz basariyla guncellendi.', [
-        { text: 'Tamam', onPress: () => router.back() },
-      ]);
+      success('Başarılı', 'Şifreniz başarıyla güncellendi.');
+      setTimeout(() => router.back(), 1000);
     } catch (error: any) {
       console.error('Password change error:', error);
       if (error.message?.toLowerCase().includes('current') ||
           error.message?.toLowerCase().includes('mevcut')) {
         setErrors((prev) => ({ ...prev, currentPassword: 'Mevcut sifre yanlis' }));
       } else {
-        Alert.alert('Hata', error.message || 'Sifre degistirilirken bir hata olustu.');
+        showError('Hata', error.message || 'Şifre değiştirilirken bir hata oluştu.');
       }
     } finally {
       setIsLoading(false);

@@ -6,7 +6,6 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Alert } from 'react-native';
 import { FlatList } from 'react-native';
 import {
   getConversation,
@@ -19,6 +18,7 @@ import {
 } from '@/services/endpoints/messaging';
 import { useMessagingWebSocket } from './use-messaging-websocket';
 import { setActiveConversation } from './use-notification-observer';
+import { useToast } from './use-toast';
 
 interface UseConversationMessagesOptions {
   conversationId: string | undefined;
@@ -55,6 +55,8 @@ export function useConversationMessages({
   conversationId,
   currentUserId,
 }: UseConversationMessagesOptions): UseConversationMessagesReturn {
+  const { error: showError } = useToast();
+
   // State
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -200,12 +202,12 @@ export function useConversationMessages({
       }, 100);
     } catch (err) {
       console.error('Send message error:', err);
-      Alert.alert('Hata', 'Mesaj gönderilemedi. Lütfen tekrar deneyin.');
+      showError('Hata', 'Mesaj gönderilemedi. Lütfen tekrar deneyin.');
       setNewMessage(messageText);
     } finally {
       setIsSending(false);
     }
-  }, [newMessage, parsedConversationId, isSending, sendTypingStatus]);
+  }, [newMessage, parsedConversationId, isSending, sendTypingStatus, showError]);
 
   // Refetch function
   const refetch = useCallback(() => {

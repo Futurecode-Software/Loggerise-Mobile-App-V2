@@ -12,14 +12,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Save, Trash2, Tag } from 'lucide-react-native';
-import { Input, Card, Badge, Checkbox } from '@/components/ui';
+import { Input, Card, Badge, Checkbox, ConfirmDialog } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -41,6 +40,10 @@ export default function BrandDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState<BrandFormData>({
@@ -132,28 +135,29 @@ export default function BrandDetailScreen() {
     }
   }, [formData, validateForm, brand, success, showError]);
 
-  // Delete handler
+  // Delete handler - opens dialog
   const handleDelete = useCallback(() => {
     if (!brand) return;
+    setShowDeleteDialog(true);
+  }, [brand]);
 
-    Alert.alert('Marka Sil', `"${brand.name}" markasını silmek istediğinize emin misiniz?`, [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteProductBrand(brand.id);
-            success('Başarılı', 'Marka silindi.');
-            setTimeout(() => {
-              router.back();
-            }, 1000);
-          } catch (err) {
-            showError('Hata', err instanceof Error ? err.message : 'Marka silinemedi');
-          }
-        },
-      },
-    ]);
+  // Confirm delete
+  const confirmDelete = useCallback(async () => {
+    if (!brand) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteProductBrand(brand.id);
+      setShowDeleteDialog(false);
+      success('Başarılı', 'Marka silindi.');
+      setTimeout(() => {
+        router.back();
+      }, 1000);
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'Marka silinemedi');
+    } finally {
+      setIsDeleting(false);
+    }
   }, [brand, success, showError]);
 
   // Cancel editing
@@ -346,6 +350,19 @@ export default function BrandDetailScreen() {
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Marka Sil"
+        message={`"${brand?.name}" markasını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`}
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous={true}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
     </SafeAreaView>
   );
 }

@@ -5,13 +5,13 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { Alert } from 'react-native';
 import {
   getConversationMessages,
   sendMessage,
   AiConversation,
   AiMessage,
 } from '@/services/endpoints/loggy';
+import { useToast } from './use-toast';
 
 interface UseLoggyMessagesOptions {
   conversation: AiConversation | null;
@@ -35,6 +35,8 @@ interface UseLoggyMessagesReturn {
 export function useLoggyMessages({
   conversation,
 }: UseLoggyMessagesOptions): UseLoggyMessagesReturn {
+  const { error: showError } = useToast();
+
   const [messages, setMessages] = useState<AiMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -89,12 +91,12 @@ export function useLoggyMessages({
       } catch (err: any) {
         setError(err instanceof Error ? err.message : 'Mesaj gönderilemedi');
         setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
-        Alert.alert('Hata', err instanceof Error ? err.message : 'Mesaj gönderilemedi');
+        showError('Hata', err instanceof Error ? err.message : 'Mesaj gönderilemedi');
       } finally {
         setIsSending(false);
       }
     },
-    [conversation, isSending]
+    [conversation, isSending, showError]
   );
 
   // Clear error

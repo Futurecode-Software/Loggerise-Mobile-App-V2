@@ -5,11 +5,12 @@
  */
 
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Plus, Trash2, Calculator, AlertTriangle, Info } from 'lucide-react-native';
 import { Card, Input, Checkbox } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { useToast } from '@/hooks/use-toast';
 
 export interface LoadItem {
   cargo_name: string;
@@ -163,6 +164,7 @@ const calculateChargeableWeight = (grossWeight: string, volumetricWeight: string
 
 export default function Step2LoadItems({ items, setItems }: Step2LoadItemsProps) {
   const colors = Colors.light;
+  const toast = useToast();
 
   const addItem = () => {
     setItems([...items, getDefaultItem()]);
@@ -170,7 +172,7 @@ export default function Step2LoadItems({ items, setItems }: Step2LoadItemsProps)
 
   const removeItem = (index: number) => {
     if (items.length === 1) {
-      Alert.alert('Uyarı', 'En az bir yük kalemi olmalıdır');
+      toast.warning('En az bir yük kalemi olmalıdır');
       return;
     }
     setItems(items.filter((_, i) => i !== index));

@@ -5,7 +5,6 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getConversations,
@@ -13,6 +12,7 @@ import {
   deleteConversation,
   AiConversation,
 } from '@/services/endpoints/loggy';
+import { useToast } from './use-toast';
 
 const STORAGE_KEY = 'loggy_last_conversation_id';
 
@@ -26,20 +26,32 @@ interface UseLoggyConversationsReturn {
   refreshing: boolean;
   error: string | null;
 
+  // Delete dialog state
+  showDeleteDialog: boolean;
+  conversationToDelete: number | null;
+
   // Actions
   fetchConversations: () => Promise<void>;
   createNewConversation: () => Promise<AiConversation>;
   selectConversation: (conversation: AiConversation) => void;
-  handleDelete: (conversationId: number) => Promise<void>;
+  handleDelete: (conversationId: number) => void;
+  confirmDelete: () => Promise<void>;
+  cancelDelete: () => void;
   refresh: () => Promise<void>;
 }
 
 export function useLoggyConversations(): UseLoggyConversationsReturn {
+  const { success, error: showError } = useToast();
+
   const [conversations, setConversations] = useState<AiConversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<AiConversation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<number | null>(null);
 
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
@@ -67,12 +79,12 @@ export function useLoggyConversations(): UseLoggyConversationsReturn {
       return newConversation;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Konuşma oluşturulamadı';
-      Alert.alert('Hata', message);
+      showError('Hata', message);
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   // Select conversation
   const selectConversation = useCallback((conversation: AiConversation) => {
@@ -80,35 +92,37 @@ export function useLoggyConversations(): UseLoggyConversationsReturn {
     AsyncStorage.setItem(STORAGE_KEY, conversation.id.toString());
   }, []);
 
-  // Delete conversation
-  const handleDelete = useCallback(
-    async (conversationId: number) => {
-      Alert.alert(
-        'Konuşmayı Sil',
-        'Bu işlem geri alınamaz. Konuşma ve tüm mesajları kalıcı olarak silinecektir.',
-        [
-          { text: 'İptal', style: 'cancel' },
-          {
-            text: 'Sil',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await deleteConversation(conversationId);
-                setConversations((prev) => prev.filter((c) => c.id !== conversationId));
-                if (currentConversation?.id === conversationId) {
-                  setCurrentConversation(null);
-                  await AsyncStorage.removeItem(STORAGE_KEY);
-                }
-              } catch (err) {
-                Alert.alert('Hata', 'Konuşma silinemedi');
-              }
-            },
-          },
-        ]
-      );
-    },
-    [currentConversation]
-  );
+  // Delete conversation - show dialog
+  const handleDelete = useCallback((conversationId: number) => {
+    setConversationToDelete(conversationId);
+    setShowDeleteDialog(true);
+  }, []);
+
+  // Confirm delete
+  const confirmDelete = useCallback(async () => {
+    if (!conversationToDelete) return;
+
+    try {
+      await deleteConversation(conversationToDelete);
+      setConversations((prev) => prev.filter((c) => c.id !== conversationToDelete));
+      if (currentConversation?.id === conversationToDelete) {
+        setCurrentConversation(null);
+        await AsyncStorage.removeItem(STORAGE_KEY);
+      }
+      success('Başarılı', 'Konuşma silindi.');
+    } catch (err) {
+      showError('Hata', 'Konuşma silinemedi');
+    } finally {
+      setShowDeleteDialog(false);
+      setConversationToDelete(null);
+    }
+  }, [conversationToDelete, currentConversation, success, showError]);
+
+  // Cancel delete
+  const cancelDelete = useCallback(() => {
+    setShowDeleteDialog(false);
+    setConversationToDelete(null);
+  }, []);
 
   // Refresh conversations
   const refresh = useCallback(async () => {
@@ -146,10 +160,14 @@ export function useLoggyConversations(): UseLoggyConversationsReturn {
     isLoading,
     refreshing,
     error,
+    showDeleteDialog,
+    conversationToDelete,
     fetchConversations,
     createNewConversation,
     selectConversation,
     handleDelete,
+    confirmDelete,
+    cancelDelete,
     refresh,
   };
 }

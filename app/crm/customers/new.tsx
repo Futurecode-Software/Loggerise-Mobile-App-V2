@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useToast } from '@/hooks/use-toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ChevronLeft, Save } from 'lucide-react-native';
@@ -24,6 +24,7 @@ import {
 
 export default function NewCrmCustomerScreen() {
   const colors = Colors.light;
+  const { success, error: showError } = useToast();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<CrmCustomerFormData>({
@@ -60,21 +61,17 @@ export default function NewCrmCustomerScreen() {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      Alert.alert('Hata', 'Lütfen formu eksiksiz doldurunuz');
+      showError('Hata', 'Lütfen formu eksiksiz doldurunuz');
       return;
     }
 
     setIsSubmitting(true);
     try {
       const customer = await createCrmCustomer(formData);
-      Alert.alert('Başarılı', 'CRM müşterisi başarıyla oluşturuldu', [
-        {
-          text: 'Tamam',
-          onPress: () => router.replace(`/crm/customers/${customer.id}` as any),
-        },
-      ]);
+      success('Başarılı', 'CRM müşterisi başarıyla oluşturuldu');
+      setTimeout(() => router.replace(`/crm/customers/${customer.id}` as any), 1000);
     } catch (err) {
-      Alert.alert(
+      showError(
         'Hata',
         err instanceof Error ? err.message : 'Müşteri oluşturulamadı'
       );

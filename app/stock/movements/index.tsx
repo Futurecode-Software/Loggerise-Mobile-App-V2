@@ -5,15 +5,14 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Plus, ArrowLeftRight, ArrowDownLeft, ArrowUpRight, Trash2, Filter, Repeat } from 'lucide-react-native';
+import { Plus, ArrowLeftRight, ArrowDownLeft, ArrowUpRight, Filter, Repeat } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
 import {
   getStockMovements,
-  deleteStockMovement,
   getMovementTypeLabel,
   isInboundMovement,
   getMovementTypeColor,
@@ -21,11 +20,9 @@ import {
   StockMovementFilters,
 } from '@/services/endpoints/stock-movements';
 import { Pagination } from '@/services/endpoints/products';
-import { useToast } from '@/hooks/use-toast';
 
 export default function StockMovementsScreen() {
   const colors = Colors.light;
-  const { success, error: showError } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -113,29 +110,6 @@ export default function StockMovementsScreen() {
     }
   };
 
-  const handleDelete = (movement: StockMovement) => {
-    Alert.alert(
-      'Hareketi Sil',
-      `Bu stok hareketini silmek istediğinize emin misiniz?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteStockMovement(movement.id);
-              success('Başarılı', 'Stok hareketi silindi.');
-              fetchMovements(1, false);
-            } catch (err) {
-              showError('Hata', err instanceof Error ? err.message : 'Hareket silinemedi');
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('tr-TR', {
       day: '2-digit',
@@ -195,17 +169,6 @@ export default function StockMovementsScreen() {
                 {formatDate(item.transaction_date)}
               </Text>
             </View>
-          ),
-          right: (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                handleDelete(item);
-              }}
-            >
-              <Trash2 size={16} color={colors.danger} />
-            </TouchableOpacity>
           ),
         }}
         onPress={() => router.push(`/stock/movements/${item.id}` as any)}
@@ -288,9 +251,6 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 10,
     color: Colors.light.textMuted,
-  },
-  deleteButton: {
-    padding: Spacing.xs,
   },
   fab: {
     position: 'absolute',

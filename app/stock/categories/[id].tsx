@@ -12,14 +12,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Save, Trash2, FolderTree, CornerDownRight } from 'lucide-react-native';
-import { Input, Card, Badge, Checkbox, SelectInput } from '@/components/ui';
+import { Input, Card, Badge, Checkbox, SelectInput, ConfirmDialog } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -44,6 +43,10 @@ export default function CategoryDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState<CategoryFormData>({
@@ -153,32 +156,29 @@ export default function CategoryDetailScreen() {
     }
   }, [formData, validateForm, category, success, showError]);
 
-  // Delete handler
+  // Delete handler - opens dialog
   const handleDelete = useCallback(() => {
     if (!category) return;
+    setShowDeleteDialog(true);
+  }, [category]);
 
-    Alert.alert(
-      'Kategori Sil',
-      `"${category.name}" kategorisini silmek istediğinize emin misiniz?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteProductCategory(category.id);
-              success('Başarılı', 'Kategori silindi.');
-              setTimeout(() => {
-                router.back();
-              }, 1000);
-            } catch (err) {
-              showError('Hata', err instanceof Error ? err.message : 'Kategori silinemedi');
-            }
-          },
-        },
-      ]
-    );
+  // Confirm delete
+  const confirmDelete = useCallback(async () => {
+    if (!category) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteProductCategory(category.id);
+      setShowDeleteDialog(false);
+      success('Başarılı', 'Kategori silindi.');
+      setTimeout(() => {
+        router.back();
+      }, 1000);
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'Kategori silinemedi');
+    } finally {
+      setIsDeleting(false);
+    }
   }, [category, success, showError]);
 
   // Cancel editing
@@ -430,6 +430,19 @@ export default function CategoryDetailScreen() {
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Kategori Sil"
+        message={`"${category?.name}" kategorisini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`}
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous={true}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
     </SafeAreaView>
   );
 }

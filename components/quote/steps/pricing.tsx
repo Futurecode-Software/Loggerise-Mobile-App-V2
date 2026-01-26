@@ -12,7 +12,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { DollarSign, Plus, Trash2, FileText } from 'lucide-react-native';
 import { Input, Card, Checkbox } from '@/components/ui';
@@ -20,6 +19,7 @@ import { SelectInput } from '@/components/ui/select-input';
 import { Colors, Spacing, Brand } from '@/constants/theme';
 import { NewQuoteFormData, PricingItem } from '@/services/endpoints/quotes-new-format';
 import { getCurrentRate } from '@/services/endpoints/exchange-rates';
+import { useToast } from '@/hooks/use-toast';
 
 interface QuoteCreatePricingScreenProps {
   data: Partial<NewQuoteFormData>;
@@ -50,6 +50,7 @@ export function QuoteCreatePricingScreen({
   const colors = Colors.light;
   const [isLoadingRate, setIsLoadingRate] = useState(false);
   const pricingItems = data.pricing_items || [];
+  const toast = useToast();
 
   // Fetch exchange rate when currency changes
   useEffect(() => {
@@ -85,14 +86,14 @@ export function QuoteCreatePricingScreen({
   const removePricingItem = useCallback(
     (index: number) => {
       if (pricingItems.length === 1) {
-        Alert.alert('Uyarı', 'En az bir fiyatlandırma kalemi olmalıdır.');
+        toast.warning('En az bir fiyatlandırma kalemi olmalıdır.');
         return;
       }
 
       const newItems = pricingItems.filter((_, i) => i !== index);
       onChange({ pricing_items: newItems });
     },
-    [pricingItems, onChange]
+    [pricingItems, onChange, toast]
   );
 
   // Update pricing item

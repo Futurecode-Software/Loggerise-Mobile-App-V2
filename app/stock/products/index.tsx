@@ -5,25 +5,22 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Plus, Package, Trash2 } from 'lucide-react-native';
+import { Plus, Package } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
 import {
   getProducts,
-  deleteProduct,
   Product,
   Pagination,
   getProductTypeLabel,
   getProductUnitLabel,
 } from '@/services/endpoints/products';
-import { useToast } from '@/hooks/use-toast';
 
 export default function ProductsScreen() {
   const colors = Colors.light;
-  const { success, error: showError } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -109,25 +106,6 @@ export default function ProductsScreen() {
     }
   };
 
-  const handleDelete = (product: Product) => {
-    Alert.alert('Ürün Sil', `"${product.name}" ürününü silmek istediğinize emin misiniz?`, [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteProduct(product.id);
-            success('Başarılı', 'Ürün silindi.');
-            fetchProducts(1, false);
-          } catch (err) {
-            showError('Hata', err instanceof Error ? err.message : 'Ürün silinemedi');
-          }
-        },
-      },
-    ]);
-  };
-
   const renderProduct = (item: Product) => {
     const additionalInfo = [];
     
@@ -194,17 +172,6 @@ export default function ProductsScreen() {
                 {getProductTypeLabel(item.product_type)} • {getProductUnitLabel(item.unit)}
               </Text>
             </View>
-          ),
-          right: (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                handleDelete(item);
-              }}
-            >
-              <Trash2 size={16} color={colors.danger} />
-            </TouchableOpacity>
           ),
         }}
         onPress={() => router.push(`/stock/products/${item.id}` as any)}
@@ -283,9 +250,6 @@ const styles = StyleSheet.create({
   productType: {
     fontSize: 10,
     color: Colors.light.textSecondary,
-  },
-  deleteButton: {
-    padding: Spacing.xs,
   },
   fab: {
     position: 'absolute',

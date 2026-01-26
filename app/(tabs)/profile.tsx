@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -21,13 +20,15 @@ import {
   Trash2,
   ChevronRight,
   Camera,
+  Image as ImageIcon,
 } from 'lucide-react-native';
-import { Card, Avatar } from '@/components/ui';
+import { Card, Avatar, ConfirmDialog, ActionSheet } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useNotificationContext } from '@/context/notification-context';
 import { uploadAvatar, deleteAvatar } from '@/services/endpoints/profile';
+import { useToast } from '@/hooks/use-toast';
 
 interface MenuItem {
   id: string;
@@ -47,8 +48,16 @@ export default function ProfileScreen() {
   const colors = Colors.light;
   const { user, logout, refreshUser } = useAuth();
   const { isInitialized: notificationsInitialized, initialize: initializeNotifications } = useNotificationContext();
+  const { success, error: showError, info } = useToast();
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // Dialog states
+  const [showAvatarSheet, setShowAvatarSheet] = useState(false);
+  const [showDeleteAvatarDialog, setShowDeleteAvatarDialog] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+  const [isDeletingAvatar, setIsDeletingAvatar] = useState(false);
 
   // Refresh user data when screen is focused
   useFocusEffect(
@@ -60,33 +69,40 @@ export default function ProfileScreen() {
   const handleNotificationPermission = async () => {
     if (!notificationsInitialized) {
       await initializeNotifications();
-      Alert.alert('Bildirimler', 'Bildirim izni istendi. Ayarlardan kontrol edebilirsiniz.');
+      info('Bildirimler', 'Bildirim izni istendi. Ayarlardan kontrol edebilirsiniz.');
     } else {
       router.push('/notifications');
     }
   };
 
-  const handleAvatarPress = async () => {
-    Alert.alert(
-      'Profil Fotoğrafı',
-      'Ne yapmak istersiniz?',
-      [
-        {
-          text: 'Galeriden Seç',
-          onPress: () => pickImage('library'),
-        },
-        {
-          text: 'Kamera ile Çek',
-          onPress: () => pickImage('camera'),
-        },
-        ...(user?.avatar ? [{
-          text: 'Fotoğrafı Sil',
-          style: 'destructive' as const,
-          onPress: handleDeleteAvatar,
-        }] : []),
-        { text: 'İptal', style: 'cancel' as const },
-      ]
-    );
+  const handleAvatarPress = () => {
+    setShowAvatarSheet(true);
+  };
+
+  const getAvatarOptions = () => {
+    const options = [
+      {
+        label: 'Galeriden Seç',
+        icon: <ImageIcon size={20} color="#374151" />,
+        onPress: () => pickImage('library'),
+      },
+      {
+        label: 'Kamera ile Çek',
+        icon: <Camera size={20} color="#374151" />,
+        onPress: () => pickImage('camera'),
+      },
+    ];
+
+    if (user?.avatar) {
+      options.push({
+        label: 'Fotoğrafı Sil',
+        icon: <Trash2 size={20} color="#ef4444" />,
+        onPress: () => setShowDeleteAvatarDialog(true),
+        destructive: true,
+      } as any);
+    }
+
+    return options;
   };
 
   const pickImage = async (source: 'library' | 'camera') => {
@@ -96,7 +112,7 @@ export default function ProfileScreen() {
       if (source === 'camera') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('İzin Gerekli', 'Kamera izni gereklidir.');
+          showError('İzin Gerekli', 'Kamera izni gereklidir.');
           return;
         }
         result = await ImagePicker.launchCameraAsync({
@@ -108,7 +124,7 @@ export default function ProfileScreen() {
       } else {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('İzin Gerekli', 'Galeri izni gereklidir.');
+          showError('İzin Gerekli', 'Galeri izni gereklidir.');
           return;
         }
         result = await ImagePicker.launchImageLibraryAsync({
@@ -124,7 +140,7 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Hata', 'Fotoğraf seçilirken bir hata oluştu.');
+      showError('Hata', 'Fotoğraf seçilirken bir hata oluştu.');
     }
   };
 
@@ -140,76 +156,48 @@ export default function ProfileScreen() {
 
       await uploadAvatar(formData);
       await refreshUser?.();
-      Alert.alert('Başarılı', 'Profil fotoğrafınız güncellendi.');
+      success('Başarılı', 'Profil fotoğrafınız güncellendi.');
     } catch (error: any) {
       console.error('Avatar upload error:', error);
-      Alert.alert('Hata', error.message || 'Fotoğraf yüklenirken bir hata oluştu.');
+      showError('Hata', error.message || 'Fotoğraf yüklenirken bir hata oluştu.');
     } finally {
       setUploadingAvatar(false);
     }
   };
 
-  const handleDeleteAvatar = async () => {
-    Alert.alert(
-      'Fotoğrafı Sil',
-      'Profil fotoğrafınızı silmek istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            setUploadingAvatar(true);
-            try {
-              await deleteAvatar();
-              await refreshUser?.();
-              Alert.alert('Başarılı', 'Profil fotoğrafınız silindi.');
-            } catch (error: any) {
-              console.error('Avatar delete error:', error);
-              Alert.alert('Hata', error.message || 'Fotoğraf silinirken bir hata oluştu.');
-            } finally {
-              setUploadingAvatar(false);
-            }
-          },
-        },
-      ]
-    );
+  const confirmDeleteAvatar = async () => {
+    setIsDeletingAvatar(true);
+    try {
+      await deleteAvatar();
+      await refreshUser?.();
+      setShowDeleteAvatarDialog(false);
+      success('Başarılı', 'Profil fotoğrafınız silindi.');
+    } catch (error: any) {
+      console.error('Avatar delete error:', error);
+      showError('Hata', error.message || 'Fotoğraf silinirken bir hata oluştu.');
+    } finally {
+      setIsDeletingAvatar(false);
+    }
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Çıkış Yap',
-      'Hesabınızdan çıkış yapmak istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Çıkış Yap',
-          style: 'destructive',
-          onPress: () => {
-            logout();
-            router.replace('/(auth)/login');
-          },
-        },
-      ]
-    );
+    setShowLogoutDialog(true);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutDialog(false);
+    logout();
+    router.replace('/(auth)/login');
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Hesabı Sil',
-      'Bu işlem geri alınamaz. Hesabınızı silmek istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Hesabı Sil',
-          style: 'destructive',
-          onPress: () => {
-            // TODO: Implement account deletion
-            Alert.alert('Bilgi', 'Hesap silme işlemi için destek ile iletişime geçin.');
-          },
-        },
-      ]
-    );
+    setShowDeleteAccountDialog(true);
+  };
+
+  const confirmDeleteAccount = () => {
+    setShowDeleteAccountDialog(false);
+    // TODO: Implement account deletion
+    info('Bilgi', 'Hesap silme işlemi için destek ile iletişime geçin.');
   };
 
   const MENU_SECTIONS: MenuSection[] = [
@@ -378,6 +366,51 @@ export default function ProfileScreen() {
           Versiyon 1.0.0
         </Text>
       </ScrollView>
+
+      {/* Avatar Action Sheet */}
+      <ActionSheet
+        visible={showAvatarSheet}
+        title="Profil Fotoğrafı"
+        options={getAvatarOptions()}
+        onCancel={() => setShowAvatarSheet(false)}
+      />
+
+      {/* Delete Avatar Confirmation */}
+      <ConfirmDialog
+        visible={showDeleteAvatarDialog}
+        title="Fotoğrafı Sil"
+        message="Profil fotoğrafınızı silmek istediğinize emin misiniz?"
+        confirmText="Sil"
+        cancelText="İptal"
+        isDangerous={true}
+        isLoading={isDeletingAvatar}
+        onConfirm={confirmDeleteAvatar}
+        onCancel={() => setShowDeleteAvatarDialog(false)}
+      />
+
+      {/* Logout Confirmation */}
+      <ConfirmDialog
+        visible={showLogoutDialog}
+        title="Çıkış Yap"
+        message="Hesabınızdan çıkış yapmak istediğinize emin misiniz?"
+        confirmText="Çıkış Yap"
+        cancelText="İptal"
+        isDangerous={true}
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutDialog(false)}
+      />
+
+      {/* Delete Account Confirmation */}
+      <ConfirmDialog
+        visible={showDeleteAccountDialog}
+        title="Hesabı Sil"
+        message="Bu işlem geri alınamaz. Hesabınızı silmek istediğinize emin misiniz?"
+        confirmText="Hesabı Sil"
+        cancelText="İptal"
+        isDangerous={true}
+        onConfirm={confirmDeleteAccount}
+        onCancel={() => setShowDeleteAccountDialog(false)}
+      />
     </View>
   );
 }

@@ -13,12 +13,12 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { Colors, Typography, Spacing } from '@/constants/theme';
+import { useToast } from '@/hooks/use-toast';
 import LoadFormProgress from '@/components/load-form/LoadFormProgress';
 import LoadFormNavigation from '@/components/load-form/LoadFormNavigation';
 import Step1BasicInfo from '@/components/load-form/Step1BasicInfo';
@@ -77,6 +77,7 @@ const getDefaultLoadItem = (): LoadItem => ({
 export default function NewLoadScreen() {
   const colors = Colors.light;
   const params = useLocalSearchParams<{ direction?: string }>();
+  const { success, error: showError } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -166,14 +167,14 @@ export default function NewLoadScreen() {
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
-        Alert.alert('Hata', 'Lütfen zorunlu alanları doldurunuz');
+        showError('Hata', 'Lütfen zorunlu alanları doldurunuz');
         return false;
       }
     }
 
     if (step === 2) {
       if (items.length === 0) {
-        Alert.alert('Hata', 'En az bir yük kalemi eklemelisiniz');
+        showError('Hata', 'En az bir yük kalemi eklemelisiniz');
         return false;
       }
 
@@ -181,7 +182,7 @@ export default function NewLoadScreen() {
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         if (!item.cargo_name || !item.cargo_name.trim()) {
-          Alert.alert('Hata', `Kalem #${i + 1}: Mal adı zorunludur`);
+          showError('Hata', `Kalem #${i + 1}: Mal adı zorunludur`);
           return false;
         }
       }
@@ -191,11 +192,11 @@ export default function NewLoadScreen() {
         const item = items[i];
         if (item.is_hazardous) {
           if (!item.hazmat_un_no || !item.hazmat_un_no.trim()) {
-            Alert.alert('Hata', `Kalem #${i + 1}: Tehlikeli madde için UN No zorunludur`);
+            showError('Hata', `Kalem #${i + 1}: Tehlikeli madde için UN No zorunludur`);
             return false;
           }
           if (!item.hazmat_class || !item.hazmat_class.trim()) {
-            Alert.alert('Hata', `Kalem #${i + 1}: Tehlikeli madde için Sınıf zorunludur`);
+            showError('Hata', `Kalem #${i + 1}: Tehlikeli madde için Sınıf zorunludur`);
             return false;
           }
         }
@@ -204,7 +205,7 @@ export default function NewLoadScreen() {
 
     if (step === 3) {
       if (addresses.length < 2) {
-        Alert.alert('Hata', 'Alış ve teslim adreslerini ekleyiniz');
+        showError('Hata', 'Alış ve teslim adreslerini ekleyiniz');
         return false;
       }
 
@@ -212,11 +213,11 @@ export default function NewLoadScreen() {
       const deliveryAddress = addresses.find((a) => a.type === 'delivery');
 
       if (!pickupAddress?.pickup_type) {
-        Alert.alert('Hata', 'Teslim alma tipi seçiniz');
+        showError('Hata', 'Teslim alma tipi seçiniz');
         return false;
       }
       if (!deliveryAddress?.delivery_type) {
-        Alert.alert('Hata', 'Teslim etme tipi seçiniz');
+        showError('Hata', 'Teslim etme tipi seçiniz');
         return false;
       }
     }
@@ -315,16 +316,12 @@ export default function NewLoadScreen() {
       const response = await createLoad(submitData);
 
       if (response) {
-        Alert.alert('Başarılı', 'Yük başarıyla oluşturuldu', [
-          {
-            text: 'Tamam',
-            onPress: () => router.back(),
-          },
-        ]);
+        success('Başarılı', 'Yük başarıyla oluşturuldu');
+        setTimeout(() => router.back(), 1000);
       }
     } catch (error: any) {
       console.error('Load creation error:', error);
-      Alert.alert('Hata', error?.message || 'Yük oluşturulamadı');
+      showError('Hata', error?.message || 'Yük oluşturulamadı');
     } finally {
       setIsSubmitting(false);
     }

@@ -17,9 +17,10 @@ import {
   ScrollView,
   FlatList,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from 'react-native';
+import { useToast } from '@/hooks/use-toast';
+import { ConfirmDialog } from '@/components/ui';
 import { useLocalSearchParams, router } from 'expo-router';
 import {
   Users,
@@ -71,6 +72,7 @@ export default function GroupSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = Colors.light;
   const { user } = useAuth();
+  const { success, error: showError, warning } = useToast();
   const currentUserId = typeof user?.id === 'string' ? parseInt(user.id, 10) : user?.id || 0;
   const conversationId = id ? parseInt(id, 10) : 0;
 
@@ -92,6 +94,11 @@ export default function GroupSettingsScreen() {
 
   // Avatar state
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  // Dialog states
+  const [showRemoveParticipantDialog, setShowRemoveParticipantDialog] = useState(false);
+  const [participantToRemove, setParticipantToRemove] = useState<Participant | null>(null);
+  const [showLeaveGroupDialog, setShowLeaveGroupDialog] = useState(false);
 
   // Fetch group details
   const fetchGroupDetails = useCallback(async (showRefresh = false) => {
@@ -151,10 +158,10 @@ export default function GroupSettingsScreen() {
         });
       }
       setViewMode('main');
-      Alert.alert('Başarılı', 'Grup bilgileri güncellendi.');
+      success('Başarılı', 'Grup bilgileri güncellendi.');
     } catch (err) {
       console.error('Update group error:', err);
-      Alert.alert('Hata', 'Grup güncellenemedi. Lütfen tekrar deneyin.');
+      showError('Hata', 'Grup güncellenemedi. Lütfen tekrar deneyin.');
     } finally {
       setIsUpdating(false);
     }
@@ -169,67 +176,62 @@ export default function GroupSettingsScreen() {
       await addParticipants(conversationId, selectedUsersToAdd);
       await fetchGroupDetails();
       setViewMode('main');
-      Alert.alert('Başarılı', 'Katılımcılar eklendi.');
+      success('Başarılı', 'Katılımcılar eklendi.');
     } catch (err) {
       console.error('Add participants error:', err);
-      Alert.alert('Hata', 'Katılımcılar eklenemedi. Lütfen tekrar deneyin.');
+      showError('Hata', 'Katılımcılar eklenemedi. Lütfen tekrar deneyin.');
     } finally {
       setIsUpdating(false);
     }
   };
 
-  // Remove participant
+  // Remove participant - show dialog
   const handleRemoveParticipant = (participant: Participant) => {
     if (!conversationId) return;
-
-    Alert.alert(
-      'Katılımcıyı Çıkar',
-      `${participant.name} adlı kullanıcıyı gruptan çıkarmak istediğinize emin misiniz?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Çıkar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeParticipant(conversationId, participant.id);
-              await fetchGroupDetails();
-              Alert.alert('Başarılı', 'Katılımcı gruptan çıkarıldı.');
-            } catch (err) {
-              console.error('Remove participant error:', err);
-              Alert.alert('Hata', 'Katılımcı çıkarılamadı. Lütfen tekrar deneyin.');
-            }
-          },
-        },
-      ]
-    );
+    setParticipantToRemove(participant);
+    setShowRemoveParticipantDialog(true);
   };
 
-  // Leave group
+  // Confirm remove participant
+  const confirmRemoveParticipant = async () => {
+    if (!conversationId || !participantToRemove) return;
+
+    try {
+      await removeParticipant(conversationId, participantToRemove.id);
+      await fetchGroupDetails();
+      setShowRemoveParticipantDialog(false);
+      setParticipantToRemove(null);
+      success('Başarılı', 'Katılımcı gruptan çıkarıldı.');
+    } catch (err) {
+      console.error('Remove participant error:', err);
+      showError('Hata', 'Katılımcı çıkarılamadı. Lütfen tekrar deneyin.');
+    }
+  };
+
+  // Leave group - show dialog
   const handleLeaveGroup = () => {
     if (!conversationId) return;
 
     if (groupDetails?.isCreator) {
-      Alert.alert('Uyarı', 'Grup oluşturucusu gruptan ayrılamaz.');
+      warning('Uyarı', 'Grup oluşturucusu gruptan ayrılamaz.');
       return;
     }
 
-    Alert.alert('Gruptan Ayrıl', 'Bu gruptan ayrılmak istediğinize emin misiniz?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Ayrıl',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await leaveGroup(conversationId);
-            router.replace('/messages' as any);
-          } catch (err) {
-            console.error('Leave group error:', err);
-            Alert.alert('Hata', 'Gruptan ayrılırken bir hata oluştu.');
-          }
-        },
-      },
-    ]);
+    setShowLeaveGroupDialog(true);
+  };
+
+  // Confirm leave group
+  const confirmLeaveGroup = async () => {
+    if (!conversationId) return;
+
+    try {
+      await leaveGroup(conversationId);
+      setShowLeaveGroupDialog(false);
+      router.replace('/messages' as any);
+    } catch (err) {
+      console.error('Leave group error:', err);
+      showError('Hata', 'Gruptan ayrılırken bir hata oluştu.');
+    }
   };
 
   // Toggle user selection for adding
@@ -246,7 +248,7 @@ export default function GroupSettingsScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('İzin Gerekli', 'Fotoğraf seçmek için galeri erişim izni gereklidir.');
+        warning('İzin Gerekli', 'Fotoğraf seçmek için galeri erişim izni gereklidir.');
         return;
       }
 
@@ -261,7 +263,7 @@ export default function GroupSettingsScreen() {
         const asset = result.assets[0];
 
         if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-          Alert.alert('Hata', 'Dosya boyutu maksimum 5MB olabilir');
+          showError('Hata', 'Dosya boyutu maksimum 5MB olabilir');
           return;
         }
 
@@ -271,7 +273,7 @@ export default function GroupSettingsScreen() {
       }
     } catch (err) {
       console.error('Image picker error:', err);
-      Alert.alert('Hata', 'Fotoğraf seçilirken bir hata oluştu');
+      showError('Hata', 'Fotoğraf seçilirken bir hata oluştu');
     }
   };
 
@@ -294,11 +296,11 @@ export default function GroupSettingsScreen() {
 
       await updateGroupAvatar(conversationId, formData);
 
-      Alert.alert('Başarılı', 'Grup fotoğrafı güncellendi');
+      success('Başarılı', 'Grup fotoğrafı güncellendi');
       await fetchGroupDetails();
     } catch (err) {
       console.error('Avatar upload error:', err);
-      Alert.alert('Hata', 'Fotoğraf yüklenirken bir hata oluştu');
+      showError('Hata', 'Fotoğraf yüklenirken bir hata oluştu');
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -615,6 +617,33 @@ export default function GroupSettingsScreen() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Remove Participant Dialog */}
+      <ConfirmDialog
+        visible={showRemoveParticipantDialog}
+        title="Katılımcıyı Çıkar"
+        message={`${participantToRemove?.name || ''} adlı kullanıcıyı gruptan çıkarmak istediğinize emin misiniz?`}
+        confirmText="Çıkar"
+        cancelText="İptal"
+        isDangerous
+        onConfirm={confirmRemoveParticipant}
+        onCancel={() => {
+          setShowRemoveParticipantDialog(false);
+          setParticipantToRemove(null);
+        }}
+      />
+
+      {/* Leave Group Dialog */}
+      <ConfirmDialog
+        visible={showLeaveGroupDialog}
+        title="Gruptan Ayrıl"
+        message="Bu gruptan ayrılmak istediğinize emin misiniz?"
+        confirmText="Ayrıl"
+        cancelText="İptal"
+        isDangerous
+        onConfirm={confirmLeaveGroup}
+        onCancel={() => setShowLeaveGroupDialog(false)}
+      />
     </View>
   );
 }

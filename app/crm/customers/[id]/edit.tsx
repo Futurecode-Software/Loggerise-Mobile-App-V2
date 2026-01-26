@@ -5,11 +5,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { useToast } from '@/hooks/use-toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Save, AlertCircle } from 'lucide-react-native';
@@ -24,6 +24,7 @@ import {
 
 export default function EditCrmCustomerScreen() {
   const colors = Colors.light;
+  const { success, error: showError } = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const customerId = parseInt(id, 10);
 
@@ -97,21 +98,17 @@ export default function EditCrmCustomerScreen() {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      Alert.alert('Hata', 'Lütfen formu eksiksiz doldurunuz');
+      showError('Hata', 'Lütfen formu eksiksiz doldurunuz');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const customer = await updateCrmCustomer(customerId, formData);
-      Alert.alert('Başarılı', 'CRM müşterisi başarıyla güncellendi', [
-        {
-          text: 'Tamam',
-          onPress: () => router.back(),
-        },
-      ]);
+      await updateCrmCustomer(customerId, formData);
+      success('Başarılı', 'CRM müşterisi başarıyla güncellendi');
+      setTimeout(() => router.back(), 1000);
     } catch (err) {
-      Alert.alert(
+      showError(
         'Hata',
         err instanceof Error ? err.message : 'Müşteri güncellenemedi'
       );

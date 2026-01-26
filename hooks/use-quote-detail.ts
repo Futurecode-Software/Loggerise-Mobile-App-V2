@@ -6,7 +6,6 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useToast } from './use-toast';
 import {
@@ -102,15 +101,11 @@ export function useQuoteDetail({ id }: UseQuoteDetailOptions): UseQuoteDetailRet
   // Delete handler
   const handleDelete = useCallback(() => {
     if (quote && !quote.can_delete) {
-      Alert.alert(
-        'Silinemez',
-        'Bu teklif silinemez. Yüklere dönüştürülmüş teklifler silinemez.',
-        [{ text: 'Tamam' }]
-      );
+      showError('Silinemez', 'Bu teklif silinemez. Yüklere dönüştürülmüş teklifler silinemez.');
       return;
     }
     setShowDeleteConfirm(true);
-  }, [quote]);
+  }, [quote, showError]);
 
   // Confirm delete handler
   const handleConfirmDelete = useCallback(async () => {
@@ -136,11 +131,7 @@ export function useQuoteDetail({ id }: UseQuoteDetailOptions): UseQuoteDetailRet
     if (!quote || !id) return;
 
     if (!quote.can_convert_to_loads) {
-      Alert.alert(
-        'Gönderilemez',
-        'Bu teklif gönderilemez. Teklifin taslak durumunda olması ve yük kalemi içermesi gerekir.',
-        [{ text: 'Tamam' }]
-      );
+      showError('Gönderilemez', 'Bu teklif gönderilemez. Teklifin taslak durumunda olması ve yük kalemi içermesi gerekir.');
       return;
     }
 
