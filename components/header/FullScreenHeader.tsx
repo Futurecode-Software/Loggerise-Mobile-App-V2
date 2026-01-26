@@ -60,8 +60,8 @@ export function FullScreenHeader({
 
   // Status bar yüksekliği - Android için yaklaşık 24dp, iOS için insets.top
   const statusBarHeight = Platform.OS === 'ios' ? insets.top : 24;
-  // Status bar ile içerik arasında ekstra padding
-  const extraTopPadding = Platform.OS === 'ios' ? Spacing.md : Spacing.lg;
+  // Status bar ile içerik arasında ekstra padding - iOS için minimum padding
+  const extraTopPadding = Platform.OS === 'ios' ? 0 : Spacing.lg;
   const totalTopPadding = statusBarHeight + extraTopPadding;
 
   return (
@@ -171,9 +171,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: Platform.OS === 'ios' ? Spacing.xs : Spacing.md,
     paddingBottom: Spacing.md,
-    minHeight: 72,
+    minHeight: Platform.OS === 'ios' ? 56 : 72,
   },
   leftSection: {
     flex: 1,

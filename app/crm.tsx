@@ -8,10 +8,8 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  ChevronLeft,
   TrendingUp,
   TrendingDown,
   Users,
@@ -25,6 +23,7 @@ import {
   UserPlus,
 } from 'lucide-react-native';
 import { Card, Badge } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   getCrmDashboard,
@@ -109,62 +108,43 @@ export default function CrmScreen() {
     </TouchableOpacity>
   );
 
+  const headerRightIcons = (
+    <View style={styles.headerActions}>
+      <TouchableOpacity
+        onPress={() => router.push('/crm/customers' as any)}
+        style={styles.headerActionButton}
+        activeOpacity={0.7}
+      >
+        <Users size={20} color="#FFFFFF" />
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => router.push('/crm/customers/new' as any)}
+        style={styles.headerActionButton}
+        activeOpacity={0.7}
+      >
+        <UserPlus size={20} color="#FFFFFF" />
+      </TouchableOpacity>
+    </View>
+  );
+
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>CRM</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => router.push('/crm/customers' as any)}
-              style={styles.headerActionButton}
-            >
-              <Users size={20} color={Brand.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => router.push('/crm/customers/new' as any)}
-              style={styles.headerActionButton}
-            >
-              <UserPlus size={20} color={Brand.primary} />
-            </TouchableOpacity>
-          </View>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader title="CRM" showBackButton rightIcons={headerRightIcons} />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             CRM verileri yükleniyor...
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>CRM</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => router.push('/crm/customers' as any)}
-              style={styles.headerActionButton}
-            >
-              <Users size={20} color={Brand.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => router.push('/crm/customers/new' as any)}
-              style={styles.headerActionButton}
-            >
-              <UserPlus size={20} color={Brand.primary} />
-            </TouchableOpacity>
-          </View>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader title="CRM" showBackButton rightIcons={headerRightIcons} />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
             <AlertCircle size={64} color={colors.danger} />
@@ -185,32 +165,13 @@ export default function CrmScreen() {
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>CRM</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={() => router.push('/crm/customers' as any)}
-            style={styles.headerActionButton}
-          >
-            <Users size={20} color={Brand.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push('/crm/customers/new' as any)}
-            style={styles.headerActionButton}
-          >
-            <UserPlus size={20} color={Brand.primary} />
-          </TouchableOpacity>
-        </View>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <FullScreenHeader title="CRM" showBackButton rightIcons={headerRightIcons} />
 
       <ScrollView
         style={styles.content}
@@ -421,29 +382,13 @@ export default function CrmScreen() {
           </Card>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
   },
   headerActions: {
     flexDirection: 'row',

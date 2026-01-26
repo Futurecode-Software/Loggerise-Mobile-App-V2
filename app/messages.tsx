@@ -11,11 +11,9 @@ import {
   AppStateStatus,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import {
-  ChevronLeft,
   Search,
   Plus,
   MessageCircle,
@@ -23,6 +21,7 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { Avatar, Input } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import {
@@ -345,31 +344,31 @@ export default function MessagesScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Mesajlar</Text>
-        <View style={styles.headerRight}>
-          {/* Yeni Grup Butonu */}
-          <TouchableOpacity
-            onPress={() => router.push('/message/group/new' as any)}
-            style={[styles.groupButton, { backgroundColor: Brand.primary }]}
-            activeOpacity={0.7}
-          >
-            <Users size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-          {totalUnreadCount > 0 && (
-            <View style={[styles.headerUnreadBadge, { backgroundColor: colors.danger }]}>
-              <Text style={styles.headerUnreadCount}>
-                {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-              </Text>
-            </View>
-          )}
-        </View>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title="Mesajlar"
+        showBackButton
+        rightIcons={
+          <View style={styles.headerRight}>
+            {/* Yeni Grup Butonu */}
+            <TouchableOpacity
+              onPress={() => router.push('/message/group/new' as any)}
+              style={[styles.groupButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+              activeOpacity={0.7}
+            >
+              <Users size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+            {totalUnreadCount > 0 && (
+              <View style={[styles.headerUnreadBadge, { backgroundColor: colors.danger }]}>
+                <Text style={styles.headerUnreadCount}>
+                  {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
+        }
+      />
 
       {/* Search */}
       <View style={styles.searchContainer}>
@@ -406,29 +405,13 @@ export default function MessagesScreen() {
       >
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
   },
   headerRight: {
     flexDirection: 'row',

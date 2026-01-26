@@ -7,12 +7,13 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useToast } from '@/hooks/use-toast';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ChevronLeft, Save } from 'lucide-react-native';
+import { Save } from 'lucide-react-native';
 import { Input, Button, Card } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
   createCrmCustomer,
@@ -81,24 +82,26 @@ export default function NewCrmCustomerScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Yeni CRM Müşterisi</Text>
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            { backgroundColor: isSubmitting ? colors.border : Brand.primary },
-          ]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
-          <Save size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Full Screen Header */}
+      <FullScreenHeader
+        title="Yeni CRM Müşterisi"
+        showBackButton
+        rightIcons={
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+            activeOpacity={0.7}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Save size={20} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+        }
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -312,7 +315,7 @@ export default function NewCrmCustomerScreen() {
           />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -320,25 +323,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  backButton: {
+  headerButton: {
     padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingLG,
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  saveButton: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
   },
   keyboardView: {
     flex: 1,
