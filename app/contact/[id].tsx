@@ -232,16 +232,15 @@ export default function ContactDetailScreen() {
   };
 
   // Adres formatla
-  const formatAddress = (address: ContactAddress): string => {
+  const formatAddress = (addressItem: ContactAddress): string => {
     const parts: string[] = [];
-    if (address.address_line_1) parts.push(address.address_line_1);
-    if (address.address_line_2) parts.push(address.address_line_2);
+    if (addressItem.address) parts.push(addressItem.address);
 
     const locationParts: string[] = [];
-    if (address.city?.name) locationParts.push(address.city.name);
-    if (address.state?.name) locationParts.push(address.state.name);
-    if (address.country?.name) locationParts.push(address.country.name);
-    if (address.postal_code) locationParts.push(address.postal_code);
+    if (addressItem.city?.name) locationParts.push(addressItem.city.name);
+    if (addressItem.state?.name) locationParts.push(addressItem.state.name);
+    if (addressItem.country?.name) locationParts.push(addressItem.country.name);
+    if (addressItem.postal_code) locationParts.push(addressItem.postal_code);
 
     if (locationParts.length > 0) {
       parts.push(locationParts.join(', '));
@@ -250,40 +249,62 @@ export default function ContactDetailScreen() {
     return parts.join('\n') || 'Adres bilgisi yok';
   };
 
-  // Adres tipi label
-  const getAddressTypeLabel = (type: ContactAddress['address_type']): string => {
+  // Adres tipi label - based on is_billing and is_shipping flags
+  const getAddressTypeLabel = (addressItem: ContactAddress): string => {
+    if (addressItem.is_billing && addressItem.is_shipping) {
+      return 'Fatura & Sevkiyat';
+    } else if (addressItem.is_billing) {
+      return 'Fatura';
+    } else if (addressItem.is_shipping) {
+      return 'Sevkiyat';
+    } else if (addressItem.is_main) {
+      return 'Ana Adres';
+    }
+    return 'Genel';
+  };
+
+  // Contact tipi label - based on type field (customer, supplier, both, etc.)
+  const getContactTypeLabel = (type: ContactDetail['type']): string => {
     switch (type) {
-      case 'billing':
-        return 'Fatura';
-      case 'shipping':
-        return 'Sevkiyat';
+      case 'customer':
+        return 'Müşteri';
+      case 'supplier':
+        return 'Tedarikçi';
       case 'both':
-        return 'Fatura & Sevkiyat';
+        return 'Müşteri & Tedarikçi';
+      case 'self':
+        return 'Kendi Firmam';
+      case 'potential':
+        return 'Potansiyel';
+      case 'other':
+        return 'Diğer';
       default:
         return type;
     }
   };
 
-  // Contact tipi label
-  const getContactTypeLabel = (type: ContactDetail['type']): string => {
-    switch (type) {
+  // Legal type label
+  const getLegalTypeLabel = (legalType: ContactDetail['legal_type']): string => {
+    switch (legalType) {
       case 'company':
         return 'Şirket';
       case 'individual':
         return 'Bireysel';
-      case 'self':
-        return 'Kendi Firmam';
+      case 'government':
+        return 'Kamu';
+      case 'public':
+        return 'Tüzel';
       default:
-        return type;
+        return legalType;
     }
   };
 
-  // Contact rol label
+  // Contact rol label - based on is_customer and is_supplier computed fields
   const getContactRoleLabel = (contact: ContactDetail): string => {
     const roles: string[] = [];
     if (contact.is_customer) roles.push('Müşteri');
     if (contact.is_supplier) roles.push('Tedarikçi');
-    return roles.length > 0 ? roles.join(' & ') : 'Belirsiz';
+    return roles.length > 0 ? roles.join(' & ') : getContactTypeLabel(contact.type);
   };
 
   // Status badge variant
@@ -295,7 +316,7 @@ export default function ContactDetailScreen() {
         return 'success';
       case 'passive':
         return 'warning';
-      case 'blacklisted':
+      case 'blacklist':
         return 'danger';
       default:
         return 'default';
@@ -309,7 +330,7 @@ export default function ContactDetailScreen() {
         return 'Aktif';
       case 'passive':
         return 'Pasif';
-      case 'blacklisted':
+      case 'blacklist':
         return 'Kara Liste';
       default:
         return status;
@@ -529,11 +550,11 @@ export default function ContactDetailScreen() {
               <View style={styles.cardHeaderRow}>
                 <View style={styles.addressHeader}>
                   <Badge
-                    label={getAddressTypeLabel(address.address_type)}
-                    variant={address.address_type === 'billing' ? 'info' : 'success'}
+                    label={getAddressTypeLabel(address)}
+                    variant={address.is_billing ? 'info' : 'success'}
                     size="sm"
                   />
-                  {address.is_default && <Badge label="Varsayılan" variant="default" size="sm" />}
+                  {address.is_main && <Badge label="Ana Adres" variant="default" size="sm" />}
                 </View>
                 <View style={styles.cardActions}>
                   <TouchableOpacity
