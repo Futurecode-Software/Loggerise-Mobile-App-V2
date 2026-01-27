@@ -137,9 +137,7 @@ export default function NewTractorTrailerAssignmentScreen() {
       await createTractorTrailerAssignment(formData as TractorTrailerAssignmentFormData);
 
       success('Başarılı', 'Eşleştirme başarıyla oluşturuldu.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

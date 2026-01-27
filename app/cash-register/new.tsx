@@ -107,9 +107,7 @@ export default function NewCashRegisterScreen() {
       await createCashRegister(formData);
 
       success('Başarılı', 'Kasa başarıyla oluşturuldu.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

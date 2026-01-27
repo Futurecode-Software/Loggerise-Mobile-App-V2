@@ -77,9 +77,7 @@ export default function NewModelScreen() {
       await createProductModel(formData);
 
       success('Başarılı', 'Model başarıyla oluşturuldu.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

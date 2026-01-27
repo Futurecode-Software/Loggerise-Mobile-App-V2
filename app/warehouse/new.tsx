@@ -91,9 +91,7 @@ export default function NewWarehouseScreen() {
       await createWarehouse(formData);
 
       success('Başarılı', 'Depo başarıyla oluşturuldu.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

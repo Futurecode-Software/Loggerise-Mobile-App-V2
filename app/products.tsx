@@ -8,7 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import {
   Search,
   Filter,
@@ -115,6 +115,19 @@ export default function ProductsScreen() {
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  // Refresh when screen comes into focus
+  const isFirstFocusRef = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocusRef.current) {
+        isFirstFocusRef.current = false;
+        return;
+      }
+      // Refresh data when screen comes into focus
+      fetchProducts(1, false);
+    }, [fetchProducts])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

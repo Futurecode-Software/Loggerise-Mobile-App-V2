@@ -213,9 +213,7 @@ export default function EditDriverTractorAssignmentScreen() {
       await updateDriverTractorAssignment(parseInt(id), formData);
 
       success('Başarılı', 'Eşleştirme başarıyla güncellendi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {
@@ -246,9 +244,7 @@ export default function EditDriverTractorAssignmentScreen() {
     try {
       await deleteDriverTractorAssignment(parseInt(id));
       success('Başarılı', 'Eşleştirme başarıyla silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error) {
       showError('Hata', getErrorMessage(error));
     } finally {

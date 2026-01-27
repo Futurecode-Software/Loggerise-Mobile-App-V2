@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import {
   Search,
   Filter,
@@ -60,6 +60,9 @@ export default function TransactionsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Refs to prevent duplicate calls
+  const isFirstFocusRef = useRef(true);
 
   // Fetch transactions from API
   const fetchTransactions = useCallback(
@@ -114,6 +117,18 @@ export default function TransactionsScreen() {
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocusRef.current) {
+        isFirstFocusRef.current = false;
+        return;
+      }
+      // Refresh data when screen comes into focus
+      fetchTransactions(1, false);
+    }, [fetchTransactions])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

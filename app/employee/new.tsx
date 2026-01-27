@@ -175,10 +175,9 @@ export default function NewEmployeeScreen() {
     try {
       await createEmployee(formData);
 
+      // Success toast goster ve hemen geri don
       success('Başarılı', 'Çalışan başarıyla oluşturuldu.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

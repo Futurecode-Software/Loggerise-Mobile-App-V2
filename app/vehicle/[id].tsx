@@ -171,9 +171,7 @@ export default function VehicleDetailScreen() {
     try {
       await deleteVehicle(parseInt(id, 10));
       success('Başarılı', 'Araç silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Araç silinemedi.');
     } finally {

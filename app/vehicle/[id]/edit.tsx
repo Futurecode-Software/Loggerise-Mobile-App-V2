@@ -315,9 +315,7 @@ export default function VehicleEditScreen() {
       await api.put(`/vehicles/${id}`, data);
 
       success('Başarılı', 'Araç başarıyla güncellendi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

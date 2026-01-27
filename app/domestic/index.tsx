@@ -15,7 +15,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import {
   Search,
   Filter,
@@ -172,6 +172,15 @@ export default function DomesticOrdersScreen() {
       }
     };
   }, [searchQuery]);
+
+  // Refresh on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (hasInitialFetchRef.current) {
+        executeFetch(searchQuery, activeFilter, 1, false);
+      }
+    }, [searchQuery, activeFilter, executeFetch])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

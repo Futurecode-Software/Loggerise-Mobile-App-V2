@@ -138,9 +138,7 @@ export default function EmployeeEditScreen() {
         });
       } catch (error) {
         showError('Hata', 'Çalışan bilgileri yüklenemedi');
-        setTimeout(() => {
-          router.back();
-        }, 1500);
+        router.back();
       } finally {
         setIsLoading(false);
       }
@@ -212,10 +210,9 @@ export default function EmployeeEditScreen() {
     try {
       await updateEmployee(parseInt(id, 10), formData);
 
+      // Success toast goster ve hemen geri don
       success('Başarılı', 'Çalışan başarıyla güncellendi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

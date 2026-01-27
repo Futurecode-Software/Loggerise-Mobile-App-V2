@@ -499,9 +499,7 @@ export default function NewVehicleScreen() {
 
       // Success - show toast message and redirect
       success('Başarılı', 'Araç başarıyla oluşturuldu.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

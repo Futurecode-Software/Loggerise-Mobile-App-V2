@@ -11,8 +11,7 @@ import {
   AppStateStatus,
   Alert,
 } from 'react-native';
-import { router } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { router, useFocusEffect } from 'expo-router';
 import {
   Search,
   Plus,
@@ -180,16 +179,12 @@ export default function MessagesTabScreen() {
     return () => clearTimeout(timeoutId);
   }, [searchQuery, fetchConversations]);
 
-  // Refresh list when screen comes into focus
+  // Refresh on screen focus
   useFocusEffect(
     useCallback(() => {
-      if (isFirstRender.current) {
-        isFirstRender.current = false;
-        return;
+      if (hasInitialFetchRef.current) {
+        fetchConversations(false);
       }
-
-      // Refresh without showing loading spinner
-      fetchConversations(false);
     }, [fetchConversations])
   );
 

@@ -142,9 +142,7 @@ export default function CashRegisterEditScreen() {
       await updateCashRegister(parseInt(id, 10), formData);
 
       success('Başarılı', 'Kasa başarıyla güncellendi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

@@ -230,9 +230,7 @@ export default function EditTireScreen() {
       const response = await api.put(`/filo-yonetimi/lastik-deposu/${id}`, submitData);
 
       success('Başarılı', response.data.message || 'Lastik başarıyla güncellendi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {
@@ -263,9 +261,7 @@ export default function EditTireScreen() {
     try {
       await api.delete(`/filo-yonetimi/lastik-deposu/${id}`);
       success('Başarılı', 'Lastik başarıyla silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error) {
       showError('Hata', getErrorMessage(error));
     } finally {

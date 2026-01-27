@@ -151,9 +151,7 @@ export default function BankAccountEditScreen() {
       await updateBank(parseInt(id, 10), formData);
 
       success('Başarılı', 'Banka hesabı başarıyla güncellendi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

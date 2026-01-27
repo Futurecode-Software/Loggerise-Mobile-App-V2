@@ -15,7 +15,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import {
   MapPin,
   Package,
@@ -53,6 +53,7 @@ export default function ExportOperationsScreen() {
 
   // Refs
   const isMountedRef = useRef(true);
+  const hasInitialFetchRef = useRef(false);
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -61,6 +62,7 @@ export default function ExportOperationsScreen() {
       const result = await getDispositionData('export');
       if (isMountedRef.current) {
         setData(result);
+        hasInitialFetchRef.current = true;
       }
     } catch (err) {
       if (isMountedRef.current) {
@@ -82,6 +84,15 @@ export default function ExportOperationsScreen() {
       isMountedRef.current = false;
     };
   }, [fetchData]);
+
+  // Refresh on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (hasInitialFetchRef.current) {
+        fetchData();
+      }
+    }, [fetchData])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

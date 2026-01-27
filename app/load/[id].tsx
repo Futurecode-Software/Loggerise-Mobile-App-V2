@@ -116,9 +116,7 @@ export default function LoadDetailScreen() {
     try {
       await deleteLoad(loadId);
       success('Başarılı', 'Yük silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Yük silinemedi.');
     } finally {

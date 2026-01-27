@@ -103,9 +103,7 @@ export default function NewCategoryScreen() {
       await createProductCategory(formData);
 
       success('Başarılı', 'Kategori başarıyla oluşturuldu.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

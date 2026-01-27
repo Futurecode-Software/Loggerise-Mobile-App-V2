@@ -8,7 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import {
   Search,
   Filter,
@@ -177,6 +177,15 @@ export default function LoadsScreen() {
       }
     };
   }, [searchQuery]); // Only searchQuery
+
+  // Refresh on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (hasInitialFetchRef.current) {
+        executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
+      }
+    }, [searchQuery, activeStatusFilter, activeDirectionFilter, executeFetch])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

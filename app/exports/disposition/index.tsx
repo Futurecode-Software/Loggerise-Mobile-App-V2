@@ -15,7 +15,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
@@ -75,6 +75,7 @@ export default function DispositionScreen() {
   // Refs
   const isMountedRef = useRef(true);
   const loadPickerModalRef = useRef<LoadPickerModalRef>(null);
+  const hasInitialFetchRef = useRef(false);
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -83,6 +84,7 @@ export default function DispositionScreen() {
       const result = await getDispositionData('export');
       if (isMountedRef.current) {
         setData(result);
+        hasInitialFetchRef.current = true;
       }
     } catch (err) {
       if (isMountedRef.current) {
@@ -104,6 +106,15 @@ export default function DispositionScreen() {
       isMountedRef.current = false;
     };
   }, [fetchData]);
+
+  // Refresh on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (hasInitialFetchRef.current) {
+        fetchData();
+      }
+    }, [fetchData])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

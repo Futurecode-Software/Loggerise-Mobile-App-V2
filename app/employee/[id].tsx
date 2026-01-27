@@ -25,7 +25,7 @@ import {
   Calendar,
   AlertCircle,
 } from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
@@ -34,7 +34,6 @@ import {
   getEmployee,
   deleteEmployee,
   Employee,
-  getFullName,
   getEmploymentStatusLabel,
   getContractTypeLabel,
   getPositionLabel,
@@ -91,16 +90,16 @@ export default function EmployeeDetailScreen() {
     setIsDeleting(true);
     try {
       await deleteEmployee(parseInt(id, 10));
+      // Success toast goster ve hemen geri don
       success('Başarılı', 'Çalışan silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Çalışan silinemedi.');
-    } finally {
+      // Hata durumunda state'leri temizle
       setIsDeleting(false);
       setShowDeleteConfirm(false);
     }
+    // Not: Basari durumunda sayfa geri dondugu icin state temizlemeye gerek yok
   };
 
   // Render info row
@@ -127,17 +126,19 @@ export default function EmployeeDetailScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
+      <View style={styles.container}>
         <FullScreenHeader
           title="Çalışan Detayı"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={[styles.loadingCard, { backgroundColor: '#FFFFFF' }]}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Çalışan bilgileri yükleniyor...
-          </Text>
+        <View style={styles.content}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={Brand.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+              Çalışan bilgileri yükleniyor...
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -146,46 +147,48 @@ export default function EmployeeDetailScreen() {
   // Error state
   if (error || !employee) {
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
+      <View style={styles.container}>
         <FullScreenHeader
           title="Çalışan Detayı"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={[styles.errorCard, { backgroundColor: '#FFFFFF' }]}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            {error || 'Çalışan bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchEmployee}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
+        <View style={styles.content}>
+          <View style={styles.errorCard}>
+            <AlertCircle size={64} color={colors.danger} />
+            <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
+            <Text style={[styles.errorText, { color: colors.textSecondary }]}>
+              {error || 'Çalışan bulunamadı'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+              onPress={fetchEmployee}
+            >
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
+    <View style={styles.container}>
       <FullScreenHeader
         title={employee.full_name}
         showBackButton
         onBackPress={() => router.back()}
         rightIcons={
-          <>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
             <TouchableOpacity
-              style={styles.headerButton}
               onPress={() => router.push(`/employee/${employee.id}/edit` as any)}
+              activeOpacity={0.7}
             >
               <Edit size={20} color="#FFFFFF" />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.headerButton}
               onPress={handleDelete}
+              activeOpacity={0.7}
               disabled={isDeleting}
             >
               {isDeleting ? (
@@ -194,51 +197,51 @@ export default function EmployeeDetailScreen() {
                 <Trash2 size={20} color="#FFFFFF" />
               )}
             </TouchableOpacity>
-          </>
+          </View>
         }
       />
 
       {/* Details */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
-        }
-      >
-        <View style={styles.contentCard}>
-        {/* Temel Bilgiler */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
-          {renderInfoRow('TC Kimlik No', employee.citizenship_no, User)}
-          {employee.employee_code && renderInfoRow('Personel Kodu', employee.employee_code, Briefcase)}
-          {employee.sgk_number && renderInfoRow('SGK No', employee.sgk_number, Briefcase)}
-          {employee.gender && renderInfoRow('Cinsiyet', getGenderLabel(employee.gender), User)}
-          {employee.marital_status && renderInfoRow('Medeni Durum', getMaritalStatusLabel(employee.marital_status), User)}
-        </Card>
+      <View style={styles.content}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
+          }
+        >
+          {/* Temel Bilgiler */}
+          <Card variant="outlined" style={styles.card}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Temel Bilgiler</Text>
+            {renderInfoRow('TC Kimlik No', employee.citizenship_no, User)}
+            {employee.employee_code && renderInfoRow('Personel Kodu', employee.employee_code, Briefcase)}
+            {employee.sgk_number && renderInfoRow('SGK No', employee.sgk_number, Briefcase)}
+            {employee.gender && renderInfoRow('Cinsiyet', getGenderLabel(employee.gender), User)}
+            {employee.marital_status && renderInfoRow('Medeni Durum', getMaritalStatusLabel(employee.marital_status), User)}
+          </Card>
 
-        {/* İletişim Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>İletişim Bilgileri</Text>
-          {renderInfoRow('Telefon', employee.phone_1, Phone)}
-          {employee.phone_2 && renderInfoRow('Telefon 2', employee.phone_2, Phone)}
-          {renderInfoRow('E-posta', employee.email, Mail)}
-          {employee.home_phone && renderInfoRow('Ev Telefonu', employee.home_phone, Phone)}
-          {employee.emergency_phone_1 && renderInfoRow('Acil Durum Tel', employee.emergency_phone_1, Phone)}
-        </Card>
+          {/* İletişim Bilgileri */}
+          <Card variant="outlined" style={styles.card}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>İletişim Bilgileri</Text>
+            {renderInfoRow('Telefon', employee.phone_1, Phone)}
+            {employee.phone_2 && renderInfoRow('Telefon 2', employee.phone_2, Phone)}
+            {renderInfoRow('E-posta', employee.email, Mail)}
+            {employee.home_phone && renderInfoRow('Ev Telefonu', employee.home_phone, Phone)}
+            {employee.emergency_phone_1 && renderInfoRow('Acil Durum Tel', employee.emergency_phone_1, Phone)}
+          </Card>
 
-        {/* İstihdam Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>İstihdam Bilgileri</Text>
-          {renderInfoRow('Durum', getEmploymentStatusLabel(employee.employment_status), Briefcase)}
-          {employee.contract_type && renderInfoRow('Sözleşme Tipi', getContractTypeLabel(employee.contract_type), Briefcase)}
-          {employee.position && renderInfoRow('Pozisyon', getPositionLabel(employee.position), Briefcase)}
-          {employee.start_date && renderInfoRow('Başlangıç Tarihi', new Date(employee.start_date).toLocaleDateString('tr-TR'), Calendar)}
-          {employee.end_date && renderInfoRow('Bitiş Tarihi', new Date(employee.end_date).toLocaleDateString('tr-TR'), Calendar)}
-        </Card>
-        </View>
-      </ScrollView>
+          {/* İstihdam Bilgileri */}
+          <Card variant="outlined" style={styles.card}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>İstihdam Bilgileri</Text>
+            {renderInfoRow('Durum', getEmploymentStatusLabel(employee.employment_status), Briefcase)}
+            {employee.contract_type && renderInfoRow('Sözleşme Tipi', getContractTypeLabel(employee.contract_type), Briefcase)}
+            {employee.position && renderInfoRow('Pozisyon', getPositionLabel(employee.position), Briefcase)}
+            {employee.start_date && renderInfoRow('Başlangıç Tarihi', new Date(employee.start_date).toLocaleDateString('tr-TR'), Calendar)}
+            {employee.end_date && renderInfoRow('Bitiş Tarihi', new Date(employee.end_date).toLocaleDateString('tr-TR'), Calendar)}
+          </Card>
+        </ScrollView>
+      </View>
 
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
@@ -259,84 +262,36 @@ export default function EmployeeDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
   },
-  headerButton: {
-    padding: Spacing.sm,
-  },
-  loadingCard: {
+  content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
     ...Shadows.lg,
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-  },
-  errorCard: {
-    flex: 1,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing['2xl'],
-    gap: Spacing.md,
-    ...Shadows.lg,
-  },
-  errorTitle: {
-    ...Typography.headingMD,
-  },
-  errorText: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
-  },
-  contentCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: Spacing['2xl'],
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing['2xl'],
-    ...Shadows.lg,
-    gap: Spacing.md,
-  },
-  sectionCard: {
     padding: Spacing.lg,
-    backgroundColor: Colors.light.card,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    paddingBottom: Spacing['3xl'],
   },
-  sectionTitle: {
+  card: {
+    marginBottom: Spacing.lg,
+  },
+  cardTitle: {
     ...Typography.headingSM,
     marginBottom: Spacing.md,
   },
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
-    gap: Spacing.sm,
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
   },
   infoRowLeft: {
     flexDirection: 'row',
@@ -346,10 +301,46 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     ...Typography.bodySM,
+    flex: 1,
   },
   infoValue: {
     ...Typography.bodySM,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'right',
+  },
+  loadingCard: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  loadingText: {
+    ...Typography.bodyMD,
+  },
+  errorCard: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  errorTitle: {
+    ...Typography.headingLG,
+  },
+  errorText: {
+    ...Typography.bodyMD,
+    textAlign: 'center',
+  },
+  retryButton: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.md,
+  },
+  retryButtonText: {
+    ...Typography.buttonMD,
+    color: Colors.light.surface,
   },
 });

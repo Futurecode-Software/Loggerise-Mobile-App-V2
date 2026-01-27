@@ -206,9 +206,7 @@ export default function EditTractorTrailerAssignmentScreen() {
       await updateTractorTrailerAssignment(parseInt(id), formData);
 
       success('Başarılı', 'Eşleştirme başarıyla güncellendi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {
@@ -239,9 +237,7 @@ export default function EditTractorTrailerAssignmentScreen() {
     try {
       await deleteTractorTrailerAssignment(parseInt(id));
       success('Başarılı', 'Eşleştirme başarıyla silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error) {
       showError('Hata', getErrorMessage(error));
     } finally {

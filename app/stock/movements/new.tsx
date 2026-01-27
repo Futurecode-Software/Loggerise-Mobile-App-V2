@@ -120,9 +120,7 @@ export default function NewMovementScreen() {
       await createStockMovement(formData as StockMovementFormData);
 
       success('Başarılı', 'Stok hareketi oluşturuldu.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

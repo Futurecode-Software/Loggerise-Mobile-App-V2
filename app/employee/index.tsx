@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { router } from 'expo-router';
-import { Filter, Plus, User, Truck, Crown, Layers, UserCheck, Coffee, UserX } from 'lucide-react-native';
-import { Badge, Avatar, StandardListContainer } from '@/components/ui';
+import { router, useFocusEffect } from 'expo-router';
+import { Filter, Plus, User, Layers, UserCheck, Coffee, UserX } from 'lucide-react-native';
+import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
-import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
+import { Colors, Spacing, Brand, Shadows, Typography } from '@/constants/theme';
 // useColorScheme kaldirildi - her zaman light mode kullanilir
 import {
   getEmployees,
@@ -14,7 +14,6 @@ import {
   Pagination,
   getFullName,
   getEmploymentStatusLabel,
-  getEmploymentStatusColor,
   getContractTypeLabel,
 } from '@/services/endpoints/employees';
 
@@ -145,6 +144,15 @@ export default function EmployeesScreen() {
     };
   }, [searchQuery]); // Only searchQuery
 
+  // Refresh on screen focus (e.g., after deleting/updating an employee)
+  useFocusEffect(
+    useCallback(() => {
+      if (hasInitialFetchRef.current) {
+        executeFetch(searchQuery, activeFilter, 1, false);
+      }
+    }, [searchQuery, activeFilter, executeFetch])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     await executeFetch(searchQuery, activeFilter, 1, false, true);
@@ -161,21 +169,6 @@ export default function EmployeesScreen() {
     }
   };
 
-  const getStatusIndicatorColor = (status: EmploymentStatus) => {
-    switch (status) {
-      case 'active':
-        return colors.success;
-      case 'on_leave':
-        return colors.warning;
-      case 'terminated':
-        return colors.danger;
-      case 'suspended':
-        return colors.textMuted;
-      default:
-        return colors.textMuted;
-    }
-  };
-
   const renderEmployee = (item: Employee) => {
     const fullName = getFullName(item);
     const isDriver = item.position?.toLowerCase().includes('sürücü') ||
@@ -185,59 +178,72 @@ export default function EmployeesScreen() {
                       item.position?.toLowerCase().includes('manager') ||
                       item.position?.toLowerCase().includes('yönetici');
 
-    const additionalBadges = [];
+    // Determine subtitle text
+    const subtitle = item.position || '-';
+    const departmentText = item.department || '-';
+    const contractText = getContractTypeLabel(item.contract_type);
+
+    // Additional info: department and contract
+    const additionalInfo = (
+      <Text style={[styles.detailText, { color: colors.textMuted }]}>
+        {departmentText} • {contractText}
+      </Text>
+    );
+
+    // Footer badges
+    const footerLeftBadges = [
+      <Badge
+        key="status"
+        label={getEmploymentStatusLabel(item.employment_status)}
+        variant={
+          item.employment_status === 'active' ? 'success' :
+          item.employment_status === 'on_leave' ? 'warning' :
+          item.employment_status === 'terminated' ? 'danger' : 'default'
+        }
+        size="sm"
+      />
+    ];
+
     if (isDriver) {
-      additionalBadges.push(
-        <View key="driver" style={[styles.badge, { backgroundColor: colors.infoLight }]}>
-          <Truck size={12} color={colors.info} />
-          <Text style={[styles.badgeText, { color: colors.info }]}>Sürücü</Text>
-        </View>
+      footerLeftBadges.push(
+        <Badge
+          key="driver"
+          label="Sürücü"
+          variant="info"
+          size="sm"
+        />
       );
     }
     if (isManager) {
-      additionalBadges.push(
-        <View key="manager" style={[styles.badge, { backgroundColor: '#F3E8FF' }]}>
-          <Crown size={12} color="#8b5cf6" />
-          <Text style={[styles.badgeText, { color: '#8b5cf6' }]}>Yönetici</Text>
-        </View>
+      footerLeftBadges.push(
+        <Badge
+          key="manager"
+          label="Yönetici"
+          variant="secondary"
+          size="sm"
+        />
       );
     }
 
     return (
-      <View style={styles.employeeItem}>
-        <Avatar name={fullName} size="lg" />
-        <View style={styles.employeeInfo}>
-          <View style={styles.employeeHeader}>
-            <Text style={[styles.employeeName, { color: colors.text }]} numberOfLines={1}>
-              {fullName}
-            </Text>
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: getStatusIndicatorColor(item.employment_status) },
-              ]}
-            />
-          </View>
-          <Text style={[styles.employeePosition, { color: colors.textSecondary }]}>
-            {item.position || '-'}
-          </Text>
-          <Text style={[styles.employeeDepartment, { color: colors.textMuted }]}>
-            {item.department || '-'} • {getContractTypeLabel(item.contract_type)}
-          </Text>
-          <View style={styles.badgeRow}>
-            <Badge
-              label={getEmploymentStatusLabel(item.employment_status)}
-              variant={
-                item.employment_status === 'active' ? 'success' :
-                item.employment_status === 'on_leave' ? 'warning' :
-                item.employment_status === 'terminated' ? 'danger' : 'default'
-              }
-              size="sm"
-            />
-            {additionalBadges}
-          </View>
-        </View>
-      </View>
+      <StandardListItem
+        icon={User}
+        iconColor={Brand.primary}
+        title={fullName}
+        subtitle={subtitle}
+        additionalInfo={additionalInfo}
+        status={{
+          label: '',
+          variant: item.employment_status === 'active' ? 'success' :
+                   item.employment_status === 'on_leave' ? 'warning' :
+                   item.employment_status === 'terminated' ? 'danger' : 'default',
+          dotOnly: true,
+        }}
+        footer={{
+          left: <View style={{ flexDirection: 'row', gap: Spacing.sm }}>{footerLeftBadges}</View>,
+        }}
+        onPress={() => router.push(`/employee/${item.id}` as any)}
+      />
     );
   };
 
@@ -285,39 +291,21 @@ export default function EmployeesScreen() {
       <View style={styles.contentWrapper}>
         <StandardListContainer
           data={employees}
-          renderItem={(item) => (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => router.push(`/employee/${item.id}` as any)}
-              style={styles.listItemWrapper}
-            >
-              {renderEmployee(item)}
-            </TouchableOpacity>
-          )}
-          keyExtractor={(item) => String(item.id)}
-          search={{
-            value: searchQuery,
-            onChange: setSearchQuery,
-            placeholder: 'İsim, e-posta veya telefon ile ara...',
-          }}
-          emptyState={{
-            icon: User,
-            title: searchQuery ? 'Sonuç bulunamadı' : 'Henüz çalışan eklenmemiş',
-            subtitle: searchQuery
-              ? 'Farklı bir arama terimi deneyin'
-              : 'Yeni çalışan eklemek için + butonuna tıklayın',
-          }}
-          loading={isLoading}
+          renderItem={renderEmployee}
+          keyExtractor={(item) => `employee-${item.id}`}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="İsim, e-posta veya telefon ile ara..."
+          isLoading={isLoading}
           refreshing={refreshing}
           onRefresh={onRefresh}
           onLoadMore={loadMore}
-          pagination={pagination || undefined}
           isLoadingMore={isLoadingMore}
           error={error}
-          onRetry={() => {
-            setIsLoading(true);
-            executeFetch(searchQuery, activeFilter, 1, false);
-          }}
+          emptyTitle={searchQuery ? 'Sonuç bulunamadı' : 'Henüz çalışan eklenmemiş'}
+          emptySubtitle={searchQuery
+            ? 'Farklı bir arama terimi deneyin'
+            : 'Yeni çalışan eklemek için + butonuna tıklayın'}
         />
       </View>
     </View>
@@ -327,6 +315,7 @@ export default function EmployeesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
   },
   contentWrapper: {
     flex: 1,
@@ -335,69 +324,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 32,
     ...Shadows.lg,
   },
-  listItemWrapper: {
-    marginBottom: Spacing.md,
-  },
-  employeeItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    padding: Spacing.lg,
-    backgroundColor: Colors.light.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  employeeInfo: {
-    flex: 1,
-  },
-  employeeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  employeeName: {
-    fontSize: 14,
-    fontWeight: '600',
-    flex: 1,
-    color: Colors.light.text,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  employeePosition: {
-    fontSize: 12,
-    marginTop: 2,
-    color: Colors.light.textSecondary,
-  },
-  employeeDepartment: {
-    fontSize: 10,
-    marginTop: 2,
-    color: Colors.light.textMuted,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
-    flexWrap: 'wrap',
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: 9999,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '500',
+  detailText: {
+    ...Typography.bodySM,
   },
 });

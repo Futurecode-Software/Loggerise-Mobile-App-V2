@@ -209,9 +209,7 @@ export default function NewDomesticOrderScreen() {
       await createDomesticOrder(data);
 
       success('Başarılı', 'İş emri oluşturuldu');
-      setTimeout(() => {
-        router.back();
-      }, 1000);
+      router.back();
     } catch (err: any) {
       const validationErrors = getValidationErrors(err);
       if (validationErrors) {

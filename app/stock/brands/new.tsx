@@ -78,9 +78,7 @@ export default function NewBrandScreen() {
       await createProductBrand(formData);
 
       success('Başarılı', 'Marka başarıyla oluşturuldu.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

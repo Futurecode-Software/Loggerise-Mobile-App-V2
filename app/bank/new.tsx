@@ -125,9 +125,7 @@ export default function NewBankAccountScreen() {
       await createBank(formData);
 
       success('Başarılı', 'Banka hesabı başarıyla oluşturuldu.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

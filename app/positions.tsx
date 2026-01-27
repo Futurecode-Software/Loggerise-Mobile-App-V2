@@ -8,7 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import {
   Search,
   Filter,
@@ -61,6 +61,7 @@ export default function PositionsScreen() {
   const fetchIdRef = useRef(0);
   const debounceTimeoutRef = useRef<NodeJS.Timeout>();
   const hasInitialFetchRef = useRef(false);
+  const isFirstFocusRef = useRef(true);
 
   // Core fetch function - no dependencies on state
   const executeFetch = useCallback(
@@ -155,6 +156,20 @@ export default function PositionsScreen() {
       }
     };
   }, [searchQuery]); // Only searchQuery
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocusRef.current) {
+        isFirstFocusRef.current = false;
+        return;
+      }
+      // Refresh data when screen comes into focus
+      if (hasInitialFetchRef.current) {
+        executeFetch(searchQuery, activeFilter, 1, false);
+      }
+    }, [searchQuery, activeFilter, executeFetch])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

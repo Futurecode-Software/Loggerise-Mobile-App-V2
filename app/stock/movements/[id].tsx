@@ -88,9 +88,7 @@ export default function MovementDetailScreen() {
       await deleteStockMovement(movement.id);
       setShowDeleteDialog(false);
       success('Başarılı', 'Stok hareketi silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1000);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Hareket silinemedi');
     } finally {

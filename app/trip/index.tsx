@@ -13,7 +13,7 @@ import {
     TripFilters,
     TripStatus,
 } from '@/services/endpoints/trips';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import {
     AlertCircle,
     ArrowRight,
@@ -71,6 +71,7 @@ export default function TripsScreen() {
   const fetchIdRef = useRef(0);
   const debounceTimeoutRef = useRef<NodeJS.Timeout>();
   const hasInitialFetchRef = useRef(false);
+  const isFirstFocusRef = useRef(true);
 
   // Core fetch function - no dependencies on state
   const executeFetch = useCallback(
@@ -165,6 +166,20 @@ export default function TripsScreen() {
       }
     };
   }, [searchQuery]); // Only searchQuery
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocusRef.current) {
+        isFirstFocusRef.current = false;
+        return;
+      }
+      // Refresh data when screen comes into focus
+      if (hasInitialFetchRef.current) {
+        executeFetch(searchQuery, activeFilter, 1, false);
+      }
+    }, [searchQuery, activeFilter, executeFetch])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Filter, Plus, Truck, Calendar, Gauge } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
@@ -49,6 +49,7 @@ export default function VehicleScreen() {
   const fetchIdRef = useRef(0);
   const debounceTimeoutRef = useRef<NodeJS.Timeout>();
   const hasInitialFetchRef = useRef(false);
+  const isFirstFocusRef = useRef(true);
 
   // Core fetch function - no dependencies on state
   const executeFetch = useCallback(
@@ -128,6 +129,20 @@ export default function VehicleScreen() {
       }
     };
   }, [searchQuery]); // Only searchQuery
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocusRef.current) {
+        isFirstFocusRef.current = false;
+        return;
+      }
+      // Refresh data when screen comes into focus
+      if (hasInitialFetchRef.current) {
+        executeFetch(searchQuery, 1, false);
+      }
+    }, [searchQuery, executeFetch])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

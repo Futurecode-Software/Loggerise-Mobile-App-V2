@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Link2, Plus, CheckCircle2, XCircle, Edit, Trash2 } from 'lucide-react-native';
 import { StandardListContainer, StandardListItem, Badge, ConfirmDialog } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
@@ -116,6 +116,15 @@ export default function TractorTrailerAssignmentsScreen() {
       }
     };
   }, [searchQuery]); // Only searchQuery
+
+  // Refresh on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (hasInitialFetchRef.current) {
+        executeFetch(searchQuery, 1, false);
+      }
+    }, [searchQuery, executeFetch])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

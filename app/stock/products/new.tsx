@@ -128,9 +128,7 @@ export default function NewProductScreen() {
       await createProduct(formData);
 
       success('Başarılı', 'Ürün başarıyla oluşturuldu.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error: any) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {

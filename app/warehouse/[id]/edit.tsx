@@ -127,9 +127,7 @@ export default function WarehouseEditScreen() {
       await updateWarehouse(parseInt(id, 10), formData);
 
       success('Başarılı', 'Depo başarıyla güncellendi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (error) {
       const validationErrors = getValidationErrors(error);
       if (validationErrors) {
