@@ -220,11 +220,6 @@ export default function StockMovementsScreen() {
             </TouchableOpacity>
           </View>
         }
-            activeOpacity={0.7}
-          >
-            <Filter size={22} color="#FFFFFF" />
-          </TouchableOpacity>
-        }
       />
 
       <View style={styles.contentArea}>
@@ -257,13 +252,6 @@ export default function StockMovementsScreen() {
         }}
       />
       </View>
-
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/stock/movements/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }

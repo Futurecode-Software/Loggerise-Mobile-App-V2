@@ -280,11 +280,6 @@ export default function EmployeesScreen() {
             </TouchableOpacity>
           </View>
         }
-            activeOpacity={0.7}
-          >
-            <Filter size={22} color="#FFFFFF" />
-          </TouchableOpacity>
-        }
       />
 
       <View style={styles.contentWrapper}>
@@ -324,11 +319,6 @@ export default function EmployeesScreen() {
             executeFetch(searchQuery, activeFilter, 1, false);
           }}
         />
-
-          onPress={() => router.push('/employee/new' as any)}
-        >
-          <Plus size={24} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
     </View>
   );
