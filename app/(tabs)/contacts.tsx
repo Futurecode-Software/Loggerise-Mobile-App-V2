@@ -317,7 +317,7 @@ export default function ContactsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Full Screen Header */}
       <FullScreenHeader
         title="Cariler"
@@ -329,8 +329,10 @@ export default function ContactsScreen() {
         }
       />
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
+      {/* Content Area with White Background and Rounded Corners */}
+      <View style={styles.contentArea}>
+        {/* Search */}
+        <View style={styles.searchContainer}>
         <Input
           placeholder="İsim, vergi no veya e-posta ile ara..."
           value={searchQuery}
@@ -396,13 +398,14 @@ export default function ContactsScreen() {
         }
       />
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/contact/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+        {/* FAB */}
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
+          onPress={() => router.push('/contact/new' as any)}
+        >
+          <Plus size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -410,6 +413,13 @@ export default function ContactsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   // Header styles removed - using FullScreenHeader component
   headerActions: {

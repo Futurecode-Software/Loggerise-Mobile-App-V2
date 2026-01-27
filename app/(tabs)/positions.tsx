@@ -346,7 +346,7 @@ export default function PositionsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Full Screen Header */}
       <FullScreenHeader
         title="Pozisyonlar"
@@ -358,8 +358,10 @@ export default function PositionsScreen() {
         }
       />
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
+      {/* Content Area with White Background and Rounded Corners */}
+      <View style={styles.contentArea}>
+        {/* Search */}
+        <View style={styles.searchContainer}>
         <Input
           placeholder="Pozisyon no, plaka veya şoför ile ara..."
           value={searchQuery}
@@ -429,13 +431,14 @@ export default function PositionsScreen() {
         }
       />
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/position/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+        {/* FAB */}
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
+          onPress={() => router.push('/position/new' as any)}
+        >
+          <Plus size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -443,6 +446,13 @@ export default function PositionsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   // Header styles removed - using FullScreenHeader component
   headerActions: {

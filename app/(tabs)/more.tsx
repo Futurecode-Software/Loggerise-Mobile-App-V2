@@ -288,7 +288,7 @@ export default function MoreScreen() {
   }, []);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Full Screen Header */}
       <FullScreenHeader
         title="Daha Fazla"
@@ -302,11 +302,13 @@ export default function MoreScreen() {
         }
       />
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
+      {/* Content Area with White Background and Rounded Corners */}
+      <View style={styles.contentArea}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
         {/* Info text */}
         <Text style={[styles.infoText, { color: colors.textMuted }]}>
           Bir kategori seçerek alt menülere erişebilirsiniz
@@ -352,7 +354,8 @@ export default function MoreScreen() {
 
         {/* Version Info */}
         <Text style={[styles.versionText, { color: colors.textMuted }]}>Loggerise v1.0.0</Text>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -360,6 +363,13 @@ export default function MoreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   // Header styles removed - using FullScreenHeader component
   content: {

@@ -264,7 +264,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Full Screen Header */}
       <FullScreenHeader
         title="Profil"
@@ -275,11 +275,13 @@ export default function ProfileScreen() {
         }
       />
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
+      {/* Content Area with White Background and Rounded Corners */}
+      <View style={styles.contentArea}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
         {/* Profile Hero */}
         <View style={styles.heroSection}>
           <TouchableOpacity
@@ -365,7 +367,8 @@ export default function ProfileScreen() {
         <Text style={[styles.versionText, { color: colors.textMuted }]}>
           Versiyon 1.0.0
         </Text>
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {/* Avatar Action Sheet */}
       <ActionSheet
@@ -418,6 +421,13 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   // Header styles removed - using FullScreenHeader component
   content: {

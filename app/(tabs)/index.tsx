@@ -38,6 +38,7 @@ import { useNotificationContext } from '@/context/notification-context';
 import { useMessageContext } from '@/context/message-context';
 import { useDashboard, DashboardTab } from '@/contexts/dashboard-context';
 import { DashboardTheme } from '@/constants/dashboard-theme';
+import { Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   DashboardQuickActions,
   OverviewTab,
@@ -116,7 +117,7 @@ export default function DashboardScreen() {
           subtitle="Yükleniyor..."
         />
         <View style={styles.loadingFull}>
-          <ActivityIndicator size="large" color={DashboardTheme.accent} />
+          <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={styles.loadingText}>Dashboard yukleniyor...</Text>
         </View>
       </View>
@@ -203,7 +204,7 @@ export default function DashboardScreen() {
         tabs={headerTabs}
       />
 
-      {/* Content */}
+      {/* Content - White rounded card */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
@@ -212,7 +213,7 @@ export default function DashboardScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={DashboardTheme.accent}
+            tintColor={Brand.primary}
           />
         }
       >
@@ -242,13 +243,18 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DashboardTheme.background,
+    backgroundColor: Brand.primary,
   },
   loadingFull: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    marginTop: 0,
+    ...Shadows.lg,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -320,9 +326,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  // Content
+  // Content - White rounded card
   content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   contentContainer: {
     padding: 20,

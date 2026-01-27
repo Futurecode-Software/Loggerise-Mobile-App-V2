@@ -350,7 +350,7 @@ export default function MessagesTabScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Full Screen Header */}
       <FullScreenHeader
         title="Mesajlar"
@@ -375,8 +375,10 @@ export default function MessagesTabScreen() {
         }
       />
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
+      {/* Content Area with White Background and Rounded Corners */}
+      <View style={styles.contentArea}>
+        {/* Search */}
+        <View style={styles.searchContainer}>
         <Input
           placeholder="Kişi veya mesaj ara..."
           value={searchQuery}
@@ -403,13 +405,14 @@ export default function MessagesTabScreen() {
         }
       />
 
-      {/* FAB - New Conversation */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/message/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+        {/* FAB - New Conversation */}
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
+          onPress={() => router.push('/message/new' as any)}
+        >
+          <Plus size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -417,6 +420,13 @@ export default function MessagesTabScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   // Header styles removed - using FullScreenHeader component
   headerRight: {
