@@ -213,6 +213,7 @@ export default function ForgotPasswordScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             bounces={false}
+            overScrollMode="never"
           >
             {/* Top Section - Logo & Title */}
             <View style={styles.topSection}>

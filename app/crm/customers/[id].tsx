@@ -430,6 +430,8 @@ export default function CrmCustomerDetailScreen() {
           />
         }
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
       >
         {activeTab === 'general' && renderGeneralTab()}
         {activeTab === 'interactions' && renderInteractionsTab()}

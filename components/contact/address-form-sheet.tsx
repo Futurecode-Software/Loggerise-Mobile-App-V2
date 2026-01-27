@@ -171,6 +171,8 @@ export function AddressFormSheet({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            bounces={false}
+            overScrollMode="never"
           >
             {/* Genel Hata */}
             {errors.submit && (

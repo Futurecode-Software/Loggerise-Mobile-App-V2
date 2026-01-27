@@ -138,6 +138,8 @@ export function FullScreenHeader({
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            bounces={false}
+            overScrollMode="never"
             style={styles.tabsScrollContainer}
             contentContainerStyle={styles.tabsContainer}
           >

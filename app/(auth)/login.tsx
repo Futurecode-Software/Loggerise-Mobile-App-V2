@@ -197,6 +197,7 @@ export default function LoginScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             bounces={false}
+            overScrollMode="never"
           >
             {/* Top Section - Logo & Welcome */}
             <View style={styles.topSection}>

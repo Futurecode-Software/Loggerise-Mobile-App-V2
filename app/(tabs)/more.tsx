@@ -308,6 +308,8 @@ export default function MoreScreen() {
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
         >
         {/* Info text */}
         <Text style={[styles.infoText, { color: colors.textMuted }]}>

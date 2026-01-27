@@ -23,7 +23,10 @@
       "Bash(node -e:*)",
       "Bash(git diff:*)",
       "Bash(node:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(while read f)",
+      "Bash(do if grep -q \"<ScrollView\" \"$f\")",
+      "Bash(then grep -n \"<ScrollView\" \"$f\")"
     ]
   },
   "enableAllProjectMcpServers": true,

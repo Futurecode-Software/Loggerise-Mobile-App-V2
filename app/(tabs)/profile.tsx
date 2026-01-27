@@ -281,6 +281,8 @@ export default function ProfileScreen() {
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
         >
         {/* Profile Hero */}
         <View style={styles.heroSection}>
