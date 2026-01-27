@@ -28,10 +28,7 @@ import {
   searchTaxOffices,
   TURKEY_ID,
   FOREIGN_DEFAULT_TAX_NUMBER,
-  Country,
-  State,
-  City,
-  TaxOffice,
+  LocationOption,
 } from '@/services/endpoints/locations';
 
 export default function EditCrmCustomerScreen() {
@@ -62,10 +59,10 @@ export default function EditCrmCustomerScreen() {
   });
 
   // Location states
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [states, setStates] = useState<State[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
-  const [taxOffices, setTaxOffices] = useState<TaxOffice[]>([]);
+  const [countries, setCountries] = useState<LocationOption[]>([]);
+  const [states, setStates] = useState<LocationOption[]>([]);
+  const [cities, setCities] = useState<LocationOption[]>([]);
+  const [taxOffices, setTaxOffices] = useState<LocationOption[]>([]);
 
   // Loading states
   const [loadingCountries, setLoadingCountries] = useState(false);
@@ -456,10 +453,7 @@ export default function EditCrmCustomerScreen() {
             {isTurkish && (
               <Select
                 label="Vergi Dairesi"
-                data={taxOffices.map((office) => ({
-                  label: office.name,
-                  value: office.id.toString(),
-                }))}
+                data={taxOffices}
                 value={formData.tax_office_id?.toString()}
                 onValueChange={(value) =>
                   setFormData({ ...formData, tax_office_id: value ? Number(value) : undefined })
@@ -468,10 +462,7 @@ export default function EditCrmCustomerScreen() {
                 loading={loadingTaxOffices}
                 onSearch={async (query) => {
                   const results = await searchTaxOffices(undefined, query);
-                  return results.map((office: any) => ({
-                    label: office.label,
-                    value: office.value.toString(),
-                  }));
+                  return results;
                 }}
               />
             )}
@@ -488,10 +479,7 @@ export default function EditCrmCustomerScreen() {
             {!isTurkish && (
               <Select
                 label="Ülke"
-                data={countries.map((country) => ({
-                  label: country.name,
-                  value: country.id.toString(),
-                }))}
+                data={countries}
                 value={formData.country_id?.toString()}
                 onValueChange={(value) => handleCountryChange(value ? Number(value) : undefined)}
                 placeholder="Ülke seçiniz"
@@ -510,10 +498,7 @@ export default function EditCrmCustomerScreen() {
 
             <Select
               label={isTurkish ? 'İl' : 'Eyalet/Bölge'}
-              data={states.map((state) => ({
-                label: state.name,
-                value: state.id.toString(),
-              }))}
+              data={states}
               value={formData.main_state_id?.toString()}
               onValueChange={(value) => handleStateChange(value ? Number(value) : undefined)}
               placeholder={isTurkish ? 'İl seçiniz' : 'Eyalet seçiniz'}
@@ -522,10 +507,7 @@ export default function EditCrmCustomerScreen() {
 
             <Select
               label={isTurkish ? 'İlçe' : 'Şehir'}
-              data={cities.map((city) => ({
-                label: city.name,
-                value: city.id.toString(),
-              }))}
+              data={cities}
               value={formData.main_city_id?.toString()}
               onValueChange={(value) =>
                 setFormData({ ...formData, main_city_id: value ? Number(value) : undefined })
@@ -579,8 +561,8 @@ export default function EditCrmCustomerScreen() {
                 { label: 'EUR - Euro', value: 'EUR' },
                 { label: 'GBP - İngiliz Sterlini', value: 'GBP' },
               ]}
-              value={formData.currency_type}
-              onValueChange={(value) => setFormData({ ...formData, currency_type: value })}
+              value={formData.currency_type || undefined}
+              onValueChange={(value: string | number | undefined) => setFormData({ ...formData, currency_type: (value as string) || 'TRY' })}
               placeholder="Para birimi seçiniz"
             />
 

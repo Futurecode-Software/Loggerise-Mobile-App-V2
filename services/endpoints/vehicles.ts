@@ -353,6 +353,7 @@ export interface VehicleInsurance {
   start_date: string;
   end_date: string;
   insurance_amount?: number;
+  premium_amount?: number;
   currency_type?: string;
   exchange_rate?: number;
   description?: string;
@@ -514,6 +515,7 @@ export interface VehicleInspection {
   inspector?: string;
   odometer?: number;
   faults?: string;
+  notes?: string;
   recommendations?: string;
   is_active: boolean;
   created_at: string;

@@ -33,10 +33,10 @@ export interface SearchableSelectOption {
 export interface SearchableSelectProps {
   label?: string;
   placeholder?: string;
-  value?: string | number;
+  value?: string | number | null;
   /** Pass the currently selected option to display it immediately without waiting for options to load */
   selectedOption?: SearchableSelectOption | null;
-  onValueChange: (value: string | number) => void;
+  onValueChange: (value: string | number | null) => void;
   /** Called when an option is selected, provides the full option object */
   onSelect?: (option: SearchableSelectOption | null) => void;
   /** Static options array - alternative to loadOptions */
@@ -48,6 +48,10 @@ export interface SearchableSelectProps {
   disabled?: boolean;
   loading?: boolean;
   renderOption?: (option: SearchableSelectOption) => React.ReactNode;
+  /** Custom display value that overrides the selected option's label */
+  displayValue?: string;
+  /** Placeholder for the search input (defaults to "Ara...") */
+  searchPlaceholder?: string;
 }
 
 export function SearchableSelect({
@@ -64,6 +68,8 @@ export function SearchableSelect({
   disabled,
   loading: loadingProp,
   renderOption,
+  displayValue,
+  searchPlaceholder = 'Ara...',
 }: SearchableSelectProps) {
   const colors = Colors.light;
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -78,7 +84,7 @@ export function SearchableSelect({
   // Use external loading state if provided
   const loading = loadingProp ?? isLoading;
 
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fixed snap point at 90% of screen height
   // Single snap point = modal opens directly at this height
@@ -88,8 +94,6 @@ export function SearchableSelect({
   const animationConfigs = useBottomSheetSpringConfigs({
     damping: 80,
     overshootClamping: true,
-    restDisplacementThreshold: 0.1,
-    restSpeedThreshold: 0.1,
     stiffness: 500,
   });
 
@@ -228,7 +232,7 @@ export function SearchableSelect({
     (e: any) => {
       e.stopPropagation();
       setSelectedOption(null);
-      onValueChange('');
+      onValueChange(null);
       onSelect?.(null);
     },
     [onValueChange, onSelect]
@@ -341,7 +345,7 @@ export function SearchableSelect({
         <Search size={20} color={colors.icon} />
         <BottomSheetTextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Ara..."
+          placeholder={searchPlaceholder}
           placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -384,7 +388,7 @@ export function SearchableSelect({
             <>
               <View style={styles.selectedContent}>
                 <Text style={[styles.selectedLabel, { color: colors.text }]}>
-                  {selectedOption.label}
+                  {displayValue ?? selectedOption.label}
                 </Text>
                 {selectedOption.subtitle && (
                   <Text style={[styles.selectedSubtitle, { color: colors.textMuted }]}>
@@ -436,7 +440,7 @@ export function SearchableSelect({
         {renderSearchInput()}
         <BottomSheetFlatList
           data={options}
-          keyExtractor={(item) => String(item.value)}
+          keyExtractor={(item: SearchableSelectOption) => String(item.value)}
           renderItem={renderOptionItem}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={renderEmpty}

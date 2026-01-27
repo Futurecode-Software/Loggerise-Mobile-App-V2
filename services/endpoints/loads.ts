@@ -30,7 +30,7 @@ export type LoadType = 'full' | 'partial';
 /**
  * Load direction enum
  */
-export type LoadDirection = 'import' | 'export' | null;
+export type LoadDirection = 'import' | 'export';
 
 /**
  * Load address type enum - Backend compatible
@@ -45,7 +45,7 @@ export interface Load {
   load_number: string;
   cargo_name?: string;
   cargo_name_foreign?: string;
-  direction?: LoadDirection;
+  direction?: LoadDirection | null;
   status: LoadStatus;
   load_type?: LoadType;
   vehicle_type?: string;
@@ -105,7 +105,7 @@ export interface Load {
   health_certificate_document?: string;
   eur1_document?: string;
   t1_t2_document?: string;
-  sort_order?: number;
+  sort_order?: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -124,8 +124,8 @@ export interface LoadDetail extends Load {
  * Load item (package/piece info)
  */
 export interface LoadItem {
-  id: number;
-  load_id: number;
+  id?: number;
+  load_id?: number;
   cargo_name?: string;
   cargo_name_foreign?: string;
   package_type?: string;
@@ -142,7 +142,7 @@ export interface LoadItem {
   volume?: number;
   lademetre?: number;
   is_stackable?: boolean;
-  stackable_rows?: number;
+  stackable_rows?: number | null;
   is_hazardous?: boolean;
   hazmat_un_no?: string;
   hazmat_class?: string;
@@ -161,18 +161,18 @@ export interface LoadAddress {
   id: number;
   load_id: number;
   type: LoadAddressType;
-  sort_order?: number;
+  sort_order?: number | null;
   is_active?: boolean;
   // Geocoding
   latitude?: number;
   longitude?: number;
   geocoding_status?: string;
   // Pickup type
-  pickup_type?: string;
+  pickup_type?: string | null;
   // Loading info
-  loading_company_id?: number;
+  loading_company_id?: number | null;
   loadingCompany?: { id: number; name: string };
-  loading_location_id?: number;
+  loading_location_id?: number | null;
   loadingLocation?: {
     id: number;
     title?: string;
@@ -185,7 +185,7 @@ export interface LoadAddress {
   loading_entry_date?: string;
   loading_exit_date?: string;
   // Domestic warehouse
-  domestic_warehouse_id?: number;
+  domestic_warehouse_id?: number | null;
   domesticWarehouse?: {
     id: number;
     name?: string;
@@ -197,9 +197,9 @@ export interface LoadAddress {
   domestic_warehouse_entry_date?: string;
   domestic_warehouse_exit_date?: string;
   // Domestic customs
-  domestic_customs_company_id?: number;
+  domestic_customs_company_id?: number | null;
   domesticCustomsCompany?: { id: number; name: string };
-  domestic_customs_location_id?: number;
+  domestic_customs_location_id?: number | null;
   domesticCustomsLocation?: {
     id: number;
     title?: string;
@@ -210,18 +210,18 @@ export interface LoadAddress {
   domestic_customs_entry_date?: string;
   domestic_customs_exit_date?: string;
   // Delivery type
-  delivery_type?: string;
+  delivery_type?: string | null;
   // International customs
-  intl_customs_company_id?: number;
+  intl_customs_company_id?: number | null;
   intlCustomsCompany?: { id: number; name: string };
   t1_number?: string;
-  intl_customs_location_id?: number;
+  intl_customs_location_id?: number | null;
   intlCustomsLocation?: {
     id: number;
     title?: string;
     address?: string;
   };
-  receiver_customs_location_id?: number;
+  receiver_customs_location_id?: number | null;
   receiverCustomsLocation?: {
     id: number;
     title?: string;
@@ -231,9 +231,9 @@ export interface LoadAddress {
   intl_customs_entry_date?: string;
   intl_customs_exit_date?: string;
   // Unloading
-  unloading_company_id?: number;
+  unloading_company_id?: number | null;
   unloadingCompany?: { id: number; name: string };
-  unloading_location_id?: number;
+  unloading_location_id?: number | null;
   unloadingLocation?: {
     id: number;
     title?: string;
@@ -242,14 +242,14 @@ export interface LoadAddress {
     state?: { id: number; name: string };
     country?: { id: number; name: string };
   };
-  destination_country_id?: number;
+  destination_country_id?: number | null;
   destinationCountry?: { id: number; name: string };
   expected_unloading_entry_date?: string;
   unloading_arrival_date?: string;
   unloading_entry_date?: string;
   unloading_exit_date?: string;
   // International warehouse
-  intl_warehouse_id?: number;
+  intl_warehouse_id?: number | null;
   intlWarehouse?: {
     id: number;
     name?: string;
@@ -366,11 +366,24 @@ export async function deleteLoad(id: number): Promise<void> {
  * Load pricing item for create/update
  */
 export interface LoadPricingItem {
-  freight_type: string;
-  freight_type_other?: string;
-  currency: string;
-  amount: string;
+  id?: number;
+  load_id?: number;
+  product_id?: number;
   description?: string;
+  quantity: string;
+  unit: string;
+  unit_price: string;
+  currency: string;
+  exchange_rate: string;
+  vat_rate: string;
+  vat_amount: string;
+  discount_rate: string;
+  discount_amount: string;
+  sub_total: string;
+  total: string;
+  sort_order?: number;
+  is_active?: boolean;
+  product?: { id: number; name: string; code?: string };
 }
 
 /**
@@ -434,9 +447,9 @@ export interface LoadFormData {
   // Diğer
   publish_to_pool?: boolean;
   is_active: boolean;
-  items?: Partial<LoadItem>[];
+  items?: Omit<LoadItem, 'id' | 'load_id'>[] | LoadItem[];
   addresses?: Partial<LoadAddress>[];
-  pricing_items?: LoadPricingItem[];
+  pricing_items?: Partial<LoadPricingItem>[] | LoadPricingItem[];
 }
 
 /**

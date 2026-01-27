@@ -83,7 +83,7 @@ export default function NotesSection({ quoteId, notes, onNotesChange }: NotesSec
     <Card
       style={[
         styles.noteCard,
-        item.is_pinned && { backgroundColor: Brand.primary + '05', borderColor: Brand.primary },
+        ...(item.is_pinned ? [{ backgroundColor: Brand.primary + '05', borderColor: Brand.primary }] : []),
       ]}
     >
       <View style={styles.noteHeader}>

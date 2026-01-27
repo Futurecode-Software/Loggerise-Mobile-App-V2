@@ -91,24 +91,32 @@ export interface Load {
 export interface FuelRecord {
   id: number;
   position_id: number;
-  date: string;
+  date?: string;
+  fuel_date?: string;
   station_name?: string;
-  liters: number;
-  price_per_liter: number;
-  total_amount: number;
-  currency: string;
+  liters: number | string;
+  price_per_liter?: number | string;
+  total_amount?: number | string;
+  amount?: number | string;
+  currency?: string;
+  currency_type?: string;
   notes?: string;
+  description?: string;
+  fuel_type?: string;
 }
 
 // Advance
 export interface Advance {
   id: number;
   position_id: number;
-  date: string;
+  date?: string;
+  advance_date?: string;
   employee_id?: number;
   employee?: Driver;
-  amount: number;
-  currency: string;
+  amount: number | string;
+  currency?: string;
+  currency_type?: string;
+  payment_method?: string;
   description?: string;
 }
 
@@ -116,12 +124,14 @@ export interface Advance {
 export interface Expense {
   id: number;
   position_id: number;
-  date: string;
+  date?: string;
+  expense_date?: string;
   expense_type: string;
   contact_id?: number;
   contact?: Contact;
-  amount: number;
-  currency: string;
+  amount: number | string;
+  currency?: string;
+  currency_type?: string;
   description?: string;
 }
 
@@ -129,10 +139,19 @@ export interface Expense {
 export interface PositionDocument {
   id: number;
   position_id: number;
-  document_type: string;
+  load_id?: number;
   file_name: string;
+  original_file_name: string;
   file_path: string;
-  uploaded_at: string;
+  file_type: string;
+  mime_type?: string;
+  file_size: number;
+  category?: string;
+  description?: string;
+  document_number?: string;
+  document_date?: string;
+  created_at: string;
+  load?: Load;
 }
 
 // Position interface (comprehensive)
@@ -151,6 +170,9 @@ export interface Position {
   vehicleOwnerContact?: Contact; // Alias for camelCase
   rental_invoice_id?: number;
   rentalInvoice?: { id: number; invoice_no: string };
+  rental_fee?: number | null;
+  rental_currency?: string | null;
+  rental_exchange_rate?: number | null;
 
   // Vehicles
   trailer_id?: number;
@@ -252,7 +274,7 @@ export interface Position {
   loads?: Load[];
   loads_count?: number; // withCount ile gelen yük sayısı
   fuel_records?: FuelRecord[];
-  advances?: Advance[];
+  advances?: AdvanceResponse[];
   expenses?: Expense[];
   documents?: PositionDocument[];
 

@@ -464,7 +464,7 @@ export function DocumentsSection({ position, onUpdate }: DocumentsSectionProps) 
                 label="Kategori"
                 data={DOCUMENT_CATEGORIES.map((c) => ({ label: c.label, value: c.value }))}
                 value={category}
-                onValueChange={(v) => setCategory(v || '')}
+                onValueChange={(v) => setCategory((v as string) || '')}
                 placeholder="Kategori seçin (opsiyonel)"
               />
 

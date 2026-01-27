@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { Colors, Typography, BorderRadius, Spacing } from '@/constants/theme';
 
-type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'outline';
+type BadgeVariant = 'default' | 'secondary' | 'success' | 'warning' | 'danger' | 'destructive' | 'error' | 'info' | 'outline';
 type BadgeSize = 'sm' | 'md';
 
 interface BadgeProps {
@@ -36,7 +36,14 @@ export function Badge({
           container: { backgroundColor: colors.warningLight },
           text: { color: colors.warning },
         };
+      case 'secondary':
+        return {
+          container: { backgroundColor: '#E8F5E9' },
+          text: { color: colors.secondary },
+        };
       case 'danger':
+      case 'destructive':
+      case 'error':
         return {
           container: { backgroundColor: colors.dangerLight },
           text: { color: colors.danger },

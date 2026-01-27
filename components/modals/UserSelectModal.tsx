@@ -62,8 +62,6 @@ const UserSelectModal = forwardRef<UserSelectModalRef, UserSelectModalProps>(
     const animationConfigs = useBottomSheetSpringConfigs({
       damping: 80,
       overshootClamping: true,
-      restDisplacementThreshold: 0.1,
-      restSpeedThreshold: 0.1,
       stiffness: 500,
     });
 
@@ -164,7 +162,8 @@ const UserSelectModal = forwardRef<UserSelectModalRef, UserSelectModalProps>(
       }
     };
 
-    const renderUserItem = useCallback(({ item: user }: { item: UserBasic }) => {
+    const renderUserItem = useCallback(({ item }: { item: UserBasic }) => {
+      const user = item;
       const isCreatingThis = creatingUserId === user.id;
 
       return (
@@ -299,7 +298,7 @@ const UserSelectModal = forwardRef<UserSelectModalRef, UserSelectModalProps>(
         <BottomSheetFlatList
           data={filteredUsers}
           renderItem={renderUserItem}
-          keyExtractor={(item) => String(item.id)}
+          keyExtractor={(item: UserBasic) => String(item.id)}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={renderEmpty}
           showsVerticalScrollIndicator={false}

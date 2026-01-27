@@ -16,7 +16,7 @@ import {
   updatePosition,
   CURRENCY_TYPES,
 } from '@/services/endpoints/positions';
-import { getLatestRate } from '@/services/endpoints/exchange-rates';
+import { getLatestRateData } from '@/services/endpoints/exchange-rates';
 import { showToast } from '@/utils/toast';
 
 interface InsuranceFuelSectionProps {
@@ -91,8 +91,8 @@ export function InsuranceFuelSection({ position, onUpdate }: InsuranceFuelSectio
 
     setIsFetchingRate(true);
     try {
-      const rateData = await getLatestRate(currencyCode);
-      const rate = rateData.forex_selling.toString();
+      const rateData = await getLatestRateData(currencyCode);
+      const rate = rateData.forex_selling;
       setFormData((prev) => ({ ...prev, insurance_exchange_rate: rate }));
     } catch (error) {
       console.error('Exchange rate fetch error:', error);
@@ -106,10 +106,11 @@ export function InsuranceFuelSection({ position, onUpdate }: InsuranceFuelSectio
   };
 
   // Handle currency change
-  const handleCurrencyChange = (currency: string | undefined) => {
+  const handleCurrencyChange = (currency: string | number | undefined) => {
     if (!currency) return;
-    setFormData((prev) => ({ ...prev, insurance_currency: currency }));
-    fetchExchangeRate(currency);
+    const currencyStr = String(currency);
+    setFormData((prev) => ({ ...prev, insurance_currency: currencyStr }));
+    fetchExchangeRate(currencyStr);
   };
 
   // Reset form to original values

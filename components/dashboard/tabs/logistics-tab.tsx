@@ -81,7 +81,6 @@ export const LogisticsTab = () => {
           titleIcon={AlertTriangle}
           titleIconColor={DashboardTheme.warning}
           items={expiringDocItems}
-          delay={200}
         />
       )}
 
@@ -91,7 +90,6 @@ export const LogisticsTab = () => {
           titleIcon={Truck}
           titleIconColor={DashboardTheme.accent}
           items={recentTripItems}
-          delay={300}
         />
       )}
     </>

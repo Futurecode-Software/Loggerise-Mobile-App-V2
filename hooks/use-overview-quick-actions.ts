@@ -3,7 +3,7 @@
  */
 
 import { useMemo } from 'react';
-import { router } from 'expo-router';
+import { router, RelativePathString } from 'expo-router';
 import {
   Truck,
   Package,
@@ -25,7 +25,7 @@ export const useOverviewQuickActions = (): QuickAction[] => {
         icon: Truck,
         onPress: () => {
           hapticLight();
-          router.push('/trips/new');
+          router.push('/trips/new' as RelativePathString);
         },
         permission: 'trips.create',
       },
@@ -35,7 +35,7 @@ export const useOverviewQuickActions = (): QuickAction[] => {
         icon: Package,
         onPress: () => {
           hapticLight();
-          router.push('/loads/new');
+          router.push('/loads/new' as RelativePathString);
         },
         permission: 'loads.create',
       },

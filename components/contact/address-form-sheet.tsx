@@ -47,7 +47,7 @@ interface AddressFormSheetProps {
   onSuccess: () => void;
 }
 
-const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
+export const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
   ({ contactId, address, onSuccess }, ref) => {
     const colors = Colors.light;
     const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -91,8 +91,6 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
     const animationConfigs = useBottomSheetSpringConfigs({
       damping: 80,
       overshootClamping: true,
-      restDisplacementThreshold: 0.1,
-      restSpeedThreshold: 0.1,
       stiffness: 500,
     });
 

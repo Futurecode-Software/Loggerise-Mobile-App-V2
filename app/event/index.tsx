@@ -65,7 +65,7 @@ export default function EventsScreen() {
   // Refs to prevent duplicate calls
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasInitialFetchRef = useRef(false);
   const searchQueryRef = useRef(searchQuery);
   const activeFilterRef = useRef(activeFilter);
@@ -308,7 +308,7 @@ export default function EventsScreen() {
             />
             <Badge
               label={getEventStatusLabel(event.status)}
-              variant={getEventStatusColor(event.status)}
+              variant={getEventStatusColor(event.status) as any}
               size="sm"
             />
           </View>
@@ -395,7 +395,7 @@ export default function EventsScreen() {
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
-            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+            <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
             <TouchableOpacity
               style={[styles.retryButton, { backgroundColor: Brand.primary }]}
               onPress={() => executeFetch(searchQuery, activeFilter, 1, false)}

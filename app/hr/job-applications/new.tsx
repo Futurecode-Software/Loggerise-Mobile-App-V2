@@ -296,7 +296,7 @@ export default function NewJobApplicationScreen() {
               options={jobPostingOptions}
               placeholder="İş ilanı seçin"
               searchPlaceholder="İlan ara..."
-              isLoading={loadingJobPostings}
+              loading={loadingJobPostings}
               error={errors.job_posting_id}
             />
 
@@ -331,12 +331,12 @@ export default function NewJobApplicationScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity onPress={handleRemoveCV} style={styles.removeButton}>
-                  <X size={20} color={colors.error} />
+                  <X size={20} color={colors.danger} />
                 </TouchableOpacity>
               </View>
             )}
             {errors.cv_file && (
-              <Text style={[styles.errorText, { color: colors.error }]}>{errors.cv_file}</Text>
+              <Text style={[styles.errorText, { color: colors.danger }]}>{errors.cv_file}</Text>
             )}
           </Card>
 

@@ -78,8 +78,6 @@ function SelectModal({
   const animationConfigs = useBottomSheetSpringConfigs({
     damping: 80,
     overshootClamping: true,
-    restDisplacementThreshold: 0.1,
-    restSpeedThreshold: 0.1,
     stiffness: 500,
   });
 
@@ -98,7 +96,7 @@ function SelectModal({
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: LocationOption }) => {
+    ({ item }: { item: LocationOption }): React.ReactElement => {
       const isSelected = String(selectedValue) === String(item.value);
       return (
         <TouchableOpacity
@@ -195,7 +193,7 @@ function SelectModal({
       <BottomSheetFlatList
         data={options}
         renderItem={renderItem}
-        keyExtractor={(item) => String(item.value)}
+        keyExtractor={(item: LocationOption) => String(item.value)}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={renderEmpty}
         showsVerticalScrollIndicator={false}
@@ -305,7 +303,7 @@ export function CountrySelect({
       {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
 
       <SelectModal
-        bottomSheetRef={bottomSheetRef}
+        bottomSheetRef={bottomSheetRef as React.RefObject<BottomSheetModal>}
         options={options}
         selectedValue={value}
         onSelect={(val) => {
@@ -446,7 +444,7 @@ export function StateSelect({
       {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
 
       <SelectModal
-        bottomSheetRef={bottomSheetRef}
+        bottomSheetRef={bottomSheetRef as React.RefObject<BottomSheetModal>}
         options={options}
         selectedValue={value}
         onSelect={(val) => {
@@ -504,7 +502,7 @@ export function CitySelect({
 
       setIsLoading(true);
       try {
-        const results = await searchCities(stateId, countryId, search);
+        const results = await searchCities(stateId, countryId ?? undefined, search);
         setOptions(results);
 
         // Update selected label if value matches
@@ -589,7 +587,7 @@ export function CitySelect({
       {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
 
       <SelectModal
-        bottomSheetRef={bottomSheetRef}
+        bottomSheetRef={bottomSheetRef as React.RefObject<BottomSheetModal>}
         options={options}
         selectedValue={value}
         onSelect={(val) => {

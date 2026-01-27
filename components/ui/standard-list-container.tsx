@@ -174,9 +174,9 @@ export function StandardListContainer<T>({
     return null;
   };
 
-  const renderFooter = () => {
+  const renderFooter = (): React.ReactElement | null => {
     if (ListFooterComponent) {
-      return ListFooterComponent;
+      return <>{ListFooterComponent}</>;
     }
 
     if (isLoadingMore) {
@@ -252,7 +252,7 @@ export function StandardListContainer<T>({
       <FlatList
         data={listData}
         keyExtractor={finalKeyExtractor}
-        renderItem={({ item, index }) => renderItem(item, index)}
+        renderItem={({ item, index }: { item: T; index: number }) => renderItem(item, index) as React.ReactElement}
         contentContainerStyle={[
           styles.listContent,
           listData.length === 0 && styles.listContentEmpty,

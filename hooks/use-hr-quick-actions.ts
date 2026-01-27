@@ -3,7 +3,7 @@
  */
 
 import { useMemo } from 'react';
-import { router } from 'expo-router';
+import { router, RelativePathString } from 'expo-router';
 import {
   UserPlus,
   Award,
@@ -36,7 +36,7 @@ export const useHrQuickActions = (): QuickAction[] => {
         icon: Award,
         onPress: () => {
           hapticLight();
-          router.push('/employees/certificates/new');
+          router.push('/employees/certificates/new' as RelativePathString);
         },
         permission: 'employee_certificates.create',
       },
@@ -46,7 +46,7 @@ export const useHrQuickActions = (): QuickAction[] => {
         icon: Users,
         onPress: () => {
           hapticLight();
-          router.push('/employees/family-members/new');
+          router.push('/employees/family-members/new' as RelativePathString);
         },
         permission: 'employee_family_members.create',
       },
@@ -56,7 +56,7 @@ export const useHrQuickActions = (): QuickAction[] => {
         icon: Briefcase,
         onPress: () => {
           hapticLight();
-          router.push('/job-postings/new');
+          router.push('/job-postings/new' as RelativePathString);
         },
         disabled: true, // Backend endpoint eksik
         permission: 'job_postings.create',
@@ -67,7 +67,7 @@ export const useHrQuickActions = (): QuickAction[] => {
         icon: UserCheck,
         onPress: () => {
           hapticLight();
-          router.push('/job-applications');
+          router.push('/job-applications' as RelativePathString);
         },
         disabled: true, // Backend endpoint eksik
         permission: 'job_applications.update',
@@ -78,7 +78,7 @@ export const useHrQuickActions = (): QuickAction[] => {
         icon: CalendarCheck,
         onPress: () => {
           hapticLight();
-          router.push('/job-applications/interviews');
+          router.push('/job-applications/interviews' as RelativePathString);
         },
         disabled: true, // Backend endpoint eksik
         permission: 'job_applications.update',

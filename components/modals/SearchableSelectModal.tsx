@@ -66,8 +66,6 @@ function SearchableSelectModalComponent<T = any>(
   const animationConfigs = useBottomSheetSpringConfigs({
     damping: 80,
     overshootClamping: true,
-    restDisplacementThreshold: 0.1,
-    restSpeedThreshold: 0.1,
     stiffness: 500,
   });
 
@@ -232,7 +230,7 @@ function SearchableSelectModalComponent<T = any>(
       <BottomSheetFlatList
         data={filteredOptions}
         renderItem={renderItem}
-        keyExtractor={(item) => String(item.value)}
+        keyExtractor={(item: SelectOption<T>) => String(item.value)}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={renderEmpty}
         showsVerticalScrollIndicator={false}

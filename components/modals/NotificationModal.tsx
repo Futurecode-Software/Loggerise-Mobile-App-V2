@@ -81,8 +81,6 @@ const NotificationModal = forwardRef<NotificationModalRef, NotificationModalProp
     const animationConfigs = useBottomSheetSpringConfigs({
       damping: 80,
       overshootClamping: true,
-      restDisplacementThreshold: 0.1,
-      restSpeedThreshold: 0.1,
       stiffness: 500,
     });
 
@@ -158,7 +156,8 @@ const NotificationModal = forwardRef<NotificationModalRef, NotificationModalProp
       return Brand.primary;
     };
 
-    const renderNotificationItem = ({ item: notification }: { item: Notification }) => {
+    const renderNotificationItem = ({ item }: { item: Notification }) => {
+      const notification = item;
       const isUnread = !notification.read_at;
       const Icon = getNotificationIcon(notification.type);
       const iconColor = getNotificationColor(notification.type);
@@ -277,7 +276,7 @@ const NotificationModal = forwardRef<NotificationModalRef, NotificationModalProp
           <BottomSheetFlatList
             data={notifications}
             renderItem={renderNotificationItem}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item: Notification) => item.id}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={renderEmpty}
             showsVerticalScrollIndicator={false}

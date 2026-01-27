@@ -26,7 +26,6 @@ import {
 import {
   searchPorts,
   searchFerryCompanies,
-  Country,
 } from '@/services/endpoints/locations';
 import { showToast } from '@/utils/toast';
 
@@ -39,6 +38,13 @@ const DECK_TYPES: { label: string; value: DeckType }[] = [
   { label: 'Alt Güverte', value: 'alt_guverte' },
   { label: 'Üst Güverte', value: 'ust_guverte' },
 ];
+
+// Local Country type for route display
+interface Country {
+  id: number;
+  name: string;
+  code: string;
+}
 
 // Section header component
 const SectionHeader = ({
@@ -232,7 +238,7 @@ export function TransportDetailsSection({
               );
             }}
             placeholder="TR-BG-RO-DE"
-            containerStyle={styles.inputContainer}
+            
           />
 
           <View style={styles.switchGroup}>
@@ -284,14 +290,14 @@ export function TransportDetailsSection({
               <DateInput
                 label="Tahmini Varış"
                 value={arrivalDates.estimated_arrival_date}
-                onChange={(value) => setArrivalDates({ ...arrivalDates, estimated_arrival_date: value })}
+                onChangeDate={(value) => setArrivalDates({ ...arrivalDates, estimated_arrival_date: value })}
               />
             </View>
             <View style={styles.halfColumn}>
               <DateInput
                 label="Gerçek Varış"
                 value={arrivalDates.actual_arrival_date}
-                onChange={(value) => setArrivalDates({ ...arrivalDates, actual_arrival_date: value })}
+                onChangeDate={(value) => setArrivalDates({ ...arrivalDates, actual_arrival_date: value })}
               />
             </View>
           </View>
@@ -425,7 +431,7 @@ export function TransportDetailsSection({
               value={roroData.roro_entry_location}
               onChangeText={(text) => setRoroData({ ...roroData, roro_entry_location: text })}
               placeholder="Giriş yeri"
-              containerStyle={styles.inputContainer}
+              
             />
 
             <View style={styles.row}>
@@ -433,14 +439,14 @@ export function TransportDetailsSection({
                 <DateInput
                   label="Beklenen Giriş"
                   value={roroData.roro_expected_entry_date}
-                  onChange={(value) => setRoroData({ ...roroData, roro_expected_entry_date: value })}
+                  onChangeDate={(value) => setRoroData({ ...roroData, roro_expected_entry_date: value })}
                 />
               </View>
               <View style={styles.halfColumn}>
                 <DateInput
                   label="Gerçek Giriş"
                   value={roroData.roro_entry_date}
-                  onChange={(value) => setRoroData({ ...roroData, roro_entry_date: value })}
+                  onChangeDate={(value) => setRoroData({ ...roroData, roro_entry_date: value })}
                 />
               </View>
             </View>
@@ -453,7 +459,7 @@ export function TransportDetailsSection({
               value={roroData.roro_exit_location}
               onChangeText={(text) => setRoroData({ ...roroData, roro_exit_location: text })}
               placeholder="Çıkış yeri"
-              containerStyle={styles.inputContainer}
+              
             />
 
             <View style={styles.row}>
@@ -461,14 +467,14 @@ export function TransportDetailsSection({
                 <DateInput
                   label="Beklenen Çıkış"
                   value={roroData.roro_expected_exit_date}
-                  onChange={(value) => setRoroData({ ...roroData, roro_expected_exit_date: value })}
+                  onChangeDate={(value) => setRoroData({ ...roroData, roro_expected_exit_date: value })}
                 />
               </View>
               <View style={styles.halfColumn}>
                 <DateInput
                   label="Gerçek Çıkış"
                   value={roroData.roro_exit_date}
-                  onChange={(value) => setRoroData({ ...roroData, roro_exit_date: value })}
+                  onChangeDate={(value) => setRoroData({ ...roroData, roro_exit_date: value })}
                 />
               </View>
             </View>
@@ -479,8 +485,8 @@ export function TransportDetailsSection({
             <DateInput
               label="Cut-off Tarihi"
               value={roroData.roro_cutoff_date}
-              onChange={(value) => setRoroData({ ...roroData, roro_cutoff_date: value })}
-              containerStyle={styles.inputContainer}
+              onChangeDate={(value) => setRoroData({ ...roroData, roro_cutoff_date: value })}
+              
             />
 
             <View style={styles.row}>
@@ -488,14 +494,14 @@ export function TransportDetailsSection({
                 <DateInput
                   label="Gemi Kalkış"
                   value={roroData.roro_departure_date}
-                  onChange={(value) => setRoroData({ ...roroData, roro_departure_date: value })}
+                  onChangeDate={(value) => setRoroData({ ...roroData, roro_departure_date: value })}
                 />
               </View>
               <View style={styles.halfColumn}>
                 <DateInput
                   label="Gemi Varış"
                   value={roroData.roro_arrival_date}
-                  onChange={(value) => setRoroData({ ...roroData, roro_arrival_date: value })}
+                  onChangeDate={(value) => setRoroData({ ...roroData, roro_arrival_date: value })}
                 />
               </View>
             </View>
@@ -508,7 +514,7 @@ export function TransportDetailsSection({
               multiline
               numberOfLines={3}
               placeholder="Notlar..."
-              containerStyle={styles.inputContainer}
+              
             />
           </Card>
         )}
@@ -545,7 +551,7 @@ export function TransportDetailsSection({
               value={trainData.train_seal_number}
               onChangeText={(text) => setTrainData({ ...trainData, train_seal_number: text })}
               placeholder="SEAL-12345"
-              containerStyle={styles.inputContainer}
+              
             />
 
             {/* Kalkış Bilgileri */}
@@ -556,7 +562,7 @@ export function TransportDetailsSection({
               value={trainData.train_departure_terminal}
               onChangeText={(text) => setTrainData({ ...trainData, train_departure_terminal: text })}
               placeholder="Terminal adı"
-              containerStyle={styles.inputContainer}
+              
             />
 
             <View style={styles.row}>
@@ -564,14 +570,14 @@ export function TransportDetailsSection({
                 <DateInput
                   label="Beklenen Kalkış"
                   value={trainData.train_expected_departure_date}
-                  onChange={(value) => setTrainData({ ...trainData, train_expected_departure_date: value })}
+                  onChangeDate={(value) => setTrainData({ ...trainData, train_expected_departure_date: value })}
                 />
               </View>
               <View style={styles.halfColumn}>
                 <DateInput
                   label="Gerçek Kalkış"
                   value={trainData.train_departure_date}
-                  onChange={(value) => setTrainData({ ...trainData, train_departure_date: value })}
+                  onChangeDate={(value) => setTrainData({ ...trainData, train_departure_date: value })}
                 />
               </View>
             </View>
@@ -584,7 +590,7 @@ export function TransportDetailsSection({
               value={trainData.train_arrival_terminal}
               onChangeText={(text) => setTrainData({ ...trainData, train_arrival_terminal: text })}
               placeholder="Terminal adı"
-              containerStyle={styles.inputContainer}
+              
             />
 
             <View style={styles.row}>
@@ -592,14 +598,14 @@ export function TransportDetailsSection({
                 <DateInput
                   label="Beklenen Varış"
                   value={trainData.train_expected_arrival_date}
-                  onChange={(value) => setTrainData({ ...trainData, train_expected_arrival_date: value })}
+                  onChangeDate={(value) => setTrainData({ ...trainData, train_expected_arrival_date: value })}
                 />
               </View>
               <View style={styles.halfColumn}>
                 <DateInput
                   label="Gerçek Varış"
                   value={trainData.train_arrival_date}
-                  onChange={(value) => setTrainData({ ...trainData, train_arrival_date: value })}
+                  onChangeDate={(value) => setTrainData({ ...trainData, train_arrival_date: value })}
                 />
               </View>
             </View>
@@ -627,7 +633,7 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: Spacing.md,
-    paddingBottom: Spacing.xxl,
+    paddingBottom: Spacing['2xl'],
   },
   card: {
     padding: Spacing.md,

@@ -13,7 +13,7 @@ import { reportsApi } from '@/services';
 import type { ProfitLossSummary, ProfitLossTrend, ExpenseBreakdownItem } from '@/services/endpoints/reports';
 import { TrendingUp, TrendingDown, DollarSign, Package, Download } from 'lucide-react-native';
 import { LineChart, PieChart } from 'react-native-chart-kit';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

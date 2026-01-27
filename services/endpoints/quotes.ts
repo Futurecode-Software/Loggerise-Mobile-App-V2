@@ -123,6 +123,8 @@ export interface Quote {
   quote_number: string;
   customer_id?: number;
   customer?: { id: number; name: string; code?: string } | null;
+  contact?: { id: number; name: string; email?: string } | null;
+  customer_name?: string | null;
   prepared_by_user_id?: number;
   prepared_by?: { id: number; name: string; email: string } | null;
   preparedBy?: { id: number; name: string; email: string } | null;
@@ -215,14 +217,27 @@ export interface QuoteFormData {
   quote_date: string;
   valid_until: string;
   currency: CurrencyType;
+  currency_type?: CurrencyType;
   exchange_rate: number;
   include_vat?: boolean;
   vat_rate?: number;
   discount_percentage?: number;
   discount_amount?: number;
+  discount_total?: number;
+  subtotal?: number;
   terms_conditions?: string;
+  terms_and_conditions?: string;
   internal_notes?: string;
   customer_notes?: string;
+  notes?: string;
+  description?: string;
+  pickup_address_id?: number;
+  delivery_address_id?: number;
+  payment_terms?: string;
+  delivery_terms?: string;
+  special_instructions?: string;
+  vat_total?: number;
+  grand_total?: number;
   load_items: LoadItem[];
 }
 

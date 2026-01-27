@@ -327,7 +327,7 @@ export default function EditDriverTractorAssignmentScreen() {
                 value: d.id.toString()
               }))}
               selectedValue={formData.employee_id?.toString()}
-              onValueChange={(val) => handleInputChange('employee_id', parseInt(val))}
+              onValueChange={(val) => handleInputChange('employee_id', parseInt(val?.toString() || ''))}
               error={errors.employee_id}
               placeholder="Sürücü adı ile ara..."
               searchable
@@ -337,7 +337,7 @@ export default function EditDriverTractorAssignmentScreen() {
               label="Çekici *"
               options={tractors.map(v => ({ label: v.plate, value: v.id.toString() }))}
               selectedValue={formData.tractor_id?.toString()}
-              onValueChange={(val) => handleInputChange('tractor_id', parseInt(val))}
+              onValueChange={(val) => handleInputChange('tractor_id', parseInt(val?.toString() || ''))}
               error={errors.tractor_id}
               placeholder="Çekici plakası ile ara..."
               searchable

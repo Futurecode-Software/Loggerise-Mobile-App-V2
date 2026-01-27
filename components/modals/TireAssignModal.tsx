@@ -92,7 +92,7 @@ const TireAssignModal = forwardRef<TireAssignModalRef, TireAssignModalProps>(
             label="Araç *"
             options={vehicles.map((v) => ({ label: v.plate, value: v.id.toString() }))}
             selectedValue={vehicleId}
-            onValueChange={setVehicleId}
+            onValueChange={(value) => setVehicleId(value?.toString() || '')}
             placeholder="Araç seçiniz..."
           />
 
@@ -100,7 +100,7 @@ const TireAssignModal = forwardRef<TireAssignModalRef, TireAssignModalProps>(
             label="Pozisyon *"
             options={TIRE_POSITION_OPTIONS}
             selectedValue={position}
-            onValueChange={setPosition}
+            onValueChange={(value) => setPosition(value?.toString() || '')}
             placeholder="Pozisyon seçiniz..."
           />
 

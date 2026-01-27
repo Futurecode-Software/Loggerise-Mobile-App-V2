@@ -35,7 +35,7 @@ export default function TireWarehouseScreen() {
   // Refs to prevent duplicate calls
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasInitialFetchRef = useRef(false);
 
   // Delete dialog state
@@ -285,15 +285,17 @@ export default function TireWarehouseScreen() {
         <View style={styles.badgesRow}>
           <View style={styles.badgeItem}>
             <Text style={[styles.badgeLabel, { color: colors.textSecondary }]}>Durum:</Text>
-            <Badge variant={getStatusBadgeVariant(item.status)}>
-              {getTireStatusLabel(item.status)}
-            </Badge>
+            <Badge
+              label={getTireStatusLabel(item.status)}
+              variant={getStatusBadgeVariant(item.status)}
+            />
           </View>
           <View style={styles.badgeItem}>
             <Text style={[styles.badgeLabel, { color: colors.textSecondary }]}>Kondisyon:</Text>
-            <Badge variant={getConditionBadgeVariant(item.condition)}>
-              {getTireConditionLabel(item.condition)}
-            </Badge>
+            <Badge
+              label={getTireConditionLabel(item.condition)}
+              variant={getConditionBadgeVariant(item.condition)}
+            />
           </View>
         </View>
       </View>

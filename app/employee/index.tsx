@@ -42,7 +42,7 @@ export default function EmployeesScreen() {
   // Refs to prevent duplicate calls
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasInitialFetchRef = useRef(false);
 
   // Core fetch function - doesn't depend on search/filter state
@@ -180,8 +180,8 @@ export default function EmployeesScreen() {
 
     // Determine subtitle text
     const subtitle = item.position || '-';
-    const departmentText = item.department || '-';
-    const contractText = getContractTypeLabel(item.contract_type);
+    const departmentText = '-'; // department field not available in Employee type
+    const contractText = item.contract_type ? getContractTypeLabel(item.contract_type) : '-';
 
     // Additional info: department and contract
     const additionalInfo = (
@@ -234,11 +234,13 @@ export default function EmployeesScreen() {
         additionalInfo={additionalInfo}
         status={{
           label: '',
-          variant: item.employment_status === 'active' ? 'success' :
+          variant: (item.employment_status === 'active' ? 'success' :
                    item.employment_status === 'on_leave' ? 'warning' :
-                   item.employment_status === 'terminated' ? 'danger' : 'default',
-          dotOnly: true,
+                   item.employment_status === 'terminated' ? 'danger' : 'default') as any,
         }}
+        statusDot={{ color: item.employment_status === 'active' ? colors.success :
+                             item.employment_status === 'on_leave' ? colors.warning :
+                             item.employment_status === 'terminated' ? colors.danger : colors.icon }}
         footer={{
           left: <View style={{ flexDirection: 'row', gap: Spacing.sm }}>{footerLeftBadges}</View>,
         }}

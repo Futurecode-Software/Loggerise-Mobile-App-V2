@@ -80,7 +80,7 @@ export default function DomesticOrdersScreen() {
   // Refs
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasInitialFetchRef = useRef(false);
 
   // Core fetch function
@@ -228,7 +228,7 @@ export default function DomesticOrdersScreen() {
             </Text>
           </View>
         </View>
-        <Badge label={getOrderStatusLabel(item.status)} variant={getOrderStatusVariant(item.status)} size="sm" />
+        <Badge label={getOrderStatusLabel(item.status)} variant={getOrderStatusVariant(item.status) as any} size="sm" />
       </View>
 
       {/* Customer */}

@@ -28,17 +28,17 @@ export interface LoadPricingItem {
     vat_rate: string;
   } | null;
   description: string;
-  quantity: string;
+  quantity: string | number;
   unit: string;
-  unit_price: string;
+  unit_price: string | number;
   currency: string;
-  exchange_rate: string;
-  vat_rate: string;
-  vat_amount: string;
-  discount_rate: string;
-  discount_amount: string;
-  sub_total: string;
-  total: string;
+  exchange_rate: string | number;
+  vat_rate: string | number;
+  vat_amount: string | number;
+  discount_rate: string | number;
+  discount_amount: string | number;
+  sub_total: string | number;
+  total: string | number;
   sort_order?: number;
   is_active?: boolean;
 }
@@ -173,12 +173,12 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
   const calculateItemTotals = useCallback((index: number, updatedItems: LoadPricingItem[]) => {
     const item = updatedItems[index];
 
-    const quantity = parseFloat(item.quantity) || 0;
-    const unitPrice = parseFloat(item.unit_price) || 0;
-    const exchangeRate = parseFloat(item.exchange_rate) || 1;
-    const vatRate = parseFloat(item.vat_rate) || 0;
-    const discountRate = parseFloat(item.discount_rate) || 0;
-    const discountAmount = parseFloat(item.discount_amount) || 0;
+    const quantity = parseFloat(item.quantity?.toString() || '0') || 0;
+    const unitPrice = parseFloat(item.unit_price?.toString() || '0') || 0;
+    const exchangeRate = parseFloat(item.exchange_rate?.toString() || '1') || 1;
+    const vatRate = parseFloat(item.vat_rate?.toString() || '0') || 0;
+    const discountRate = parseFloat(item.discount_rate?.toString() || '0') || 0;
+    const discountAmount = parseFloat(item.discount_amount?.toString() || '0') || 0;
 
     // TRY karşılığı (birim fiyat × miktar × kur)
     const lineTotalInTry = quantity * unitPrice * exchangeRate;
@@ -245,11 +245,11 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
   };
 
   // Para birimi değiştiğinde kur çek
-  const handleCurrencyChange = async (index: number, currency: string) => {
+  const handleCurrencyChange = async (index: number, currency: string | number) => {
     const updatedItems = [...items];
-    updatedItems[index].currency = currency;
+    updatedItems[index].currency = currency?.toString() || '';
 
-    const rate = await fetchExchangeRate(currency);
+    const rate = await fetchExchangeRate(currency?.toString() || '');
     updatedItems[index].exchange_rate = rate;
 
     setItems(updatedItems);
@@ -257,17 +257,17 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
   };
 
   // Hesaplama gerektiren alan değişikliklerinde
-  const handleCalculableFieldChange = (index: number, field: keyof LoadPricingItem, value: string) => {
+  const handleCalculableFieldChange = (index: number, field: keyof LoadPricingItem, value: string | number) => {
     const updatedItems = [...items];
-    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    updatedItems[index] = { ...updatedItems[index], [field]: value?.toString() || '' };
     calculateItemTotals(index, updatedItems);
   };
 
   // Toplamları hesapla
   const calculateTotals = () => {
-    const totalSubtotal = items.reduce((sum, item) => sum + (parseFloat(item.sub_total) || 0), 0);
-    const totalVat = items.reduce((sum, item) => sum + (parseFloat(item.vat_amount) || 0), 0);
-    const totalAmount = items.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
+    const totalSubtotal = items.reduce((sum, item) => sum + (parseFloat(item.sub_total?.toString() || '0') || 0), 0);
+    const totalVat = items.reduce((sum, item) => sum + (parseFloat(item.vat_amount?.toString() || '0') || 0), 0);
+    const totalAmount = items.reduce((sum, item) => sum + (parseFloat(item.total?.toString() || '0') || 0), 0);
     return { totalSubtotal, totalVat, totalAmount };
   };
 
@@ -353,7 +353,7 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
                     <Input
                       label="Miktar *"
                       placeholder="1"
-                      value={item.quantity}
+                      value={item.quantity?.toString()}
                       onChangeText={(value) => handleCalculableFieldChange(index, 'quantity', value)}
                       keyboardType="decimal-pad"
                     />
@@ -375,7 +375,7 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
                     <Input
                       label="Birim Fiyat *"
                       placeholder="0.00"
-                      value={item.unit_price}
+                      value={item.unit_price?.toString()}
                       onChangeText={(value) => handleCalculableFieldChange(index, 'unit_price', value)}
                       keyboardType="decimal-pad"
                     />
@@ -385,7 +385,7 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
                       label="Para Birimi *"
                       placeholder="Seçiniz"
                       value={item.currency}
-                      onValueChange={(value) => handleCurrencyChange(index, value)}
+                      onValueChange={(value) => handleCurrencyChange(index, value?.toString() || '')}
                       options={CURRENCY_OPTIONS}
                     />
                   </View>
@@ -397,7 +397,7 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
                     <Input
                       label="Kur"
                       placeholder="1.00"
-                      value={item.exchange_rate}
+                      value={item.exchange_rate?.toString()}
                       onChangeText={(value) => handleCalculableFieldChange(index, 'exchange_rate', value)}
                       keyboardType="decimal-pad"
                       editable={item.currency !== 'TRY'}
@@ -408,7 +408,7 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
                       label="KDV %"
                       placeholder="Seçiniz"
                       value={item.vat_rate}
-                      onValueChange={(value) => handleCalculableFieldChange(index, 'vat_rate', value)}
+                      onValueChange={(value) => handleCalculableFieldChange(index, 'vat_rate', value?.toString() || '')}
                       options={VAT_RATE_OPTIONS}
                     />
                   </View>
@@ -418,7 +418,7 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
                 <View style={[styles.itemTotalRow, { backgroundColor: '#F8FAFC', borderColor: colors.border }]}>
                   <Text style={[styles.itemTotalLabel, { color: colors.textSecondary }]}>Toplam (TRY):</Text>
                   <Text style={[styles.itemTotalAmount, { color: Brand.primary }]}>
-                    {formatAmount(parseFloat(item.total) || 0)} ₺
+                    {formatAmount(parseFloat(item.total?.toString() || '0') || 0)} ₺
                   </Text>
                 </View>
               </View>

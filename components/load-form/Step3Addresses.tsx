@@ -19,8 +19,8 @@ export interface LoadAddress {
   type: 'pickup' | 'delivery';
   pickup_type?: string | null;
   delivery_type?: string | null;
-  sort_order: number;
-  is_active: boolean;
+  sort_order?: number | null;
+  is_active?: boolean;
   // Loading
   loading_company_id?: number | null;
   loading_location_id?: number | null;

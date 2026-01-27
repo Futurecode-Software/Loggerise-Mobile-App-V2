@@ -47,7 +47,7 @@ export default function VehicleScreen() {
   // Refs to prevent duplicate calls
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasInitialFetchRef = useRef(false);
   const isFirstFocusRef = useRef(true);
 

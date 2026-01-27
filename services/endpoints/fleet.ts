@@ -6,6 +6,7 @@
 
 import api, { getErrorMessage } from '../api';
 import { Pagination } from './vehicles';
+export { Pagination };
 
 /**
  * ==========================================

@@ -163,7 +163,8 @@ export function FuelRecordsSection({ position, onUpdate }: FuelRecordsSectionPro
     }
   };
 
-  const formatDate = (dateString: string): string => {
+  const formatDate = (dateString?: string | null): string => {
+    if (!dateString) return '-';
     try {
       return new Date(dateString).toLocaleDateString('tr-TR');
     } catch {
@@ -171,7 +172,8 @@ export function FuelRecordsSection({ position, onUpdate }: FuelRecordsSectionPro
     }
   };
 
-  const formatNumber = (value: string | number): string => {
+  const formatNumber = (value?: string | number | null): string => {
+    if (value === undefined || value === null) return '0,00';
     const num = typeof value === 'string' ? parseFloat(value) : value;
     return num.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
@@ -284,7 +286,7 @@ export function FuelRecordsSection({ position, onUpdate }: FuelRecordsSectionPro
               <DateInput
                 label="Tarih"
                 value={formData.fuel_date}
-                onChange={(date) => setFormData({ ...formData, fuel_date: date })}
+                onChangeDate={(date) => setFormData({ ...formData, fuel_date: date })}
                 required
               />
 
@@ -292,7 +294,7 @@ export function FuelRecordsSection({ position, onUpdate }: FuelRecordsSectionPro
                 label="Yakıt Tipi"
                 data={FUEL_TYPES.map((t) => ({ label: t.label, value: t.value }))}
                 value={formData.fuel_type}
-                onValueChange={(v) => setFormData({ ...formData, fuel_type: v })}
+                onValueChange={(v) => setFormData({ ...formData, fuel_type: v as string })}
                 placeholder="Yakıt tipi seçin"
               />
 
@@ -316,7 +318,7 @@ export function FuelRecordsSection({ position, onUpdate }: FuelRecordsSectionPro
                 label="Para Birimi"
                 data={CURRENCY_TYPES.map((c) => ({ label: c.label, value: c.value }))}
                 value={formData.currency_type}
-                onValueChange={(v) => setFormData({ ...formData, currency_type: v || 'TRY' })}
+                onValueChange={(v) => setFormData({ ...formData, currency_type: (v as string) || 'TRY' })}
                 placeholder="Para birimi seçin"
               />
 

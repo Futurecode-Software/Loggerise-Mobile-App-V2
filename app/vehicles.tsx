@@ -32,6 +32,7 @@ import {
   Vehicle,
   VehicleType,
   VehicleStatus,
+  OwnershipType,
   VehicleFilters,
   Pagination,
 } from '@/services/endpoints/vehicles';
@@ -111,7 +112,7 @@ export default function VehiclesScreen() {
   // Refs to prevent duplicate calls
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasInitialFetchRef = useRef(false);
   const isFirstFocusRef = useRef(true);
 
@@ -155,7 +156,7 @@ export default function VehiclesScreen() {
 
         // Add ownership filter
         if (ownership !== 'all') {
-          filters.ownership_type = ownership;
+          filters.ownership_type = ownership as OwnershipType;
         }
 
         const response = await getVehicles(filters);

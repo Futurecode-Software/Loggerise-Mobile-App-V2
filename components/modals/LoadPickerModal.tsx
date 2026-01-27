@@ -44,8 +44,6 @@ const LoadPickerModal = forwardRef<LoadPickerModalRef, LoadPickerModalProps>(
     const animationConfigs = useBottomSheetSpringConfigs({
       damping: 80,
       overshootClamping: true,
-      restDisplacementThreshold: 0.1,
-      restSpeedThreshold: 0.1,
       stiffness: 500,
     });
 
@@ -92,7 +90,8 @@ const LoadPickerModal = forwardRef<LoadPickerModalRef, LoadPickerModalProps>(
       }
     };
 
-    const renderLoadItem = ({ item: load }: { item: Load }) => {
+    const renderLoadItem = ({ item }: { item: Load }) => {
+      const load = item;
       const isLoading = loadingLoadId === load.id;
       const isSelected = selectedLoads.has(load.id);
 
@@ -176,7 +175,7 @@ const LoadPickerModal = forwardRef<LoadPickerModalRef, LoadPickerModalProps>(
         <BottomSheetFlatList
           data={loads}
           renderItem={renderLoadItem}
-          keyExtractor={(item) => String(item.id)}
+          keyExtractor={(item: Load) => String(item.id)}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={renderEmpty}
           showsVerticalScrollIndicator={false}

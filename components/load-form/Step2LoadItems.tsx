@@ -13,6 +13,7 @@ import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/th
 import { useToast } from '@/hooks/use-toast';
 
 export interface LoadItem {
+  id?: number;
   cargo_name: string;
   cargo_name_foreign?: string;
   package_type: string;

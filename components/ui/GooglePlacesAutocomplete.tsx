@@ -56,7 +56,7 @@ export function GooglePlacesAutocomplete({
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showPredictions, setShowPredictions] = useState(false);
-  const debounceTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (value !== undefined) {

@@ -68,7 +68,7 @@ export function useMessagingWebSocket({
   // Refs for cleanup and state
   const conversationUnsubscribeRef = useRef<(() => void) | null>(null);
   const userChannelUnsubscribeRef = useRef<(() => void) | null>(null);
-  const typingTimeoutsRef = useRef<Record<number, NodeJS.Timeout>>({});
+  const typingTimeoutsRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
   const currentConversationIdRef = useRef<number | undefined>(undefined);
   const isSubscribedRef = useRef(false);
 

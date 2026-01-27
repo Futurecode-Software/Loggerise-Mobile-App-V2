@@ -60,7 +60,7 @@ export default function MessagesScreen() {
   }, [conversations]);
 
   // Current user ID
-  const currentUserId = user?.id || 0;
+  const currentUserId = typeof user?.id === 'string' ? parseInt(user.id, 10) : user?.id || 0;
 
   // Fetch conversations from API
   const fetchConversations = useCallback(async (showLoading = true) => {
@@ -134,7 +134,7 @@ export default function MessagesScreen() {
 
   // WebSocket for real-time updates
   const { isConnected, reconnect } = useMessagingWebSocket({
-    userId: currentUserId,
+    userId: currentUserId as number,
     onNewConversationMessage: handleNewConversationMessage,
     onParticipantAdded: handleParticipantAdded,
   });

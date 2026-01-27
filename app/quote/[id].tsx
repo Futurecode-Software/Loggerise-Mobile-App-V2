@@ -88,7 +88,7 @@ export default function QuoteDetailScreen() {
     <View style={styles.container}>
       <FullScreenHeader
         title={quote.quote_number || 'Teklif Detayı'}
-        subtitle={quote.contact?.name || quote.customer_name}
+        subtitle={quote.contact?.name || quote.customer_name || undefined}
         showBackButton
         rightIcons={
           <View style={{ flexDirection: 'row', gap: Spacing.md }}>

@@ -65,7 +65,7 @@ export function QuoteCreatePricingScreen({
       setIsLoadingRate(true);
       try {
         const rate = await getCurrentRate(data.currency);
-        onChange({ exchange_rate: parseFloat(rate.toFixed(4)) });
+        onChange({ exchange_rate: parseFloat(parseFloat(rate).toFixed(4)) });
       } catch (error) {
         console.error('[Pricing] Fetch rate error:', error);
       } finally {
@@ -124,7 +124,7 @@ export function QuoteCreatePricingScreen({
                 label="Para Birimi *"
                 placeholder="Seçiniz..."
                 value={data.currency}
-                onValueChange={(value) => onChange({ currency: value })}
+                onValueChange={(value) => onChange({ currency: (value as string) || 'TRY' })}
                 options={CURRENCY_OPTIONS}
                 required
               />
@@ -133,14 +133,14 @@ export function QuoteCreatePricingScreen({
               <Input
                 label="Döviz Kuru *"
                 placeholder="1.0000"
-                value={data.exchange_rate?.toString() || ''}
+                value={data.exchange_rate?.toString() ?? ''}
                 onChangeText={(value) =>
-                  onChange({ exchange_rate: parseFloat(value) || 1 })
+                  onChange({ exchange_rate: parseFloat(value || '0') || 1 })
                 }
                 keyboardType="decimal-pad"
                 required
                 editable={!isLoadingRate}
-                rightElement={
+                rightIcon={
                   isLoadingRate ? (
                     <ActivityIndicator size="small" color={Brand.primary} />
                   ) : undefined
@@ -227,9 +227,9 @@ export function QuoteCreatePricingScreen({
               <Input
                 label="İndirim %"
                 placeholder="0"
-                value={data.discount_percentage?.toString() || ''}
+                value={data.discount_percentage?.toString() ?? ''}
                 onChangeText={(value) =>
-                  onChange({ discount_percentage: parseFloat(value) || 0 })
+                  onChange({ discount_percentage: parseFloat(value || '0') || 0 })
                 }
                 keyboardType="decimal-pad"
               />
@@ -238,9 +238,9 @@ export function QuoteCreatePricingScreen({
               <Input
                 label="İndirim Tutar"
                 placeholder="0"
-                value={data.discount_amount?.toString() || ''}
+                value={data.discount_amount?.toString() ?? ''}
                 onChangeText={(value) =>
-                  onChange({ discount_amount: parseFloat(value) || 0 })
+                  onChange({ discount_amount: parseFloat(value || '0') || 0 })
                 }
                 keyboardType="decimal-pad"
               />

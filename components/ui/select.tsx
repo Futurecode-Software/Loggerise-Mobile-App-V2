@@ -34,14 +34,14 @@ const getStatusBarHeight = (): number => {
 
 interface SelectItem {
   label: string;
-  value: string;
+  value: string | number;
 }
 
 interface SelectProps {
   label?: string;
   data: SelectItem[];
-  value?: string | null;
-  onValueChange: (value: string | undefined) => void;
+  value?: string | number | null;
+  onValueChange: (value: string | number | undefined) => void;
   error?: string;
   placeholder?: string;
   searchable?: boolean;
@@ -51,6 +51,9 @@ interface SelectProps {
   /** API-based search function - when provided, search will call API instead of client-side filtering */
   onSearch?: (query: string) => Promise<SelectItem[]>;
 }
+
+// Type guard to convert value to string for keyExtractor
+const valueToString = (value: string | number): string => String(value);
 
 /**
  * Select component - Custom modal-based dropdown with green header
@@ -76,12 +79,12 @@ export function Select({
   onSearch,
 }: SelectProps) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState<string | null>(valueProp ?? null);
+  const [value, setValue] = useState<string | number | null>(valueProp ?? null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SelectItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SelectItem | null>(null); // Seçilen item'ı sakla
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const colors = Colors.light;
   const insets = useSafeAreaInsets();
 
@@ -346,7 +349,7 @@ export function Select({
             ) : (
               <FlatList
                 data={displayItems}
-                keyExtractor={(item) => item.value}
+                keyExtractor={(item) => valueToString(item.value)}
                 renderItem={renderItem}
                 style={styles.optionsList}
                 contentContainerStyle={styles.optionsListContent}

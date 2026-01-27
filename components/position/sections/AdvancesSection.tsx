@@ -23,6 +23,7 @@ import { DateInput } from '@/components/ui/date-input';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
   Position,
+  Advance,
   AdvanceResponse,
   AdvanceInput,
   createAdvance,
@@ -53,7 +54,7 @@ const initialFormData: AdvanceInput = {
 export function AdvancesSection({ position, onUpdate }: AdvancesSectionProps) {
   const colors = Colors.light;
   const insets = useSafeAreaInsets();
-  const advances = position.advances || [];
+  const advances = (position.advances || []) as AdvanceResponse[];
 
   // Modal states
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -212,16 +213,16 @@ export function AdvancesSection({ position, onUpdate }: AdvancesSectionProps) {
             <View style={styles.recordHeader}>
               <View style={styles.recordInfo}>
                 <Text style={[styles.recordDate, { color: colors.text }]}>
-                  {formatDate(advance.date || advance.advance_date)}
+                  {formatDate(advance.advance_date)}
                 </Text>
                 <Text style={[styles.recordType, { color: colors.textSecondary }]}>
-                  {getPaymentMethodLabel(advance.payment_method)}
+                  {getPaymentMethodLabel(advance.payment_method ?? '')}
                 </Text>
               </View>
               <View style={styles.recordActions}>
                 <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: colors.surface }]}
-                  onPress={() => handleOpenEdit(advance as any)}
+                  onPress={() => handleOpenEdit(advance)}
                 >
                   <Pencil size={16} color={Brand.primary} />
                 </TouchableOpacity>
@@ -246,7 +247,7 @@ export function AdvancesSection({ position, onUpdate }: AdvancesSectionProps) {
               <View style={styles.detailRow}>
                 <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Tutar:</Text>
                 <Text style={[styles.detailValue, { color: colors.text }]}>
-                  {formatCurrency(parseFloat(advance.amount as any), advance.currency || advance.currency_type)}
+                  {formatCurrency(parseFloat(advance.amount || '0'), advance.currency_type)}
                 </Text>
               </View>
               {advance.description && (
@@ -292,7 +293,7 @@ export function AdvancesSection({ position, onUpdate }: AdvancesSectionProps) {
               <DateInput
                 label="Tarih"
                 value={formData.advance_date}
-                onChange={(date) => setFormData({ ...formData, advance_date: date })}
+                onChangeText={(date) => setFormData({ ...formData, advance_date: date })}
                 required
               />
 
@@ -301,8 +302,8 @@ export function AdvancesSection({ position, onUpdate }: AdvancesSectionProps) {
                   label="Çalışan"
                   data={driverOptions}
                   value={formData.employee_id ? String(formData.employee_id) : undefined}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, employee_id: v ? parseInt(v, 10) : undefined })
+                  onValueChange={(v: string | number | undefined) =>
+                    setFormData({ ...formData, employee_id: v ? parseInt(v as string, 10) : undefined })
                   }
                   placeholder="Çalışan seçin"
                 />
@@ -312,7 +313,7 @@ export function AdvancesSection({ position, onUpdate }: AdvancesSectionProps) {
                 label="Ödeme Yöntemi"
                 data={PAYMENT_METHODS.map((m) => ({ label: m.label, value: m.value }))}
                 value={formData.payment_method}
-                onValueChange={(v) => setFormData({ ...formData, payment_method: v })}
+                onValueChange={(v: string | number | undefined) => setFormData({ ...formData, payment_method: v as string })}
                 placeholder="Ödeme yöntemi seçin"
               />
 
@@ -328,7 +329,7 @@ export function AdvancesSection({ position, onUpdate }: AdvancesSectionProps) {
                 label="Para Birimi"
                 data={CURRENCY_TYPES.map((c) => ({ label: c.label, value: c.value }))}
                 value={formData.currency_type}
-                onValueChange={(v) => setFormData({ ...formData, currency_type: v || 'TRY' })}
+                onValueChange={(v: string | number | undefined) => setFormData({ ...formData, currency_type: (v as string) || 'TRY' })}
                 placeholder="Para birimi seçin"
               />
 

@@ -53,7 +53,7 @@ export default function JobApplicationsScreen() {
   // Refs
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasInitialFetchRef = useRef(false);
 
   // Core fetch function
@@ -208,7 +208,7 @@ export default function JobApplicationsScreen() {
         additionalInfo={additionalInfo}
         status={{
           label: getApplicationStatusLabel(item.status),
-          variant: getApplicationStatusColor(item.status),
+          variant: getApplicationStatusColor(item.status) === 'error' ? 'danger' : getApplicationStatusColor(item.status),
         }}
         footer={{
           left: item.job_posting ? (

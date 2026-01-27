@@ -3,7 +3,7 @@
  */
 
 import { useMemo } from 'react';
-import { router } from 'expo-router';
+import { router, RelativePathString } from 'expo-router';
 import {
   DollarSign,
   CreditCard,
@@ -25,7 +25,7 @@ export const useFinanceQuickActions = (): QuickAction[] => {
         icon: DollarSign,
         onPress: () => {
           hapticLight();
-          router.push('/(tabs)/transactions');
+          router.push('/(tabs)/transactions' as RelativePathString);
         },
         permission: 'financial_transactions.create',
       },
@@ -35,7 +35,7 @@ export const useFinanceQuickActions = (): QuickAction[] => {
         icon: CreditCard,
         onPress: () => {
           hapticLight();
-          router.push('/(tabs)/transactions');
+          router.push('/(tabs)/transactions' as RelativePathString);
         },
         permission: 'financial_transactions.create',
       },
@@ -65,7 +65,7 @@ export const useFinanceQuickActions = (): QuickAction[] => {
         icon: ArrowUpDown,
         onPress: () => {
           hapticLight();
-          router.push('/(tabs)/transactions');
+          router.push('/(tabs)/transactions' as RelativePathString);
         },
         permission: 'financial_transactions.create',
       },

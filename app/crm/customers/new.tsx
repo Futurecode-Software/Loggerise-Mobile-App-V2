@@ -55,9 +55,9 @@ export default function NewCrmCustomerScreen() {
   });
 
   // Location states
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [states, setStates] = useState<State[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
+  const [countries, setCountries] = useState<LocationOption[]>([]);
+  const [states, setStates] = useState<LocationOption[]>([]);
+  const [cities, setCities] = useState<LocationOption[]>([]);
   const [taxOffices, setTaxOffices] = useState<LocationOption[]>([]);
 
   // Loading states
@@ -385,10 +385,7 @@ export default function NewCrmCustomerScreen() {
             {!isTurkish && (
               <Select
                 label="Ülke"
-                data={countries.map((country) => ({
-                  label: country.name,
-                  value: country.id.toString(),
-                }))}
+                data={countries}
                 value={formData.country_id?.toString()}
                 onValueChange={(value) =>
                   setFormData({ ...formData, country_id: value ? Number(value) : undefined })
@@ -409,10 +406,7 @@ export default function NewCrmCustomerScreen() {
 
             <Select
               label={isTurkish ? 'İl' : 'Eyalet/Bölge'}
-              data={states.map((state) => ({
-                label: state.name,
-                value: state.id.toString(),
-              }))}
+              data={states}
               value={formData.main_state_id?.toString()}
               onValueChange={(value) =>
                 setFormData({ ...formData, main_state_id: value ? Number(value) : undefined })
@@ -423,10 +417,7 @@ export default function NewCrmCustomerScreen() {
 
             <Select
               label={isTurkish ? 'İlçe' : 'Şehir'}
-              data={cities.map((city) => ({
-                label: city.name,
-                value: city.id.toString(),
-              }))}
+              data={cities}
               value={formData.main_city_id?.toString()}
               onValueChange={(value) =>
                 setFormData({ ...formData, main_city_id: value ? Number(value) : undefined })
@@ -473,7 +464,7 @@ export default function NewCrmCustomerScreen() {
                 { label: 'GBP - İngiliz Sterlini', value: 'GBP' },
               ]}
               value={formData.currency_type}
-              onValueChange={(value) => setFormData({ ...formData, currency_type: value })}
+              onValueChange={(value) => setFormData({ ...formData, currency_type: value?.toString() || 'TRY' })}
               placeholder="Para birimi seçiniz"
             />
 

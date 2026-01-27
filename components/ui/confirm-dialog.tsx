@@ -3,40 +3,83 @@ import { View, Modal, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { X } from 'lucide-react-native';
 
 interface ConfirmDialogProps {
-  visible: boolean;
+  visible?: boolean;
+  open?: boolean;  // Alias for visible
   title: string;
-  message: string;
+  message?: string;
+  description?: string;  // Alias for message
   confirmText?: string;
   cancelText?: string;
   confirmButtonColor?: string;
   cancelButtonColor?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  onOpenChange?: (open: boolean) => void;  // Called when dialog opens/closes
   isLoading?: boolean;
+  loading?: boolean;  // Alias for isLoading
   isDangerous?: boolean;
+  isDestructive?: boolean;  // Alias for isDangerous
+  variant?: string;  // Can be 'danger', 'dangerous', 'destructive', etc.
 }
 
 export function ConfirmDialog({
   visible,
+  open,
   title,
   message,
+  description,
   confirmText = 'Evet',
   cancelText = 'İptal',
   confirmButtonColor = '#10b981',
   cancelButtonColor = '#6b7280',
   onConfirm,
   onCancel,
-  isLoading = false,
+  onOpenChange,
+  isLoading,
+  loading,
   isDangerous = false,
+  isDestructive = false,
+  variant,
 }: ConfirmDialogProps) {
-  const finalConfirmColor = isDangerous ? '#ef4444' : confirmButtonColor;
+  // Support both `visible` and `open` props
+  const isVisible = open !== undefined ? open : visible;
+  
+  // Support both `message` and `description` props
+  const dialogMessage = description !== undefined ? description : message;
+  
+  // Support `isLoading` and `loading` props
+  const isActionLoading = loading !== undefined ? loading : isLoading;
+  
+  // Determine if this is a dangerous/destructive action
+  const isDangerAction = isDangerous || isDestructive || variant === 'danger' || variant === 'dangerous' || variant === 'destructive';
+  
+  // Use red color for destructive actions
+  const finalConfirmColor = isDangerAction ? '#ef4444' : confirmButtonColor;
+
+  // Handle confirm with onOpenChange callback
+  const handleConfirm = () => {
+    onConfirm();
+    // Call onOpenChange with false when dialog is closing via confirm
+    if (onOpenChange) {
+      onOpenChange(false);
+    }
+  };
+
+  // Handle cancel with onOpenChange callback
+  const handleCancel = () => {
+    onCancel();
+    // Call onOpenChange with false when dialog is closing via cancel
+    if (onOpenChange) {
+      onOpenChange(false);
+    }
+  };
 
   return (
     <Modal
-      visible={visible}
+      visible={isVisible}
       transparent={true}
       animationType="fade"
-      onRequestClose={onCancel}
+      onRequestClose={handleCancel}
       presentationStyle="overFullScreen"
       statusBarTranslucent={true}
     >
@@ -47,8 +90,8 @@ export function ConfirmDialog({
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             <TouchableOpacity
-              onPress={onCancel}
-              disabled={isLoading}
+              onPress={handleCancel}
+              disabled={isActionLoading}
               style={styles.closeButton}
             >
               <X size={24} color="#6b7280" />
@@ -56,35 +99,35 @@ export function ConfirmDialog({
           </View>
 
           {/* Content */}
-          <Text style={styles.message}>{message}</Text>
+          {dialogMessage && <Text style={styles.message}>{dialogMessage}</Text>}
 
           {/* Footer Buttons */}
           <View style={styles.footer}>
             <TouchableOpacity
-              onPress={onCancel}
-              disabled={isLoading}
+              onPress={handleCancel}
+              disabled={isActionLoading}
               style={[
                 styles.button,
                 styles.cancelButton,
                 { backgroundColor: cancelButtonColor },
-                isLoading && styles.buttonDisabled,
+                isActionLoading && styles.buttonDisabled,
               ]}
             >
               <Text style={styles.cancelButtonText}>{cancelText}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={onConfirm}
-              disabled={isLoading}
+              onPress={handleConfirm}
+              disabled={isActionLoading}
               style={[
                 styles.button,
                 styles.confirmButton,
                 { backgroundColor: finalConfirmColor },
-                isLoading && styles.buttonDisabled,
+                isActionLoading && styles.buttonDisabled,
               ]}
             >
               <Text style={styles.confirmButtonText}>
-                {isLoading ? 'Lütfen bekleyin...' : confirmText}
+                {isActionLoading ? 'Lütfen bekleyin...' : confirmText}
               </Text>
             </TouchableOpacity>
           </View>

@@ -42,7 +42,7 @@ export default function JobPostingsScreen() {
   // Refs to prevent duplicate calls
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasInitialFetchRef = useRef(false);
 
   // Core fetch function
@@ -209,7 +209,7 @@ export default function JobPostingsScreen() {
     } else {
       statusBadges.push({
         label: 'Pasif',
-        variant: 'error' as const,
+        variant: 'danger' as const,
       });
     }
 
@@ -236,7 +236,7 @@ export default function JobPostingsScreen() {
         title={item.title}
         subtitle={item.position}
         additionalInfo={additionalInfo}
-        status={statusBadges[0]} // Primary status badge
+        status={statusBadges[0]}
         footer={{
           left: statusBadges.length > 1 ? (
             <View style={styles.statusBadges}>

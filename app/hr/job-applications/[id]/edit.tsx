@@ -314,7 +314,7 @@ export default function EditJobApplicationScreen() {
               options={jobPostingOptions}
               placeholder="İş ilanı seçin"
               searchPlaceholder="İlan ara..."
-              isLoading={loadingJobPostings}
+              loading={loadingJobPostings}
               error={errors.job_posting_id}
             />
 
@@ -363,7 +363,7 @@ export default function EditJobApplicationScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity onPress={handleRemoveCV} style={styles.removeButton}>
-                  <X size={20} color={colors.error} />
+                  <X size={20} color={colors.danger} />
                 </TouchableOpacity>
               </View>
             )}

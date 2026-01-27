@@ -336,7 +336,7 @@ export default function InteractionDetailScreen() {
               <Badge
                 label={getInteractionTypeLabel(formData.interaction_type)}
                 variant="info"
-                size="lg"
+                size="md"
               />
             )}
           </Card>
@@ -364,7 +364,7 @@ export default function InteractionDetailScreen() {
                 multiline
                 numberOfLines={4}
                 editable={isEditing}
-                style={styles.textArea}
+                inputStyle={styles.textArea}
               />
             </View>
           </Card>
@@ -379,7 +379,6 @@ export default function InteractionDetailScreen() {
               onChangeText={(value) => setFormData({ ...formData, interaction_date: value })}
               error={errors.interaction_date}
               editable={isEditing}
-              type="date"
               required
             />
 
@@ -388,7 +387,6 @@ export default function InteractionDetailScreen() {
               value={formData.next_followup_date}
               onChangeText={(value) => setFormData({ ...formData, next_followup_date: value })}
               editable={isEditing}
-              type="date"
             />
           </Card>
 
@@ -398,7 +396,7 @@ export default function InteractionDetailScreen() {
             <Badge
               label={getInteractionStatusLabel(formData.status || 'pending')}
               variant={getInteractionStatusVariant(formData.status || 'pending')}
-              size="lg"
+              size="md"
             />
           </Card>
 

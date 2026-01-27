@@ -5,6 +5,7 @@ type ToastType = 'success' | 'error' | 'info' | 'warning';
 interface ToastOptions {
   visibilityTime?: number;
   position?: 'top' | 'bottom';
+  duration?: number;
 }
 
 export function useToast() {
@@ -13,7 +14,7 @@ export function useToast() {
       type,
       text1: title,
       text2: message,
-      visibilityTime: options?.visibilityTime ?? 3000,
+      visibilityTime: options?.duration ?? options?.visibilityTime ?? 3000,
       position: options?.position ?? 'top',
     });
   };
@@ -34,5 +35,5 @@ export function useToast() {
     show('warning', title, message, options);
   };
 
-  return { show, success, error, info, warning };
+  return { show, success, error, info, warning, showError: error };
 }

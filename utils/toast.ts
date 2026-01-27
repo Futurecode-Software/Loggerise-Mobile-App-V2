@@ -9,13 +9,14 @@ interface ToastOptions {
   type: 'success' | 'error' | 'info';
   message: string;
   visibilityTime?: number;
+  duration?: number;
 }
 
-export function showToast({ type, message, visibilityTime = 3000 }: ToastOptions) {
+export function showToast({ type, message, visibilityTime, duration }: ToastOptions) {
   Toast.show({
     type,
     text1: message,
-    visibilityTime,
+    visibilityTime: duration ?? visibilityTime ?? 3000,
     position: 'top',
   });
 }

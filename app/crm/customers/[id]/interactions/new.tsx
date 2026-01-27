@@ -101,14 +101,12 @@ export default function NewInteractionScreen() {
       {/* Header */}
       <FullScreenHeader
         title="Yeni Görüşme"
-        onBack={() => router.back()}
-        rightIcons={[
-          {
-            icon: <Save size={20} color="#FFFFFF" />,
-            onPress: handleSubmit,
-            disabled: isSubmitting,
-          },
-        ]}
+        onBackPress={() => router.back()}
+        rightIcons={
+          <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting}>
+            <Save size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
       />
 
       <KeyboardAvoidingView
@@ -186,7 +184,7 @@ export default function NewInteractionScreen() {
                 onChangeText={(value) => setFormData({ ...formData, description: value })}
                 multiline
                 numberOfLines={4}
-                style={styles.textArea}
+                inputStyle={styles.textArea}
               />
             </View>
           </Card>
@@ -202,7 +200,6 @@ export default function NewInteractionScreen() {
               onChangeText={(value) => setFormData({ ...formData, interaction_date: value })}
               error={errors.interaction_date}
               required
-              type="date"
             />
 
             <Input
@@ -211,7 +208,6 @@ export default function NewInteractionScreen() {
               value={formData.next_followup_date}
               onChangeText={(value) => setFormData({ ...formData, next_followup_date: value })}
               error={errors.next_followup_date}
-              type="date"
             />
           </Card>
 

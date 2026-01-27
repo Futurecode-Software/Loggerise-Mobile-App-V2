@@ -14,6 +14,7 @@ import {
   Platform,
   StatusBar as RNStatusBar,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -36,6 +37,18 @@ export interface FullScreenHeaderProps {
     isActive?: boolean;
     onPress?: () => void;
   }>;
+  rightAction?: {
+    icon: ReactNode;
+    onPress: () => void;
+    disabled?: boolean;
+    loading?: boolean;
+    backgroundColor?: string;
+    iconColor?: string;
+  };
+  leftActions?: Array<{
+    icon: ReactNode;
+    onPress: () => void;
+  }>;
 }
 
 export function FullScreenHeader({
@@ -47,6 +60,8 @@ export function FullScreenHeader({
   onBackPress,
   showBackButton = false,
   tabs,
+  rightAction,
+  leftActions,
 }: FullScreenHeaderProps) {
   const insets = useSafeAreaInsets();
 
@@ -97,6 +112,21 @@ export function FullScreenHeader({
         >
           {/* Sol Taraf - Avatar + Bilgiler veya Back Button */}
           <View style={styles.leftSection}>
+            {/* Left Actions - Rendered before back button */}
+            {leftActions && leftActions.length > 0 && (
+              <View style={styles.leftActionsContainer}>
+                {leftActions.map((action, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={action.onPress}
+                    style={styles.leftActionButton}
+                    activeOpacity={0.7}
+                  >
+                    {action.icon}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
             {showBackButton && (
               <TouchableOpacity
                 onPress={handleBackPress}
@@ -130,7 +160,29 @@ export function FullScreenHeader({
           </View>
 
           {/* Sağ Taraf */}
-          <View style={styles.rightSection}>{rightIcons}</View>
+          <View style={styles.rightSection}>
+            {rightIcons}
+            {rightAction && (
+              <TouchableOpacity
+                onPress={rightAction.onPress}
+                disabled={rightAction.disabled || rightAction.loading}
+                style={[
+                  styles.rightActionButton,
+                  rightAction.backgroundColor && {
+                    backgroundColor: rightAction.backgroundColor,
+                  },
+                  (rightAction.disabled || rightAction.loading) && styles.rightActionButtonDisabled,
+                ]}
+                activeOpacity={0.7}
+              >
+                {rightAction.loading ? (
+                  <ActivityIndicator size="small" color={rightAction.iconColor || '#FFFFFF'} />
+                ) : (
+                  rightAction.icon
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Tab Headerleri (varsa) */}
@@ -212,6 +264,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
     justifyContent: 'flex-end',
+  },
+  leftActionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginRight: Spacing.sm,
+  },
+  leftActionButton: {
+    padding: Spacing.sm,
+  },
+  rightActionButton: {
+    padding: Spacing.sm,
+    borderRadius: 8,
+    minWidth: 40,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rightActionButtonDisabled: {
+    opacity: 0.5,
   },
   tabsScrollContainer: {
     maxHeight: 56,

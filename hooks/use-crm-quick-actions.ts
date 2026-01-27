@@ -3,7 +3,7 @@
  */
 
 import { useMemo } from 'react';
-import { router } from 'expo-router';
+import { router, RelativePathString } from 'expo-router';
 import {
   FileText,
   Copy,
@@ -56,7 +56,7 @@ export const useCrmQuickActions = (): QuickAction[] => {
         icon: MessageSquare,
         onPress: () => {
           hapticLight();
-          router.push('/crm/interactions/new');
+          router.push('/crm/interactions/new' as RelativePathString);
         },
         permission: 'crm_interactions.create',
       },

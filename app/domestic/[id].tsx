@@ -36,6 +36,7 @@ import {
   Square,
 } from 'lucide-react-native';
 import { Card, Badge } from '@/components/ui';
+import type { ViewStyle } from 'react-native';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
@@ -491,7 +492,7 @@ export default function DomesticOrderDetailScreen() {
               </Card>
             ))}
 
-            <Card style={[styles.totalCard, { backgroundColor: Brand.primary + '10' }]}>
+            <Card style={[styles.totalCard, { backgroundColor: (Brand.primary + '10') as string }]}>
               <View style={styles.totalRow}>
                 <Text style={[styles.totalLabel, { color: colors.text }]}>Toplam Gelir</Text>
                 <Text style={[styles.totalAmount, { color: Brand.primary }]}>
@@ -538,7 +539,7 @@ export default function DomesticOrderDetailScreen() {
                     </Text>
                     <Badge
                       label={expense.status === 'approved' ? 'Onaylı' : expense.status === 'rejected' ? 'Reddedildi' : 'Bekliyor'}
-                      variant={expense.status === 'approved' ? 'success' : expense.status === 'rejected' ? 'destructive' : 'warning'}
+                      variant={expense.status === 'approved' ? 'success' : expense.status === 'rejected' ? 'error' : 'warning'}
                       size="sm"
                     />
                   </View>
@@ -551,7 +552,7 @@ export default function DomesticOrderDetailScreen() {
               </Card>
             ))}
 
-            <Card style={[styles.totalCard, { backgroundColor: '#ef4444' + '10' }]}>
+            <Card style={[styles.totalCard, { backgroundColor: ('#ef4444' + '10') as string }]}>
               <View style={styles.totalRow}>
                 <Text style={[styles.totalLabel, { color: colors.text }]}>Onaylı Masraflar</Text>
                 <Text style={[styles.totalAmount, { color: '#ef4444' }]}>
@@ -670,6 +671,7 @@ export default function DomesticOrderDetailScreen() {
         variant="destructive"
         loading={isDeleting}
         onConfirm={handleDelete}
+        onCancel={() => setDeleteDialogOpen(false)}
       />
 
       {/* Status Change Dialog */}
@@ -682,6 +684,7 @@ export default function DomesticOrderDetailScreen() {
         cancelText="İptal"
         loading={isUpdatingStatus}
         onConfirm={handleStatusChange}
+        onCancel={() => setStatusDialogOpen(false)}
       />
     </View>
   );

@@ -3,7 +3,7 @@
  */
 
 import { useMemo } from 'react';
-import { router } from 'expo-router';
+import { router, RelativePathString } from 'expo-router';
 import { Truck, Package, MapPin, UserCheck } from 'lucide-react-native';
 import { QuickAction } from '@/contexts/quick-actions-context';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -19,7 +19,7 @@ export const useLogisticsQuickActions = (): QuickAction[] => {
         icon: Truck,
         onPress: () => {
           hapticLight();
-          router.push('/trips/new');
+          router.push('/trips/new' as RelativePathString);
         },
         permission: 'trips.create',
       },
@@ -49,7 +49,7 @@ export const useLogisticsQuickActions = (): QuickAction[] => {
         icon: UserCheck,
         onPress: () => {
           hapticLight();
-          router.push('/trips');
+          router.push('/trips' as RelativePathString);
         },
         permission: 'trips.update',
       },

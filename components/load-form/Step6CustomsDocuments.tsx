@@ -65,8 +65,8 @@ export default function Step6CustomsDocuments({
   const colors = Colors.light;
 
   // GTIP seçildiğinde
-  const handleGtipChange = (value: string | number | undefined) => {
-    updateFormData('gtip_hs_code', value || '');
+  const handleGtipChange = (value: string | number | null) => {
+    updateFormData('gtip_hs_code', (value as string) || '');
   };
 
   return (

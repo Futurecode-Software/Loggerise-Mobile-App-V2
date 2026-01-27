@@ -163,7 +163,8 @@ export function ExpensesSection({ position, onUpdate }: ExpensesSectionProps) {
     }
   };
 
-  const formatDate = (dateString: string): string => {
+  const formatDate = (dateString?: string | null): string => {
+    if (!dateString) return '-';
     try {
       return new Date(dateString).toLocaleDateString('tr-TR');
     } catch {
@@ -281,7 +282,7 @@ export function ExpensesSection({ position, onUpdate }: ExpensesSectionProps) {
               <DateInput
                 label="Tarih"
                 value={formData.expense_date}
-                onChange={(date) => setFormData({ ...formData, expense_date: date })}
+                onChangeDate={(date) => setFormData({ ...formData, expense_date: date })}
                 required
               />
 
@@ -289,7 +290,7 @@ export function ExpensesSection({ position, onUpdate }: ExpensesSectionProps) {
                 label="Masraf Türü"
                 data={EXPENSE_TYPES.map((t) => ({ label: t.label, value: t.value }))}
                 value={formData.expense_type}
-                onValueChange={(v) => setFormData({ ...formData, expense_type: v || 'other' })}
+                onValueChange={(v) => setFormData({ ...formData, expense_type: (v as string) || 'other' })}
                 placeholder="Masraf türü seçin"
                 required
               />
@@ -306,7 +307,7 @@ export function ExpensesSection({ position, onUpdate }: ExpensesSectionProps) {
                 label="Para Birimi"
                 data={CURRENCY_TYPES.map((c) => ({ label: c.label, value: c.value }))}
                 value={formData.currency_type}
-                onValueChange={(v) => setFormData({ ...formData, currency_type: v || 'TRY' })}
+                onValueChange={(v) => setFormData({ ...formData, currency_type: (v as string) || 'TRY' })}
                 placeholder="Para birimi seçin"
               />
 

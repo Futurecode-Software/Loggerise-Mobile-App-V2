@@ -10,6 +10,10 @@ export interface ExchangeRate {
   date: string;
 }
 
+export interface RateData {
+  forex_selling: string;
+}
+
 /**
  * Get latest exchange rate for a currency
  */
@@ -34,3 +38,20 @@ export const getCurrentRate = getLatestExchangeRate;
  * Alias for getLatestExchangeRate (backward compatibility)
  */
 export const getLatestRate = getLatestExchangeRate;
+
+/**
+ * Get latest rate data object
+ */
+export const getLatestRateData = async (currencyCode: string): Promise<RateData> => {
+  if (currencyCode === 'TRY') {
+    return { forex_selling: '1' };
+  }
+
+  const response = await api.get(`/exchange-rates/latest/${currencyCode}`);
+  if (response.data.success && response.data.data) {
+    return {
+      forex_selling: response.data.data.forex_selling,
+    };
+  }
+  throw new Error('Kur bilgisi alınamadı');
+};

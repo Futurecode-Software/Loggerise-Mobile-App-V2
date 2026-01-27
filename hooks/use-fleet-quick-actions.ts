@@ -3,7 +3,7 @@
  */
 
 import { useMemo } from 'react';
-import { router } from 'expo-router';
+import { router, RelativePathString } from 'expo-router';
 import {
   Car,
   Wrench,
@@ -36,7 +36,7 @@ export const useFleetQuickActions = (): QuickAction[] => {
         icon: Wrench,
         onPress: () => {
           hapticLight();
-          router.push('/(tabs)/vehicles');
+          router.push('/(tabs)/vehicles' as RelativePathString);
         },
         permission: 'vehicle_maintenances.create',
       },
@@ -46,7 +46,7 @@ export const useFleetQuickActions = (): QuickAction[] => {
         icon: AlertTriangle,
         onPress: () => {
           hapticLight();
-          router.push('/(tabs)/vehicles');
+          router.push('/(tabs)/vehicles' as RelativePathString);
         },
         permission: 'vehicle_faults.create',
       },
@@ -56,7 +56,7 @@ export const useFleetQuickActions = (): QuickAction[] => {
         icon: Shield,
         onPress: () => {
           hapticLight();
-          router.push('/(tabs)/vehicles');
+          router.push('/(tabs)/vehicles' as RelativePathString);
         },
         permission: 'vehicle_insurances.create',
       },
@@ -66,7 +66,7 @@ export const useFleetQuickActions = (): QuickAction[] => {
         icon: ClipboardCheck,
         onPress: () => {
           hapticLight();
-          router.push('/(tabs)/vehicles');
+          router.push('/(tabs)/vehicles' as RelativePathString);
         },
         permission: 'vehicle_inspections.create',
       },

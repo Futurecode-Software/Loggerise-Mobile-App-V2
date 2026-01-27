@@ -251,9 +251,9 @@ export default function CargoItemForm({ visible, item, onClose, onSave }: CargoI
 
           {/* Footer */}
           <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
-            <Button label="İptal" onPress={onClose} variant="secondary" style={styles.footerButton} />
+            <Button title="İptal" onPress={onClose} variant="secondary" style={styles.footerButton} />
             <Button
-              label={item ? 'Güncelle' : 'Ekle'}
+              title={item ? 'Güncelle' : 'Ekle'}
               onPress={handleSave}
               variant="primary"
               style={styles.footerButton}

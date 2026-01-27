@@ -111,7 +111,7 @@ export default function VehicleEditScreen() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [activeTab, setActiveTab] = useState('basic');
   const formRef = useRef<ScrollView>(null);
 
@@ -265,31 +265,31 @@ export default function VehicleEditScreen() {
   }, [errors]);
 
   const validateForm = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string[]> = {};
 
     if (!formData.brand) {
-      newErrors.brand = 'Marka zorunludur.';
+      newErrors.brand = ['Marka zorunludur.'];
     }
     if (!formData.plate) {
-      newErrors.plate = 'Plaka zorunludur.';
+      newErrors.plate = ['Plaka zorunludur.'];
     }
     if (!formData.vehicle_type) {
-      newErrors.vehicle_type = 'Araç tipi zorunludur.';
+      newErrors.vehicle_type = ['Araç tipi zorunludur.'];
     }
     if (!formData.color) {
-      newErrors.color = 'Renk zorunludur.';
+      newErrors.color = ['Renk zorunludur.'];
     }
     if (!formData.gear_type) {
-      newErrors.gear_type = 'Vites tipi zorunludur.';
+      newErrors.gear_type = ['Vites tipi zorunludur.'];
     }
     if (!formData.document_type) {
-      newErrors.document_type = 'Ehliyet sınıfı zorunludur.';
+      newErrors.document_type = ['Ehliyet sınıfı zorunludur.'];
     }
     if (!formData.ownership_type) {
-      newErrors.ownership_type = 'Sahiplik tipi zorunludur.';
+      newErrors.ownership_type = ['Sahiplik tipi zorunludur.'];
     }
     if (!formData.status) {
-      newErrors.status = 'Durum zorunludur.';
+      newErrors.status = ['Durum zorunludur.'];
     }
 
     setErrors(newErrors);
@@ -367,21 +367,21 @@ export default function VehicleEditScreen() {
               options={VehicleTypeOptions}
               selectedValue={formData.vehicle_type}
               onValueChange={(value) => handleInputChange('vehicle_type', value)}
-              error={errors.vehicle_type}
+              error={errors.vehicle_type?.[0]}
             />
             <Input
               label="Plaka *"
               placeholder="34 ABC 123"
               value={formData.plate}
               onChangeText={(text) => handleInputChange('plate', text)}
-              error={errors.plate}
+              error={errors.plate?.[0]}
             />
             <Input
               label="Marka *"
               placeholder="Mercedes, Volvo vb."
               value={formData.brand}
               onChangeText={(text) => handleInputChange('brand', text)}
-              error={errors.brand}
+              error={errors.brand?.[0]}
             />
             <Input
               label="Model"
@@ -403,7 +403,7 @@ export default function VehicleEditScreen() {
               placeholder="Beyaz, Siyah vb."
               value={formData.color}
               onChangeText={(text) => handleInputChange('color', text)}
-              error={errors.color}
+              error={errors.color?.[0]}
             />
             <Input
               label="Ticari Adı"
@@ -428,28 +428,28 @@ export default function VehicleEditScreen() {
               options={GearTypeOptions}
               selectedValue={formData.gear_type}
               onValueChange={(value) => handleInputChange('gear_type', value)}
-              error={errors.gear_type}
+              error={errors.gear_type?.[0]}
             />
             <SelectInput
               label="Ehliyet Sınıfı *"
               options={DocumentTypeOptions}
               selectedValue={formData.document_type}
               onValueChange={(value) => handleInputChange('document_type', value)}
-              error={errors.document_type}
+              error={errors.document_type?.[0]}
             />
             <SelectInput
               label="Sahiplik Tipi *"
               options={OwnershipTypeOptions}
               selectedValue={formData.ownership_type}
               onValueChange={(value) => handleInputChange('ownership_type', value)}
-              error={errors.ownership_type}
+              error={errors.ownership_type?.[0]}
             />
             <SelectInput
               label="Durum *"
               options={StatusOptions}
               selectedValue={formData.status}
               onValueChange={(value) => handleInputChange('status', value)}
-              error={errors.status}
+              error={errors.status?.[0]}
             />
             <Input
               label="Toplam KM"

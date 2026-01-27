@@ -18,8 +18,10 @@ interface InputProps extends Omit<TextInputProps, 'style'> {
   rightIcon?: React.ReactNode;
   containerStyle?: ViewStyle;
   inputStyle?: ViewStyle;
+  style?: ViewStyle;
   isPassword?: boolean;
   required?: boolean;
+  type?: string;
 }
 
 export function Input({
@@ -29,7 +31,9 @@ export function Input({
   rightIcon,
   containerStyle,
   inputStyle,
+  style,
   isPassword = false,
+  type,
   ...props
 }: InputProps) {
   const colors = Colors.light;
@@ -43,7 +47,7 @@ export function Input({
   };
 
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View style={[styles.container, containerStyle, style]}>
       {label && (
         <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label}

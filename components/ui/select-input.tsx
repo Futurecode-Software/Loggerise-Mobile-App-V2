@@ -9,16 +9,16 @@ import { Select } from './select';
 
 interface Option {
   label: string;
-  value: string;
+  value: string | number;
 }
 
 interface SelectInputProps {
-  label: string;
+  label?: string;
   options: Option[];
-  selectedValue?: string | null;
+  selectedValue?: string | number | null;
   /** Alias for selectedValue - for consistent API */
-  value?: string | null;
-  onValueChange: (value: string) => void;
+  value?: string | number | null;
+  onValueChange: (value: string | number | null) => void;
   error?: string;
   placeholder?: string;
   searchable?: boolean;
@@ -46,9 +46,7 @@ export function SelectInput({
       data={options}
       value={currentValue}
       onValueChange={(val) => {
-        if (val !== undefined) {
-          onValueChange(val);
-        }
+        onValueChange(val ?? null);
       }}
       error={error}
       placeholder={placeholder}

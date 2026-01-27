@@ -196,3 +196,53 @@ export async function searchTaxOffices(
     throw new Error(message);
   }
 }
+
+/**
+ * Port info
+ */
+export interface Port {
+  id: number;
+  name: string;
+  port_code?: string;
+}
+
+/**
+ * Ferry company info
+ */
+export interface FerryCompany {
+  id: number;
+  name: string;
+  short_code?: string;
+}
+
+/**
+ * Search ports by name/code
+ */
+export async function searchPorts(search?: string): Promise<Port[]> {
+  try {
+    const response = await api.get<{ success: boolean; data: Port[] }>(
+      '/locations/ports',
+      { params: { search } }
+    );
+    return response.data.data || [];
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Search ferry companies by name/code
+ */
+export async function searchFerryCompanies(search?: string): Promise<FerryCompany[]> {
+  try {
+    const response = await api.get<{ success: boolean; data: FerryCompany[] }>(
+      '/locations/ferry-companies',
+      { params: { search } }
+    );
+    return response.data.data || [];
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}

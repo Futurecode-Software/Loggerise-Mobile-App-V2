@@ -50,8 +50,6 @@ export function TaxOfficeSelect({
   const animationConfigs = useBottomSheetSpringConfigs({
     damping: 80,
     overshootClamping: true,
-    restDisplacementThreshold: 0.1,
-    restSpeedThreshold: 0.1,
     stiffness: 500,
   });
 
@@ -292,7 +290,7 @@ export function TaxOfficeSelect({
           <BottomSheetFlatList
             data={options}
             renderItem={renderItem}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item: TaxOffice) => item.id.toString()}
             ListEmptyComponent={renderEmpty}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}

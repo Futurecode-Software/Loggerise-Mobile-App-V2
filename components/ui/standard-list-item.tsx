@@ -15,7 +15,7 @@ export interface StandardListItemProps {
   additionalInfo?: React.ReactNode;
   status?: {
     label: string;
-    variant?: 'success' | 'warning' | 'danger' | 'default' | 'info' | 'outline';
+    variant?: 'default' | 'secondary' | 'success' | 'warning' | 'danger' | 'destructive' | 'error' | 'info' | 'outline';
   };
   statusDot?: {
     color: string;
@@ -24,6 +24,7 @@ export interface StandardListItemProps {
     left?: React.ReactNode;
     right?: React.ReactNode;
   };
+  actions?: React.ReactNode;
   onPress?: () => void;
   showChevron?: boolean;
   style?: ViewStyle;
@@ -40,6 +41,7 @@ export function StandardListItem({
   status,
   statusDot,
   footer,
+  actions,
   onPress,
   showChevron = true,
   style,
@@ -101,6 +103,7 @@ export function StandardListItem({
             size="sm"
           />
         )}
+        {actions}
         {showChevron && (
           <ChevronRight size={18} color={colors.icon} style={styles.chevron} />
         )}

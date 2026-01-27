@@ -64,8 +64,6 @@ const GroupCreateModal = forwardRef<GroupCreateModalRef, GroupCreateModalProps>(
     const animationConfigs = useBottomSheetSpringConfigs({
       damping: 80,
       overshootClamping: true,
-      restDisplacementThreshold: 0.1,
-      restSpeedThreshold: 0.1,
       stiffness: 500,
     });
 
@@ -249,7 +247,7 @@ const GroupCreateModal = forwardRef<GroupCreateModalRef, GroupCreateModalProps>(
 
     const renderSelectedUser = (user: UserBasic) => (
       <View key={user.id} style={[styles.selectedUserChip, { backgroundColor: Brand.primary + '15' }]}>
-        <Avatar name={user.name} size="xs" source={user.avatar_url || undefined} />
+        <Avatar name={user.name} size="sm" source={user.avatar_url || undefined} />
         <Text style={[styles.selectedUserName, { color: Brand.primary }]} numberOfLines={1}>
           {user.name}
         </Text>

@@ -141,7 +141,7 @@ export default function EditLoadScreen() {
         const mappedFormData: LoadFormData = {
           cargo_name: load.cargo_name || '',
           cargo_name_foreign: load.cargo_name_foreign || '',
-          direction: load.direction,
+          direction: load.direction || undefined,
           vehicle_type: load.vehicle_type || '',
           loading_type: load.loading_type || '',
           transport_speed: load.transport_speed || '',
@@ -213,9 +213,15 @@ export default function EditLoadScreen() {
           setItems(mappedItems);
         }
 
-        // Map addresses
+        // Map addresses - ensure sort_order is set with defaults
         if (load.addresses && load.addresses.length > 0) {
-          setAddresses(load.addresses);
+          const mappedAddresses = load.addresses.map((addr, index) => ({
+            ...addr,
+            sort_order: addr.sort_order ?? index,
+            pickup_type: addr.pickup_type ?? null,
+            delivery_type: addr.delivery_type ?? null,
+          })) as LoadAddress[];
+          setAddresses(mappedAddresses);
         }
 
         // Set selected companies
@@ -425,7 +431,7 @@ export default function EditLoadScreen() {
     const submitData: LoadFormData = {
       ...cleanedFormData,
       items: items.map((item) => ({
-        id: item.id, // Keep existing item IDs for updates
+        ...(item.id ? { id: item.id } : {}), // Keep existing item IDs for updates
         cargo_name: item.cargo_name,
         cargo_name_foreign: item.cargo_name_foreign,
         package_type: item.package_type,
@@ -450,27 +456,27 @@ export default function EditLoadScreen() {
         hazmat_packing_group: item.hazmat_packing_group,
         hazmat_flash_point: item.hazmat_flash_point,
         hazmat_description: item.hazmat_description,
-      })),
-      addresses: addresses,
+      })) as LoadFormData['items'],
+      addresses: addresses as LoadFormData['addresses'],
       // Clean pricing items
       pricing_items: pricingItems.map((pItem) => ({
-        id: pItem.id, // Keep existing pricing item IDs
+        ...(pItem.id ? { id: pItem.id } : {}),
         product_id: pItem.product_id || null,
         description: pItem.description || '',
-        quantity: parseFloat(pItem.quantity) || 1,
+        quantity: parseFloat(pItem.quantity as string) || 1,
         unit: pItem.unit || 'NIU',
-        unit_price: parseFloat(pItem.unit_price) || 0,
+        unit_price: parseFloat(pItem.unit_price as string) || 0,
         currency: pItem.currency || 'TRY',
-        exchange_rate: parseFloat(pItem.exchange_rate) || 1,
-        vat_rate: parseFloat(pItem.vat_rate) || 0,
-        vat_amount: parseFloat(pItem.vat_amount) || 0,
-        discount_rate: parseFloat(pItem.discount_rate) || 0,
-        discount_amount: parseFloat(pItem.discount_amount) || 0,
-        sub_total: parseFloat(pItem.sub_total) || 0,
-        total: parseFloat(pItem.total) || 0,
+        exchange_rate: parseFloat(pItem.exchange_rate as string) || 1,
+        vat_rate: parseFloat(pItem.vat_rate as string) || 0,
+        vat_amount: parseFloat(pItem.vat_amount as string) || 0,
+        discount_rate: parseFloat(pItem.discount_rate as string) || 0,
+        discount_amount: parseFloat(pItem.discount_amount as string) || 0,
+        sub_total: parseFloat(pItem.sub_total as string) || 0,
+        total: parseFloat(pItem.total as string) || 0,
         sort_order: pItem.sort_order || 0,
         is_active: pItem.is_active !== false,
-      })),
+      })) as unknown as LoadFormData['pricing_items'],
     };
 
     try {

@@ -44,7 +44,7 @@ interface AuthorityFormSheetProps {
   onSuccess: () => void;
 }
 
-const AuthorityFormSheet = forwardRef<
+export const AuthorityFormSheet = forwardRef<
   AuthorityFormSheetRef,
   AuthorityFormSheetProps
 >(({ contactId, authority, onSuccess }, ref) => {
@@ -80,8 +80,6 @@ const AuthorityFormSheet = forwardRef<
   const animationConfigs = useBottomSheetSpringConfigs({
     damping: 80,
     overshootClamping: true,
-    restDisplacementThreshold: 0.1,
-    restSpeedThreshold: 0.1,
     stiffness: 500,
   });
 

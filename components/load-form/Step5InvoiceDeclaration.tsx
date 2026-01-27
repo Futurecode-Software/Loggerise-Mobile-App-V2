@@ -226,7 +226,7 @@ export default function Step5InvoiceDeclaration({
               label="Para Birimi"
               placeholder="TRY"
               value={data.estimated_value_currency || 'TRY'}
-              onValueChange={handleCurrencyChange}
+              onValueChange={(value: string | number | null) => handleCurrencyChange(value as string)}
               options={CURRENCY_OPTIONS}
             />
           </View>

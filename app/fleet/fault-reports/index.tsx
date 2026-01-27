@@ -33,7 +33,7 @@ export default function FaultReportsScreen() {
   // Refs to prevent duplicate calls
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasInitialFetchRef = useRef(false);
 
   // Core fetch function
@@ -230,15 +230,17 @@ export default function FaultReportsScreen() {
         <View style={styles.badgesRow}>
           <View style={styles.badgeItem}>
             <Text style={[styles.badgeLabel, { color: colors.textSecondary }]}>Önem:</Text>
-            <Badge variant={getSeverityBadgeVariant(item.severity)}>
-              {getSeverityLabel(item.severity)}
-            </Badge>
+            <Badge
+              label={getSeverityLabel(item.severity)}
+              variant={getSeverityBadgeVariant(item.severity)}
+            />
           </View>
           <View style={styles.badgeItem}>
             <Text style={[styles.badgeLabel, { color: colors.textSecondary }]}>Durum:</Text>
-            <Badge variant={getStatusBadgeVariant(item.status)}>
-              {getFaultStatusLabel(item.status)}
-            </Badge>
+            <Badge
+              label={getFaultStatusLabel(item.status)}
+              variant={getStatusBadgeVariant(item.status)}
+            />
           </View>
         </View>
       </View>

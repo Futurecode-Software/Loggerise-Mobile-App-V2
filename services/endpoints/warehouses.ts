@@ -16,9 +16,11 @@ export interface Warehouse {
   address?: string;
   city?: string;
   country?: string;
+  postal_code?: string;
   manager?: string;
   phone?: string;
   email?: string;
+  notes?: string;
   country_id?: number;
   city_id?: number;
   is_active: boolean;
@@ -82,9 +84,11 @@ export interface WarehouseFormData {
   address?: string;
   city?: string;
   country?: string;
+  postal_code?: string;
   manager?: string;
   phone?: string;
   email?: string;
+  notes?: string;
   country_id?: number;
   city_id?: number;
   is_active?: boolean;

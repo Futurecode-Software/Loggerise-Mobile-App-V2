@@ -24,7 +24,7 @@ export function useLoggySearch(): UseLoggySearchReturn {
   const [searchQuery, setSearchQueryState] = useState('');
   const [searchResults, setSearchResults] = useState<AiConversation[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Handle search
   const handleSearch = useCallback(async (query: string) => {

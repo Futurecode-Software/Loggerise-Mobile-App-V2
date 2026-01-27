@@ -69,7 +69,7 @@ export function AutocompleteInput({
     width: number;
   } | null>(null);
 
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
   const containerRef = useRef<View>(null);
 

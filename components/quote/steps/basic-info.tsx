@@ -168,7 +168,7 @@ export function QuoteCreateBasicInfoScreen({
             label="Yük Yönü"
             placeholder="Seçiniz..."
             value={data.direction}
-            onValueChange={(value) => onChange({ direction: value as Direction })}
+            onValueChange={(value) => onChange({ direction: value as Direction | undefined })}
             options={DIRECTION_OPTIONS}
           />
 
@@ -176,7 +176,7 @@ export function QuoteCreateBasicInfoScreen({
             label="Araç Tipi"
             placeholder="Seçiniz..."
             value={data.vehicle_type}
-            onValueChange={(value) => onChange({ vehicle_type: value })}
+            onValueChange={(value) => onChange({ vehicle_type: value as string | undefined })}
             options={VEHICLE_TYPE_OPTIONS}
           />
 
@@ -186,7 +186,7 @@ export function QuoteCreateBasicInfoScreen({
                 label="Yükleme Tipi *"
                 placeholder="Seçiniz..."
                 value={data.loading_type}
-                onValueChange={(value) => onChange({ loading_type: value })}
+                onValueChange={(value) => onChange({ loading_type: value as string | undefined })}
                 options={LOADING_TYPE_OPTIONS}
               />
             </View>
@@ -196,7 +196,7 @@ export function QuoteCreateBasicInfoScreen({
                 label="Yük Tipi"
                 placeholder="Seçiniz..."
                 value={data.load_type}
-                onValueChange={(value) => onChange({ load_type: value })}
+                onValueChange={(value) => onChange({ load_type: value as 'full' | 'partial' | undefined })}
                 options={LOAD_TYPE_OPTIONS}
               />
             </View>
@@ -206,7 +206,7 @@ export function QuoteCreateBasicInfoScreen({
             label="Yük Taşıma Hızı *"
             placeholder="Seçiniz..."
             value={data.transport_speed}
-            onValueChange={(value) => onChange({ transport_speed: value })}
+            onValueChange={(value) => onChange({ transport_speed: value as string | undefined })}
             options={TRANSPORT_SPEED_OPTIONS}
           />
         </Card>

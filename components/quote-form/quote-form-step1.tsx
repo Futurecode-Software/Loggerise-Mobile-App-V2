@@ -95,7 +95,7 @@ export default function QuoteFormStep1({ formData, setFormData, errors }: QuoteF
                     borderColor: isActive ? Brand.primary : colors.border,
                   },
                 ]}
-                onPress={() => setFormData({ ...formData, currency_type: currency.value })}
+                onPress={() => setFormData({ ...formData, currency_type: currency.value as import('@/services/endpoints/quotes').CurrencyType })}
               >
                 <Text
                   style={[

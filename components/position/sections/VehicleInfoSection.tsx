@@ -56,9 +56,9 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
   const [formData, setFormData] = useState<FormData>({
     vehicle_owner_type: position.vehicle_owner_type || 'own',
     vehicle_owner_contact_id: position.vehicle_owner_contact_id || null,
-    rental_fee: position.rental_fee || '',
+    rental_fee: position.rental_fee?.toString() || '',
     rental_currency: position.rental_currency || 'TRY',
-    rental_exchange_rate: position.rental_exchange_rate || '1',
+    rental_exchange_rate: position.rental_exchange_rate?.toString() || '1',
     truck_tractor_id: position.truck_tractor_id || null,
     trailer_id: position.trailer_id || null,
     manual_location: position.manual_location || '',
@@ -107,9 +107,9 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
     setFormData({
       vehicle_owner_type: position.vehicle_owner_type || 'own',
       vehicle_owner_contact_id: position.vehicle_owner_contact_id || null,
-      rental_fee: position.rental_fee || '',
+      rental_fee: position.rental_fee?.toString() || '',
       rental_currency: position.rental_currency || 'TRY',
-      rental_exchange_rate: position.rental_exchange_rate || '1',
+      rental_exchange_rate: position.rental_exchange_rate?.toString() || '1',
       truck_tractor_id: position.truck_tractor_id || null,
       trailer_id: position.trailer_id || null,
       manual_location: position.manual_location || '',
@@ -158,8 +158,7 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
 
     setIsFetchingRate(true);
     try {
-      const rateData = await getLatestRate(currencyCode);
-      const rate = rateData.forex_selling.toString();
+      const rate = await getLatestRate(currencyCode);
       setFormData((prev) => ({ ...prev, rental_exchange_rate: rate }));
     } catch (error) {
       console.error('Exchange rate fetch error:', error);
@@ -173,7 +172,8 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
   };
 
   // Handle currency change
-  const handleCurrencyChange = (currency: string | undefined) => {
+  const handleCurrencyChange = (value: string | number | undefined) => {
+    const currency = value?.toString();
     if (!currency) return;
     setFormData((prev) => ({ ...prev, rental_currency: currency }));
     fetchExchangeRate(currency);
@@ -257,9 +257,9 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
     setFormData({
       vehicle_owner_type: position.vehicle_owner_type || 'own',
       vehicle_owner_contact_id: position.vehicle_owner_contact_id || null,
-      rental_fee: position.rental_fee || '',
+      rental_fee: position.rental_fee?.toString() || '',
       rental_currency: position.rental_currency || 'TRY',
-      rental_exchange_rate: position.rental_exchange_rate || '1',
+      rental_exchange_rate: position.rental_exchange_rate?.toString() || '1',
       truck_tractor_id: position.truck_tractor_id || null,
       trailer_id: position.trailer_id || null,
       manual_location: position.manual_location || '',
@@ -309,15 +309,15 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
     try {
       await updatePosition(position.id, {
         vehicle_owner_type: formData.vehicle_owner_type,
-        vehicle_owner_contact_id: formData.vehicle_owner_contact_id,
-        rental_fee: formData.rental_fee || undefined,
+        vehicle_owner_contact_id: formData.vehicle_owner_contact_id || undefined,
+        rental_fee: formData.rental_fee ? parseFloat(formData.rental_fee) : null,
         rental_currency: formData.rental_currency,
-        rental_exchange_rate: formData.rental_exchange_rate,
-        truck_tractor_id: formData.truck_tractor_id,
-        trailer_id: formData.trailer_id,
+        rental_exchange_rate: formData.rental_exchange_rate ? parseFloat(formData.rental_exchange_rate) : null,
+        truck_tractor_id: formData.truck_tractor_id || undefined,
+        trailer_id: formData.trailer_id || undefined,
         manual_location: formData.manual_location || undefined,
-        driver_id: formData.driver_id,
-        second_driver_id: formData.second_driver_id,
+        driver_id: formData.driver_id || undefined,
+        second_driver_id: formData.second_driver_id || undefined,
       });
 
       showToast({

@@ -151,13 +151,13 @@ export default function NoteFormModal({
           {/* Footer */}
           <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
             <Button
-              label="İptal"
+              title="İptal"
               onPress={onClose}
               variant="secondary"
               style={styles.footerButton}
             />
             <Button
-              label={isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+              title={isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
               onPress={handleSave}
               disabled={isSubmitting}
               variant="primary"

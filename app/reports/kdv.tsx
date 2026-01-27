@@ -12,7 +12,7 @@ import { showError } from '@/utils/toast';
 import { reportsApi } from '@/services';
 import type { KdvSummary } from '@/services/endpoints/reports';
 import { Download, FileText, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 export default function KdvReportScreen() {

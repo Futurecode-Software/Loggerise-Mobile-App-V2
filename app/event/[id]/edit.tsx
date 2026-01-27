@@ -380,18 +380,16 @@ export default function EditEventScreen() {
 
             <DateInput
               label="Başlangıç"
-              value={formData.start_datetime ? new Date(formData.start_datetime) : new Date()}
-              onChange={(date) => handleInputChange('start_datetime', date.toISOString())}
-              mode="datetime"
+              value={formData.start_datetime ? formData.start_datetime.split('T')[0] : new Date().toISOString().split('T')[0]}
+              onChangeDate={(date) => handleInputChange('start_datetime', new Date(date).toISOString())}
               error={errors.start_datetime}
               required
             />
 
             <DateInput
               label="Bitiş"
-              value={formData.end_datetime ? new Date(formData.end_datetime) : new Date()}
-              onChange={(date) => handleInputChange('end_datetime', date.toISOString())}
-              mode="datetime"
+              value={formData.end_datetime ? formData.end_datetime.split('T')[0] : new Date().toISOString().split('T')[0]}
+              onChangeDate={(date) => handleInputChange('end_datetime', new Date(date).toISOString())}
               error={errors.end_datetime}
               required
             />
@@ -420,10 +418,10 @@ export default function EditEventScreen() {
             <SelectInput
               label="İletişim Yöntemi"
               placeholder="Yöntem seçin"
-              value={formData.contact_method || ''}
+              value={formData.contact_method ?? null}
               options={CONTACT_METHOD_OPTIONS}
-              onValueChange={(value) =>
-                handleInputChange('contact_method', value || undefined)
+              onValueChange={(value: string | number | null) =>
+                handleInputChange('contact_method', (value as string | undefined) ?? undefined)
               }
               error={errors.contact_method}
             />
@@ -446,10 +444,10 @@ export default function EditEventScreen() {
             <SelectInput
               label="Hatırlatıcı"
               placeholder="Hatırlatıcı seçin"
-              value={formData.reminder_minutes || ''}
+              value={formData.reminder_minutes ?? null}
               options={REMINDER_OPTIONS}
-              onValueChange={(value) =>
-                handleInputChange('reminder_minutes', value || undefined)
+              onValueChange={(value: string | number | null) =>
+                handleInputChange('reminder_minutes', (value as number | undefined) ?? undefined)
               }
               error={errors.reminder_minutes}
             />
