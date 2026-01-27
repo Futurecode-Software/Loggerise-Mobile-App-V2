@@ -38,6 +38,7 @@ export function ConfirmDialog({
       animationType="fade"
       onRequestClose={onCancel}
       presentationStyle="overFullScreen"
+      statusBarTranslucent={true}
     >
       <View style={styles.container}>
         <View style={styles.backdrop} />
