@@ -22,6 +22,7 @@ import {
 import { Avatar, Input } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import UserSelectModal, { UserSelectModalRef } from '@/components/modals/UserSelectModal';
+import GroupCreateModal, { GroupCreateModalRef } from '@/components/modals/GroupCreateModal';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useMessageContext } from '@/context/message-context';
@@ -49,6 +50,7 @@ export default function MessagesTabScreen() {
   const appState = useRef(AppState.currentState);
   const conversationsRef = useRef<Conversation[]>([]);
   const userSelectModalRef = useRef<UserSelectModalRef>(null);
+  const groupCreateModalRef = useRef<GroupCreateModalRef>(null);
 
   // State
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,7 +66,7 @@ export default function MessagesTabScreen() {
   }, [conversations]);
 
   // Current user ID
-  const currentUserId = user?.id || 0;
+  const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : 0;
 
   // Fetch conversations from API
   const fetchConversations = useCallback(async (showLoading = true) => {
@@ -203,8 +205,17 @@ export default function MessagesTabScreen() {
     userSelectModalRef.current?.present();
   };
 
+  const handleOpenNewGroup = () => {
+    groupCreateModalRef.current?.present();
+  };
+
   const handleConversationCreated = (conversationId: number) => {
     // Refresh conversations after new conversation created
+    fetchConversations(false);
+  };
+
+  const handleGroupCreated = (conversationId: number) => {
+    // Refresh conversations after new group created
     fetchConversations(false);
   };
 
@@ -375,7 +386,7 @@ export default function MessagesTabScreen() {
             </TouchableOpacity>
             {/* Yeni Grup Butonu */}
             <TouchableOpacity
-              onPress={() => router.push('/message/group/new' as any)}
+              onPress={handleOpenNewGroup}
               style={[styles.groupButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
               activeOpacity={0.7}
             >
@@ -427,6 +438,12 @@ export default function MessagesTabScreen() {
       <UserSelectModal
         ref={userSelectModalRef}
         onConversationCreated={handleConversationCreated}
+      />
+
+      {/* Group Create Modal */}
+      <GroupCreateModal
+        ref={groupCreateModalRef}
+        onGroupCreated={handleGroupCreated}
       />
     </View>
   );

@@ -70,7 +70,7 @@ export default function LoadsScreen() {
   // Refs to prevent duplicate calls
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hasInitialFetchRef = useRef(false);
 
   // Core fetch function - no dependencies on state

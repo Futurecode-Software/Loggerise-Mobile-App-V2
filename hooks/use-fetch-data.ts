@@ -54,7 +54,7 @@ export function useFetchData<T, F extends Record<string, any>>({
   const isMountedRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const hasInitialFetchRef = useRef(false);
 
   // Store fetchFn in ref to avoid dependency issues
@@ -261,7 +261,7 @@ export function useFetchList<T, F extends Record<string, any>>({
   const isMountedRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const hasInitialFetchRef = useRef(false);
   const fetchFnRef = useRef(fetchFn);
   fetchFnRef.current = fetchFn;

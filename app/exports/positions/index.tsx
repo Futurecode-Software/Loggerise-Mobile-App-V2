@@ -47,7 +47,7 @@ export default function ExportPositionsScreen() {
   // Refs to prevent duplicate calls
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const hasInitialFetchRef = useRef(false);
 
   // Core fetch function

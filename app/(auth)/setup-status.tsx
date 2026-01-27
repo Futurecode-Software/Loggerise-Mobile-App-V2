@@ -38,7 +38,7 @@ export default function SetupStatusScreen() {
 
   // Use ref to immediately stop polling (state updates are async)
   const shouldStopPolling = useRef(false);
-  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -246,7 +246,7 @@ export default function SetupStatusScreen() {
                 ? Brand.primary
                 : isActive
                 ? colors.surface
-                : colors.surfaceAlt,
+                : colors.card,
               borderColor: step.completed || isActive ? Brand.primary : colors.border,
             },
           ]}

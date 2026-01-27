@@ -81,7 +81,7 @@ export function Select({
   const [searchResults, setSearchResults] = useState<SelectItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SelectItem | null>(null); // Seçilen item'ı sakla
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const colors = Colors.light;
   const insets = useSafeAreaInsets();
 

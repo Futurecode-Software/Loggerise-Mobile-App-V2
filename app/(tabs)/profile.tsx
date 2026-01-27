@@ -297,7 +297,7 @@ export default function ProfileScreen() {
               </View>
             ) : (
               <>
-                <Avatar name={user?.fullName} imageUrl={user?.avatar} size="xl" />
+                <Avatar name={user?.fullName} source={user?.avatar} size="xl" />
                 <View
                   style={[styles.editAvatarButton, { backgroundColor: Brand.primary }]}
                 >

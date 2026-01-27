@@ -69,7 +69,7 @@ export function SearchableSelect({
     selectedOptionProp || null
   );
 
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Fixed snap point at 90% of screen height
   // Single snap point = modal opens directly at this height

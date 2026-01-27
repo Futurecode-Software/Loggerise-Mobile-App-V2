@@ -53,7 +53,7 @@ export default function ContactsScreen() {
   // Refs to prevent duplicate calls
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hasInitialFetchRef = useRef(false);
   const isFirstFocusRef = useRef(true);
 
@@ -83,11 +83,11 @@ export default function ContactsScreen() {
           filters.search = search.trim();
         }
 
-        // Add type/role filter
+        // Add legal type filter
         if (filter === 'company') {
-          filters.type = 'company';
+          filters.legal_type = 'company';
         } else if (filter === 'individual') {
-          filters.type = 'individual';
+          filters.legal_type = 'individual';
         }
 
         const response = await getContacts(filters);
@@ -220,7 +220,7 @@ export default function ContactsScreen() {
   const renderContact = useCallback(
     ({ item }: { item: Contact }) => {
       const roleBadge = getRoleBadge(item);
-      const isCompany = item.type === 'company';
+      const isCompany = item.legal_type === 'company';
 
       return (
         <StandardListItem

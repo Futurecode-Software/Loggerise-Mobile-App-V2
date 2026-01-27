@@ -10,7 +10,7 @@
  * - POST /api/v1/mobile/filo-yonetimi/lastik-deposu/{id}/bakimlar (maintenance)
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,15 +20,16 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Modal,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Save, Trash2, Car, Wrench, X } from 'lucide-react-native';
+import { Save, Trash2, Car, Wrench } from 'lucide-react-native';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Input, Card } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
 import { DateInput } from '@/components/ui/date-input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import TireAssignModal, { TireAssignModalRef } from '@/components/modals/TireAssignModal';
+import TireMaintenanceModal, { TireMaintenanceModalRef } from '@/components/modals/TireMaintenanceModal';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import api, { getErrorMessage, getValidationErrors } from '@/services/api';
@@ -48,17 +49,6 @@ const CONDITION_OPTIONS = [
   { label: 'Orta', value: 'fair' },
   { label: 'Kötü', value: 'poor' },
   { label: 'Eskimiş', value: 'worn_out' },
-];
-
-// Tire position options
-const TIRE_POSITION_OPTIONS = [
-  { label: 'Sol Ön', value: 'left_front' },
-  { label: 'Sağ Ön', value: 'right_front' },
-  { label: 'Sol Arka Dış', value: 'left_rear_outer' },
-  { label: 'Sol Arka İç', value: 'left_rear_inner' },
-  { label: 'Sağ Arka Dış', value: 'right_rear_outer' },
-  { label: 'Sağ Arka İç', value: 'right_rear_inner' },
-  { label: 'Yedek', value: 'spare' },
 ];
 
 export default function EditTireScreen() {
@@ -87,29 +77,12 @@ export default function EditTireScreen() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Assign modal state
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [assignData, setAssignData] = useState<{
-    vehicle_id?: number;
-    position?: string;
-    assigned_at: string;
-  }>({
-    assigned_at: new Date().toISOString().split('T')[0],
-  });
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [isAssigning, setIsAssigning] = useState(false);
+  // Modal refs
+  const assignModalRef = useRef<TireAssignModalRef>(null);
+  const maintenanceModalRef = useRef<TireMaintenanceModalRef>(null);
 
-  // Maintenance modal state
-  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
-  const [maintenanceData, setMaintenanceData] = useState<{
-    maintenance_date: string;
-    description: string;
-    cost?: string;
-  }>({
-    maintenance_date: new Date().toISOString().split('T')[0],
-    description: '',
-  });
-  const [isAddingMaintenance, setIsAddingMaintenance] = useState(false);
+  // Vehicle list for assign modal
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
   // Fetch tire data
   const fetchTire = useCallback(async () => {
@@ -270,48 +243,67 @@ export default function EditTireScreen() {
     }
   };
 
-  // Assign to vehicle handler
-  const handleAssignToVehicle = async () => {
-    if (!assignData.vehicle_id || !assignData.position || !id) {
-      showError('Hata', 'Lütfen tüm alanları doldurun.');
-      return;
-    }
+  // Fetch vehicles for assign modal
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const response = await getVehicles({ per_page: 100 });
+        setVehicles(response.vehicles);
+      } catch (error) {
+        console.error('Failed to fetch vehicles:', error);
+      }
+    };
+    fetchVehicles();
+  }, []);
 
-    setIsAssigning(true);
+  // Open assign modal
+  const handleOpenAssignModal = () => {
+    assignModalRef.current?.present();
+  };
+
+  // Open maintenance modal
+  const handleOpenMaintenanceModal = () => {
+    maintenanceModalRef.current?.present();
+  };
+
+  // Assign to vehicle handler
+  const handleAssignToVehicle = async (data: {
+    vehicle_id: number;
+    position: string;
+    assigned_at: string;
+  }) => {
+    if (!id) return;
+
     try {
-      const response = await api.post(`/filo-yonetimi/lastik-deposu/${id}/ata`, assignData);
+      const response = await api.post(`/filo-yonetimi/lastik-deposu/${id}/ata`, data);
       success('Başarılı', response.data.message || 'Lastik araca atandı.');
-      setShowAssignModal(false);
       fetchTire(); // Refresh tire data
     } catch (error) {
       showError('Hata', getErrorMessage(error));
-    } finally {
-      setIsAssigning(false);
+      throw error; // Re-throw to let modal handle it
     }
   };
 
   // Add maintenance record handler
-  const handleAddMaintenance = async () => {
-    if (!maintenanceData.maintenance_date || !maintenanceData.description || !id) {
-      showError('Hata', 'Lütfen tarih ve açıklama alanlarını doldurun.');
-      return;
-    }
+  const handleAddMaintenance = async (data: {
+    maintenance_date: string;
+    description: string;
+    cost?: string;
+  }) => {
+    if (!id) return;
 
-    setIsAddingMaintenance(true);
     try {
-      const submitData: any = { ...maintenanceData };
+      const submitData: any = { ...data };
       if (submitData.cost) {
         submitData.cost = parseFloat(submitData.cost);
       }
 
       const response = await api.post(`/filo-yonetimi/lastik-deposu/${id}/bakimlar`, submitData);
       success('Başarılı', response.data.message || 'Bakım kaydı eklendi.');
-      setShowMaintenanceModal(false);
       fetchTire(); // Refresh tire data
     } catch (error) {
       showError('Hata', getErrorMessage(error));
-    } finally {
-      setIsAddingMaintenance(false);
+      throw error; // Re-throw to let modal handle it
     }
   };
 
@@ -384,14 +376,14 @@ export default function EditTireScreen() {
               <View style={styles.actionButtonsRow}>
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: Brand.primary }]}
-                onPress={() => setShowAssignModal(true)}
+                onPress={handleOpenAssignModal}
               >
                 <Car size={20} color="#FFFFFF" />
                 <Text style={styles.actionButtonText}>Araca Ata</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: '#f59e0b' }]}
-                onPress={() => setShowMaintenanceModal(true)}
+                onPress={handleOpenMaintenanceModal}
               >
                 <Wrench size={20} color="#FFFFFF" />
                 <Text style={styles.actionButtonText}>Bakım Ekle</Text>
@@ -546,125 +538,15 @@ export default function EditTireScreen() {
         onCancel={() => setShowDeleteDialog(false)}
       />
 
-      {/* Assign to Vehicle Modal */}
-      <Modal
-        visible={showAssignModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowAssignModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Araca Ata</Text>
-              <TouchableOpacity onPress={() => setShowAssignModal(false)}>
-                <X size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
+      {/* Tire Assign Modal */}
+      <TireAssignModal
+        ref={assignModalRef}
+        vehicles={vehicles}
+        onAssign={handleAssignToVehicle}
+      />
 
-            <ScrollView style={styles.modalBody}>
-              <SelectInput
-                label="Araç *"
-                options={vehicles.map(v => ({ label: v.plate, value: v.id.toString() }))}
-                selectedValue={assignData.vehicle_id?.toString()}
-                onValueChange={(val) => setAssignData({ ...assignData, vehicle_id: parseInt(val) })}
-                placeholder="Araç plakası ile ara..."
-                searchable
-              />
-
-              <SelectInput
-                label="Pozisyon *"
-                options={TIRE_POSITION_OPTIONS}
-                selectedValue={assignData.position}
-                onValueChange={(val) => setAssignData({ ...assignData, position: val })}
-                placeholder="Seçiniz..."
-              />
-
-              <DateInput
-                label="Atanma Tarihi *"
-                value={assignData.assigned_at}
-                onChangeDate={(date) => setAssignData({ ...assignData, assigned_at: date })}
-                required
-              />
-
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: Brand.primary }]}
-                onPress={handleAssignToVehicle}
-                disabled={isAssigning}
-              >
-                {isAssigning ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.modalButtonText}>Ata</Text>
-                )}
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Maintenance Modal */}
-      <Modal
-        visible={showMaintenanceModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowMaintenanceModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Bakım Kaydı Ekle</Text>
-              <TouchableOpacity onPress={() => setShowMaintenanceModal(false)}>
-                <X size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              <DateInput
-                label="Bakım Tarihi *"
-                value={maintenanceData.maintenance_date}
-                onChangeDate={(date) =>
-                  setMaintenanceData({ ...maintenanceData, maintenance_date: date })
-                }
-                required
-              />
-
-              <Input
-                label="Açıklama *"
-                placeholder="Bakım açıklaması"
-                value={maintenanceData.description}
-                onChangeText={(text) =>
-                  setMaintenanceData({ ...maintenanceData, description: text })
-                }
-                multiline
-                numberOfLines={3}
-              />
-
-              <Input
-                label="Maliyet (TL)"
-                placeholder="Opsiyonel"
-                value={maintenanceData.cost || ''}
-                onChangeText={(text) =>
-                  setMaintenanceData({ ...maintenanceData, cost: text })
-                }
-                keyboardType="decimal-pad"
-              />
-
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#f59e0b' }]}
-                onPress={handleAddMaintenance}
-                disabled={isAddingMaintenance}
-              >
-                {isAddingMaintenance ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.modalButtonText}>Kaydet</Text>
-                )}
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      {/* Tire Maintenance Modal */}
+      <TireMaintenanceModal ref={maintenanceModalRef} onAddMaintenance={handleAddMaintenance} />
     </View>
   );
 }
@@ -729,40 +611,5 @@ const styles = StyleSheet.create({
     ...Typography.headingMD,
     marginTop: Spacing.sm,
     marginBottom: Spacing.sm,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: BorderRadius.lg,
-    borderTopRightRadius: BorderRadius.lg,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  modalTitle: {
-    ...Typography.headingMD,
-  },
-  modalBody: {
-    padding: Spacing.lg,
-  },
-  modalButton: {
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    marginTop: Spacing.lg,
-  },
-  modalButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
   },
 });

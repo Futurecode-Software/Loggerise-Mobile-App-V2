@@ -35,7 +35,7 @@ export default function TireWarehouseScreen() {
   // Refs to prevent duplicate calls
   const isMountedRef = useRef(true);
   const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const hasInitialFetchRef = useRef(false);
 
   // Delete dialog state

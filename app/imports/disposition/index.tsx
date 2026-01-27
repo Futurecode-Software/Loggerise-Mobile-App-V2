@@ -16,8 +16,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
   Plus,
   Check,
@@ -75,6 +73,7 @@ export default function DispositionScreen() {
   // Refs
   const isMountedRef = useRef(true);
   const loadPickerModalRef = useRef<LoadPickerModalRef>(null);
+  const hasInitialFetchRef = useRef(false);
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -83,6 +82,7 @@ export default function DispositionScreen() {
       const result = await getDispositionData('import');
       if (isMountedRef.current) {
         setData(result);
+        hasInitialFetchRef.current = true;
       }
     } catch (err) {
       if (isMountedRef.current) {
@@ -410,9 +410,8 @@ export default function DispositionScreen() {
   const unassignedLoads = data?.unassigned_loads || [];
 
   return (
-    <GestureHandlerRootView style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <BottomSheetModalProvider>
-        <FullScreenHeader
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
+      <FullScreenHeader
           title="Dispozisyon"
           subtitle={`${draftPositions.length} taslak • ${unassignedLoads.length} atanmamış yük`}
           showBackButton
@@ -499,9 +498,8 @@ export default function DispositionScreen() {
           setPositionToDelete(null);
         }}
       />
-        </View>
-      </BottomSheetModalProvider>
-    </GestureHandlerRootView>
+    </View>
+  </View>
   );
 }
 

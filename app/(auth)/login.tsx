@@ -12,8 +12,6 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Mail, Lock, CheckSquare, Square, AlertCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, G } from 'react-native-svg';
@@ -175,14 +173,12 @@ export default function LoginScreen() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <BottomSheetModalProvider>
-        <LinearGradient
-          colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradientBackground}
-        >
+    <LinearGradient
+      colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradientBackground}
+    >
         {/* Header Space - invisible header to match register/forgot-password pages */}
         <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
           <View style={styles.header} />
@@ -332,12 +328,10 @@ export default function LoginScreen() {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </LinearGradient>
 
-      {/* Forgot Password Modal */}
-      <ForgotPasswordModal ref={forgotPasswordModalRef} />
-    </BottomSheetModalProvider>
-    </GestureHandlerRootView>
+        {/* Forgot Password Modal */}
+        <ForgotPasswordModal ref={forgotPasswordModalRef} />
+      </LinearGradient>
   );
 }
 

@@ -119,6 +119,7 @@ export interface ContactAuthority {
 export interface ContactFilters {
   search?: string;
   type?: ContactType;
+  legal_type?: LegalType;
   status?: ContactStatus;
   is_active?: boolean;
   include_potential?: boolean;
