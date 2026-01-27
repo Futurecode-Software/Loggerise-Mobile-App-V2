@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { Plus, Layers, Clock, CheckCircle, XCircle, AlertTriangle, Ban, FileText } from 'lucide-react-native';
+import { Plus, Layers, Clock, CheckCircle, XCircle, AlertTriangle, Ban, FileText, TrendingUp, Wallet, AlertCircle } from 'lucide-react-native';
+import { formatBalance } from '@/services/endpoints/cash-registers';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Spacing, Typography, BorderRadius, Shadows, Brand } from '@/constants/theme';
@@ -217,6 +218,72 @@ export default function ChecksScreen() {
     );
   };
 
+  // Calculate totals
+  const getTotals = () => {
+    const totalAmount = checks.reduce((acc, check) => acc + check.amount, 0);
+    const pendingAmount = checks
+      .filter(c => c.status === 'pending')
+      .reduce((acc, check) => acc + check.amount, 0);
+    const clearedAmount = checks
+      .filter(c => c.status === 'cleared')
+      .reduce((acc, check) => acc + check.amount, 0);
+    return { totalAmount, pendingAmount, clearedAmount };
+  };
+
+  const totals = getTotals();
+
+  const renderHeader = () => {
+    if (checks.length === 0) return null;
+    
+    return (
+      <View style={styles.summaryCard}>
+        {/* Header */}
+        <View style={styles.summaryHeader}>
+          <View style={styles.summaryHeaderLeft}>
+            <View style={styles.summaryIcon}>
+              <TrendingUp size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.summaryTitle}>Çek Özeti</Text>
+          </View>
+          <View style={styles.summaryBadge}>
+            <Text style={styles.summaryBadgeText}>{checks.length} Çek</Text>
+          </View>
+        </View>
+
+        {/* Total Amount */}
+        <View style={styles.summaryTotal}>
+          <Text style={styles.summaryTotalLabel}>Toplam Tutar</Text>
+          <Text style={styles.summaryTotalValue}>
+            {totals.totalAmount.toFixed(2)} ₺
+          </Text>
+        </View>
+
+        {/* Stats Grid */}
+        <View style={styles.summaryGrid}>
+          <View style={[styles.summaryStat, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+            <View style={styles.summaryStatHeader}>
+              <Wallet size={16} color="#10B981" />
+              <Text style={[styles.summaryStatValue, { color: '#10B981' }]}>
+                {totals.clearedAmount.toFixed(2)} ₺
+              </Text>
+            </View>
+            <Text style={styles.summaryStatLabel}>Tahsil Edildi</Text>
+          </View>
+
+          <View style={[styles.summaryStat, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+            <View style={styles.summaryStatHeader}>
+              <Clock size={16} color="#F59E0B" />
+              <Text style={[styles.summaryStatValue, { color: '#F59E0B' }]}>
+                {totals.pendingAmount.toFixed(2)} ₺
+              </Text>
+            </View>
+            <Text style={styles.summaryStatLabel}>Beklemede</Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   // Prepare tabs for header
   const headerTabs = STATUS_FILTERS.map((filter) => {
     const Icon = filter.icon;
@@ -262,6 +329,7 @@ export default function ChecksScreen() {
         error={error}
         emptyTitle="Çek bulunamadı"
         emptySubtitle="Henüz kayıtlı çek bulunmuyor"
+        ListHeaderComponent={renderHeader()}
       />
       </View>
     </View>
@@ -289,5 +357,89 @@ const styles = StyleSheet.create({
   amount: {
     ...Typography.bodyMD,
     fontWeight: '600',
+  },
+  summaryCard: {
+    marginHorizontal: 0,
+    marginBottom: Spacing.md,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Brand.primary,
+    ...Shadows.md,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  summaryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  summaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryTitle: {
+    ...Typography.headingSM,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  summaryBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  summaryBadgeText: {
+    ...Typography.bodyXS,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  summaryTotal: {
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  summaryTotalLabel: {
+    ...Typography.bodySM,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: Spacing.xs,
+  },
+  summaryTotalValue: {
+    ...Typography.headingLG,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  summaryStat: {
+    flex: 1,
+    minWidth: '45%',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  summaryStatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.xs,
+  },
+  summaryStatValue: {
+    ...Typography.bodyMD,
+    fontWeight: '700',
+  },
+  summaryStatLabel: {
+    ...Typography.bodyXS,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
 });

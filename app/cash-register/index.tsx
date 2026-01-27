@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Dimensions } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { Filter, Plus, Wallet, User, Layers, DollarSign, Euro, PoundSterling } from 'lucide-react-native';
+import { Filter, Plus, Wallet, User, Layers, DollarSign, Euro, PoundSterling, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
@@ -203,20 +203,158 @@ export default function CashRegistersScreen() {
     );
   };
 
-  const renderHeader = () => {
-    if (Object.keys(totals).length === 0) return null;
+  // Carousel state
+  const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
+  const carouselRef = useRef<FlatList>(null);
+  const screenWidth = Dimensions.get('window').width;
+  // Peek gösterimi için kart genişliği: Bir sonraki kartın bir kısmı görünsün
+  const cardWidth = screenWidth - Spacing.lg * 2 - 40; // 40px peek alanı
+
+  const renderCarouselCard = ({ item, index }: { item: [string, number]; index: number }) => {
+    const [currency, total] = item;
+    const currencyRegisters = cashRegisters.filter(cr => cr.currency_type === currency);
+    const positiveCount = currencyRegisters.filter(cr => cr.balance > 0).length;
+    const negativeCount = currencyRegisters.filter(cr => cr.balance < 0).length;
+    
     return (
-      <View style={[styles.totalCard, { backgroundColor: Brand.primary }]}>
-        <Text style={styles.totalLabel}>Toplam Bakiye</Text>
-        <View style={styles.currencyBreakdown}>
-          {Object.entries(totals).map(([currency, total]) => (
-            <View key={currency} style={styles.currencyChip}>
-              <Text style={styles.currencyChipText}>
-                {currency}: {formatBalance(total, currency as CurrencyType)}
+      <View style={[styles.carouselCard, { width: cardWidth }]}>
+        {/* Header */}
+        <View style={styles.carouselHeader}>
+          <View style={styles.carouselHeaderLeft}>
+            <View style={styles.carouselIcon}>
+              <TrendingUp size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.carouselTitle}>{currency} Kasaları</Text>
+          </View>
+          <View style={styles.carouselBadge}>
+            <Text style={styles.carouselBadgeText}>{currencyRegisters.length} Kasa</Text>
+          </View>
+        </View>
+
+        {/* Total Amount */}
+        <View style={styles.carouselTotal}>
+          <Text style={styles.carouselTotalLabel}>Toplam Bakiye</Text>
+          <Text style={styles.carouselTotalValue}>
+            {formatBalance(total, currency as CurrencyType)}
+          </Text>
+        </View>
+
+        {/* Stats Grid */}
+        <View style={styles.carouselGrid}>
+          <View style={[styles.carouselStat, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+            <View style={styles.carouselStatHeader}>
+              <Text style={[styles.carouselStatValue, { color: '#10B981' }]}>
+                {positiveCount}
               </Text>
             </View>
+            <Text style={styles.carouselStatLabel}>Pozitif</Text>
+          </View>
+
+          <View style={[styles.carouselStat, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+            <View style={styles.carouselStatHeader}>
+              <Text style={[styles.carouselStatValue, { color: '#EF4444' }]}>
+                {negativeCount}
+              </Text>
+            </View>
+            <Text style={styles.carouselStatLabel}>Negatif</Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const scrollToIndex = (index: number) => {
+    const entries = Object.entries(totals);
+    if (index < 0 || index >= entries.length) return;
+    
+    carouselRef.current?.scrollToOffset({
+      offset: index * (cardWidth + Spacing.md),
+      animated: true,
+    });
+    setActiveCarouselIndex(index);
+  };
+
+  const renderPagination = () => {
+    const entries = Object.entries(totals);
+    if (entries.length <= 1) return null;
+    
+    const currentCurrency = entries[activeCarouselIndex]?.[0] || '';
+    
+    return (
+      <View style={styles.paginationContainer}>
+        {/* Sol ok */}
+        <TouchableOpacity
+          onPress={() => scrollToIndex(activeCarouselIndex - 1)}
+          disabled={activeCarouselIndex === 0}
+          style={[
+            styles.paginationArrow,
+            activeCarouselIndex === 0 && styles.paginationArrowDisabled,
+          ]}
+        >
+          <ChevronLeft size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        {/* Para birimi isimleri */}
+        <View style={styles.currencyTabs}>
+          {entries.map(([currency], index) => (
+            <TouchableOpacity
+              key={currency}
+              onPress={() => scrollToIndex(index)}
+              style={[
+                styles.currencyTab,
+                index === activeCarouselIndex && styles.currencyTabActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.currencyTabText,
+                  index === activeCarouselIndex && styles.currencyTabTextActive,
+                ]}
+              >
+                {currency}
+              </Text>
+            </TouchableOpacity>
           ))}
         </View>
+
+        {/* Sağ ok */}
+        <TouchableOpacity
+          onPress={() => scrollToIndex(activeCarouselIndex + 1)}
+          disabled={activeCarouselIndex === entries.length - 1}
+          style={[
+            styles.paginationArrow,
+            activeCarouselIndex === entries.length - 1 && styles.paginationArrowDisabled,
+          ]}
+        >
+          <ChevronRight size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderHeader = () => {
+    if (Object.keys(totals).length === 0) return null;
+    const entries = Object.entries(totals);
+    
+    return (
+      <View>
+        <FlatList
+          ref={carouselRef}
+          data={entries}
+          renderItem={renderCarouselCard}
+          keyExtractor={([currency]) => currency}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={cardWidth + Spacing.md}
+          decelerationRate="fast"
+          contentContainerStyle={styles.carouselContent}
+          onMomentumScrollEnd={(event) => {
+            const index = Math.round(event.nativeEvent.contentOffset.x / (cardWidth + Spacing.md));
+            setActiveCarouselIndex(index);
+          }}
+        />
+        {renderPagination()}
       </View>
     );
   };
@@ -292,32 +430,147 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Brand.primary,
   },
-  totalCard: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.xl,
-    marginBottom: Spacing.md,
-    marginTop: Spacing.md,
+  carouselContent: {
+    paddingHorizontal: 0,
+    gap: Spacing.md,
   },
-  totalLabel: {
-    ...Typography.bodyMD,
-    color: 'rgba(255,255,255,0.8)',
+  carouselCard: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Brand.primary,
+    ...Shadows.md,
+  },
+  carouselHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: Spacing.md,
   },
-  currencyBreakdown: {
+  carouselHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  carouselIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  carouselTitle: {
+    ...Typography.headingSM,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  carouselBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  carouselBadgeText: {
+    ...Typography.bodyXS,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  carouselTotal: {
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  carouselTotalLabel: {
+    ...Typography.bodySM,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: Spacing.xs,
+  },
+  carouselTotalValue: {
+    ...Typography.headingLG,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  carouselGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
   },
-  currencyChip: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  carouselStat: {
+    flex: 1,
+    minWidth: '45%',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  carouselStatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
+  carouselStatValue: {
+    ...Typography.bodyLG,
+    fontWeight: '700',
+  },
+  carouselStatLabel: {
+    ...Typography.bodyXS,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.md,
+  },
+  paginationArrow: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paginationArrowDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    opacity: 0.4,
+  },
+  currencyTabs: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    padding: Spacing.xs,
+  },
+  currencyTab: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.full,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
   },
-  currencyChipText: {
+  currencyTabActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+    ...Shadows.sm,
+  },
+  currencyTabText: {
     ...Typography.bodySM,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  currencyTabTextActive: {
+    color: Brand.primary,
+    textShadowColor: 'transparent',
   },
   additionalInfo: {
     gap: Spacing.sm,

@@ -1087,9 +1087,592 @@ Bu standartlar ile:
 
 ---
 
+## Özet Kart (Summary Card) Standardı
+
+Liste sayfalarında (Faturalar, Kasalar, vb.) üstte gösterilen özet kart için standart tasarım.
+
+### 🎨 Tasarım Kuralları
+
+#### 1. **Kart Konumlandırma**
+
+`StandardListContainer` içinde kullanılan `ListHeaderComponent` olarak eklenmelidir:
+
+```tsx
+<StandardListContainer
+  ...
+  ListHeaderComponent={renderHeader()}
+/>
+```
+
+**Önemli:** `StandardListContainer` zaten `padding: Spacing.lg` uyguladığı için, özet kartta **margin kullanılmamalıdır**:
+
+```typescript
+// ❌ YANLIŞ - Çift padding oluşur
+summaryCard: {
+  marginHorizontal: Spacing.lg, // BUNU KULLANMA
+  ...
+}
+
+// ✅ DOĞRU - Container padding'i yeterli
+summaryCard: {
+  marginHorizontal: 0, // Sıfır margin
+  marginBottom: Spacing.md,
+  ...
+}
+```
+
+#### 2. **Kart Yapısı**
+
+```tsx
+const renderHeader = () => {
+  if (data.length === 0) return null;
+
+  return (
+    <View style={styles.summaryCard}>
+      {/* Header */}
+      <View style={styles.summaryHeader}>
+        <View style={styles.summaryHeaderLeft}>
+          <View style={styles.summaryIcon}>
+            <TrendingUp size={20} color="#FFFFFF" />
+          </View>
+          <Text style={styles.summaryTitle}>Özet Başlık</Text>
+        </View>
+        <View style={styles.summaryBadge}>
+          <Text style={styles.summaryBadgeText}>{data.length} Kayıt</Text>
+        </View>
+      </View>
+
+      {/* Toplam Tutar */}
+      <View style={styles.summaryTotal}>
+        <Text style={styles.summaryTotalLabel}>Toplam Tutar</Text>
+        <Text style={styles.summaryTotalValue}>
+          {formatBalance(total, currency)}
+        </Text>
+      </View>
+
+      {/* Stats Grid */}
+      <View style={styles.summaryGrid}>
+        <View style={[styles.summaryStat, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+          <View style={styles.summaryStatHeader}>
+            <Wallet size={16} color="#10B981" />
+            <Text style={[styles.summaryStatValue, { color: '#10B981' }]}>
+              {formatBalance(paid, currency)}
+            </Text>
+          </View>
+          <Text style={styles.summaryStatLabel}>Ödendi</Text>
+        </View>
+
+        <View style={[styles.summaryStat, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+          <View style={styles.summaryStatHeader}>
+            <Clock size={16} color="#F59E0B" />
+            <Text style={[styles.summaryStatValue, { color: '#F59E0B' }]}>
+              {formatBalance(pending, currency)}
+            </Text>
+          </View>
+          <Text style={styles.summaryStatLabel}>Bekliyor</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
+```
+
+#### 3. **Style Tanımları**
+
+```typescript
+const styles = StyleSheet.create({
+  summaryCard: {
+    marginHorizontal: 0,      // Sıfır - container padding'i yeterli
+    marginBottom: Spacing.md,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Brand.primary,
+    ...Shadows.md,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  summaryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  summaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryTitle: {
+    ...Typography.headingSM,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  summaryBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  summaryBadgeText: {
+    ...Typography.bodyXS,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  summaryTotal: {
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  summaryTotalLabel: {
+    ...Typography.bodySM,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: Spacing.xs,
+  },
+  summaryTotalValue: {
+    ...Typography.headingLG,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  summaryStat: {
+    flex: 1,
+    minWidth: '45%',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  summaryStatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.xs,
+  },
+  summaryStatValue: {
+    ...Typography.bodyMD,
+    fontWeight: '700',
+  },
+  summaryStatLabel: {
+    ...Typography.bodyXS,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+});
+```
+
+#### 4. **Para Formatı**
+
+Para değerleri için `formatBalance` fonksiyonu kullanılmalıdır:
+
+```tsx
+import { formatBalance } from '@/services/endpoints/cash-registers';
+
+// Kullanım
+<Text>{formatBalance(amount, currency)}</Text>
+// Çıktı: "12.500,50 ₺" veya "$12,500.50"
+```
+
+### 🎨 Renk Kodları
+
+Stats kartları için transparan arka plan renkleri:
+
+| Durum | Renk | Arka Plan |
+|-------|------|-----------|
+| Başarılı | `#10B981` | `rgba(16, 185, 129, 0.15)` |
+| Beklemede | `#F59E0B` | `rgba(245, 158, 11, 0.15)` |
+| Hata/Vade Geçti | `#EF4444` | `rgba(239, 68, 68, 0.15)` |
+| Bilgi | `#3B82F6` | `rgba(59, 130, 246, 0.15)` |
+
+### ✅ Referans Uygulamalar
+
+Tekli Özet Kartı:
+- `@/app/finance/invoices/index.tsx` - Fatura Özeti
+- `@/app/check/index.tsx` - Çek Özeti
+- `@/app/promissory-note/index.tsx` - Senet Özeti
+
+---
+
+## Çoklu Para Birimi Carousel Standardı
+
+Birden fazla para birimi (TRY, USD, EUR, vb.) olan sayfalarda (Kasalar, Bankalar, vb.) kullanılan yatay kaydırılabilir özet kart yapısı.
+
+### 🎯 Kullanım Senaryoları
+
+- Birden fazla döviz cinsi olan listeler (Kasalar, Bankalar)
+- Her para birimi için ayrı özet gösterimi
+- Kullanıcıların kaydırarak farklı para birimlerini görüntülemesi
+
+### 🎨 Tasarım Kuralları
+
+#### 1. **Yapı**
+
+```tsx
+const [activeIndex, setActiveIndex] = useState(0);
+const carouselRef = useRef<FlatList>(null);
+const screenWidth = Dimensions.get('window').width;
+const cardWidth = screenWidth - Spacing.lg * 2; // Container padding
+
+const renderCarouselCard = ({ item }: { item: [string, number] }) => {
+  const [currency, total] = item;
+  
+  return (
+    <View style={[styles.carouselCard, { width: cardWidth }]}>
+      {/* Header */}
+      <View style={styles.carouselHeader}>
+        <View style={styles.carouselHeaderLeft}>
+          <View style={styles.carouselIcon}>
+            <TrendingUp size={20} color="#FFFFFF" />
+          </View>
+          <Text style={styles.carouselTitle}>{currency} Kasaları</Text>
+        </View>
+        <View style={styles.carouselBadge}>
+          <Text style={styles.carouselBadgeText}>3 Kasa</Text>
+        </View>
+      </View>
+
+      {/* Total Amount */}
+      <View style={styles.carouselTotal}>
+        <Text style={styles.carouselTotalLabel}>Toplam Bakiye</Text>
+        <Text style={styles.carouselTotalValue}>
+          {formatBalance(total, currency)}
+        </Text>
+      </View>
+
+      {/* Stats Grid */}
+      <View style={styles.carouselGrid}>
+        <View style={[styles.carouselStat, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+          <View style={styles.carouselStatHeader}>
+            <Text style={[styles.carouselStatValue, { color: '#10B981' }]}>
+              2
+            </Text>
+          </View>
+          <Text style={styles.carouselStatLabel}>Pozitif</Text>
+        </View>
+
+        <View style={[styles.carouselStat, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+          <View style={styles.carouselStatHeader}>
+            <Text style={[styles.carouselStatValue, { color: '#EF4444' }]}>
+              1
+            </Text>
+          </View>
+          <Text style={styles.carouselStatLabel}>Negatif</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+const renderPaginationDots = () => {
+  const entries = Object.entries(totals);
+  if (entries.length <= 1) return null;
+  
+  return (
+    <View style={styles.paginationContainer}>
+      {entries.map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.paginationDot,
+            index === activeIndex && styles.paginationDotActive,
+          ]}
+        />
+      ))}
+    </View>
+  );
+};
+
+// Usage in renderHeader
+<FlatList
+  ref={carouselRef}
+  data={Object.entries(totals)}
+  renderItem={renderCarouselCard}
+  keyExtractor={([currency]) => currency}
+  horizontal
+  pagingEnabled
+  showsHorizontalScrollIndicator={false}
+  snapToInterval={cardWidth + Spacing.md}
+  decelerationRate="fast"
+  onMomentumScrollEnd={(event) => {
+    const index = Math.round(
+      event.nativeEvent.contentOffset.x / (cardWidth + Spacing.md)
+    );
+    setActiveIndex(index);
+  }}
+/>
+{renderPaginationDots()}
+```
+
+#### 2. **Style Tanımları**
+
+```typescript
+const styles = StyleSheet.create({
+  carouselContent: {
+    paddingHorizontal: 0,
+    gap: Spacing.md,
+  },
+  carouselCard: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Brand.primary,
+    ...Shadows.md,
+  },
+  carouselHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  carouselHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  carouselIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  carouselTitle: {
+    ...Typography.headingSM,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  carouselBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  carouselBadgeText: {
+    ...Typography.bodyXS,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  carouselTotal: {
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  carouselTotalLabel: {
+    ...Typography.bodySM,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: Spacing.xs,
+  },
+  carouselTotalValue: {
+    ...Typography.headingLG,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  carouselGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  carouselStat: {
+    flex: 1,
+    minWidth: '45%',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  carouselStatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
+  carouselStatValue: {
+    ...Typography.bodyLG,
+    fontWeight: '700',
+  },
+  carouselStatLabel: {
+    ...Typography.bodyXS,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  paginationDotActive: {
+    backgroundColor: '#FFFFFF',
+    width: 24,
+    borderRadius: 4,
+  },
+});
+```
+
+#### 3. **Navigasyon - Kullanıcı Deneyimi**
+
+Kullanıcıya carousel'in kaydırılabilir olduğunu açıkça göstermek için:
+
+**A. Peek (Glimpse) Gösterimi**
+Bir sonraki kartın bir kısmını göstererek kaydırılabilir olduğunu ima et:
+
+```typescript
+const cardWidth = screenWidth - Spacing.lg * 2 - 40; // 40px peek alanı
+```
+
+**B. Ok Butonları**
+Sol/sağ ok butonları ile manuel navigasyon:
+
+```tsx
+<TouchableOpacity
+  onPress={() => scrollToIndex(activeIndex - 1)}
+  disabled={activeIndex === 0}
+  style={styles.paginationArrow}
+>
+  <ChevronLeft size={20} color="#FFFFFF" />
+</TouchableOpacity>
+```
+
+**C. Para Birimi Tab'leri**
+Döviz cinslerinin isimleriyle tab navigasyonu:
+
+```tsx
+<View style={styles.currencyTabs}>
+  {currencies.map(([currency], index) => (
+    <TouchableOpacity
+      key={currency}
+      onPress={() => scrollToIndex(index)}
+      style={[
+        styles.currencyTab,
+        index === activeIndex && styles.currencyTabActive,
+      ]}
+    >
+      <Text style={index === activeIndex ? activeText : inactiveText}>
+        {currency}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
+```
+
+**D. Tab (Badge) Stilleri**
+
+Deaktif tab'lerin görünürlüğünü artırmak için:
+
+```typescript
+currencyTabs: {
+  flexDirection: 'row',
+  gap: Spacing.sm,
+  borderRadius: BorderRadius.full,
+  padding: Spacing.xs,
+},
+// Deaktif Tab - Belirgin border ve koyu arka plan
+currencyTab: {
+  paddingHorizontal: Spacing.md,
+  paddingVertical: Spacing.xs,
+  borderRadius: BorderRadius.full,
+  borderWidth: 2,                              // Kalın border
+  borderColor: 'rgba(255, 255, 255, 0.6)',    // Daha opak border
+  backgroundColor: 'rgba(0, 0, 0, 0.15)',     // Hafif koyu arka plan
+},
+// Aktif Tab - Beyaz vurgu
+currencyTabActive: {
+  backgroundColor: '#FFFFFF',
+  borderColor: '#FFFFFF',
+  ...Shadows.sm,
+},
+// Deaktif Yazı - Kalın ve gölge ile
+currencyTabText: {
+  ...Typography.bodySM,
+  color: '#FFFFFF',
+  fontWeight: '700',                          // Daha kalın
+  textShadowColor: 'rgba(0, 0, 0, 0.3)',     // Okunurluk için gölge
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 2,
+},
+// Aktif Yazı
+currencyTabTextActive: {
+  color: Brand.primary,
+  textShadowColor: 'transparent',            // Aktifken gölge yok
+},
+```
+
+**Görünürlük İpuçları:**
+- ✅ Border kalınlığı: `2px` (ince borderlar kaybolur)
+- ✅ Deaktif arka plan: `rgba(0,0,0,0.15)` (beyazdan daha belirgin)
+- ✅ Border opaklığı: En az `0.6` (çok transparan olmamalı)
+- ✅ Yazı gölgesi: Kontrastı artırır
+- ✅ Font kalınlığı: `700` (bold)
+
+**E. Ok (Navigation) Stilleri**
+```typescript
+paginationArrow: {
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  borderWidth: 1.5,
+  borderColor: 'rgba(255, 255, 255, 0.5)',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+paginationArrowDisabled: {
+  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  borderColor: 'rgba(255, 255, 255, 0.2)',
+  opacity: 0.4,
+},
+```
+
+#### 4. **Önemli Kurallar**
+
+- ✅ Tek para birimi varsa carousel gösterilmez
+- ✅ `pagingEnabled` ile kart kart kaydırma
+- ✅ `snapToInterval` ile düzgün hizalama
+- ✅ **Peek**: Bir sonraki kartın 40px'i görünür
+- ✅ **Ok butonları**: Sol/sağ gezinme
+- ✅ **Tab'ler**: Para birimlerine tıklayarak atlama
+- ✅ Aktif tab: Beyaz arka plan, yeşil yazı
+
+### ✅ Referans Uygulamalar
+
+- `@/app/cash-register/index.tsx` - Kasa Carousel (TRY, USD, EUR, GBP)
+- `@/app/bank/index.tsx` - Banka Hesapları Carousel
+
+---
+
 **Son Güncelleme:** 2026-01-27
 
 ### 🔄 Changelog
+
+#### 2026-01-27 - Sayfa Güncellemeleri
+- Güncelleme: `bank/index.tsx` - Carousel yapısına geçirildi
+- Güncelleme: `check/index.tsx` - Özet kart eklendi
+- Güncelleme: `promissory-note/index.tsx` - Özet kart eklendi
+
+#### 2026-01-27 - Çoklu Para Birimi Carousel Standardı
+- Yeni: Birden fazla döviz cinsi için yatay kaydırılabilir carousel yapısı
+- Yeni: Ok butonları ve para birimi tab'leri ile navigasyon
+- Yeni: `pagingEnabled` ve `snapToInterval` ile düzgün kart hizalama
+
+#### 2026-01-27 - Özet Kart (Summary Card) Standardı
+- Yeni: Liste sayfaları için yeşil özet kart tasarım standardı eklendi
+- Yeni: `marginHorizontal: 0` kullanımı - container padding'i ile uyumlu genişlik
+- Yeni: Para formatı için `formatBalance` fonksiyonu kullanımı
+- Yeni: Transparan stats kartları renk kodları standardize edildi
 
 #### 2026-01-27 - Full Screen Searchable Select Modal Standardı
 - Yeni: Full screen searchable select modal pattern eklendi (`['90%']` snap point)

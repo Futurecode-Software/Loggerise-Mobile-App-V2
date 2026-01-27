@@ -13,6 +13,9 @@ import {
   Clock,
   XCircle,
   AlertCircle,
+  TrendingUp,
+  Wallet,
+  AlertTriangle,
 } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
@@ -32,6 +35,7 @@ import {
   getPaymentStatusColor,
   formatInvoiceTotal,
 } from '@/services/endpoints/invoices';
+import { formatBalance } from '@/services/endpoints/cash-registers';
 import { formatDate } from '@/utils/formatters';
 
 // Type filters
@@ -331,44 +335,78 @@ export default function InvoicesListScreen() {
   const renderHeader = () => {
     if (invoices.length === 0) return null;
 
-    // Calculate summary
-    const summary = invoices.reduce(
-      (acc, inv) => {
-        acc.total += inv.total;
-        if (inv.payment_status === 'paid') acc.paid += inv.total;
-        else if (inv.payment_status === 'pending') acc.pending += inv.total;
-        else if (inv.payment_status === 'overdue') acc.overdue += inv.total;
-        return acc;
-      },
-      { total: 0, paid: 0, pending: 0, overdue: 0 }
-    );
+    // Calculate summary by currency
+    const summaryByCurrency: Record<string, { total: number; paid: number; pending: number; overdue: number }> = {};
+    
+    invoices.forEach((inv) => {
+      const currency = inv.currency_type || 'TRY';
+      if (!summaryByCurrency[currency]) {
+        summaryByCurrency[currency] = { total: 0, paid: 0, pending: 0, overdue: 0 };
+      }
+      summaryByCurrency[currency].total += inv.total;
+      if (inv.payment_status === 'paid') summaryByCurrency[currency].paid += inv.total;
+      else if (inv.payment_status === 'pending') summaryByCurrency[currency].pending += inv.total;
+      else if (inv.payment_status === 'overdue') summaryByCurrency[currency].overdue += inv.total;
+    });
+
+    // Get primary currency (first one or TRY)
+    const primaryCurrency = Object.keys(summaryByCurrency)[0] || 'TRY';
+    const summary = summaryByCurrency[primaryCurrency];
 
     return (
-      <View style={[styles.summaryCard, { backgroundColor: Brand.primary }]}>
-        <Text style={styles.summaryLabel}>Özet</Text>
+      <View style={styles.summaryCard}>
+        {/* Header */}
+        <View style={styles.summaryHeader}>
+          <View style={styles.summaryHeaderLeft}>
+            <View style={styles.summaryIcon}>
+              <TrendingUp size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.summaryTitle}>Fatura Özeti</Text>
+          </View>
+          <View style={styles.summaryBadge}>
+            <Text style={styles.summaryBadgeText}>{invoices.length} Fatura</Text>
+          </View>
+        </View>
+
+        {/* Total Amount */}
+        <View style={styles.summaryTotal}>
+          <Text style={styles.summaryTotalLabel}>Toplam Tutar</Text>
+          <Text style={styles.summaryTotalValue}>
+            {formatBalance(summary.total, primaryCurrency as any)}
+          </Text>
+        </View>
+
+        {/* Stats Grid */}
         <View style={styles.summaryGrid}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{invoices.length}</Text>
-            <Text style={styles.summaryText}>Fatura</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={[styles.summaryValue, { color: '#10B981' }]}>
-              {summary.paid.toFixed(2)} ₺
-            </Text>
-            <Text style={styles.summaryText}>Ödendi</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={[styles.summaryValue, { color: '#F59E0B' }]}>
-              {summary.pending.toFixed(2)} ₺
-            </Text>
-            <Text style={styles.summaryText}>Bekliyor</Text>
-          </View>
-          {summary.overdue > 0 && (
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
-                {summary.overdue.toFixed(2)} ₺
+          <View style={[styles.summaryStat, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+            <View style={styles.summaryStatHeader}>
+              <Wallet size={16} color="#10B981" />
+              <Text style={[styles.summaryStatValue, { color: '#10B981' }]}>
+                {formatBalance(summary.paid, primaryCurrency as any)}
               </Text>
-              <Text style={styles.summaryText}>Vadesi Geçti</Text>
+            </View>
+            <Text style={styles.summaryStatLabel}>Ödendi</Text>
+          </View>
+
+          <View style={[styles.summaryStat, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+            <View style={styles.summaryStatHeader}>
+              <Clock size={16} color="#F59E0B" />
+              <Text style={[styles.summaryStatValue, { color: '#F59E0B' }]}>
+                {formatBalance(summary.pending, primaryCurrency as any)}
+              </Text>
+            </View>
+            <Text style={styles.summaryStatLabel}>Bekliyor</Text>
+          </View>
+
+          {summary.overdue > 0 && (
+            <View style={[styles.summaryStat, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+              <View style={styles.summaryStatHeader}>
+                <AlertTriangle size={16} color="#EF4444" />
+                <Text style={[styles.summaryStatValue, { color: '#EF4444' }]}>
+                  {formatBalance(summary.overdue, primaryCurrency as any)}
+                </Text>
+              </View>
+              <Text style={styles.summaryStatLabel}>Vadesi Geçti</Text>
             </View>
           )}
         </View>
@@ -540,36 +578,88 @@ const styles = StyleSheet.create({
     ...Typography.bodyMD,
   },
   summaryCard: {
-    marginHorizontal: Spacing.md,
-    marginVertical: Spacing.sm,
-    padding: Spacing.md,
+    marginHorizontal: 0,
+    marginBottom: Spacing.md,
+    padding: Spacing.lg,
     borderRadius: BorderRadius.lg,
-    ...Shadows.sm,
+    backgroundColor: Brand.primary,
+    ...Shadows.md,
   },
-  summaryLabel: {
-    ...Typography.bodySM,
-    fontWeight: '600',
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  summaryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  summaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryTitle: {
+    ...Typography.headingSM,
     color: '#FFFFFF',
-    marginBottom: Spacing.sm,
+    fontWeight: '600',
+  },
+  summaryBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  summaryBadgeText: {
+    ...Typography.bodyXS,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  summaryTotal: {
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  summaryTotalLabel: {
+    ...Typography.bodySM,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: Spacing.xs,
+  },
+  summaryTotalValue: {
+    ...Typography.headingLG,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   summaryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
   },
-  summaryItem: {
+  summaryStat: {
     flex: 1,
     minWidth: '45%',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
   },
-  summaryValue: {
-    ...Typography.bodyLG,
+  summaryStatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.xs,
+  },
+  summaryStatValue: {
+    ...Typography.bodyMD,
     fontWeight: '700',
-    color: '#FFFFFF',
   },
-  summaryText: {
+  summaryStatLabel: {
     ...Typography.bodyXS,
-    color: '#FFFFFF',
-    opacity: 0.8,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   filtersCard: {
     margin: Spacing.md,
