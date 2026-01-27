@@ -21,6 +21,7 @@ import {
 } from 'lucide-react-native';
 import { Avatar, Input } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
+import UserSelectModal, { UserSelectModalRef } from '@/components/modals/UserSelectModal';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useMessageContext } from '@/context/message-context';
@@ -47,6 +48,7 @@ export default function MessagesTabScreen() {
   const hasInitialFetchRef = useRef(false);
   const appState = useRef(AppState.currentState);
   const conversationsRef = useRef<Conversation[]>([]);
+  const userSelectModalRef = useRef<UserSelectModalRef>(null);
 
   // State
   const [searchQuery, setSearchQuery] = useState('');
@@ -196,6 +198,15 @@ export default function MessagesTabScreen() {
     await fetchConversations(false);
     setRefreshing(false);
   }, [fetchConversations]);
+
+  const handleOpenNewMessage = () => {
+    userSelectModalRef.current?.present();
+  };
+
+  const handleConversationCreated = (conversationId: number) => {
+    // Refresh conversations after new conversation created
+    fetchConversations(false);
+  };
 
   // Sort conversations by last message time (newest first) - memoized
   const sortedConversations = useMemo(() => {
@@ -356,7 +367,7 @@ export default function MessagesTabScreen() {
           <View style={styles.headerRight}>
             {/* Yeni Mesaj Butonu */}
             <TouchableOpacity
-              onPress={() => router.push('/message/new' as any)}
+              onPress={handleOpenNewMessage}
               style={{ padding: Spacing.sm }}
               activeOpacity={0.7}
             >
@@ -411,6 +422,12 @@ export default function MessagesTabScreen() {
         }
       />
       </View>
+
+      {/* User Select Modal */}
+      <UserSelectModal
+        ref={userSelectModalRef}
+        onConversationCreated={handleConversationCreated}
+      />
     </View>
   );
 }

@@ -5,7 +5,7 @@
  * Uses DashboardContext for centralized state management.
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,7 @@ import {
 
 import { Avatar } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
+import NotificationModal, { NotificationModalRef } from '@/components/modals/NotificationModal';
 import { useAuth } from '@/context/auth-context';
 import { useNotificationContext } from '@/context/notification-context';
 import { useMessageContext } from '@/context/message-context';
@@ -81,8 +82,17 @@ const TAB_COMPONENTS: Record<DashboardTab, React.FC> = {
 
 export default function DashboardScreen() {
   const { user } = useAuth();
-  const { unreadCount, refreshUnreadCount } = useNotificationContext();
+  const {
+    unreadCount,
+    notifications,
+    isLoading: isNotificationsLoading,
+    refreshUnreadCount,
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead,
+  } = useNotificationContext();
   const { unreadCount: unreadMessageCount, refreshUnreadCount: refreshMessageCount } = useMessageContext();
+  const notificationModalRef = useRef<NotificationModalRef>(null);
 
   const {
     isLoadingAvailable,
@@ -104,6 +114,16 @@ export default function DashboardScreen() {
 
   const handleRefresh = async () => {
     await Promise.all([onRefresh(), refreshUnreadCount(), refreshMessageCount()]);
+  };
+
+  const handleOpenNotifications = async () => {
+    // Fetch latest notifications before opening modal
+    await fetchNotifications();
+    notificationModalRef.current?.present();
+  };
+
+  const handleRefreshNotifications = async () => {
+    await Promise.all([fetchNotifications(), refreshUnreadCount()]);
   };
 
   const TabComponent = TAB_COMPONENTS[activeTab] || BasicTab;
@@ -187,7 +207,7 @@ export default function DashboardScreen() {
             {/* Notification Bell */}
             <TouchableOpacity
               style={styles.notificationBtn}
-              onPress={() => router.push('/notifications')}
+              onPress={handleOpenNotifications}
               activeOpacity={0.7}
             >
               <Bell size={22} color="#FFFFFF" />
@@ -238,6 +258,16 @@ export default function DashboardScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Notification Modal */}
+      <NotificationModal
+        ref={notificationModalRef}
+        notifications={notifications}
+        isLoading={isNotificationsLoading}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+        onRefresh={handleRefreshNotifications}
+      />
     </View>
   );
 }
