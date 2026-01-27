@@ -12,9 +12,11 @@ import { BorderRadius, Shadows } from '@/constants/theme';
 interface CustomBottomSheetProps {
   children: React.ReactNode;
   snapPoints?: (string | number)[];
+  index?: number;
   onDismiss?: () => void;
   onChange?: (index: number) => void;
   enableDynamicSizing?: boolean;
+  animateOnMount?: boolean;
 }
 
 /**
@@ -30,7 +32,7 @@ interface CustomBottomSheetProps {
  * - Identical on iOS & Android
  */
 const CustomBottomSheet = forwardRef<BottomSheetModal, CustomBottomSheetProps>(
-  ({ children, snapPoints, onDismiss, onChange, enableDynamicSizing = false }, ref) => {
+  ({ children, snapPoints, index, onDismiss, onChange, enableDynamicSizing = false, animateOnMount = true }, ref) => {
     // Snap points - defaults to dynamic sizing if not provided
     const points = useMemo(
       () => snapPoints || ['50%', '75%'],
@@ -63,9 +65,11 @@ const CustomBottomSheet = forwardRef<BottomSheetModal, CustomBottomSheetProps>(
     return (
       <BottomSheetModal
         ref={ref}
+        index={index}
         snapPoints={points}
         enableDynamicSizing={enableDynamicSizing}
         enablePanDownToClose={true}
+        animateOnMount={animateOnMount}
         animationConfigs={animationConfigs}
         backdropComponent={renderBackdrop}
         backgroundStyle={styles.background}

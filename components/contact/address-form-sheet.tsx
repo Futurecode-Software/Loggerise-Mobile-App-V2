@@ -1,18 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  Modal,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, MapPin, Check } from 'lucide-react-native';
-import { Button, Input, Card } from '@/components/ui';
+import { MapPin, Check, CheckCircle, X } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import {
+  BottomSheetModal,
+  BottomSheetScrollView,
+  BottomSheetBackdrop,
+  BottomSheetBackdropProps,
+  useBottomSheetSpringConfigs,
+} from '@gorhom/bottom-sheet';
+import { Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
   ContactAddress,
@@ -21,12 +33,15 @@ import {
   updateContactAddress,
 } from '@/services/endpoints/contacts';
 
+export interface AddressFormSheetRef {
+  present: () => void;
+  dismiss: () => void;
+}
+
 interface AddressFormSheetProps {
-  visible: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
   contactId: number;
   address?: ContactAddress | null;
+  onSuccess: () => void;
 }
 
 type AddressType = 'billing' | 'shipping' | 'both';
@@ -37,33 +52,62 @@ const ADDRESS_TYPES: { value: AddressType; label: string }[] = [
   { value: 'both', label: 'Fatura & Sevkiyat' },
 ];
 
-export function AddressFormSheet({
-  visible,
-  onClose,
-  onSuccess,
-  contactId,
-  address,
-}: AddressFormSheetProps) {
-  const colors = Colors.light;
+const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
+  ({ contactId, address, onSuccess }, ref) => {
+    const colors = Colors.light;
+    const bottomSheetRef = useRef<BottomSheetModal>(null);
 
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+    const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [isSuccess, setIsSuccess] = useState(false);
 
-  const [formData, setFormData] = useState<AddressFormData>({
-    title: '',
-    address_line_1: '',
-    address_line_2: '',
-    postal_code: '',
-    phone: '',
-    email: '',
-    address_type: 'both',
-    is_default: false,
-    is_active: true,
-  });
+    const [formData, setFormData] = useState<AddressFormData>({
+      title: '',
+      address_line_1: '',
+      address_line_2: '',
+      postal_code: '',
+      phone: '',
+      email: '',
+      address_type: 'both',
+      is_default: false,
+      is_active: true,
+    });
 
-  // Form verilerini doldur (düzenleme modunda)
-  useEffect(() => {
-    if (visible) {
+    // Expose present/dismiss methods to parent
+    useImperativeHandle(ref, () => ({
+      present: () => bottomSheetRef.current?.present(),
+      dismiss: () => bottomSheetRef.current?.dismiss(),
+    }));
+
+    // Snap points - tek sabit yükseklik (sürüklenmeyi önler)
+    const snapPoints = useMemo(() => (isSuccess ? ['30%'] : ['85%']), [isSuccess]);
+    const initialIndex = useMemo(() => 0, []);
+
+    // iOS-like spring animation
+    const animationConfigs = useBottomSheetSpringConfigs({
+      damping: 80,
+      overshootClamping: true,
+      restDisplacementThreshold: 0.1,
+      restSpeedThreshold: 0.1,
+      stiffness: 500,
+    });
+
+    // Backdrop - arka plana tıklayınca kapatır
+    const renderBackdrop = useCallback(
+      (props: BottomSheetBackdropProps) => (
+        <BottomSheetBackdrop
+          {...props}
+          disappearsOnIndex={-1}
+          appearsOnIndex={0}
+          opacity={0.5}
+          pressBehavior="close"
+        />
+      ),
+      []
+    );
+
+    // Form verilerini doldur (düzenleme modunda)
+    useEffect(() => {
       if (address) {
         setFormData({
           title: address.title || '',
@@ -94,94 +138,108 @@ export function AddressFormSheet({
         });
       }
       setErrors({});
-    }
-  }, [visible, address]);
+      setIsSuccess(false);
+    }, [address]);
 
-  const handleChange = (field: keyof AddressFormData, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    // Hata mesajını temizle
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
-    }
-  };
+    const handleDismiss = useCallback(() => {
+      // Reset state after modal close animation
+      setTimeout(() => {
+        setIsSuccess(false);
+        setErrors({});
+      }, 200);
+    }, []);
 
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.title.trim()) {
-      newErrors.title = 'Adres başlığı zorunludur';
-    }
-
-    if (!formData.address_line_1.trim()) {
-      newErrors.address_line_1 = 'Adres zorunludur';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async () => {
-    if (!validate()) return;
-
-    setLoading(true);
-    try {
-      if (address) {
-        // Güncelle
-        await updateContactAddress(contactId, address.id, formData);
-      } else {
-        // Yeni oluştur
-        await createContactAddress(contactId, formData);
+    const handleChange = (field: keyof AddressFormData, value: string | boolean) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+      // Hata mesajını temizle
+      if (errors[field]) {
+        setErrors((prev) => ({ ...prev, [field]: '' }));
       }
-      onSuccess();
-      onClose();
-    } catch (error) {
-      setErrors({
-        submit: error instanceof Error ? error.message : 'Bir hata oluştu',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <X size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {address ? 'Adresi Düzenle' : 'Yeni Adres'}
+    const validate = (): boolean => {
+      const newErrors: Record<string, string> = {};
+
+      if (!formData.title.trim()) {
+        newErrors.title = 'Adres başlığı zorunludur';
+      }
+
+      if (!formData.address_line_1.trim()) {
+        newErrors.address_line_1 = 'Adres zorunludur';
+      }
+
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = async () => {
+      if (!validate()) return;
+
+      setLoading(true);
+      try {
+        if (address) {
+          // Güncelle
+          await updateContactAddress(contactId, address.id, formData);
+        } else {
+          // Yeni oluştur
+          await createContactAddress(contactId, formData);
+        }
+        setIsSuccess(true);
+        onSuccess();
+        // Auto close after 1.5 seconds
+        setTimeout(() => {
+          bottomSheetRef.current?.dismiss();
+        }, 1500);
+      } catch (error) {
+        setErrors({
+          submit: error instanceof Error ? error.message : 'Bir hata oluştu',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const renderHeader = useCallback(() => (
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerLeft}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {isSuccess ? 'İşlem Başarılı!' : address ? 'Adresi Düzenle' : 'Yeni Adres'}
           </Text>
-          <View style={styles.headerRight} />
+          {!isSuccess && (
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              {address ? 'Adres bilgilerini güncelleyin' : 'Yeni adres bilgilerini girin'}
+            </Text>
+          )}
         </View>
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.content}
+        <TouchableOpacity
+          onPress={() => bottomSheetRef.current?.dismiss()}
+          style={styles.closeButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            bounces={false}
-            overScrollMode="never"
-          >
-            {/* Genel Hata */}
-            {errors.submit && (
-              <Card style={[styles.errorCard, { backgroundColor: colors.dangerLight }]}>
-                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.submit}</Text>
-              </Card>
-            )}
+          <X size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+    ), [address, isSuccess, colors]);
 
-            {/* Adres Başlığı */}
+    const renderFormContent = () => (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <BottomSheetScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Genel Hata */}
+          {errors.submit && (
+            <Text style={[styles.errorText, { color: colors.danger }]}>
+              {errors.submit}
+            </Text>
+          )}
+
+          {/* Adres Başlığı */}
+          <View style={styles.inputContainer}>
             <Input
               label="Adres Başlığı *"
               placeholder="Örn: Merkez Ofis, Fabrika, Depo"
@@ -190,8 +248,10 @@ export function AddressFormSheet({
               error={errors.title}
               leftIcon={<MapPin size={18} color={colors.icon} />}
             />
+          </View>
 
-            {/* Adres Satırı 1 */}
+          {/* Adres Satırı 1 */}
+          <View style={styles.inputContainer}>
             <Input
               label="Adres *"
               placeholder="Sokak, mahalle, bina no"
@@ -201,16 +261,20 @@ export function AddressFormSheet({
               multiline
               numberOfLines={2}
             />
+          </View>
 
-            {/* Adres Satırı 2 */}
+          {/* Adres Satırı 2 */}
+          <View style={styles.inputContainer}>
             <Input
               label="Adres (devam)"
               placeholder="Kat, daire, ek bilgi"
               value={formData.address_line_2}
               onChangeText={(value) => handleChange('address_line_2', value)}
             />
+          </View>
 
-            {/* Posta Kodu */}
+          {/* Posta Kodu */}
+          <View style={styles.inputContainer}>
             <Input
               label="Posta Kodu"
               placeholder="34000"
@@ -218,8 +282,10 @@ export function AddressFormSheet({
               onChangeText={(value) => handleChange('postal_code', value)}
               keyboardType="numeric"
             />
+          </View>
 
-            {/* Telefon */}
+          {/* Telefon */}
+          <View style={styles.inputContainer}>
             <Input
               label="Telefon"
               placeholder="+90 212 000 00 00"
@@ -227,8 +293,10 @@ export function AddressFormSheet({
               onChangeText={(value) => handleChange('phone', value)}
               keyboardType="phone-pad"
             />
+          </View>
 
-            {/* E-posta */}
+          {/* E-posta */}
+          <View style={styles.inputContainer}>
             <Input
               label="E-posta"
               placeholder="adres@firma.com"
@@ -237,136 +305,214 @@ export function AddressFormSheet({
               keyboardType="email-address"
               autoCapitalize="none"
             />
+          </View>
 
-            {/* Adres Tipi */}
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.text }]}>Adres Tipi</Text>
-              <View style={styles.typeSelector}>
-                {ADDRESS_TYPES.map((type) => (
-                  <TouchableOpacity
-                    key={type.value}
+          {/* Adres Tipi */}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: colors.text }]}>Adres Tipi</Text>
+            <View style={styles.typeSelector}>
+              {ADDRESS_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type.value}
+                  style={[
+                    styles.typeOption,
+                    {
+                      backgroundColor:
+                        formData.address_type === type.value
+                          ? Brand.primary
+                          : colors.card,
+                      borderColor:
+                        formData.address_type === type.value
+                          ? Brand.primary
+                          : colors.border,
+                    },
+                  ]}
+                  onPress={() => handleChange('address_type', type.value)}
+                >
+                  <Text
                     style={[
-                      styles.typeOption,
+                      styles.typeOptionText,
                       {
-                        backgroundColor:
-                          formData.address_type === type.value ? Brand.primary : colors.card,
-                        borderColor:
-                          formData.address_type === type.value ? Brand.primary : colors.border,
+                        color:
+                          formData.address_type === type.value
+                            ? '#FFFFFF'
+                            : colors.textSecondary,
                       },
                     ]}
-                    onPress={() => handleChange('address_type', type.value)}
                   >
-                    <Text
-                      style={[
-                        styles.typeOptionText,
-                        {
-                          color:
-                            formData.address_type === type.value ? '#FFFFFF' : colors.textSecondary,
-                        },
-                      ]}
-                    >
-                      {type.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+                    {type.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
-
-            {/* Varsayılan Adres */}
-            <TouchableOpacity
-              style={[styles.checkboxRow, { borderColor: colors.border }]}
-              onPress={() => handleChange('is_default', !formData.is_default)}
-            >
-              <View
-                style={[
-                  styles.checkbox,
-                  {
-                    backgroundColor: formData.is_default ? Brand.primary : 'transparent',
-                    borderColor: formData.is_default ? Brand.primary : colors.border,
-                  },
-                ]}
-              >
-                {formData.is_default && <Check size={14} color="#FFFFFF" />}
-              </View>
-              <Text style={[styles.checkboxLabel, { color: colors.text }]}>Varsayılan Adres</Text>
-            </TouchableOpacity>
-
-            {/* Aktif */}
-            <TouchableOpacity
-              style={[styles.checkboxRow, { borderColor: colors.border }]}
-              onPress={() => handleChange('is_active', !formData.is_active)}
-            >
-              <View
-                style={[
-                  styles.checkbox,
-                  {
-                    backgroundColor: formData.is_active ? Brand.primary : 'transparent',
-                    borderColor: formData.is_active ? Brand.primary : colors.border,
-                  },
-                ]}
-              >
-                {formData.is_active && <Check size={14} color="#FFFFFF" />}
-              </View>
-              <Text style={[styles.checkboxLabel, { color: colors.text }]}>Aktif</Text>
-            </TouchableOpacity>
-          </ScrollView>
-
-          {/* Footer */}
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <Button title="İptal" variant="outline" onPress={onClose} style={styles.footerButton} />
-            <Button
-              title={address ? 'Güncelle' : 'Ekle'}
-              onPress={handleSubmit}
-              loading={loading}
-              style={styles.footerButton}
-            />
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Modal>
-  );
-}
+
+          {/* Varsayılan Adres */}
+          <TouchableOpacity
+            style={styles.checkboxRow}
+            onPress={() => handleChange('is_default', !formData.is_default)}
+          >
+            <View
+              style={[
+                styles.checkbox,
+                {
+                  backgroundColor: formData.is_default
+                    ? Brand.primary
+                    : 'transparent',
+                  borderColor: formData.is_default ? Brand.primary : colors.border,
+                },
+              ]}
+            >
+              {formData.is_default && <Check size={14} color="#FFFFFF" />}
+            </View>
+            <Text style={[styles.checkboxLabel, { color: colors.text }]}>
+              Varsayılan Adres
+            </Text>
+          </TouchableOpacity>
+
+          {/* Aktif */}
+          <TouchableOpacity
+            style={styles.checkboxRow}
+            onPress={() => handleChange('is_active', !formData.is_active)}
+          >
+            <View
+              style={[
+                styles.checkbox,
+                {
+                  backgroundColor: formData.is_active
+                    ? Brand.primary
+                    : 'transparent',
+                  borderColor: formData.is_active ? Brand.primary : colors.border,
+                },
+              ]}
+            >
+              {formData.is_active && <Check size={14} color="#FFFFFF" />}
+            </View>
+            <Text style={[styles.checkboxLabel, { color: colors.text }]}>
+              Aktif
+            </Text>
+          </TouchableOpacity>
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            <LinearGradient
+              colors={[Brand.primary, Brand.primaryLight]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.submitButtonGradient}
+            >
+              <Text style={styles.submitButtonText}>
+                {loading
+                  ? 'Kaydediliyor...'
+                  : address
+                  ? 'Güncelle'
+                  : 'Ekle'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </BottomSheetScrollView>
+      </KeyboardAvoidingView>
+    );
+
+    const renderSuccessContent = () => (
+      <View style={styles.successContainer}>
+        <View
+          style={[styles.successIcon, { backgroundColor: colors.successLight }]}
+        >
+          <CheckCircle size={28} color={colors.success} />
+        </View>
+        <Text style={[styles.successTitle, { color: colors.text }]}>
+          İşlem Başarılı!
+        </Text>
+        <Text style={[styles.successText, { color: colors.textSecondary }]}>
+          {address ? 'Adres güncellendi.' : 'Yeni adres eklendi.'}
+        </Text>
+      </View>
+    );
+
+    return (
+      <BottomSheetModal
+        ref={bottomSheetRef}
+        index={initialIndex}
+        snapPoints={snapPoints}
+        enablePanDownToClose={true}
+        enableContentPanningGesture={false}
+        enableDynamicSizing={false}
+        animateOnMount={true}
+        animationConfigs={animationConfigs}
+        backdropComponent={renderBackdrop}
+        backgroundStyle={styles.background}
+        handleIndicatorStyle={styles.handleIndicator}
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
+        onDismiss={handleDismiss}
+      >
+        {renderHeader()}
+        {isSuccess ? renderSuccessContent() : renderFormContent()}
+      </BottomSheetModal>
+    );
+  }
+);
+
+AddressFormSheet.displayName = 'AddressFormSheet';
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  background: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+  },
+  handleIndicator: {
+    backgroundColor: '#9CA3AF',
+    width: 48,
+    height: 5,
+    borderRadius: 3,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing['2xl'],
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
-  closeButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingMD,
-  },
-  headerRight: {
-    width: 40,
-  },
-  content: {
+  headerLeft: {
     flex: 1,
   },
-  scrollView: {
+  title: {
+    ...Typography.headingLG,
+    marginBottom: 2,
+  },
+  subtitle: {
+    ...Typography.bodySM,
+  },
+  closeButton: {
+    padding: Spacing.xs,
+  },
+  keyboardView: {
     flex: 1,
   },
   scrollContent: {
-    padding: Spacing.lg,
+    paddingHorizontal: Spacing['2xl'],
+    paddingTop: Spacing.md,
     paddingBottom: Spacing['3xl'],
-  },
-  errorCard: {
-    padding: Spacing.md,
-    marginBottom: Spacing.lg,
-    borderRadius: BorderRadius.md,
   },
   errorText: {
     ...Typography.bodySM,
     textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  inputContainer: {
+    marginBottom: Spacing.md,
+  },
+  field: {
+    marginBottom: Spacing.md,
   },
   label: {
     ...Typography.bodySM,
@@ -393,7 +539,7 @@ const styles = StyleSheet.create({
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
     marginBottom: Spacing.sm,
   },
   checkbox: {
@@ -408,13 +554,50 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     ...Typography.bodyMD,
   },
-  footer: {
-    flexDirection: 'row',
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    borderTopWidth: 1,
+  submitButton: {
+    width: '100%',
+    height: 44,
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+    marginTop: Spacing.md,
   },
-  footerButton: {
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonGradient: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Success State
+  successContainer: {
+    paddingHorizontal: Spacing['2xl'],
+    paddingVertical: Spacing['3xl'],
+    alignItems: 'center',
+  },
+  successIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  successTitle: {
+    ...Typography.headingMD,
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
+  successText: {
+    ...Typography.bodySM,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });
+
+export default AddressFormSheet;

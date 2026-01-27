@@ -14,12 +14,12 @@ import {
   Filter,
   Plus,
   User,
+  Building2,
   AlertCircle,
 } from 'lucide-react-native';
-import { Card, Badge, Avatar, Input, SkeletonList } from '@/components/ui';
+import { StandardListItem, Badge, Input, SkeletonList } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-// useColorScheme kaldirildi - her zaman light mode kullanilir
+import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
 import {
   getContacts,
   Contact,
@@ -84,11 +84,7 @@ export default function ContactsScreen() {
         }
 
         // Add type/role filter
-        if (filter === 'customer') {
-          // is_customer filter not available, use type filter logic in UI
-        } else if (filter === 'supplier') {
-          // is_supplier filter not available, use type filter logic in UI
-        } else if (filter === 'company') {
+        if (filter === 'company') {
           filters.type = 'company';
         } else if (filter === 'individual') {
           filters.type = 'individual';
@@ -206,58 +202,63 @@ export default function ContactsScreen() {
     return true;
   });
 
+  // Get role badge for footer
   const getRoleBadge = (contact: Contact) => {
     if (contact.is_customer && contact.is_supplier) {
-      return <Badge label="Her İkisi" variant="default" size="sm" />;
+      return { label: 'Her İkisi', variant: 'default' as const };
     }
     if (contact.is_customer) {
-      return <Badge label="Müşteri" variant="success" size="sm" />;
+      return { label: 'Müşteri', variant: 'success' as const };
     }
     if (contact.is_supplier) {
-      return <Badge label="Tedarikçi" variant="info" size="sm" />;
+      return { label: 'Tedarikçi', variant: 'info' as const };
     }
     return null;
   };
 
-  const renderContact = ({ item }: { item: Contact }) => (
-    <Card
-      style={styles.contactCard}
-      onPress={() => router.push(`/contact/${item.id}` as any)}
-    >
-      <View style={styles.contactContent}>
-        <Avatar
-          name={item.name}
-          size="md"
-          backgroundColor={
-            item.type === 'company' ? colors.successLight : colors.infoLight
-          }
-        />
-        <View style={styles.contactInfo}>
-          <View style={styles.contactHeader}>
-            <Text
-              style={[styles.contactName, { color: colors.text }]}
-              numberOfLines={1}
-            >
-              {item.name}
-            </Text>
-            {getRoleBadge(item)}
-          </View>
-          <Text style={[styles.contactDetail, { color: colors.textSecondary }]}>
-            {item.type === 'company'
+  // Render contact item using StandardListItem
+  const renderContact = useCallback(
+    ({ item }: { item: Contact }) => {
+      const roleBadge = getRoleBadge(item);
+      const isCompany = item.type === 'company';
+
+      return (
+        <StandardListItem
+          icon={isCompany ? Building2 : User}
+          iconColor={isCompany ? colors.success : colors.info}
+          iconBg={isCompany ? colors.successLight : colors.infoLight}
+          title={item.name}
+          subtitle={
+            isCompany
               ? `VKN: ${item.tax_number || '-'}`
-              : `TC: ${item.identity_number || '-'}`}
-          </Text>
-          {item.email && (
-            <Text
-              style={[styles.contactEmail, { color: colors.textMuted }]}
-              numberOfLines={1}
-            >
-              {item.email}
-            </Text>
-          )}
-        </View>
-      </View>
-    </Card>
+              : `TC: ${item.identity_number || '-'}`
+          }
+          meta={item.email || undefined}
+          status={
+            roleBadge
+              ? {
+                  label: roleBadge.label,
+                  variant: roleBadge.variant,
+                }
+              : undefined
+          }
+          onPress={() => router.push(`/contact/${item.id}` as any)}
+          showChevron
+          style={styles.listItem}
+        />
+      );
+    },
+    [colors]
+  );
+
+  // Optimize FlatList with getItemLayout (fixed height items)
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: 88, // Approximate height of StandardListItem with padding
+      offset: 88 * index,
+      index,
+    }),
+    []
   );
 
   const renderEmptyState = () => {
@@ -268,7 +269,9 @@ export default function ContactsScreen() {
     if (error) {
       return (
         <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
+          <View
+            style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}
+          >
             <AlertCircle size={64} color={colors.danger} />
           </View>
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
@@ -317,13 +320,13 @@ export default function ContactsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
+    <View style={styles.container}>
       {/* Full Screen Header */}
       <FullScreenHeader
         title="Cariler"
         subtitle={pagination ? `${pagination.total} kayıt` : undefined}
         rightIcons={
-          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+          <View style={styles.headerActions}>
             <TouchableOpacity
               onPress={() => router.push('/contact/new' as any)}
               activeOpacity={0.7}
@@ -341,70 +344,74 @@ export default function ContactsScreen() {
       <View style={styles.contentArea}>
         {/* Search */}
         <View style={styles.searchContainer}>
-        <Input
-          placeholder="İsim, vergi no veya e-posta ile ara..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          leftIcon={<Search size={20} color={colors.icon} />}
-          containerStyle={styles.searchInput}
-        />
-      </View>
+          <Input
+            placeholder="İsim, vergi no veya e-posta ile ara..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            leftIcon={<Search size={20} color={colors.icon} />}
+            containerStyle={styles.searchInput}
+          />
+        </View>
 
-      {/* Filter Chips */}
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          data={FILTER_CHIPS}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor:
-                    activeFilter === item.id ? Brand.primary : colors.card,
-                  borderColor:
-                    activeFilter === item.id ? Brand.primary : colors.border,
-                },
-              ]}
-              onPress={() => setActiveFilter(item.id)}
-            >
-              <Text
+        {/* Filter Chips */}
+        <View style={styles.filterContainer}>
+          <FlatList
+            horizontal
+            data={FILTER_CHIPS}
+            keyExtractor={(item) => item.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterContent}
+            renderItem={({ item }) => (
+              <TouchableOpacity
                 style={[
-                  styles.filterChipText,
+                  styles.filterChip,
                   {
-                    color:
-                      activeFilter === item.id ? '#FFFFFF' : colors.textSecondary,
+                    backgroundColor:
+                      activeFilter === item.id ? Brand.primary : colors.card,
+                    borderColor:
+                      activeFilter === item.id ? Brand.primary : colors.border,
                   },
                 ]}
+                onPress={() => setActiveFilter(item.id)}
               >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
-
-      {/* Contact List */}
-      <FlatList
-        data={filteredContacts}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderContact}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Brand.primary}
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    {
+                      color:
+                        activeFilter === item.id
+                          ? '#FFFFFF'
+                          : colors.textSecondary,
+                    },
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            )}
           />
-        }
-      />
+        </View>
+
+        {/* Contact List */}
+        <FlatList
+          data={filteredContacts}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderContact}
+          getItemLayout={getItemLayout}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={renderFooter}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Brand.primary}
+            />
+          }
+        />
       </View>
     </View>
   );
@@ -413,6 +420,7 @@ export default function ContactsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
   },
   contentArea: {
     flex: 1,
@@ -421,17 +429,10 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 32,
     ...Shadows.lg,
   },
-  // Header styles removed - using FullScreenHeader component
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-  },
-  headerButton: {
-    padding: Spacing.sm,
-  },
-  countText: {
-    ...Typography.bodySM,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
   filterChip: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
+    borderRadius: 32,
     borderWidth: 1,
   },
   filterChipText: {
@@ -462,44 +463,8 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     flexGrow: 1,
   },
-  contactCard: {
-    marginBottom: 0,
-  },
-  contactContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: 2,
-  },
-  contactName: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
-    flex: 1,
-  },
-  contactDetail: {
-    ...Typography.bodySM,
-    marginBottom: 2,
-  },
-  contactEmail: {
-    ...Typography.bodySM,
-  },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
+  listItem: {
+    marginBottom: Spacing.md,
   },
   emptyState: {
     flex: 1,
@@ -529,7 +494,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    borderRadius: 12,
   },
   retryButtonText: {
     color: '#FFFFFF',

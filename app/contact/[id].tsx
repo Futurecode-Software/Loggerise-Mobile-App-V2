@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -32,7 +32,8 @@ import {
 } from 'lucide-react-native';
 import { Card, Badge, Avatar, Button, Skeleton, ConfirmDialog } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
-import { AddressFormSheet, AuthorityFormSheet } from '@/components/contact';
+import AddressFormSheet, { AddressFormSheetRef } from '@/components/contact/address-form-sheet';
+import AuthorityFormSheet, { AuthorityFormSheetRef } from '@/components/contact/authority-form-sheet';
 import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 // useColorScheme kaldirildi - her zaman light mode kullanilir
@@ -69,12 +70,12 @@ export default function ContactDetailScreen() {
   const [addressToDelete, setAddressToDelete] = useState<ContactAddress | null>(null);
   const [authorityToDelete, setAuthorityToDelete] = useState<ContactAuthority | null>(null);
 
-  // Adres form sheet state
-  const [addressSheetOpen, setAddressSheetOpen] = useState(false);
+  // Adres form sheet ref
+  const addressSheetRef = useRef<AddressFormSheetRef>(null);
   const [editingAddress, setEditingAddress] = useState<ContactAddress | null>(null);
 
-  // Yetkili form sheet state
-  const [authoritySheetOpen, setAuthoritySheetOpen] = useState(false);
+  // Yetkili form sheet ref
+  const authoritySheetRef = useRef<AuthorityFormSheetRef>(null);
   const [editingAuthority, setEditingAuthority] = useState<ContactAuthority | null>(null);
 
   // Veriyi çek
@@ -152,13 +153,13 @@ export default function ContactDetailScreen() {
   // Yeni adres ekle
   const handleAddAddress = () => {
     setEditingAddress(null);
-    setAddressSheetOpen(true);
+    addressSheetRef.current?.present();
   };
 
   // Adres düzenle
   const handleEditAddress = (address: ContactAddress) => {
     setEditingAddress(address);
-    setAddressSheetOpen(true);
+    addressSheetRef.current?.present();
   };
 
   // Adres sil
@@ -192,13 +193,13 @@ export default function ContactDetailScreen() {
   // Yeni yetkili ekle
   const handleAddAuthority = () => {
     setEditingAuthority(null);
-    setAuthoritySheetOpen(true);
+    authoritySheetRef.current?.present();
   };
 
   // Yetkili düzenle
   const handleEditAuthority = (authority: ContactAuthority) => {
     setEditingAuthority(authority);
-    setAuthoritySheetOpen(true);
+    authoritySheetRef.current?.present();
   };
 
   // Yetkili sil
@@ -726,227 +727,219 @@ export default function ContactDetailScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Full Screen Header */}
       <FullScreenHeader
-        title={loading ? 'Yükleniyor...' : contact?.name || 'Cari Detay'}
-        subtitle={
-          contact
-            ? `${contact.code} • ${getContactRoleLabel(contact)}`
-            : undefined
-        }
-        showBackButton
-        leftIcon={
-          contact ? (
-            <Avatar
-              name={contact.name}
-              size="sm"
-            />
-          ) : undefined
-        }
-        rightIcons={
-          contact ? (
-            <>
-              <TouchableOpacity
-                style={styles.headerButton}
-                onPress={() => {
-                  // TODO: Düzenleme sayfasına yönlendir
-                }}
-                activeOpacity={0.7}
-              >
-                <Edit size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.headerButton}
-                onPress={handleDelete}
-                disabled={deleting}
-                activeOpacity={0.7}
-              >
-                {deleting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Trash2 size={20} color="#FFFFFF" />
-                )}
-              </TouchableOpacity>
-            </>
-          ) : null
-        }
-      />
+            title={loading ? 'Yükleniyor...' : contact?.name || 'Cari Detay'}
+            subtitle={
+              contact
+                ? `${contact.code} • ${getContactRoleLabel(contact)}`
+                : undefined
+            }
+            showBackButton
+            leftIcon={
+              contact ? (
+                <Avatar
+                  name={contact.name}
+                  size="sm"
+                />
+              ) : undefined
+            }
+            rightIcons={
+              contact ? (
+                <>
+                  <TouchableOpacity
+                    style={styles.headerButton}
+                    onPress={() => {
+                      // TODO: Düzenleme sayfasına yönlendir
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Edit size={20} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.headerButton}
+                    onPress={handleDelete}
+                    disabled={deleting}
+                    activeOpacity={0.7}
+                  >
+                    {deleting ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Trash2 size={20} color="#FFFFFF" />
+                    )}
+                  </TouchableOpacity>
+                </>
+              ) : null
+            }
+          />
 
-      {/* Content */}
-      {loading ? (
-        renderLoadingSkeleton()
-      ) : error ? (
-        renderError()
-      ) : contact ? (
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[Brand.primary]}
-              tintColor={Brand.primary}
-            />
-          }
-        >
-          {/* Hero Section */}
-          <View style={styles.heroSection}>
-            <Avatar name={contact.name} size="xl" />
-            <Text style={[styles.contactName, { color: colors.text }]}>{contact.name}</Text>
+          {/* Content */}
+          {loading ? (
+            renderLoadingSkeleton()
+          ) : error ? (
+            renderError()
+          ) : contact ? (
+            <ScrollView
+              style={styles.content}
+              contentContainerStyle={styles.contentContainer}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                  colors={[Brand.primary]}
+                  tintColor={Brand.primary}
+                />
+              }
+            >
+              {/* Hero Section */}
+              <View style={styles.heroSection}>
+                <Avatar name={contact.name} size="xl" />
+                <Text style={[styles.contactName, { color: colors.text }]}>{contact.name}</Text>
 
-            <View style={styles.badgeRow}>
-              <Badge label={getContactRoleLabel(contact)} variant="info" />
-              <Badge label={getStatusLabel(contact.status)} variant={getStatusVariant(contact.status)} />
-            </View>
+                <View style={styles.badgeRow}>
+                  <Badge label={getContactRoleLabel(contact)} variant="info" />
+                  <Badge label={getStatusLabel(contact.status)} variant={getStatusVariant(contact.status)} />
+                </View>
 
-            {/* Stats - Adres ve Yetkili sayısı */}
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.text }]}>
-                  {contact.addresses?.filter((a) => a.is_active).length || 0}
-                </Text>
-                <Text style={[styles.statLabel, { color: colors.textMuted }]}>Adres</Text>
+                {/* Stats - Adres ve Yetkili sayısı */}
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: colors.text }]}>
+                      {contact.addresses?.filter((a) => a.is_active).length || 0}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.textMuted }]}>Adres</Text>
+                  </View>
+                  <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: colors.text }]}>
+                      {contact.authorities?.filter((a) => a.is_active).length || 0}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.textMuted }]}>Yetkili</Text>
+                  </View>
+                  <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: colors.text }]}>
+                      {getContactTypeLabel(contact.type)}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.textMuted }]}>Tip</Text>
+                  </View>
+                </View>
               </View>
-              <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-              <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.text }]}>
-                  {contact.authorities?.filter((a) => a.is_active).length || 0}
-                </Text>
-                <Text style={[styles.statLabel, { color: colors.textMuted }]}>Yetkili</Text>
-              </View>
-              <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-              <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.text }]}>
-                  {getContactTypeLabel(contact.type)}
-                </Text>
-                <Text style={[styles.statLabel, { color: colors.textMuted }]}>Tip</Text>
-              </View>
-            </View>
-          </View>
 
-          {/* Tabs */}
-          <View style={[styles.tabs, { borderBottomColor: colors.border }]}>
-            {(['info', 'addresses', 'authorities'] as TabType[]).map((tab) => (
-              <TouchableOpacity
-                key={tab}
-                style={[styles.tab, activeTab === tab && { borderBottomColor: Brand.primary }]}
-                onPress={() => setActiveTab(tab)}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    { color: activeTab === tab ? Brand.primary : colors.textSecondary },
-                    activeTab === tab && styles.activeTabText,
-                  ]}
+              {/* Tabs */}
+              <View style={[styles.tabs, { borderBottomColor: colors.border }]}>
+                {(['info', 'addresses', 'authorities'] as TabType[]).map((tab) => (
+                  <TouchableOpacity
+                    key={tab}
+                    style={[styles.tab, activeTab === tab && { borderBottomColor: Brand.primary }]}
+                    onPress={() => setActiveTab(tab)}
+                  >
+                    <Text
+                      style={[
+                        styles.tabText,
+                        { color: activeTab === tab ? Brand.primary : colors.textSecondary },
+                        activeTab === tab && styles.activeTabText,
+                      ]}
+                    >
+                      {tab === 'info' ? 'Bilgiler' : tab === 'addresses' ? 'Adresler' : 'Yetkililer'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Tab Content */}
+              {activeTab === 'info' && renderInfoTab()}
+              {activeTab === 'addresses' && renderAddressesTab()}
+              {activeTab === 'authorities' && renderAuthoritiesTab()}
+            </ScrollView>
+          ) : null}
+
+          {/* Floating Actions */}
+          {contact && (contact.phone || contact.email) && (
+            <View style={[styles.floatingActions, { ...Shadows.lg }]}>
+              {contact.phone && (
+                <TouchableOpacity
+                  style={[styles.floatingButton, { backgroundColor: Brand.primary }]}
+                  onPress={() => handleCall(contact.phone!)}
                 >
-                  {tab === 'info' ? 'Bilgiler' : tab === 'addresses' ? 'Adresler' : 'Yetkililer'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Tab Content */}
-          {activeTab === 'info' && renderInfoTab()}
-          {activeTab === 'addresses' && renderAddressesTab()}
-          {activeTab === 'authorities' && renderAuthoritiesTab()}
-        </ScrollView>
-      ) : null}
-
-      {/* Floating Actions */}
-      {contact && (contact.phone || contact.email) && (
-        <View style={[styles.floatingActions, { ...Shadows.lg }]}>
-          {contact.phone && (
-            <TouchableOpacity
-              style={[styles.floatingButton, { backgroundColor: Brand.primary }]}
-              onPress={() => handleCall(contact.phone!)}
-            >
-              <Phone size={22} color="#FFFFFF" />
-            </TouchableOpacity>
+                  <Phone size={22} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
+              {contact.email && (
+                <TouchableOpacity
+                  style={[
+                    styles.floatingButtonSecondary,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
+                  onPress={() => handleEmail(contact.email!)}
+                >
+                  <Mail size={22} color={colors.icon} />
+                </TouchableOpacity>
+              )}
+            </View>
           )}
-          {contact.email && (
-            <TouchableOpacity
-              style={[
-                styles.floatingButtonSecondary,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-              onPress={() => handleEmail(contact.email!)}
-            >
-              <Mail size={22} color={colors.icon} />
-            </TouchableOpacity>
+
+          {/* Delete Contact Confirmation */}
+          <ConfirmDialog
+            visible={showDeleteDialog}
+            title="Cariyi Sil"
+            message={`"${contact?.name}" adlı cariyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`}
+            confirmText="Sil"
+            cancelText="İptal"
+            isDangerous={true}
+            isLoading={deleting}
+            onConfirm={confirmDeleteContact}
+            onCancel={() => setShowDeleteDialog(false)}
+          />
+
+          {/* Delete Address Confirmation */}
+          <ConfirmDialog
+            visible={showDeleteAddressDialog}
+            title="Adresi Sil"
+            message={`"${addressToDelete?.title}" adresini silmek istediğinize emin misiniz?`}
+            confirmText="Sil"
+            cancelText="İptal"
+            isDangerous={true}
+            onConfirm={confirmDeleteAddress}
+            onCancel={() => {
+              setShowDeleteAddressDialog(false);
+              setAddressToDelete(null);
+            }}
+          />
+
+          {/* Delete Authority Confirmation */}
+          <ConfirmDialog
+            visible={showDeleteAuthorityDialog}
+            title="Yetkiliyi Sil"
+            message={`"${authorityToDelete?.name}" adlı yetkiliyi silmek istediğinize emin misiniz?`}
+            confirmText="Sil"
+            cancelText="İptal"
+            isDangerous={true}
+            onConfirm={confirmDeleteAuthority}
+            onCancel={() => {
+              setShowDeleteAuthorityDialog(false);
+              setAuthorityToDelete(null);
+            }}
+          />
+
+          {/* Adres Form Sheet */}
+          {contact && (
+            <AddressFormSheet
+              ref={addressSheetRef}
+              contactId={contact.id}
+              address={editingAddress}
+              onSuccess={handleAddressSuccess}
+            />
           )}
-        </View>
-      )}
 
-      {/* Adres Form Sheet */}
-      {contact && (
-        <AddressFormSheet
-          visible={addressSheetOpen}
-          onClose={() => {
-            setAddressSheetOpen(false);
-            setEditingAddress(null);
-          }}
-          onSuccess={handleAddressSuccess}
-          contactId={contact.id}
-          address={editingAddress}
-        />
-      )}
-
-      {/* Yetkili Form Sheet */}
-      {contact && (
-        <AuthorityFormSheet
-          visible={authoritySheetOpen}
-          onClose={() => {
-            setAuthoritySheetOpen(false);
-            setEditingAuthority(null);
-          }}
-          onSuccess={handleAuthoritySuccess}
-          contactId={contact.id}
-          authority={editingAuthority}
-        />
-      )}
-
-      {/* Delete Contact Confirmation */}
-      <ConfirmDialog
-        visible={showDeleteDialog}
-        title="Cariyi Sil"
-        message={`"${contact?.name}" adlı cariyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`}
-        confirmText="Sil"
-        cancelText="İptal"
-        isDangerous={true}
-        isLoading={deleting}
-        onConfirm={confirmDeleteContact}
-        onCancel={() => setShowDeleteDialog(false)}
-      />
-
-      {/* Delete Address Confirmation */}
-      <ConfirmDialog
-        visible={showDeleteAddressDialog}
-        title="Adresi Sil"
-        message={`"${addressToDelete?.title}" adresini silmek istediğinize emin misiniz?`}
-        confirmText="Sil"
-        cancelText="İptal"
-        isDangerous={true}
-        onConfirm={confirmDeleteAddress}
-        onCancel={() => {
-          setShowDeleteAddressDialog(false);
-          setAddressToDelete(null);
-        }}
-      />
-
-      {/* Delete Authority Confirmation */}
-      <ConfirmDialog
-        visible={showDeleteAuthorityDialog}
-        title="Yetkiliyi Sil"
-        message={`"${authorityToDelete?.name}" adlı yetkiliyi silmek istediğinize emin misiniz?`}
-        confirmText="Sil"
-        cancelText="İptal"
-        isDangerous={true}
-        onConfirm={confirmDeleteAuthority}
-        onCancel={() => {
-          setShowDeleteAuthorityDialog(false);
-          setAuthorityToDelete(null);
-        }}
-      />
+          {/* Yetkili Form Sheet */}
+          {contact && (
+            <AuthorityFormSheet
+              ref={authoritySheetRef}
+              contactId={contact.id}
+              authority={editingAuthority}
+              onSuccess={handleAuthoritySuccess}
+            />
+          )}
     </View>
   );
 }
@@ -998,6 +991,9 @@ function InfoRow({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  innerContainer: {
     flex: 1,
   },
   headerButton: {

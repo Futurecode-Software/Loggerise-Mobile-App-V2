@@ -144,6 +144,56 @@ Bu standart sayesinde:
 
 Uygulama genelinde tutarlı modal deneyimi için bottom sheet kullanımı standardize edilmiştir.
 
+### ⚠️ KRİTİK: Provider Kullanımı
+
+**ÖNEMLI:** `GestureHandlerRootView` ve `BottomSheetModalProvider` zaten `app/_layout.tsx`'te TÜM UYGULAMA için tanımlıdır!
+
+```tsx
+// app/_layout.tsx - ZATEN TANIMLI
+<GestureHandlerRootView style={{ flex: 1 }}>
+  <BottomSheetModalProvider>
+    {/* Tüm uygulama */}
+  </BottomSheetModalProvider>
+</GestureHandlerRootView>
+```
+
+**❌ YAPILMAMALIDIR:**
+```tsx
+// ❌ YANLIŞ - Duplicate provider eklemek
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+
+export default function MyScreen() {
+  return (
+    <GestureHandlerRootView>  {/* ❌ DUPLICATE */}
+      <BottomSheetModalProvider>  {/* ❌ DUPLICATE */}
+        <View>...</View>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
+  );
+}
+```
+
+**✅ DOĞRU KULLANIM:**
+```tsx
+// ✅ DOĞRU - Provider'lar zaten _layout.tsx'te var
+export default function MyScreen() {
+  return (
+    <View style={styles.container}>
+      {/* İçerik */}
+
+      {/* Modal'lar direkt buraya */}
+      <MyModal ref={modalRef} />
+    </View>
+  );
+}
+```
+
+**Sorunlar:**
+- Duplicate provider'lar modal gesture'larını bozar
+- Scroll sırasında istenmeyen davranışlara neden olur
+- Modal'ın beklenmedik şekilde kapanmasına sebep olur
+
 ### 🎨 Modal Tasarım Prensibleri
 
 #### 1. **Base Component: CustomBottomSheet**
@@ -175,60 +225,208 @@ const modalRef = useRef<BottomSheetModal>(null);
 </CustomBottomSheet>
 ```
 
-#### 2. **Snap Points (Modal Yüksekliği)**
+#### 2. **Snap Points (Modal Yüksekliği) - KRİTİK**
 
-Modal yükseklikleri içeriğe göre belirlenmelidir:
+Modal yükseklikleri içeriğe göre belirlenmelidir. **ÖNEMLI:** Snap point sayısı modal davranışını doğrudan etkiler!
 
-- **Küçük Form (1-2 input):** `['25%']` veya `['30%']`
-- **Orta Form (2-3 input):** `['32%']` veya `['40%']`
-- **Büyük Form (4+ input):** `['50%', '75%']`
-- **List Modal (Scrollable):** `['50%', '75%', '90%']` + `index={1}` - Başlangıçta %75 (yarı ekrandan fazla), küçültülebilir/genişletilebilir
-- **Full Screen Search Modal:** `['90%']` + `enableDynamicSizing={false}` - Direkt %90'da açılır
-- **Success State:** `['25%']`
-- **Dynamic Sizing:** `enableDynamicSizing={true}` için snap points gerekmez
+##### **Tek Snap Point (Sabit Modal - ÖNERİLEN)**
 
-**Best Practice:**
+✅ **Kullanım Senaryoları:**
+- Form modal'ları (Adres, Yetkili, vb.)
+- Searchable select modal'lar
+- Scroll içeriği olan modal'lar
+
+✅ **Avantajları:**
+- Modal sabit yükseklikte kalır
+- Yukarı/aşağı sürüklenemez
+- Scroll yaparken kazara kapanmaz
+- Daha kontrollü kullanıcı deneyimi
+
 ```tsx
-// Form ve success state için farklı snap points
-const snapPoints = isSent ? ['25%'] : ['32%'];
+// ✅ DOĞRU - Tek snap point (sabit yükseklik)
+const snapPoints = useMemo(() => ['85%'], []);
 
-<CustomBottomSheet
+<BottomSheetModal
   ref={bottomSheetRef}
+  index={0}
   snapPoints={snapPoints}
+  enablePanDownToClose={true}           // Handle'dan aşağı sürükle = Kapat
+  enableContentPanningGesture={false}   // İçerik scroll eder, modal hareket etmez
+  enableDynamicSizing={false}
+  animateOnMount={true}
 />
+```
 
-// List modal için multiple snap points + initial index
+##### **Çoklu Snap Point (Ayarlanabilir Modal)**
+
+⚠️ **Kullanım Senaryoları:**
+- Liste modal'ları (sadece liste görünümü için)
+- Kullanıcının modal boyutunu değiştirmesini istediğiniz durumlar
+
+⚠️ **Dikkat Edilmesi Gerekenler:**
+- Scroll içeriği olan form'larda kullanılmamalı
+- Scroll yaparken modal istemeden snap point'ler arasında hareket edebilir
+- Kazara kapanma riski yüksek
+
+```tsx
+// ⚠️ SADECE LİSTE MODAL'LARI İÇİN
 const snapPoints = useMemo(() => ['50%', '75%', '90%'], []);
 
 <BottomSheetModal
   ref={bottomSheetRef}
-  index={1}              // Başlangıçta 75%'te aç (index 1)
+  index={1}                           // Başlangıçta index 1 (%75)
   snapPoints={snapPoints}
+  enablePanDownToClose={true}
   animateOnMount={true}
 />
+```
 
-// Full screen searchable modal için tek snap point
+##### **Snap Point Yükseklikleri**
+
+- **Success State:** `['30%']` - Başarı mesajı için
+- **Küçük Form (1-2 input):** `['40%']` - Tek snap point
+- **Orta Form (3-5 input):** `['60%']` - Tek snap point
+- **Büyük Form (6+ input, scroll):** `['85%']` - Tek snap point (ÖNERİLEN)
+- **Full Screen Modal:** `['90%']` - Searchable select için
+- **Liste Modal (adjustable):** `['50%', '75%', '90%']` + `index={1}`
+
+**❌ YAPILMAMALIDIR:**
+```tsx
+// ❌ YANLIŞ - Form modal'ında çift snap point
+const snapPoints = useMemo(() => ['75%', '90%'], []);  // İki yükseklik = Sürüklenebilir
+// Bu, scroll yaparken modal'ın istemeden hareket etmesine neden olur!
+```
+
+**✅ DOĞRU KULLANIM:**
+```tsx
+// ✅ DOĞRU - Form modal'ında tek snap point
+const snapPoints = useMemo(() => ['85%'], []);  // Tek yükseklik = Sabit
+
+// Success state için farklı snap point
+const snapPoints = useMemo(() => (isSuccess ? ['30%'] : ['85%']), [isSuccess]);
+```
+
+##### **Gesture Props - KRİTİK AYARLAR**
+
+Bottom sheet gesture davranışını kontrol eden props:
+
+**1. `enablePanDownToClose`**
+- **Varsayılan:** `false`
+- **Önerilen:** `true`
+- **İşlevi:** Handle'dan aşağı sürükleyerek modal'ı kapatma
+- **Kullanım:** Tüm modal'larda `true` olmalı
+
+```tsx
+enablePanDownToClose={true}  // ✅ Handle'dan aşağı sürükle = Modal kapanır
+```
+
+**2. `enableContentPanningGesture`**
+- **Varsayılan:** `true`
+- **Önerilen:** `false` (scroll içeriği olan modal'lar için)
+- **İşlevi:** İçerik scroll ederken modal'ın hareket edip etmemesi
+- **Kullanım:** Form ve liste modal'larında `false` olmalı
+
+```tsx
+enableContentPanningGesture={false}  // ✅ Scroll yaparken modal hareket etmez
+```
+
+⚠️ **SORUN:** `enableContentPanningGesture={true}` olduğunda:
+- Scroll yaparken modal istemeden hareket eder
+- Kullanıcı scroll yaparken kazara modal'ı kapatabilir
+- Çift snap point varsa snap point'ler arasında istenmeyen geçişler olur
+
+**3. `enableHandlePanningGesture`**
+- **Varsayılan:** `true`
+- **Önerilen:** Tanımlanmasın (default değer kullanılsın)
+- **İşlevi:** Handle'dan sürükleme gesture'ı
+- **Kullanım:** Tek snap point'li modal'larda tanımlanmamalı
+
+```tsx
+// ✅ DOĞRU - enableHandlePanningGesture tanımlanmamış (default: true)
+<BottomSheetModal
+  enablePanDownToClose={true}
+  enableContentPanningGesture={false}
+  // enableHandlePanningGesture tanımlanmadı
+/>
+```
+
+⚠️ **UYARI:** `enableHandlePanningGesture={false}` olursa:
+- Handle'dan modal AŞAĞI sürüklenemez
+- `enablePanDownToClose={true}` bile olsa kapatılamaz
+- Sadece backdrop'a tıklayarak kapatılabilir
+
+**4. `enableDynamicSizing`**
+- **Varsayılan:** `false`
+- **Önerilen:** `false` (sabit snap point'ler için)
+- **İşlevi:** Modal'ın içeriğe göre boyutlanması
+- **Kullanım:** Sabit snap point kullanıyorsak `false` olmalı
+
+```tsx
+enableDynamicSizing={false}  // ✅ Sabit snap point kullan
+```
+
+##### **Tam Yapılandırma Örnekleri**
+
+**Form Modal (Sabit, Scroll İçerikli):**
+```tsx
+const snapPoints = useMemo(() => ['85%'], []);
+
+<BottomSheetModal
+  ref={bottomSheetRef}
+  index={0}
+  snapPoints={snapPoints}
+  enablePanDownToClose={true}           // ✅ Handle'dan kapat
+  enableContentPanningGesture={false}   // ✅ Scroll yaparken hareket etme
+  enableDynamicSizing={false}           // ✅ Sabit yükseklik
+  animateOnMount={true}
+  animationConfigs={animationConfigs}
+  backdropComponent={renderBackdrop}
+  backgroundStyle={styles.background}
+  handleIndicatorStyle={styles.handleIndicator}
+  keyboardBehavior="interactive"
+  keyboardBlurBehavior="restore"
+  android_keyboardInputMode="adjustResize"
+  onDismiss={handleDismiss}
+>
+  <BottomSheetScrollView>
+    {/* Form içeriği */}
+  </BottomSheetScrollView>
+</BottomSheetModal>
+```
+
+**Searchable Select Modal (Full Screen):**
+```tsx
 const snapPoints = useMemo(() => ['90%'], []);
 
 <BottomSheetModal
   ref={bottomSheetRef}
   index={0}
   snapPoints={snapPoints}
-  enableDynamicSizing={false}  // İçeriğe göre boyutlanmasın
-  enablePanDownToClose={true}  // Tepedeki çizgiden sürükleyerek kapat
-  enableContentPanningGesture={false}  // Liste scroll ederken kapanma
+  enablePanDownToClose={true}           // ✅ Handle'dan kapat
+  enableContentPanningGesture={false}   // ✅ Liste scroll ederken hareket etme
+  enableDynamicSizing={false}           // ✅ Sabit %90
   animateOnMount={true}
-/>
+  animationConfigs={animationConfigs}
+  backdropComponent={renderBackdrop}
+  keyboardBehavior="interactive"
+  keyboardBlurBehavior="restore"
+  android_keyboardInputMode="adjustResize"
+>
+  <BottomSheetFlatList
+    data={options}
+    renderItem={renderItem}
+  />
+</BottomSheetModal>
 ```
 
 **Context7 Best Practices:**
+- ✅ **Tek snap point kullanın** - Form ve scroll içeriği için
+- ✅ **`enableContentPanningGesture={false}`** - Scroll sırasında istenmeyen hareket engellenir
+- ✅ **`enablePanDownToClose={true}`** - Handle'dan kapatma her zaman aktif
+- ❌ **`enableHandlePanningGesture={false}` kullanmayın** - Handle'dan kapatma çalışmaz
 - ⚠️ **`index` prop'u kritik!** Modal açıldığında hangi snap point'e gideceğini belirler
-- Default `index={0}` (ilk snap point) genelde çok küçük olur
-- Liste modalları için `index={1}` (orta snap point) önerilir
-- Snap points sıralı olmalı (küçükten büyüğe: 50% → 75% → 90%)
-- Scrollable içerik için 3 snap point ideal (küçük-orta-büyük)
-- `animateOnMount={true}` ile smooth açılış animasyonu
-- `enableDynamicSizing={false}` sabit snap point için zorunlu
+- ✅ **`animateOnMount={true}`** - Smooth açılış animasyonu
+- ✅ **`enableDynamicSizing={false}`** - Sabit snap point için zorunlu
 
 #### 3. **Modal Ref Pattern**
 
@@ -437,15 +635,111 @@ export default function LoginScreen() {
 }
 ```
 
+### 🔧 Sorun Giderme (Troubleshooting)
+
+#### **Sorun 1: Modal scroll yaparken kapanıyor veya hareket ediyor**
+
+**Neden:**
+- `enableContentPanningGesture={true}` (default)
+- Çift snap point kullanımı
+
+**Çözüm:**
+```tsx
+// ✅ Bu değişiklikleri yap
+const snapPoints = useMemo(() => ['85%'], []);  // Tek snap point
+
+<BottomSheetModal
+  snapPoints={snapPoints}
+  enableContentPanningGesture={false}  // EKLE
+/>
+```
+
+#### **Sorun 2: Handle'dan modal aşağı sürüklenemiyor**
+
+**Neden:**
+- `enableHandlePanningGesture={false}` yanlışlıkla eklenmiş
+
+**Çözüm:**
+```tsx
+// ✅ Bu prop'u KALDIR
+<BottomSheetModal
+  enablePanDownToClose={true}
+  // enableHandlePanningGesture={false}  ← BUNU SİL
+/>
+```
+
+#### **Sorun 3: Modal açıldığında çok küçük açılıyor**
+
+**Neden:**
+- `index={0}` ve ilk snap point çok küçük
+- Örnek: `snapPoints={['30%', '90%']}` + `index={0}` → %30'da açılır
+
+**Çözüm:**
+```tsx
+// ✅ Seçenek 1: index değiştir
+<BottomSheetModal
+  index={1}  // İkinci snap point'e aç
+  snapPoints={['30%', '90%']}
+/>
+
+// ✅ Seçenek 2: Tek snap point kullan (ÖNERİLEN)
+const snapPoints = useMemo(() => ['85%'], []);
+<BottomSheetModal
+  index={0}
+  snapPoints={snapPoints}
+/>
+```
+
+#### **Sorun 4: Duplicate provider hatası veya modal garip davranıyor**
+
+**Neden:**
+- `GestureHandlerRootView` ve `BottomSheetModalProvider` sayfa içinde tekrar kullanılmış
+- Bu provider'lar zaten `app/_layout.tsx`'te tanımlı
+
+**Çözüm:**
+```tsx
+// ❌ BUNLARI SİL
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+
+export default function MyScreen() {
+  return (
+    // ❌ BUNLARI SİL
+    // <GestureHandlerRootView>
+    //   <BottomSheetModalProvider>
+          <View style={styles.container}>
+            {/* İçerik */}
+            <MyModal ref={modalRef} />
+          </View>
+    //   </BottomSheetModalProvider>
+    // </GestureHandlerRootView>
+  );
+}
+```
+
+#### **Sorun 5: Modal çok yukarı/aşağı hareket ediyor (snap point'ler arası)**
+
+**Neden:**
+- Birden fazla snap point kullanımı
+- Örnek: `['75%', '90%']` → Kullanıcı modal'ı yukarı/aşağı çekebiliyor
+
+**Çözüm:**
+```tsx
+// ✅ Tek snap point kullan
+const snapPoints = useMemo(() => ['85%'], []);  // Sadece bir yükseklik
+```
+
 ### ⚠️ Önemli Notlar
 
-1. **Root Provider:** Bottom sheet kullanılan tüm sayfalarda `GestureHandlerRootView` ve `BottomSheetModalProvider` wrapper'ları gereklidir
-2. **Snap Points:** Modal içeriği değiştiğinde (form → success) snap points'i de güncelle
+1. **Root Provider:** `GestureHandlerRootView` ve `BottomSheetModalProvider` **ZATEN `app/_layout.tsx`'TE VAR** - Sayfalara EKLEME!
+2. **Snap Points:** Form modal'ları için **TEK snap point** kullan - Çift snap point scroll sorunlarına neden olur
 3. **Keyboard Handling:** Input içeren modallerde keyboard otomatik handle edilir
 4. **State Cleanup:** Modal kapanırken state'i temizlemeyi unutma
 5. **Loading State:** Butonlarda loading state göster ve disabled yap
 6. **Validation:** Form validation error'ları Input component'inin `error` prop'u ile göster
 7. **Animation:** CustomBottomSheet spring animation kullanır, özel animation gerekmez
+8. **Gesture Props:** `enableContentPanningGesture={false}` ZORUNLU - Scroll sorunlarını önler
+9. **Handle Panning:** `enableHandlePanningGesture` prop'unu KULLANMA - Default değer yeterli
 
 ### 📦 Full Screen Searchable Select Modal Standardı (SearchableSelect)
 
@@ -703,6 +997,45 @@ Bu modal:
 - ✅ State cleanup on dismiss
 - ✅ Proper ref exposure
 
+#### Scroll Form Modal Örnekleri (GÜNCEL)
+`@/components/contact/AddressFormSheet.tsx`
+`@/components/contact/AuthorityFormSheet.tsx`
+
+Bu modal'lar:
+- ✅ **Tek snap point** (`['85%']`) - Sabit yükseklik
+- ✅ **`enableContentPanningGesture={false}`** - Scroll sorunlarını önler
+- ✅ **`enablePanDownToClose={true}`** - Handle'dan kapatma
+- ✅ `BottomSheetScrollView` ile scroll içerik
+- ✅ Success state için farklı snap point (`['30%']`)
+- ✅ Form validation ve error handling
+- ✅ State cleanup on dismiss
+
+**Kritik Özellikler:**
+```tsx
+// Tek snap point - modal sabit kalır
+const snapPoints = useMemo(() => (isSuccess ? ['30%'] : ['85%']), [isSuccess]);
+
+<BottomSheetModal
+  index={0}
+  snapPoints={snapPoints}
+  enablePanDownToClose={true}
+  enableContentPanningGesture={false}  // ← KRİTİK
+  enableDynamicSizing={false}
+  // enableHandlePanningGesture TANIMLANMAMIŞ (default: true)
+/>
+```
+
+#### Searchable Select Modal Örneği (GÜNCEL)
+`@/components/modals/SearchableSelectModal.tsx`
+
+Bu modal:
+- ✅ **Tek snap point** (`['90%']`) - Full screen
+- ✅ **`enableContentPanningGesture={false}`** - Liste scroll ederken modal hareket etmez
+- ✅ `BottomSheetFlatList` ile scrollable options
+- ✅ Arama fonksiyonu
+- ✅ Empty state handling
+- ✅ `BottomSheetTextInput` kullanımı
+
 #### List Modal Örneği
 `@/components/modals/LoadPickerModal.tsx`
 
@@ -714,15 +1047,88 @@ Bu modal:
 - ✅ Empty state handling
 - ✅ Modal açık kalma pattern
 
-#### Kullanım Örneği (Disposition)
-`@/app/imports/disposition/index.tsx` ve `@/app/exports/disposition/index.tsx`
+#### Kullanım Örneği (Fatura Sayfası)
+`@/app/finance/invoices/new.tsx`
 
-Bu sayfalar:
-- ✅ GestureHandlerRootView + BottomSheetModalProvider wrapper
-- ✅ LoadPickerModal entegrasyonu
-- ✅ Multiple load selection
-- ✅ Real-time data refresh
-- ✅ Error handling
+Bu sayfa:
+- ✅ **PROVIDER YOK** (zaten `_layout.tsx`'te var)
+- ✅ SearchableSelectModal kullanımı
+- ✅ Birden fazla modal yönetimi
+- ✅ Modal ref pattern
+
+```tsx
+export default function NewInvoiceScreen() {
+  const currencyModalRef = useRef<SearchableSelectModalRef>(null);
+  const contactModalRef = useRef<SearchableSelectModalRef>(null);
+
+  return (
+    <View style={styles.container}>  {/* ✅ Provider YOK */}
+      <FullScreenHeader ... />
+      <ScrollView>
+        {/* Form içeriği */}
+      </ScrollView>
+
+      {/* Modal'lar ScrollView DIŞINDA */}
+      <SearchableSelectModal
+        ref={currencyModalRef}
+        title="Para Birimi Seçin"
+        options={currencyOptions}
+        onSelect={handleCurrencySelect}
+      />
+
+      <SearchableSelectModal
+        ref={contactModalRef}
+        title="Cari Seçin"
+        options={contactOptions}
+        onSelect={handleContactSelect}
+      />
+    </View>
+  );
+}
+```
+
+#### Kullanım Örneği (Cari Detay)
+`@/app/contact/[id].tsx`
+
+Bu sayfa:
+- ✅ **PROVIDER YOK** (duplicate provider hatası çözüldü)
+- ✅ AddressFormSheet ve AuthorityFormSheet kullanımı
+- ✅ Modal'lar ana View içinde, ScrollView dışında
+
+```tsx
+export default function ContactDetailScreen() {
+  const addressSheetRef = useRef<AddressFormSheetRef>(null);
+  const authoritySheetRef = useRef<AuthorityFormSheetRef>(null);
+
+  return (
+    <View style={styles.container}>  {/* ✅ Provider YOK */}
+      <FullScreenHeader ... />
+      <ScrollView>
+        {/* Sayfa içeriği */}
+      </ScrollView>
+
+      {/* Modal'lar ScrollView DIŞINDA */}
+      {contact && (
+        <AddressFormSheet
+          ref={addressSheetRef}
+          contactId={contact.id}
+          address={editingAddress}
+          onSuccess={handleAddressSuccess}
+        />
+      )}
+
+      {contact && (
+        <AuthorityFormSheet
+          ref={authoritySheetRef}
+          contactId={contact.id}
+          authority={editingAuthority}
+          onSuccess={handleAuthoritySuccess}
+        />
+      )}
+    </View>
+  );
+}
+```
 
 tüm best practice'leri içerir.
 
@@ -1658,10 +2064,24 @@ paginationArrowDisabled: {
 
 ### 🔄 Changelog
 
+#### 2026-01-27 - Bottom Sheet Modal Standardı - KRİTİK GÜNCELLEME
+- **KRİTİK:** Provider kullanımı net açıklandı - `app/_layout.tsx`'te zaten tanımlı
+- **KRİTİK:** Duplicate provider sorunları ve çözümleri eklendi
+- **KRİTİK:** Snap points detaylı açıklandı - Tek vs çoklu snap point kullanımı
+- **KRİTİK:** `enableContentPanningGesture={false}` zorunlu hale getirildi
+- **KRİTİK:** `enableHandlePanningGesture` kullanımı netleştirildi - Default değer yeterli
+- Yeni: Sorun giderme (Troubleshooting) bölümü eklendi
+- Yeni: 5 yaygın modal sorunu ve çözümleri
+- Güncelleme: AddressFormSheet ve AuthorityFormSheet referans olarak eklendi
+- Güncelleme: SearchableSelectModal güncel props ile güncellendi
+- Güncelleme: Fatura ve Cari detay sayfaları örnek olarak eklendi
+- Düzeltme: Tüm modal örnekleri tek snap point kullanımı ile güncellendi
+
 #### 2026-01-27 - Sayfa Güncellemeleri
 - Güncelleme: `bank/index.tsx` - Carousel yapısına geçirildi
 - Güncelleme: `check/index.tsx` - Özet kart eklendi
 - Güncelleme: `promissory-note/index.tsx` - Özet kart eklendi
+- Düzeltme: `contact/[id].tsx` - Modal sorunları çözüldü (duplicate provider, snap points)
 
 #### 2026-01-27 - Çoklu Para Birimi Carousel Standardı
 - Yeni: Birden fazla döviz cinsi için yatay kaydırılabilir carousel yapısı
