@@ -293,7 +293,11 @@ export function formatSalaryRange(
     return `${formatter.format(min)}+`;
   }
 
-  return `${formatter.format(max)}'e kadar`;
+  if (max) {
+    return `${formatter.format(max)}'e kadar`;
+  }
+
+  return '-';
 }
 
 /**

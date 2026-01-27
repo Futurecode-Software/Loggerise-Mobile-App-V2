@@ -290,7 +290,7 @@ export default function ContactDetailScreen() {
       case 'public':
         return 'Tüzel';
       default:
-        return legalType;
+        return legalType || '';
     }
   };
 

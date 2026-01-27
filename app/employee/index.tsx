@@ -296,7 +296,7 @@ export default function EmployeesScreen() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           searchPlaceholder="İsim, e-posta veya telefon ile ara..."
-          isLoading={isLoading}
+          loading={isLoading}
           refreshing={refreshing}
           onRefresh={onRefresh}
           onLoadMore={loadMore}

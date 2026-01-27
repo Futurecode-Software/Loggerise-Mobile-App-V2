@@ -173,7 +173,7 @@ async function setupAndroidChannel() {
 
   await notificationsModule.setNotificationChannelAsync('default', {
     name: 'Varsayilan',
-    importance: Notifications.AndroidImportance.MAX,
+    importance: notificationsModule.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#13452d',
     sound: 'default',
@@ -183,7 +183,7 @@ async function setupAndroidChannel() {
   await notificationsModule.setNotificationChannelAsync('messages', {
     name: 'Mesajlar',
     description: 'Yeni mesaj bildirimleri',
-    importance: Notifications.AndroidImportance.HIGH,
+    importance: notificationsModule.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#13452d',
     sound: 'default',
@@ -193,7 +193,7 @@ async function setupAndroidChannel() {
   await notificationsModule.setNotificationChannelAsync('alerts', {
     name: 'Uyarilar',
     description: 'Onemli uyarilar ve hatirlatmalar',
-    importance: Notifications.AndroidImportance.HIGH,
+    importance: notificationsModule.AndroidImportance.HIGH,
     vibrationPattern: [0, 500, 500, 500],
     lightColor: '#ef4444',
     sound: 'default',
@@ -203,7 +203,7 @@ async function setupAndroidChannel() {
   await notificationsModule.setNotificationChannelAsync('updates', {
     name: 'Guncellemeler',
     description: 'Sistem ve siparis guncellemeleri',
-    importance: Notifications.AndroidImportance.DEFAULT,
+    importance: notificationsModule.AndroidImportance.DEFAULT,
     sound: 'default',
   });
 }

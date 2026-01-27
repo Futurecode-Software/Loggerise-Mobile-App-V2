@@ -137,17 +137,18 @@ export const getCurrencySymbol = (currency: string): string => {
  * Formats date in Turkish locale
  *
  * @param date - Tarih (Date, string, veya number)
- * @param options - Intl.DateTimeFormatOptions (opsiyonel)
+ * @param formatOrOptions - Format pattern string veya Intl.DateTimeFormatOptions
  * @returns Formatlanmış tarih string veya '-' (undefined/null ise)
  *
  * @example
  * formatDate(new Date()) // "23.01.2026"
- * formatDate('2026-01-23') // "23.01.2026"
+ * formatDate('2026-01-23', 'dd.MM.yyyy') // "23.01.2026"
+ * formatDate(new Date(), { day: '2-digit', month: 'short' }) // "23 Oca"
  * formatDate(undefined) // "-"
  */
 export const formatDate = (
   date?: Date | string | number | null,
-  options?: Intl.DateTimeFormatOptions
+  formatOrOptions?: string | Intl.DateTimeFormatOptions
 ): string => {
   if (!date) {
     return '-';
@@ -162,7 +163,27 @@ export const formatDate = (
       return '-';
     }
 
-    return dateObj.toLocaleDateString('tr-TR', options);
+    // If formatOrOptions is a string, use manual formatting
+    if (typeof formatOrOptions === 'string') {
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+
+      // Handle common patterns
+      return formatOrOptions
+        .replace('yyyy', String(year))
+        .replace('MM', month)
+        .replace('dd', day)
+        .replace('HH', hours)
+        .replace('mm', minutes)
+        .replace('ss', seconds);
+    }
+
+    // Otherwise use Intl.DateTimeFormatOptions
+    return dateObj.toLocaleDateString('tr-TR', formatOrOptions);
   } catch {
     return '-';
   }

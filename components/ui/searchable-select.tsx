@@ -39,10 +39,14 @@ export interface SearchableSelectProps {
   onValueChange: (value: string | number) => void;
   /** Called when an option is selected, provides the full option object */
   onSelect?: (option: SearchableSelectOption | null) => void;
-  loadOptions: (searchQuery: string) => Promise<SearchableSelectOption[]>;
+  /** Static options array - alternative to loadOptions */
+  options?: SearchableSelectOption[];
+  /** Async function to load options - alternative to options array */
+  loadOptions?: (searchQuery: string) => Promise<SearchableSelectOption[]>;
   error?: string;
   required?: boolean;
   disabled?: boolean;
+  loading?: boolean;
   renderOption?: (option: SearchableSelectOption) => React.ReactNode;
 }
 
@@ -53,21 +57,26 @@ export function SearchableSelect({
   selectedOption: selectedOptionProp,
   onValueChange,
   onSelect,
+  options: optionsProp,
   loadOptions,
   error,
   required,
   disabled,
+  loading: loadingProp,
   renderOption,
 }: SearchableSelectProps) {
   const colors = Colors.light;
   const bottomSheetRef = useRef<BottomSheetModal>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [options, setOptions] = useState<SearchableSelectOption[]>([]);
+  const [options, setOptions] = useState<SearchableSelectOption[]>(optionsProp || []);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedOption, setSelectedOption] = useState<SearchableSelectOption | null>(
     selectedOptionProp || null
   );
+
+  // Use external loading state if provided
+  const loading = loadingProp ?? isLoading;
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -134,9 +143,37 @@ export function SearchableSelect({
     };
   }, [searchQuery]);
 
+  // If static options are provided, use them directly
+  useEffect(() => {
+    if (optionsProp) {
+      setOptions(optionsProp);
+      // Update selected option if value matches
+      if (value) {
+        const selected = optionsProp.find((opt) => opt.value === value);
+        if (selected) {
+          setSelectedOption(selected);
+        }
+      }
+    }
+  }, [optionsProp, value]);
+
   // Fetch options from API
   const fetchOptions = useCallback(
     async (query: string) => {
+      // If static options provided, use client-side filtering
+      if (optionsProp) {
+        const filtered = query
+          ? optionsProp.filter((opt) =>
+              opt.label.toLowerCase().includes(query.toLowerCase())
+            )
+          : optionsProp;
+        setOptions(filtered);
+        return;
+      }
+
+      // Otherwise use loadOptions
+      if (!loadOptions) return;
+
       setIsLoading(true);
       try {
         const results = await loadOptions(query);
@@ -156,7 +193,7 @@ export function SearchableSelect({
         setIsLoading(false);
       }
     },
-    [loadOptions, value]
+    [loadOptions, value, optionsProp]
   );
 
   // Handle modal open

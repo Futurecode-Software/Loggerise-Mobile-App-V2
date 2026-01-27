@@ -3,7 +3,7 @@ import Toast from 'react-native-toast-message';
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 interface ToastOptions {
-  duration?: number;
+  visibilityTime?: number;
   position?: 'top' | 'bottom';
 }
 
@@ -13,7 +13,7 @@ export function useToast() {
       type,
       text1: title,
       text2: message,
-      duration: options?.duration ?? 3000,
+      visibilityTime: options?.visibilityTime ?? 3000,
       position: options?.position ?? 'top',
     });
   };

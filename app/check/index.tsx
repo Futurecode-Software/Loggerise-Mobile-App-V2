@@ -220,13 +220,16 @@ export default function ChecksScreen() {
 
   // Calculate totals
   const getTotals = () => {
-    const totalAmount = checks.reduce((acc, check) => acc + check.amount, 0);
+    const totalAmount = checks.reduce(
+      (acc, check) => acc + (parseFloat(String(check.amount)) || 0), 
+      0
+    );
     const pendingAmount = checks
       .filter(c => c.status === 'pending')
-      .reduce((acc, check) => acc + check.amount, 0);
+      .reduce((acc, check) => acc + (parseFloat(String(check.amount)) || 0), 0);
     const clearedAmount = checks
       .filter(c => c.status === 'cleared')
-      .reduce((acc, check) => acc + check.amount, 0);
+      .reduce((acc, check) => acc + (parseFloat(String(check.amount)) || 0), 0);
     return { totalAmount, pendingAmount, clearedAmount };
   };
 
@@ -321,7 +324,7 @@ export default function ChecksScreen() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchPlaceholder="Çek numarası, banka ara..."
-        isLoading={isLoading}
+        loading={isLoading}
         isLoadingMore={isLoadingMore}
         refreshing={refreshing}
         onRefresh={onRefresh}

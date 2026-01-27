@@ -394,7 +394,7 @@ export default function EditPromissoryNoteScreen() {
           <DateInput
             label="Düzenleme Tarihi"
             value={formData.issue_date}
-            onDateChange={(value) => handleInputChange('issue_date', value)}
+            onChangeDate={(value) => handleInputChange('issue_date', value)}
             error={errors.issue_date}
             required
           />
@@ -402,7 +402,7 @@ export default function EditPromissoryNoteScreen() {
           <DateInput
             label="Vade Tarihi"
             value={formData.due_date}
-            onDateChange={(value) => handleInputChange('due_date', value)}
+            onChangeDate={(value) => handleInputChange('due_date', value)}
             error={errors.due_date}
             required
           />

@@ -198,7 +198,7 @@ export default function NewContactScreen() {
   useEffect(() => {
     if (formData.tax_number && formData.tax_number.length >= 10 && isTurkish && formData.tax_number !== FOREIGN_DEFAULT_TAX_NUMBER) {
       const timeoutId = setTimeout(() => {
-        queryEfaturaUser(formData.tax_number);
+        queryEfaturaUser(formData.tax_number!);
       }, 800);
 
       return () => clearTimeout(timeoutId);

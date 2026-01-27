@@ -219,13 +219,16 @@ export default function PromissoryNotesScreen() {
 
   // Calculate totals
   const getTotals = () => {
-    const totalAmount = promissoryNotes.reduce((acc, note) => acc + note.amount, 0);
+    const totalAmount = promissoryNotes.reduce(
+      (acc, note) => acc + (parseFloat(String(note.amount)) || 0), 
+      0
+    );
     const pendingAmount = promissoryNotes
       .filter(n => n.status === 'pending')
-      .reduce((acc, note) => acc + note.amount, 0);
+      .reduce((acc, note) => acc + (parseFloat(String(note.amount)) || 0), 0);
     const clearedAmount = promissoryNotes
       .filter(n => n.status === 'cleared')
-      .reduce((acc, note) => acc + note.amount, 0);
+      .reduce((acc, note) => acc + (parseFloat(String(note.amount)) || 0), 0);
     return { totalAmount, pendingAmount, clearedAmount };
   };
 
@@ -320,7 +323,7 @@ export default function PromissoryNotesScreen() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchPlaceholder="Senet numarası, banka ara..."
-        isLoading={isLoading}
+        loading={isLoading}
         isLoadingMore={isLoadingMore}
         refreshing={refreshing}
         onRefresh={onRefresh}

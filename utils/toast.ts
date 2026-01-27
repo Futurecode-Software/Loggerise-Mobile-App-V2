@@ -8,14 +8,14 @@ import Toast from 'react-native-toast-message';
 interface ToastOptions {
   type: 'success' | 'error' | 'info';
   message: string;
-  duration?: number;
+  visibilityTime?: number;
 }
 
-export function showToast({ type, message, duration = 3000 }: ToastOptions) {
+export function showToast({ type, message, visibilityTime = 3000 }: ToastOptions) {
   Toast.show({
     type,
     text1: message,
-    duration,
+    visibilityTime,
     position: 'top',
   });
 }
@@ -25,7 +25,7 @@ export function showError(title: string, message: string) {
     type: 'error',
     text1: title,
     text2: message,
-    duration: 4000,
+    visibilityTime: 4000,
     position: 'top',
   });
 }
@@ -35,7 +35,7 @@ export function showSuccess(title: string, message?: string) {
     type: 'success',
     text1: title,
     text2: message,
-    duration: 3000,
+    visibilityTime: 3000,
     position: 'top',
   });
 }

@@ -266,7 +266,7 @@ export default function JobApplicationsScreen() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           searchPlaceholder="Ad, e-posta, telefon ara..."
-          isLoading={isLoading}
+          loading={isLoading}
           isLoadingMore={isLoadingMore}
           refreshing={refreshing}
           onRefresh={onRefresh}

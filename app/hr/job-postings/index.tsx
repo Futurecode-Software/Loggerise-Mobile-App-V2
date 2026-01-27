@@ -300,7 +300,7 @@ export default function JobPostingsScreen() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           searchPlaceholder="İlan başlığı, pozisyon ara..."
-          isLoading={isLoading}
+          loading={isLoading}
           isLoadingMore={isLoadingMore}
           refreshing={refreshing}
           onRefresh={onRefresh}

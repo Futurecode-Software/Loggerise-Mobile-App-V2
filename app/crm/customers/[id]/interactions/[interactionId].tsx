@@ -209,7 +209,7 @@ export default function InteractionDetailScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Görüşme Detayı" onBack={() => router.back()} />
+        <FullScreenHeader title="Görüşme Detayı" onBackPress={() => router.back()} />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
@@ -224,7 +224,7 @@ export default function InteractionDetailScreen() {
   if (error) {
     return (
       <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Görüşme Detayı" onBack={() => router.back()} />
+        <FullScreenHeader title="Görüşme Detayı" onBackPress={() => router.back()} />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
             <AlertCircle size={64} color={colors.danger} />
@@ -247,22 +247,17 @@ export default function InteractionDetailScreen() {
       {/* Header */}
       <FullScreenHeader
         title="Görüşme Detayı"
-        onBack={() => router.back()}
+        onBackPress={() => router.back()}
         rightIcons={
-          isEditing
-            ? [
-                {
-                  icon: <Save size={20} color="#FFFFFF" />,
-                  onPress: handleUpdate,
-                  disabled: isSubmitting,
-                },
-              ]
-            : [
-                {
-                  icon: <Trash2 size={20} color="#FFFFFF" />,
-                  onPress: handleDelete,
-                },
-              ]
+          isEditing ? (
+            <TouchableOpacity onPress={handleUpdate} disabled={isSubmitting}>
+              <Save size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={handleDelete}>
+              <Trash2 size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          )
         }
       />
 

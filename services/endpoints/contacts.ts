@@ -85,6 +85,7 @@ export interface ContactAddress {
   contact_id: number;
   title: string;
   address_type: 'billing' | 'shipping' | 'both';
+  address?: string; // Full address string
   address_line_1?: string;
   address_line_2?: string;
   country?: { id: number; name: string };
@@ -95,6 +96,9 @@ export interface ContactAddress {
   email?: string;
   is_default: boolean;
   is_active: boolean;
+  is_billing?: boolean;
+  is_shipping?: boolean;
+  is_main?: boolean;
 }
 
 /**

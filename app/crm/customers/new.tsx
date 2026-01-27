@@ -28,10 +28,7 @@ import {
   searchTaxOffices,
   TURKEY_ID,
   FOREIGN_DEFAULT_TAX_NUMBER,
-  Country,
-  State,
-  City,
-  TaxOffice,
+  LocationOption,
 } from '@/services/endpoints/locations';
 
 export default function NewCrmCustomerScreen() {
@@ -61,7 +58,7 @@ export default function NewCrmCustomerScreen() {
   const [countries, setCountries] = useState<Country[]>([]);
   const [states, setStates] = useState<State[]>([]);
   const [cities, setCities] = useState<City[]>([]);
-  const [taxOffices, setTaxOffices] = useState<TaxOffice[]>([]);
+  const [taxOffices, setTaxOffices] = useState<LocationOption[]>([]);
 
   // Loading states
   const [loadingCountries, setLoadingCountries] = useState(false);
@@ -362,10 +359,7 @@ export default function NewCrmCustomerScreen() {
             {isTurkish && (
               <Select
                 label="Vergi Dairesi"
-                data={taxOffices.map((office) => ({
-                  label: office.name,
-                  value: office.id.toString(),
-                }))}
+                data={taxOffices}
                 value={formData.tax_office_id?.toString()}
                 onValueChange={(value) =>
                   setFormData({ ...formData, tax_office_id: value ? Number(value) : undefined })
@@ -374,10 +368,7 @@ export default function NewCrmCustomerScreen() {
                 loading={loadingTaxOffices}
                 onSearch={async (query) => {
                   const results = await searchTaxOffices(query);
-                  return results.map((office) => ({
-                    label: office.name,
-                    value: office.id.toString(),
-                  }));
+                  return results;
                 }}
               />
             )}

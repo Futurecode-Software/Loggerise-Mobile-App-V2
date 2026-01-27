@@ -12,6 +12,7 @@
  */
 
 import * as Google from 'expo-auth-session/providers/google';
+import { AuthSessionResult } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 
@@ -84,7 +85,7 @@ export function getGoogleAuthConfig() {
  */
 export function useGoogleAuthRequest() {
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: GOOGLE_CONFIG.expoClientId,
+    clientId: GOOGLE_CONFIG.expoClientId,
     webClientId: GOOGLE_CONFIG.webClientId,
     androidClientId: GOOGLE_CONFIG.androidClientId,
     iosClientId: GOOGLE_CONFIG.iosClientId,
@@ -98,7 +99,7 @@ export function useGoogleAuthRequest() {
  * Extract tokens from Google auth response
  */
 export function extractTokensFromResponse(
-  response: Google.GoogleAuthSessionResult | null
+  response: AuthSessionResult | null
 ): GoogleSignInResult | null {
   if (!response) return null;
 
@@ -122,7 +123,7 @@ export function extractTokensFromResponse(
  * Check if response indicates user cancelled
  */
 export function isUserCancellation(
-  response: Google.GoogleAuthSessionResult | null
+  response: AuthSessionResult | null
 ): boolean {
   return response?.type === 'cancel' || response?.type === 'dismiss';
 }
@@ -131,7 +132,7 @@ export function isUserCancellation(
  * Get error message from response
  */
 export function getErrorFromResponse(
-  response: Google.GoogleAuthSessionResult | null
+  response: AuthSessionResult | null
 ): GoogleSignInError | null {
   if (!response) return null;
 

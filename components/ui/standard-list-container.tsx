@@ -32,6 +32,10 @@ export interface StandardListContainerProps<T> {
     onChange: (text: string) => void;
     placeholder?: string;
   };
+  /** Backward compatibility - alternative to search prop */
+  searchQuery?: string;
+  onSearchChange?: (text: string) => void;
+  searchPlaceholder?: string;
   filters?: {
     items: FilterChip[];
     activeId: string;
@@ -62,6 +66,9 @@ export function StandardListContainer<T>({
   renderItem,
   keyExtractor,
   search,
+  searchQuery,
+  onSearchChange,
+  searchPlaceholder,
   filters,
   emptyState,
   loading = false,
@@ -77,6 +84,13 @@ export function StandardListContainer<T>({
   ListFooterComponent,
 }: StandardListContainerProps<T>) {
   const colors = Colors.light;
+
+  // Backward compatibility: convert searchQuery/onSearchChange to search object
+  const searchConfig = search || (searchQuery !== undefined && onSearchChange ? {
+    value: searchQuery,
+    onChange: onSearchChange,
+    placeholder: searchPlaceholder,
+  } : undefined);
 
   const renderEmptyState = () => {
     if (loading) {
@@ -195,12 +209,12 @@ export function StandardListContainer<T>({
   return (
     <View style={styles.container}>
       {/* Search */}
-      {search && (
+      {searchConfig && (
         <View style={styles.searchContainer}>
           <Input
-            placeholder={search.placeholder || 'Ara...'}
-            value={search.value}
-            onChangeText={search.onChange}
+            placeholder={searchConfig.placeholder || 'Ara...'}
+            value={searchConfig.value}
+            onChangeText={searchConfig.onChange}
             leftIcon={<Search size={20} color={colors.icon} />}
             containerStyle={styles.searchInput}
           />

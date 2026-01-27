@@ -23,6 +23,7 @@ interface SelectInputProps {
   placeholder?: string;
   searchable?: boolean;
   disabled?: boolean;
+  required?: boolean;
 }
 
 export function SelectInput({

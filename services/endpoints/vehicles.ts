@@ -120,21 +120,6 @@ export interface Vehicle {
 }
 
 /**
- * Vehicle insurance
- */
-export interface VehicleInsurance {
-  id: number;
-  vehicle_id: number;
-  policy_number: string;
-  insurance_company?: string;
-  insurance_type: string;
-  start_date: string;
-  end_date: string;
-  premium_amount?: number;
-  is_active: boolean;
-}
-
-/**
  * Vehicle maintenance
  */
 export interface VehicleMaintenance {
@@ -145,19 +130,6 @@ export interface VehicleMaintenance {
   km_at_maintenance?: number;
   cost?: number;
   description?: string;
-  is_active: boolean;
-}
-
-/**
- * Vehicle inspection
- */
-export interface VehicleInspection {
-  id: number;
-  vehicle_id: number;
-  inspection_date: string;
-  next_inspection_date?: string;
-  result: 'passed' | 'failed' | 'pending';
-  notes?: string;
   is_active: boolean;
 }
 
@@ -328,6 +300,13 @@ export function getVehicleTypeLabel(type: VehicleType): string {
     van: 'Kamyonet',
     pickup: 'Pikap',
     car: 'Otomobil',
+    minibus: 'Minibüs',
+    bus: 'Otobüs',
+    light_truck: 'Hafif Kamyon',
+    truck_tractor: 'Çekici',
+    tractor: 'Traktör',
+    motorcycle: 'Motosiklet',
+    construction_machine: 'İş Makinesi',
     other: 'Diğer',
   };
   return labels[type] || type;
@@ -340,6 +319,7 @@ export function getStatusLabel(status: VehicleStatus): string {
   const labels: Record<VehicleStatus, string> = {
     available: 'Müsait',
     in_use: 'Kullanımda',
+    in_maintenance: 'Bakımda',
     maintenance: 'Bakımda',
     out_of_service: 'Hizmet Dışı',
   };
@@ -353,6 +333,7 @@ export function getStatusColor(status: VehicleStatus): string {
   const colors: Record<VehicleStatus, string> = {
     available: '#22c55e',
     in_use: '#3b82f6',
+    in_maintenance: '#f5a623',
     maintenance: '#f5a623',
     out_of_service: '#ef4444',
   };

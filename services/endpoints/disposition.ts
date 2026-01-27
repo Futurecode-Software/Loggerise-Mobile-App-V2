@@ -207,8 +207,9 @@ export function calculatePositionCapacity(loads: Load[]): {
   let totalLademetre = 0;
 
   loads.forEach((load) => {
-    if (load.items) {
-      load.items.forEach((item: any) => {
+    const loadWithItems = load as any;
+    if (loadWithItems.items) {
+      loadWithItems.items.forEach((item: any) => {
         totalVolume += item.volume || 0;
         totalWeight += item.gross_weight || 0;
         totalLademetre += item.lademetre || 0;

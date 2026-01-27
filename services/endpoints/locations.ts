@@ -7,6 +7,40 @@
 import api, { getErrorMessage } from '../api';
 
 /**
+ * Constants
+ */
+export const TURKEY_ID = 1;
+export const FOREIGN_DEFAULT_TAX_NUMBER = '0000000000';
+
+/**
+ * Location types
+ */
+export interface Country {
+  id: number;
+  name: string;
+  code: string;
+}
+
+export interface State {
+  id: number;
+  name: string;
+  country_id: number;
+}
+
+export interface City {
+  id: number;
+  name: string;
+  state_id: number;
+}
+
+export interface TaxOffice {
+  id: number;
+  name: string;
+  code: string;
+  city_id: number;
+}
+
+/**
  * Location option for selects
  */
 export interface LocationOption {
@@ -133,5 +167,32 @@ export async function lookupLocation(place: Partial<PlaceDetails>): Promise<Loca
   } catch (error) {
     console.error('Location lookup error:', error);
     return {}; // Silent fail - user can manually select
+  }
+}
+
+/**
+ * Search tax offices by city
+ */
+export async function searchTaxOffices(
+  cityId?: number | string,
+  search?: string
+): Promise<LocationOption[]> {
+  try {
+    const response = await api.get<{ success: boolean; data: TaxOffice[] }>(
+      '/locations/tax-offices',
+      {
+        params: {
+          city_id: cityId,
+          search,
+        },
+      }
+    );
+    return response.data.data.map((item) => ({
+      value: item.id,
+      label: item.name,
+    }));
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
   }
 }

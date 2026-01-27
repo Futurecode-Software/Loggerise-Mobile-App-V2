@@ -187,7 +187,7 @@ export default function CrmScreen() {
       >
         {/* Won Quotes Card */}
         {data?.wonQuotes && (
-          <Card style={[styles.highlightCard, { backgroundColor: Brand.primary }]}>
+          <Card style={[styles.highlightCard, { backgroundColor: Brand.primary } as any]}>
             <View style={styles.highlightHeader}>
               <View style={styles.highlightIcon}>
                 <Target size={24} color="#FFFFFF" />
@@ -369,7 +369,7 @@ export default function CrmScreen() {
 
         {/* Expiring Quotes */}
         {data?.expiringQuotes && data.expiringQuotes.length > 0 && (
-          <Card style={[styles.sectionCard, { borderColor: colors.warning, borderWidth: 1 }]}>
+          <Card style={[styles.sectionCard, { borderColor: colors.warning, borderWidth: 1 } as any]}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <AlertCircle size={18} color={colors.warning} />
