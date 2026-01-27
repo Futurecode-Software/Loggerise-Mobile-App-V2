@@ -43,5 +43,7 @@ export * as checksApi from './endpoints/checks';
 export * as promissoryNotesApi from './endpoints/promissory-notes';
 export * as eventsApi from './endpoints/events';
 export * as reportsApi from './endpoints/reports';
+export * as jobPostingsApi from './endpoints/job-postings';
+export * as jobApplicationsApi from './endpoints/job-applications';
 export * as notifications from './notifications';
 export * as googleAuth from './google-auth';
