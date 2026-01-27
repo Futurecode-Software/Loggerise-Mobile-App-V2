@@ -89,8 +89,8 @@ const MENU_SECTIONS: MenuSection[] = [
       // Finance Management (Finans Yönetimi)
       { id: 'cash', label: 'Kasalar', icon: Wallet, color: '#14b8a6', route: '/cash-register' },
       { id: 'banks', label: 'Bankalar', icon: Building2, color: '#22c55e', route: '/bank' },
-      { id: 'checks', label: 'Çekler', icon: Receipt, color: '#f97316', route: '/finance/checks' },
-      { id: 'notes', label: 'Senetler', icon: ScrollText, color: '#a855f7', route: '/finance/notes' },
+      { id: 'checks', label: 'Çekler', icon: Receipt, color: '#f97316', route: '/check' },
+      { id: 'notes', label: 'Senetler', icon: ScrollText, color: '#a855f7', route: '/promissory-note' },
       { id: 'transactions', label: 'Mali Hareketler', icon: ArrowLeftRight, color: '#6366f1', route: '/transactions' },
       // Contact Management (Cari Yönetimi)
       { id: 'contacts', label: 'Cariler', icon: Users, color: '#f59e0b', route: '/contacts' },

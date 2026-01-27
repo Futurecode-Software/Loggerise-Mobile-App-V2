@@ -87,12 +87,9 @@ export default function WarehouseDetailScreen() {
     try {
       await deleteWarehouse(parseInt(id, 10));
       success('Başarılı', 'Depo silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Depo silinemedi.');
-    } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
     }

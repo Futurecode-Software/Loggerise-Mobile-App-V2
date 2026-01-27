@@ -13,7 +13,7 @@ import {
 import { router } from 'expo-router';
 import { User, Mail, Phone, Check } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
-import { FullScreenHeader } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { useAuth } from '@/context/auth-context';
 import { updateProfile, ProfileUpdateData } from '@/services/endpoints/profile';
 import { useToast } from '@/hooks/use-toast';
@@ -75,7 +75,7 @@ export default function EditProfileScreen() {
       await updateProfile(data);
       await refreshUser();
       success('Başarılı', 'Profil bilgileriniz güncellendi.');
-      setTimeout(() => router.back(), 1000);
+      router.back();
     } catch (error: any) {
       console.error('Profile update error:', error);
       showError('Hata', error.message || 'Profil güncellenirken bir hata oluştu.');

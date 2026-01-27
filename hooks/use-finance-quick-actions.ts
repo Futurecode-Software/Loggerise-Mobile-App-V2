@@ -45,17 +45,17 @@ export const useFinanceQuickActions = (): QuickAction[] => {
         icon: FileText,
         onPress: () => {
           hapticLight();
-          router.push('/checks/new');
+          router.push('/check/new');
         },
         permission: 'checks.create',
       },
       {
         id: 'promissory-note',
         label: 'Senet Ekle',
-        icon: FileText,
+        icon: Banknote,
         onPress: () => {
           hapticLight();
-          router.push('/promissory-notes/new');
+          router.push('/promissory-note/new');
         },
         permission: 'promissory_notes.create',
       },

@@ -17,7 +17,8 @@ import {
 
 import { router } from 'expo-router';
 import { Save } from 'lucide-react-native';
-import { Input, Card, Checkbox, FullScreenHeader } from '@/components/ui';
+import { Input, Card, Checkbox } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import { createProductModel, ModelFormData } from '@/services/endpoints/products';

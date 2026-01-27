@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
-import { Filter, Plus, Wallet, User, Layers, DollarSign, Euro, PoundSterling } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { Filter, Plus, Landmark, Copy, Check, Layers, DollarSign, Euro, PoundSterling } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+// useColorScheme kaldirildi - her zaman light mode kullanilir
 import {
-  getCashRegisters,
-  CashRegister,
-  CashRegisterFilters,
+  getBanks,
+  Bank,
+  BankFilters,
   Pagination,
   CurrencyType,
   formatBalance,
-} from '@/services/endpoints/cash-registers';
+  getCurrencySymbol,
+} from '@/services/endpoints/banks';
 
 const CURRENCY_FILTERS = [
   { id: 'all', label: 'Tümü', icon: Layers },
@@ -22,14 +24,16 @@ const CURRENCY_FILTERS = [
   { id: 'GBP', label: 'GBP', icon: PoundSterling },
 ];
 
-export default function CashRegistersScreen() {
+export default function BankAccountsScreen() {
+  // Her zaman light mode kullanilir
   const colors = Colors.light;
 
   const [refreshing, setRefreshing] = useState(false);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState('all');
 
   // API state
-  const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -48,32 +52,34 @@ export default function CashRegistersScreen() {
       try {
         setError(null);
 
-        const filters: CashRegisterFilters = {
+        // Build filters
+        const filters: BankFilters = {
           page,
           per_page: 20,
           is_active: true,
         };
 
+        // Add currency filter
         if (filter !== 'all') {
           filters.currency_type = filter as CurrencyType;
         }
 
-        const response = await getCashRegisters(filters);
+        const response = await getBanks(filters);
 
         // Only update if this is still the latest request
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
           if (append) {
-            setCashRegisters((prev) => [...prev, ...response.cashRegisters]);
+            setBanks((prev) => [...prev, ...response.banks]);
           } else {
-            setCashRegisters(response.cashRegisters);
+            setBanks(response.banks);
           }
           setPagination(response.pagination);
           hasInitialFetchRef.current = true;
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Cash registers fetch error:', err);
-          setError(err instanceof Error ? err.message : 'Kasalar yüklenemedi');
+          console.error('Banks fetch error:', err);
+          setError(err instanceof Error ? err.message : 'Banka hesapları yüklenemedi');
         }
       } finally {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
@@ -104,15 +110,6 @@ export default function CashRegistersScreen() {
     executeFetch(activeFilter, 1, false);
   }, [activeFilter]); // Only activeFilter
 
-  // Refresh when screen is focused (e.g., after delete/create/edit)
-  useFocusEffect(
-    useCallback(() => {
-      if (hasInitialFetchRef.current) {
-        executeFetch(activeFilter, 1, false);
-      }
-    }, [activeFilter, executeFetch])
-  );
-
   const onRefresh = async () => {
     setRefreshing(true);
     await executeFetch(activeFilter, 1, false);
@@ -129,49 +126,63 @@ export default function CashRegistersScreen() {
     }
   };
 
+  const handleCopyIban = (id: number, _iban: string) => {
+    // In a real app, use Clipboard.setString(iban)
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   // Calculate totals by currency
   const getTotals = () => {
     const totals: Record<string, number> = {};
-    cashRegisters.forEach((cr) => {
-      if (!totals[cr.currency_type]) {
-        totals[cr.currency_type] = 0;
+    banks.forEach((bank) => {
+      if (!totals[bank.currency_type]) {
+        totals[bank.currency_type] = 0;
       }
-      totals[cr.currency_type] += cr.balance;
+      totals[bank.currency_type] += bank.balance;
     });
     return totals;
   };
 
   const totals = getTotals();
 
-  const renderCashRegister = (item: CashRegister) => {
-    const additionalInfo = [];
-    if (item.location) {
-      additionalInfo.push(
-        <Text key="location" style={[styles.location, { color: colors.textSecondary }]}>
-          {item.location}
+  const renderBankAccount = (item: Bank) => {
+    const accountDetails = [];
+    if (item.account_number) {
+      accountDetails.push(
+        <Text key="account" style={[styles.accountNumber, { color: colors.textMuted }]}>
+          {`**** **** ${item.account_number.slice(-4)}`}
         </Text>
       );
     }
-    if (item.responsible_user) {
-      additionalInfo.push(
-        <View key="responsible" style={styles.responsibleRow}>
-          <User size={14} color={colors.icon} />
-          <Text style={[styles.responsibleText, { color: colors.textSecondary }]}>
-            {item.responsible_user.name}
+    if (item.iban) {
+      accountDetails.push(
+        <TouchableOpacity
+          key="iban"
+          style={styles.ibanRow}
+          onPress={() => handleCopyIban(item.id, item.iban!)}
+        >
+          <Text style={[styles.iban, { color: colors.textSecondary }]} numberOfLines={1}>
+            {item.iban}
           </Text>
-        </View>
+          {copiedId === item.id ? (
+            <Check size={16} color={colors.success} />
+          ) : (
+            <Copy size={16} color={colors.icon} />
+          )}
+        </TouchableOpacity>
       );
     }
 
     return (
       <StandardListItem
-        icon={Wallet}
+        icon={Landmark}
         iconColor={Brand.primary}
         title={item.name}
-        subtitle={item.code}
+        subtitle={item.branch || undefined}
         additionalInfo={
-          additionalInfo.length > 0 ? (
-            <View style={styles.additionalInfo}>{additionalInfo}</View>
+          accountDetails.length > 0 ? (
+            <View style={styles.accountDetails}>{accountDetails}</View>
           ) : undefined
         }
         status={{
@@ -198,7 +209,7 @@ export default function CashRegistersScreen() {
             </View>
           ),
         }}
-        onPress={() => router.push(`/cash-register/${item.id}` as any)}
+        onPress={() => router.push(`/bank/${item.id}` as any)}
       />
     );
   };
@@ -237,14 +248,14 @@ export default function CashRegistersScreen() {
   return (
     <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
-        title="Kasalar"
-        subtitle={pagination ? `${pagination.total} kasa` : undefined}
+        title="Banka Hesapları"
+        subtitle={pagination ? `${pagination.total} hesap` : undefined}
         showBackButton={true}
         tabs={headerTabs}
         rightIcons={
           <View style={{ flexDirection: 'row', gap: Spacing.md }}>
             <TouchableOpacity
-              onPress={() => router.push('/cash-register/new' as any)}
+              onPress={() => router.push('/bank/new' as any)}
               activeOpacity={0.7}
             >
               <Plus size={22} color="#FFFFFF" />
@@ -262,13 +273,13 @@ export default function CashRegistersScreen() {
       />
 
       <StandardListContainer
-        data={cashRegisters}
-        renderItem={renderCashRegister}
+        data={banks}
+        renderItem={renderBankAccount}
         keyExtractor={(item) => String(item.id)}
         emptyState={{
-          icon: Wallet,
-          title: 'Henüz kasa eklenmemiş',
-          subtitle: 'Yeni kasa eklemek için + butonuna tıklayın',
+          icon: Landmark,
+          title: 'Henüz banka hesabı eklenmemiş',
+          subtitle: 'Yeni hesap eklemek için + butonuna tıklayın',
         }}
         loading={isLoading}
         refreshing={refreshing}
@@ -319,21 +330,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  additionalInfo: {
-    gap: Spacing.sm,
+  accountDetails: {
+    gap: Spacing.xs,
     marginTop: Spacing.sm,
   },
-  location: {
+  accountNumber: {
     ...Typography.bodySM,
-    color: Colors.light.textSecondary,
+    color: Colors.light.textMuted,
   },
-  responsibleRow: {
+  ibanRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  responsibleText: {
+  iban: {
     ...Typography.bodySM,
+    flex: 1,
     color: Colors.light.textSecondary,
   },
   footerLeftContent: {

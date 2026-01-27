@@ -26,7 +26,10 @@
       "Bash(done)",
       "Bash(while read f)",
       "Bash(do if grep -q \"<ScrollView\" \"$f\")",
-      "Bash(then grep -n \"<ScrollView\" \"$f\")"
+      "Bash(then grep -n \"<ScrollView\" \"$f\")",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(test:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

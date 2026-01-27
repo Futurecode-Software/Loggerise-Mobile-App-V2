@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Filter, Plus, Landmark, Copy, Check, Layers, DollarSign, Euro, PoundSterling } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
@@ -114,6 +114,15 @@ export default function BankAccountsScreen() {
     setRefreshing(true);
     await executeFetch(activeFilter, 1, false);
   };
+
+  // Auto-refresh on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (hasInitialFetchRef.current) {
+        executeFetch(activeFilter, 1, false);
+      }
+    }, [activeFilter, executeFetch])
+  );
 
   const loadMore = () => {
     if (

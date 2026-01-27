@@ -26,7 +26,8 @@ import {
   CheckCheck,
   Trash2,
 } from 'lucide-react-native';
-import { Card, Badge, FullScreenHeader } from '@/components/ui';
+import { Card, Badge } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 // useColorScheme import kaldirildi - her zaman light mode kullanilir
 import { useNotificationContext } from '@/context/notification-context';

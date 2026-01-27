@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useToast } from '@/hooks/use-toast';
-import { ConfirmDialog, FullScreenHeader } from '@/components/ui';
+import { ConfirmDialog } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   Save,
@@ -190,7 +191,7 @@ export default function InteractionDetailScreen() {
       await deleteInteraction(customerId, interactionIdNum);
       setShowDeleteDialog(false);
       success('Başarılı', 'Görüşme silindi');
-      setTimeout(() => router.back(), 1000);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Görüşme silinemedi');
     }

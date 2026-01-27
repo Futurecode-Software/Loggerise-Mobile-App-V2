@@ -11,6 +11,7 @@ interface BadgeProps {
   size?: BadgeSize;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  numberOfLines?: number;
 }
 
 export function Badge({
@@ -19,6 +20,7 @@ export function Badge({
   size = 'md',
   style,
   textStyle,
+  numberOfLines = 1,
 }: BadgeProps) {
   const colors = Colors.light;
 
@@ -101,6 +103,7 @@ export function Badge({
           sizeStyles.text,
           textStyle,
         ]}
+        numberOfLines={numberOfLines}
       >
         {label}
       </Text>
@@ -112,6 +115,7 @@ const styles = StyleSheet.create({
   badge: {
     borderRadius: BorderRadius.full,
     alignSelf: 'flex-start',
+    flexShrink: 0,
   },
   text: {
     fontWeight: '500',

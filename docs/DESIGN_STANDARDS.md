@@ -567,4 +567,363 @@ tüm best practice'leri içerir.
 
 ---
 
+## Liste Sayfaları Standardı (CRUD Operations)
+
+Tüm liste sayfalarında (Çekler, Senetler, Kasalar, vb.) tutarlı bir davranış ve kullanıcı deneyimi sağlanmalıdır.
+
+### 🎯 Zorunlu Kurallar
+
+#### 1. **Header Yapısı**
+
+Header'da sağ üstte yeni kayıt ekleme butonu bulunmalıdır:
+
+```tsx
+import { router, useFocusEffect } from 'expo-router';
+import { Plus } from 'lucide-react-native';
+
+<FullScreenHeader
+  title="Sayfa Başlığı"
+  subtitle={pagination ? `${pagination.total} kayıt` : undefined}
+  tabs={headerTabs} // Status filtreleri (opsiyonel)
+  rightIcons={
+    <TouchableOpacity
+      onPress={() => router.push('/module/new')}
+      activeOpacity={0.7}
+    >
+      <Plus size={22} color="#FFFFFF" />
+    </TouchableOpacity>
+  }
+/>
+```
+
+**Önemli:**
+- ✅ `rightIcons` prop'u kullanılmalı (rightActions DEĞİL)
+- ✅ TouchableOpacity ile sarmalanmalı
+- ✅ Plus icon beyaz renkte (#FFFFFF)
+- ✅ Icon boyutu 22px
+
+#### 2. **Silme İşlemi Standardı**
+
+Silme işlemi anında tamamlanmalı, kullanıcı toast mesajını beklemeden listeye dönmelidir:
+
+```tsx
+const handleConfirmDelete = async () => {
+  if (!id) return;
+  setIsDeleting(true);
+  try {
+    await deleteItem(parseInt(id, 10));
+
+    // ✅ Success toast göster
+    success('Başarılı', 'Kayıt silindi.');
+
+    // ✅ ANINDA geri dön - setTimeout KULLANMA
+    router.back();
+
+  } catch (err) {
+    showError('Hata', err instanceof Error ? err.message : 'Kayıt silinemedi.');
+    // ❌ Hata durumunda state'leri temizle
+    setIsDeleting(false);
+    setShowDeleteConfirm(false);
+  }
+  // ❌ finally bloğunda state temizleme - başarı durumunda modal zaten kapanmış olacak
+};
+```
+
+**Önemli:**
+- ✅ Toast mesajı göster
+- ✅ `router.back()` HEMEN çağrılmalı
+- ❌ `setTimeout(() => router.back(), 1500)` KULLANMA
+- ❌ Toast'in kapanmasını BEKLEME
+
+#### 3. **Kaydetme İşlemi Standardı**
+
+Oluşturma ve güncelleme işlemlerinde de aynı prensip geçerlidir:
+
+```tsx
+const handleSubmit = async () => {
+  if (!validateForm()) return;
+
+  setIsSubmitting(true);
+  try {
+    await createItem(formData);
+    // veya
+    await updateItem(parseInt(id, 10), formData);
+
+    // ✅ Success toast göster
+    success('Başarılı', 'Kayıt kaydedildi.');
+
+    // ✅ ANINDA geri dön
+    router.back();
+
+  } catch (error: any) {
+    const validationErrors = getValidationErrors(error);
+    if (validationErrors) {
+      // Validation hatalarını göster
+      setErrors(flattenErrors(validationErrors));
+    } else {
+      showError('Hata', getErrorMessage(error));
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+```
+
+#### 4. **Liste Otomatik Güncelleme (useFocusEffect)**
+
+Liste sayfası, detail/edit sayfalarından dönüldüğünde otomatik olarak güncellenmelidir:
+
+```tsx
+import { router, useFocusEffect } from 'expo-router';
+
+export default function ListScreen() {
+  const [items, setItems] = useState([]);
+  const hasInitialFetchRef = useRef(false);
+
+  // ... diğer state ve fetch logic
+
+  // ✅ Screen focus olduğunda liste yenile
+  useFocusEffect(
+    useCallback(() => {
+      if (hasInitialFetchRef.current) {
+        executeFetch(searchQuery, activeFilter, 1, false);
+      }
+    }, [searchQuery, activeFilter, executeFetch])
+  );
+
+  // ... rest of component
+}
+```
+
+**Önemli:**
+- ✅ `useFocusEffect` hook'u kullanılmalı
+- ✅ `hasInitialFetchRef.current` kontrolü ile ilk mount'ta çift fetch engellensin
+- ✅ Mevcut search ve filter parametreleri korunmalı
+- ✅ Dependencies array'e executeFetch dahil edilmeli
+
+#### 5. **Liste Item Bileşeni (StandardListItem)**
+
+Tüm liste sayfalarında tutarlı görünüm için `StandardListItem` component'i kullanılmalıdır:
+
+```tsx
+import { StandardListItem } from '@/components/ui';
+import { FileText } from 'lucide-react-native';
+
+const renderItem = (item: Item) => {
+  return (
+    <StandardListItem
+      icon={FileText}
+      iconColor={Brand.primary}
+      title={item.number}
+      subtitle={item.contact?.name || '-'}
+      additionalInfo={
+        <View style={styles.additionalInfo}>
+          <Text style={styles.detailText}>
+            {item.bank_name} • {formatDate(item.due_date, 'dd.MM.yyyy')}
+          </Text>
+        </View>
+      }
+      status={{
+        label: getStatusLabel(item.status),
+        variant: getStatusColor(item.status),
+      }}
+      footer={{
+        left: (
+          <Badge
+            label={getTypeLabel(item.type)}
+            variant={item.type === 'received' ? 'success' : 'info'}
+            size="sm"
+          />
+        ),
+        right: (
+          <Text style={styles.amount}>
+            {formatAmount(item.amount, item.currency_type)}
+          </Text>
+        ),
+      }}
+      onPress={() => router.push(`/module/${item.id}`)}
+    />
+  );
+};
+```
+
+**Önemli:**
+- ✅ `StandardListItem` component'i kullanılmalı
+- ✅ Icon ve iconColor belirtilmeli
+- ✅ Footer'da sol tarafta type badge, sağ tarafta amount gösterilmeli
+- ✅ Status badge sağ üstte gösterilmeli
+- ❌ Custom TouchableOpacity + Card yerine StandardListItem kullanılmalı
+
+#### 6. **Badge Kullanımı**
+
+Badge etiketleri kısa ve öz olmalıdır:
+
+```tsx
+// ✅ DOĞRU
+export function getTypeLabel(type: Type): string {
+  const labels: Record<Type, string> = {
+    received: 'Alınan',
+    issued: 'Verilen',
+  };
+  return labels[type] || type;
+}
+
+// ❌ YANLIŞ - Çok uzun
+export function getTypeLabel(type: Type): string {
+  const labels: Record<Type, string> = {
+    received: 'Alınan Çek',
+    issued: 'Verilen Çek',
+  };
+  return labels[type] || type;
+}
+```
+
+**Badge Props:**
+```tsx
+<Badge
+  label={label}
+  variant="success"
+  size="sm"
+  numberOfLines={1}  // Otomatik eklenir
+/>
+```
+
+### 📋 Header Action Buttons Örnekleri
+
+#### Detail Screen (Edit + Delete)
+
+```tsx
+<FullScreenHeader
+  title={item.number}
+  showBackButton
+  rightIcons={
+    <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+      <TouchableOpacity
+        onPress={() => router.push(`/module/${item.id}/edit`)}
+        activeOpacity={0.7}
+      >
+        <Edit size={20} color="#FFFFFF" />
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={handleDelete}
+        activeOpacity={0.7}
+        disabled={isDeleting}
+      >
+        {isDeleting ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <Trash2 size={20} color="#FFFFFF" />
+        )}
+      </TouchableOpacity>
+    </View>
+  }
+/>
+```
+
+#### Edit/New Screen (Save)
+
+```tsx
+<FullScreenHeader
+  title="Yeni Kayıt"
+  subtitle="Form bilgilerini girin"
+  rightIcons={
+    <TouchableOpacity
+      onPress={handleSubmit}
+      activeOpacity={0.7}
+      disabled={isSubmitting}
+    >
+      {isSubmitting ? (
+        <ActivityIndicator size="small" color="#FFFFFF" />
+      ) : (
+        <Save size={22} color="#FFFFFF" />
+      )}
+    </TouchableOpacity>
+  }
+/>
+```
+
+### ✅ Referans Component'ler
+
+Bu standartları uygulayan örnek sayfalar:
+
+#### Liste Sayfaları
+- `@/app/check/index.tsx` - Çekler listesi
+- `@/app/promissory-note/index.tsx` - Senetler listesi
+- `@/app/cash-register/index.tsx` - Kasalar listesi
+
+#### Detail Sayfaları
+- `@/app/check/[id].tsx` - Çek detayı
+- `@/app/promissory-note/[id].tsx` - Senet detayı
+
+#### Form Sayfaları
+- `@/app/check/new.tsx` - Yeni çek
+- `@/app/check/[id]/edit.tsx` - Çek düzenle
+- `@/app/promissory-note/new.tsx` - Yeni senet
+- `@/app/promissory-note/[id]/edit.tsx` - Senet düzenle
+
+### ⚠️ Yapılmaması Gerekenler
+
+1. ❌ **setTimeout ile geri dönüş:** Toast'in kapanmasını beklemeyin
+   ```tsx
+   // YANLIŞ
+   success('Başarılı', 'Kayıt silindi.');
+   setTimeout(() => router.back(), 1500); // ❌
+
+   // DOĞRU
+   success('Başarılı', 'Kayıt silindi.');
+   router.back(); // ✅
+   ```
+
+2. ❌ **rightActions kullanımı:** Bu prop mevcut değil
+   ```tsx
+   // YANLIŞ
+   rightActions={[{ icon: <Plus />, onPress: () => {} }]} // ❌
+
+   // DOĞRU
+   rightIcons={<TouchableOpacity>...</TouchableOpacity>} // ✅
+   ```
+
+3. ❌ **useFocusEffect olmadan liste:** Geri dönüşte liste güncellenmiyor
+   ```tsx
+   // YANLIŞ - sadece useEffect kullanmak
+   useEffect(() => {
+     fetchData();
+   }, []); // ❌ Geri dönüşte çalışmaz
+
+   // DOĞRU
+   useFocusEffect(
+     useCallback(() => {
+       if (hasInitialFetchRef.current) {
+         fetchData();
+       }
+     }, [fetchData])
+   ); // ✅
+   ```
+
+4. ❌ **Custom card rendering:** StandardListItem kullanılmalı
+   ```tsx
+   // YANLIŞ
+   <TouchableOpacity style={styles.card}>
+     <View>...</View>
+   </TouchableOpacity> // ❌
+
+   // DOĞRU
+   <StandardListItem
+     icon={FileText}
+     title={item.title}
+     ...
+   /> // ✅
+   ```
+
+### 🎯 Kullanıcı Deneyimi Hedefi
+
+Bu standartlar ile:
+- ✅ Anında geri bildirim (toast + navigation)
+- ✅ Liste her zaman güncel
+- ✅ Tutarlı görünüm (StandardListItem)
+- ✅ Beklemeden işlem tamamlanıyor
+- ✅ Modern ve akıcı kullanım deneyimi
+
+---
+
 **Son Güncelleme:** 2026-01-27

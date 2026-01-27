@@ -22,8 +22,8 @@ import {
   X,
   Settings2,
 } from 'lucide-react-native';
-import { FullScreenHeader } from '@/components/ui';
 import { Card, Badge, Input } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { formatNumber } from '@/utils/formatters';
 // useColorScheme kaldirildi - her zaman light mode kullanilir

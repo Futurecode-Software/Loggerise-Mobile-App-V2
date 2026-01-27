@@ -21,7 +21,8 @@ import {
   AlertCircle,
   Route,
 } from 'lucide-react-native';
-import { Card, Badge, Input, FullScreenHeader } from '@/components/ui';
+import { Card, Badge, Input } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   getPositions,

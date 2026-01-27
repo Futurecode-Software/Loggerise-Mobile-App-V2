@@ -39,5 +39,7 @@ export * as cashRegistersApi from './endpoints/cash-registers';
 export * as financialTransactionsApi from './endpoints/financial-transactions';
 export * as crmApi from './endpoints/crm';
 export * as quotesApi from './endpoints/quotes';
+export * as checksApi from './endpoints/checks';
+export * as promissoryNotesApi from './endpoints/promissory-notes';
 export * as notifications from './notifications';
 export * as googleAuth from './google-auth';

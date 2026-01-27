@@ -150,12 +150,9 @@ export default function BrandDetailScreen() {
       await deleteProductBrand(brand.id);
       setShowDeleteDialog(false);
       success('Başarılı', 'Marka silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1000);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Marka silinemedi');
-    } finally {
       setIsDeleting(false);
     }
   }, [brand, success, showError]);

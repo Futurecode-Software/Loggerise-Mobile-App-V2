@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useToast } from '@/hooks/use-toast';
-import { FullScreenHeader } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Save, AlertCircle } from 'lucide-react-native';
 import { Input, Button, Card, Select } from '@/components/ui';
@@ -246,7 +246,7 @@ export default function EditCrmCustomerScreen() {
     try {
       await updateCrmCustomer(customerId, formData);
       success('Başarılı', 'CRM müşterisi başarıyla güncellendi');
-      setTimeout(() => router.back(), 1000);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Müşteri güncellenemedi');
     } finally {

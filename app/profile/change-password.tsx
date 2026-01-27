@@ -14,7 +14,7 @@ import {
 import { router } from 'expo-router';
 import { Lock, Eye, EyeOff, Check } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
-import { FullScreenHeader } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { changePassword, PasswordChangeData } from '@/services/endpoints/profile';
 import { useToast } from '@/hooks/use-toast';
 
@@ -77,7 +77,7 @@ export default function ChangePasswordScreen() {
 
       await changePassword(data);
       success('Başarılı', 'Şifreniz başarıyla güncellendi.');
-      setTimeout(() => router.back(), 1000);
+      router.back();
     } catch (error: any) {
       console.error('Password change error:', error);
       if (error.message?.toLowerCase().includes('current') ||

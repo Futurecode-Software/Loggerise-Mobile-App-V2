@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Plus, User, Phone, Mail, Users, Layers, UserCheck, UserMinus, UserX, ArrowRightLeft } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
@@ -141,6 +141,15 @@ export default function CrmCustomersListScreen() {
       }
     };
   }, [searchQuery]); // Only searchQuery
+
+  // Refresh when screen is focused (e.g., after delete/create/edit)
+  useFocusEffect(
+    useCallback(() => {
+      if (hasInitialFetchRef.current) {
+        executeFetch(searchQuery, activeFilter, 1, false, false);
+      }
+    }, [searchQuery, activeFilter, executeFetch])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

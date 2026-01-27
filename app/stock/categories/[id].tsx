@@ -17,7 +17,8 @@ import {
 
 import { router, useLocalSearchParams } from 'expo-router';
 import { Save, Trash2, FolderTree, CornerDownRight } from 'lucide-react-native';
-import { Input, Card, Badge, Checkbox, SelectInput, ConfirmDialog, FullScreenHeader } from '@/components/ui';
+import { Input, Card, Badge, Checkbox, SelectInput, ConfirmDialog } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -170,12 +171,9 @@ export default function CategoryDetailScreen() {
       await deleteProductCategory(category.id);
       setShowDeleteDialog(false);
       success('Başarılı', 'Kategori silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1000);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Kategori silinemedi');
-    } finally {
       setIsDeleting(false);
     }
   }, [category, success, showError]);

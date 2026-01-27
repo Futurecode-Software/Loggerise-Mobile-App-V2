@@ -315,7 +315,7 @@ export default function NewLoadScreen() {
 
       if (response) {
         success('Başarılı', 'Yük başarıyla oluşturuldu');
-        setTimeout(() => router.back(), 1000);
+        router.back();
       }
     } catch (error: any) {
       console.error('Load creation error:', error);

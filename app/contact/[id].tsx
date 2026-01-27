@@ -138,7 +138,7 @@ export default function ContactDetailScreen() {
       await deleteContact(Number(id));
       setShowDeleteDialog(false);
       success('Başarılı', 'Cari silindi.');
-      setTimeout(() => router.back(), 1000);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Silme işlemi başarısız');
       setDeleting(false);

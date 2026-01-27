@@ -92,9 +92,12 @@ export default function BankAccountDetailScreen() {
     try {
       await deleteBank(parseInt(id, 10));
       success('Başarılı', 'Banka hesabı silindi.');
-      router.back();
+      setTimeout(() => {
+        router.back();
+      }, 1500);
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Banka hesabı silinemedi.');
+    } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
     }

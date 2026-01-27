@@ -25,8 +25,8 @@ import {
   AlertCircle,
   ChevronRight,
 } from 'lucide-react-native';
-import { FullScreenHeader } from '@/components/ui';
 import { Card } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 // useColorScheme kaldirildi - her zaman light mode kullanilir
 import {

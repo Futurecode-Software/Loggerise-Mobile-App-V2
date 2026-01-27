@@ -17,7 +17,8 @@ import {
 
 import { router, useLocalSearchParams } from 'expo-router';
 import { Save, Trash2, Layers } from 'lucide-react-native';
-import { Input, Card, Badge, Checkbox, ConfirmDialog, FullScreenHeader } from '@/components/ui';
+import { Input, Card, Badge, Checkbox, ConfirmDialog } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -149,12 +150,9 @@ export default function ModelDetailScreen() {
       await deleteProductModel(model.id);
       setShowDeleteDialog(false);
       success('Başarılı', 'Model silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1000);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Model silinemedi');
-    } finally {
       setIsDeleting(false);
     }
   }, [model, success, showError]);

@@ -10,7 +10,8 @@ import {
   Linking,
 } from 'react-native';
 import { useToast } from '@/hooks/use-toast';
-import { ConfirmDialog, FullScreenHeader } from '@/components/ui';
+import { ConfirmDialog } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   Edit,
@@ -100,7 +101,7 @@ export default function CrmCustomerDetailScreen() {
       await deleteCrmCustomer(customerId);
       setShowDeleteDialog(false);
       success('Başarılı', 'Müşteri silindi');
-      setTimeout(() => router.back(), 1000);
+      router.back();
     } catch (err) {
       showError(
         'Hata',

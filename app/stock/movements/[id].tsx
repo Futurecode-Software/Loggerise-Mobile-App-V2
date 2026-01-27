@@ -26,7 +26,8 @@ import {
   Hash,
   FileText,
 } from 'lucide-react-native';
-import { Card, Badge, ConfirmDialog, FullScreenHeader } from '@/components/ui';
+import { Card, Badge, ConfirmDialog } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {

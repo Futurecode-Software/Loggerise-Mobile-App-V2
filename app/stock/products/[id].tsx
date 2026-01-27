@@ -209,12 +209,9 @@ export default function ProductDetailScreen() {
       await deleteProduct(product.id);
       setShowDeleteDialog(false);
       success('Başarılı', 'Ürün silindi.');
-      setTimeout(() => {
-        router.back();
-      }, 1000);
+      router.back();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Ürün silinemedi');
-    } finally {
       setIsDeleting(false);
     }
   }, [product, success, showError]);
