@@ -183,6 +183,7 @@ Modal yükseklikleri içeriğe göre belirlenmelidir:
 - **Orta Form (2-3 input):** `['32%']` veya `['40%']`
 - **Büyük Form (4+ input):** `['50%', '75%']`
 - **List Modal (Scrollable):** `['50%', '75%', '90%']` + `index={1}` - Başlangıçta %75 (yarı ekrandan fazla), küçültülebilir/genişletilebilir
+- **Full Screen Search Modal:** `['90%']` + `enableDynamicSizing={false}` - Direkt %90'da açılır
 - **Success State:** `['25%']`
 - **Dynamic Sizing:** `enableDynamicSizing={true}` için snap points gerekmez
 
@@ -205,6 +206,19 @@ const snapPoints = useMemo(() => ['50%', '75%', '90%'], []);
   snapPoints={snapPoints}
   animateOnMount={true}
 />
+
+// Full screen searchable modal için tek snap point
+const snapPoints = useMemo(() => ['90%'], []);
+
+<BottomSheetModal
+  ref={bottomSheetRef}
+  index={0}
+  snapPoints={snapPoints}
+  enableDynamicSizing={false}  // İçeriğe göre boyutlanmasın
+  enablePanDownToClose={true}  // Tepedeki çizgiden sürükleyerek kapat
+  enableContentPanningGesture={false}  // Liste scroll ederken kapanma
+  animateOnMount={true}
+/>
 ```
 
 **Context7 Best Practices:**
@@ -214,6 +228,7 @@ const snapPoints = useMemo(() => ['50%', '75%', '90%'], []);
 - Snap points sıralı olmalı (küçükten büyüğe: 50% → 75% → 90%)
 - Scrollable içerik için 3 snap point ideal (küçük-orta-büyük)
 - `animateOnMount={true}` ile smooth açılış animasyonu
+- `enableDynamicSizing={false}` sabit snap point için zorunlu
 
 #### 3. **Modal Ref Pattern**
 
@@ -431,6 +446,152 @@ export default function LoginScreen() {
 5. **Loading State:** Butonlarda loading state göster ve disabled yap
 6. **Validation:** Form validation error'ları Input component'inin `error` prop'u ile göster
 7. **Animation:** CustomBottomSheet spring animation kullanır, özel animation gerekmez
+
+### 📦 Full Screen Searchable Select Modal Standardı (SearchableSelect)
+
+Müşteri seçimi gibi arama + seçim işlemleri için full screen modal kullanılmalıdır:
+
+```tsx
+import {
+  BottomSheetModal,
+  BottomSheetFlatList,
+  BottomSheetBackdrop,
+  BottomSheetTextInput,
+  useBottomSheetSpringConfigs,
+} from '@gorhom/bottom-sheet';
+
+const SearchableSelect = () => {
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  
+  // Tek snap point - direkt %90'da açılır
+  const snapPoints = useMemo(() => ['90%'], []);
+
+  // iOS-like spring animation
+  const animationConfigs = useBottomSheetSpringConfigs({
+    damping: 80,
+    overshootClamping: true,
+    restDisplacementThreshold: 0.1,
+    restSpeedThreshold: 0.1,
+    stiffness: 500,
+  });
+
+  // Backdrop - arka plana tıklayınca kapatır
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    []
+  );
+
+  return (
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      index={0}
+      snapPoints={snapPoints}
+      enablePanDownToClose={true}        // Tepedeki çizgiden sürükleyerek kapat
+      enableContentPanningGesture={false} // Liste scroll ederken kapanmaz
+      enableDynamicSizing={false}         // Sabit %90 yüksekliği
+      animateOnMount={true}
+      animationConfigs={animationConfigs}
+      backdropComponent={renderBackdrop}
+      backgroundStyle={styles.background}
+      handleIndicatorStyle={styles.handleIndicator}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Müşteri Seç</Text>
+        <Text style={styles.subtitle}>{options.length} sonuç</Text>
+      </View>
+
+      {/* Search Input */}
+      <View style={styles.searchContainer}>
+        <Search size={20} color={colors.icon} />
+        <BottomSheetTextInput
+          style={styles.searchInput}
+          placeholder="Ara..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
+      {/* List */}
+      <BottomSheetFlatList
+        data={options}
+        renderItem={renderOptionItem}
+        keyExtractor={(item) => String(item.value)}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={renderEmpty}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      />
+    </BottomSheetModal>
+  );
+};
+
+const styles = StyleSheet.create({
+  background: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+  },
+  handleIndicator: {
+    backgroundColor: '#9CA3AF',  // Daha belirgin
+    width: 48,                   // Daha geniş
+    height: 5,                   // Daha kalın
+    borderRadius: 3,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing['2xl'],
+    paddingTop: Spacing.lg,      // Daha fazla üst boşluk
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginHorizontal: Spacing.lg,
+    marginVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    backgroundColor: Colors.light.card,
+  },
+  searchInput: {
+    flex: 1,
+    ...Typography.bodyMD,
+    paddingVertical: Spacing.xs,
+    color: Colors.light.text,
+  },
+  listContent: {
+    paddingBottom: Spacing['2xl'],
+  },
+});
+```
+
+**Önemli Noktalar:**
+- ✅ `snapPoints={['90%']}` - Direkt ekranın %90'ında açılır
+- ✅ `enableDynamicSizing={false}` - İçeriğe göre boyutlanmayı engeller
+- ✅ `enablePanDownToClose={true}` - Tepedeki çizgiden sürükleyerek kapatma
+- ✅ `enableContentPanningGesture={false}` - Liste scroll ederken kapanmayı engeller
+- ✅ `pressBehavior="close"` - Arka plana tıklayınca kapatır
+- ✅ `BottomSheetTextInput` - Klavye ile uyumlu input
+- ✅ Belirgin handle indicator (48x5px, koyu gri)
 
 ### 📦 List Modal Standardı (LoadPickerModal Örneği)
 
@@ -927,3 +1088,11 @@ Bu standartlar ile:
 ---
 
 **Son Güncelleme:** 2026-01-27
+
+### 🔄 Changelog
+
+#### 2026-01-27 - Full Screen Searchable Select Modal Standardı
+- Yeni: Full screen searchable select modal pattern eklendi (`['90%']` snap point)
+- Güncelleme: `enableDynamicSizing={false}` sabit snap point kullanımı için zorunlu
+- Güncelleme: `enableContentPanningGesture={false}` liste scroll sırasında kapanmayı engeller
+- Güncelleme: `pressBehavior="close"` arka plana tıklayınca kapatır

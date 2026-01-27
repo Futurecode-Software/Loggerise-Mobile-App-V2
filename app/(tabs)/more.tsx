@@ -205,7 +205,7 @@ const MENU_SECTIONS: MenuSection[] = [
     title: 'Ajandam',
     icon: Calendar,
     iconColor: '#a855f7',
-    route: '/agenda', // Direkt link - alt menü yok
+    route: '/event', // Direkt link - alt menü yok
   },
   {
     id: 'reports',
@@ -214,8 +214,8 @@ const MENU_SECTIONS: MenuSection[] = [
     iconColor: '#14b8a6',
     items: [
       { id: 'profit-loss', label: 'Kar Zarar Analizi', icon: PieChart, color: '#14b8a6', route: '/reports/profit-loss' },
-      { id: 'vat', label: 'KDV Raporu', icon: FileText, color: '#f97316', route: '/reports/vat' },
-      { id: 'contact-reports', label: 'Cari Raporlar', icon: Users, color: '#ec4899', route: '/reports/contacts' },
+      { id: 'kdv', label: 'KDV Raporu', icon: FileText, color: '#f97316', route: '/reports/kdv' },
+      { id: 'contact-reports', label: 'Cari Raporlar', icon: Users, color: '#ec4899', route: '/reports/contact' },
       { id: 'domestic-reports', label: 'Yurtiçi Raporlar', icon: Truck, color: '#10b981', route: '/reports/domestic' },
     ],
   },

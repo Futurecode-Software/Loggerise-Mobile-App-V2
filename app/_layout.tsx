@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { LogBox } from 'react-native';
 import Toast from 'react-native-toast-message';
 import 'react-native-reanimated';
@@ -120,6 +121,7 @@ function RootLayoutNav() {
         <Stack.Screen name="finance" />
         <Stack.Screen name="positions" />
         <Stack.Screen name="messages" />
+        <Stack.Screen name="event" />
       </Stack>
       {/* StatusBar artık her sayfada FullScreenHeader içinde yönetiliyor */}
       <Toast position='top' topOffset={60} />
@@ -171,7 +173,9 @@ export default function RootLayout() {
             <NotificationProvider>
               <MessageProvider>
                 <DashboardProvider>
-                  <RootLayoutNav />
+                  <BottomSheetModalProvider>
+                    <RootLayoutNav />
+                  </BottomSheetModalProvider>
                 </DashboardProvider>
               </MessageProvider>
             </NotificationProvider>

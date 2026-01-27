@@ -1,44 +1,28 @@
 /**
  * SearchableSelect Component
  *
- * Async searchable select component similar to web AsyncSelect.
- * Supports searching with debounced API calls.
+ * Bottom sheet searchable select following DESIGN_STANDARDS.md
+ * Uses BottomSheetModal with async search functionality
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
-  TextInput,
-  FlatList,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar as RNStatusBar,
-  Dimensions,
 } from 'react-native';
-import Constants from 'expo-constants';
-import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Search, X, ChevronDown, Check, ChevronLeft } from 'lucide-react-native';
+import {
+  BottomSheetModal,
+  BottomSheetFlatList,
+  BottomSheetBackdrop,
+  BottomSheetBackdropProps,
+  BottomSheetTextInput,
+  useBottomSheetSpringConfigs,
+} from '@gorhom/bottom-sheet';
+import { Search, X, ChevronDown, Check } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-
-// Status bar yüksekliği hesaplama
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const getStatusBarHeight = (): number => {
-  if (Platform.OS === 'android') {
-    return Constants.statusBarHeight || 24;
-  }
-  // iOS için - notch'lu cihazlar için daha yüksek değer
-  // iPhone X ve sonrası: ~44-50px, eski iPhone: ~20px
-  if (SCREEN_HEIGHT >= 812) {
-    return 47; // iPhone X, 11, 12, 13, 14, 15 serisi (notch'lu)
-  }
-  return 20; // Eski iPhone modelleri
-};
 
 export interface SearchableSelectOption {
   label: string;
@@ -76,36 +60,53 @@ export function SearchableSelect({
   renderOption,
 }: SearchableSelectProps) {
   const colors = Colors.light;
-  const insets = useSafeAreaInsets();
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
 
-  const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [options, setOptions] = useState<SearchableSelectOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  // Initialize with selectedOptionProp if provided
   const [selectedOption, setSelectedOption] = useState<SearchableSelectOption | null>(
     selectedOptionProp || null
   );
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Load initial options when modal opens
-  useEffect(() => {
-    if (isOpen && options.length === 0) {
-      fetchOptions('');
-    }
-  }, [isOpen]);
+  // Fixed snap point at 90% of screen height
+  // Single snap point = modal opens directly at this height
+  const snapPoints = useMemo(() => ['90%'], []);
 
-  // Sync with external selectedOption prop (primary source of truth)
+  // iOS-like spring animation config
+  const animationConfigs = useBottomSheetSpringConfigs({
+    damping: 80,
+    overshootClamping: true,
+    restDisplacementThreshold: 0.1,
+    restSpeedThreshold: 0.1,
+    stiffness: 500,
+  });
+
+  // Custom backdrop with dimmed background
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    []
+  );
+
+  // Sync with external selectedOption prop
   useEffect(() => {
     if (selectedOptionProp !== undefined) {
       setSelectedOption(selectedOptionProp);
     }
   }, [selectedOptionProp]);
 
-  // Sync selectedOption with external value prop (fallback when options are loaded)
+  // Sync selectedOption with external value prop
   useEffect(() => {
-    // Only try to find from options if no selectedOptionProp was provided
     if (selectedOptionProp === undefined && value && options.length > 0) {
       const selected = options.find((opt) => opt.value === value);
       if (selected && selectedOption?.value !== value) {
@@ -118,8 +119,6 @@ export function SearchableSelect({
 
   // Debounced search
   useEffect(() => {
-    if (!isOpen) return;
-
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
@@ -133,29 +132,48 @@ export function SearchableSelect({
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery, isOpen]);
+  }, [searchQuery]);
 
   // Fetch options from API
-  const fetchOptions = useCallback(async (query: string) => {
-    setIsLoading(true);
-    try {
-      const results = await loadOptions(query);
-      setOptions(results);
+  const fetchOptions = useCallback(
+    async (query: string) => {
+      setIsLoading(true);
+      try {
+        const results = await loadOptions(query);
+        setOptions(results);
 
-      // Update selected option if value matches
-      if (value) {
-        const selected = results.find((opt) => opt.value === value);
-        if (selected) {
-          setSelectedOption(selected);
+        // Update selected option if value matches
+        if (value) {
+          const selected = results.find((opt) => opt.value === value);
+          if (selected) {
+            setSelectedOption(selected);
+          }
         }
+      } catch (error) {
+        console.error('Error loading options:', error);
+        setOptions([]);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading options:', error);
+    },
+    [loadOptions, value]
+  );
+
+  // Handle modal open
+  const handleOpen = useCallback(() => {
+    if (disabled) return;
+    setSearchQuery('');
+    fetchOptions(''); // Load initial options
+    bottomSheetRef.current?.present();
+  }, [disabled, fetchOptions]);
+
+  // Handle modal dismiss
+  const handleDismiss = useCallback(() => {
+    setTimeout(() => {
+      setSearchQuery('');
       setOptions([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadOptions, value]);
+    }, 200);
+  }, []);
 
   // Handle option selection
   const handleSelect = useCallback(
@@ -163,18 +181,21 @@ export function SearchableSelect({
       setSelectedOption(option);
       onValueChange(option.value);
       onSelect?.(option);
-      setIsOpen(false);
-      setSearchQuery('');
+      bottomSheetRef.current?.dismiss();
     },
     [onValueChange, onSelect]
   );
 
   // Handle clear
-  const handleClear = useCallback(() => {
-    setSelectedOption(null);
-    onValueChange('');
-    onSelect?.(null);
-  }, [onValueChange, onSelect]);
+  const handleClear = useCallback(
+    (e: any) => {
+      e.stopPropagation();
+      setSelectedOption(null);
+      onValueChange('');
+      onSelect?.(null);
+    },
+    [onValueChange, onSelect]
+  );
 
   // Render option item
   const renderOptionItem = useCallback(
@@ -187,9 +208,10 @@ export function SearchableSelect({
             style={[
               styles.optionItem,
               { borderBottomColor: colors.border },
-              isSelected && { backgroundColor: colors.surface },
+              isSelected && { backgroundColor: Brand.primary + '08' },
             ]}
             onPress={() => handleSelect(item)}
+            activeOpacity={0.7}
           >
             {renderOption(item)}
             {isSelected && (
@@ -204,9 +226,10 @@ export function SearchableSelect({
           style={[
             styles.optionItem,
             { borderBottomColor: colors.border },
-            isSelected && { backgroundColor: colors.surface },
+            isSelected && { backgroundColor: Brand.primary + '08' },
           ]}
           onPress={() => handleSelect(item)}
+          activeOpacity={0.7}
         >
           <View style={styles.optionContent}>
             <Text
@@ -231,6 +254,72 @@ export function SearchableSelect({
     [value, colors, handleSelect, renderOption]
   );
 
+  // Render empty state
+  const renderEmpty = useCallback(() => {
+    if (isLoading) {
+      return (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color={Brand.primary} />
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            Aranıyor...
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>
+          {searchQuery ? 'Sonuç bulunamadı' : 'Seçenek bulunamadı'}
+        </Text>
+        {searchQuery && (
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            "{searchQuery}" için sonuç yok
+          </Text>
+        )}
+      </View>
+    );
+  }, [isLoading, searchQuery, colors]);
+
+  // Render header with search
+  const renderHeader = useCallback(() => {
+    return (
+      <View style={styles.header}>
+        <View>
+          <Text style={[styles.title, { color: colors.text }]}>{label || 'Seçim Yap'}</Text>
+          {options.length > 0 && (
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              {options.length} seçenek
+            </Text>
+          )}
+        </View>
+      </View>
+    );
+  }, [label, options.length, colors]);
+
+  // Render search input
+  const renderSearchInput = useCallback(() => {
+    return (
+      <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Search size={20} color={colors.icon} />
+        <BottomSheetTextInput
+          style={[styles.searchInput, { color: colors.text }]}
+          placeholder="Ara..."
+          placeholderTextColor={colors.textMuted}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <X size={18} color={colors.icon} />
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }, [searchQuery, colors]);
+
   return (
     <View style={styles.container}>
       {label && (
@@ -249,8 +338,9 @@ export function SearchableSelect({
           },
           disabled && { opacity: 0.5 },
         ]}
-        onPress={() => !disabled && setIsOpen(true)}
+        onPress={handleOpen}
         disabled={disabled}
+        activeOpacity={0.7}
       >
         <View style={styles.selectContent}>
           {selectedOption ? (
@@ -267,11 +357,9 @@ export function SearchableSelect({
               </View>
               {!disabled && (
                 <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleClear();
-                  }}
+                  onPress={handleClear}
                   style={styles.clearButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                   <X size={18} color={colors.icon} />
                 </TouchableOpacity>
@@ -290,104 +378,35 @@ export function SearchableSelect({
 
       {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
 
-      <Modal
-        visible={isOpen}
-        transparent={false}
-        animationType="slide"
-        onRequestClose={() => setIsOpen(false)}
-        presentationStyle="fullScreen"
-        statusBarTranslucent={true}
+      <BottomSheetModal
+        ref={bottomSheetRef}
+        index={0}
+        snapPoints={snapPoints}
+        enablePanDownToClose={true}
+        enableContentPanningGesture={false}
+        enableDynamicSizing={false}
+        animateOnMount={true}
+        animationConfigs={animationConfigs}
+        backdropComponent={renderBackdrop}
+        backgroundStyle={styles.background}
+        handleIndicatorStyle={styles.handleIndicator}
+        onDismiss={handleDismiss}
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
       >
-        {/* StatusBar - Transparent, yeşil View arkasından görünür */}
-        <StatusBar style="light" />
-        {Platform.OS === 'android' && (
-          <RNStatusBar
-            barStyle="light-content"
-            backgroundColor="transparent"
-            translucent={true}
-          />
-        )}
-
-        {/* Status bar yüksekliği - FullScreenHeader ile aynı yaklaşım */}
-        {(() => {
-          const statusBarHeight = Platform.OS === 'ios' ? insets.top : insets.top || 24;
-          const extraTopPadding = Platform.OS === 'ios' ? 0 : 0;
-          const totalTopPadding = statusBarHeight + extraTopPadding;
-
-          return (
-            <View style={[styles.modalWrapper, { paddingTop: totalTopPadding }]}>
-              {/* Yeşil Header */}
-              <View style={styles.greenHeader}>
-            <View style={styles.greenHeaderContent}>
-              <TouchableOpacity
-                onPress={() => setIsOpen(false)}
-                style={styles.backButton}
-                activeOpacity={0.7}
-              >
-                <ChevronLeft size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-              <Text style={styles.greenHeaderTitle} numberOfLines={1}>
-                {label || 'Seçim Yap'}
-              </Text>
-              <View style={styles.headerRightPlaceholder} />
-            </View>
-          </View>
-
-          {/* İçerik alanı */}
-          <KeyboardAvoidingView
-            style={[styles.modalContent, { backgroundColor: colors.background }]}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
-            {/* Search Input */}
-            <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Search size={20} color={colors.icon} />
-              <TextInput
-                style={[styles.searchInput, { color: colors.text }]}
-                placeholder="Ara..."
-                placeholderTextColor={colors.textMuted}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoFocus
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <X size={18} color={colors.icon} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Options List */}
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={Brand.primary} />
-                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-                  Aranıyor...
-                </Text>
-              </View>
-            ) : options.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                  {searchQuery ? 'Sonuç bulunamadı' : 'Seçenek bulunamadı'}
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={options}
-                keyExtractor={(item) => String(item.value)}
-                renderItem={renderOptionItem}
-                style={styles.optionsList}
-                contentContainerStyle={styles.optionsListContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              />
-            )}
-          </KeyboardAvoidingView>
-            </View>
-          );
-        })()}
-      </Modal>
+        {renderHeader()}
+        {renderSearchInput()}
+        <BottomSheetFlatList
+          data={options}
+          keyExtractor={(item) => String(item.value)}
+          renderItem={renderOptionItem}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmpty}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        />
+      </BottomSheetModal>
     </View>
   );
 }
@@ -436,45 +455,37 @@ const styles = StyleSheet.create({
     ...Typography.bodyXS,
     marginTop: Spacing.xs,
   },
-  modalWrapper: {
-    flex: 1,
-    backgroundColor: Brand.primary,
-    width: '100%',
-    height: '100%',
+  // Bottom Sheet Styles
+  background: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
   },
-  greenHeader: {
-    backgroundColor: Brand.primary,
-    width: '100%',
-    paddingTop: 0,
+  handleIndicator: {
+    backgroundColor: '#9CA3AF',
+    width: 48,
+    height: 5,
+    borderRadius: 3,
   },
-  greenHeaderContent: {
+  shadow: {
+    ...Shadows.lg,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing['2xl'],
+    paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
-    minHeight: 56,
-    backgroundColor: Brand.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
   },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  greenHeaderTitle: {
+  title: {
     ...Typography.headingMD,
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 16,
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: Spacing.md,
   },
-  headerRightPlaceholder: {
-    width: 40, // Back button ile dengelemek için
-  },
-  modalContent: {
-    flex: 1,
+  subtitle: {
+    ...Typography.bodyXS,
+    marginTop: 2,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -482,7 +493,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    margin: Spacing.md,
+    marginHorizontal: Spacing.lg,
+    marginVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
   },
@@ -491,30 +503,8 @@ const styles = StyleSheet.create({
     ...Typography.bodyMD,
     paddingVertical: Spacing.xs,
   },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-  },
-  emptyText: {
-    ...Typography.bodyMD,
-  },
-  optionsList: {
-    flex: 1,
-  },
-  optionsListContent: {
-    paddingBottom: Spacing.lg,
+  listContent: {
+    paddingBottom: Spacing['2xl'],
   },
   optionItem: {
     flexDirection: 'row',
@@ -537,5 +527,18 @@ const styles = StyleSheet.create({
   },
   checkIcon: {
     marginLeft: Spacing.sm,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    padding: Spacing['2xl'],
+    gap: Spacing.md,
+    marginTop: Spacing['2xl'],
+  },
+  emptyTitle: {
+    ...Typography.headingSM,
+  },
+  emptyText: {
+    ...Typography.bodyMD,
+    textAlign: 'center',
   },
 });

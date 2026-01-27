@@ -29,7 +29,16 @@
       "Bash(then grep -n \"<ScrollView\" \"$f\")",
       "Bash(wc:*)",
       "Bash(find:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(dir:*)",
+      "Bash(php artisan route:list:*)",
+      "Bash(npx expo start --port 8082 --clear)",
+      "Bash(php artisan tenants:migrate:*)",
+      "Bash(where:*)",
+      "Bash(C:Usersufukm.configherdbinphp.bat artisan tenants:migrate --tenants=all)",
+      "Bash(\"C:/Users/ufukm/.config/herd/bin/php.bat\" artisan tenants:migrate --tenants=all)",
+      "Bash(\"C:/Users/ufukm/.config/herd/bin/php.bat\" artisan list)",
+      "Bash(\"C:/Users/ufukm/.config/herd/bin/php.bat\" artisan tenants:migrate)"
     ]
   },
   "enableAllProjectMcpServers": true,
