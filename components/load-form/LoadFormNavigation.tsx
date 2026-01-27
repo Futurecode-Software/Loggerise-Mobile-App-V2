@@ -10,6 +10,7 @@ interface LoadFormNavigationProps {
   onNext: () => void;
   onSubmit: () => void;
   isSubmitting: boolean;
+  submitButtonText?: string;
 }
 
 export default function LoadFormNavigation({
@@ -19,6 +20,7 @@ export default function LoadFormNavigation({
   onNext,
   onSubmit,
   isSubmitting,
+  submitButtonText = 'Kaydet',
 }: LoadFormNavigationProps) {
   const colors = Colors.light;
   const isFirstStep = currentStep === 1;
@@ -58,7 +60,7 @@ export default function LoadFormNavigation({
         ) : (
           <>
             <Text style={[styles.buttonText, styles.buttonTextWhite]}>
-              {isLastStep ? 'Kaydet' : 'İleri'}
+              {isLastStep ? submitButtonText : 'İleri'}
             </Text>
             {isLastStep ? (
               <Save size={20} color="#FFFFFF" />

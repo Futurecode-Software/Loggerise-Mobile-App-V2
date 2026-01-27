@@ -747,9 +747,7 @@ export default function ContactDetailScreen() {
                 <>
                   <TouchableOpacity
                     style={styles.headerButton}
-                    onPress={() => {
-                      // TODO: Düzenleme sayfasına yönlendir
-                    }}
+                    onPress={() => router.push(`/contact/${id}/edit` as any)}
                     activeOpacity={0.7}
                   >
                     <Edit size={20} color="#FFFFFF" />

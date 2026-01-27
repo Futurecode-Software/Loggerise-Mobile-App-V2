@@ -46,9 +46,27 @@ export interface Contact {
     id: number;
     name: string;
   };
+  tax_office_id?: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Extended fields
+  business_type?: BusinessType | null;
+  legal_type?: LegalType;
+  currency_type?: string;
+  category?: string;
+  country_id?: number;
+  main_address?: string;
+  main_state_id?: number | null;
+  main_city_id?: number | null;
+  main_latitude?: number | null;
+  main_longitude?: number | null;
+  main_place_id?: string | null;
+  main_formatted_address?: string | null;
+  risk_limit?: number | null;
+  customer_segment?: 'enterprise' | 'mid_market' | 'small_business' | 'individual' | null;
+  credit_rating?: number | null;
+  default_payment_terms?: number | null;
 }
 
 /**

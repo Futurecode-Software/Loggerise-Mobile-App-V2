@@ -440,6 +440,32 @@ export interface LoadFormData {
 }
 
 /**
+ * Update existing load
+ */
+export async function updateLoad(id: number, data: LoadFormData): Promise<LoadDetail> {
+  try {
+    console.log('[API] Updating load', id, 'with data:', JSON.stringify(data, null, 2));
+    const response = await api.put<LoadResponse>(`/loads/${id}`, data);
+    return response.data.data.load;
+  } catch (error: any) {
+    console.error('[API] Load update failed:', error?.response?.data || error);
+    // Get detailed error message
+    if (error?.response?.data?.errors) {
+      const errors = error.response.data.errors;
+      const firstField = Object.keys(errors)[0];
+      if (firstField) {
+        throw new Error(`${firstField}: ${errors[firstField][0]}`);
+      }
+    }
+    if (error?.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
  * Create new load
  */
 export async function createLoad(data: LoadFormData): Promise<LoadDetail> {

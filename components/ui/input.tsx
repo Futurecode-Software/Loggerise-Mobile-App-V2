@@ -19,6 +19,7 @@ interface InputProps extends Omit<TextInputProps, 'style'> {
   containerStyle?: ViewStyle;
   inputStyle?: ViewStyle;
   isPassword?: boolean;
+  required?: boolean;
 }
 
 export function Input({
@@ -46,6 +47,7 @@ export function Input({
       {label && (
         <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label}
+          {props.required && <Text style={{ color: colors.danger }}> *</Text>}
         </Text>
       )}
       <View

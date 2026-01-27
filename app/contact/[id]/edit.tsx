@@ -9,7 +9,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Save } from 'lucide-react-native';
 import { Input, Button, Card } from '@/components/ui';
 import { GooglePlacesAutocomplete } from '@/components/ui/GooglePlacesAutocomplete';
@@ -18,7 +18,8 @@ import { TaxOfficeSelect } from '@/components/ui/TaxOfficeSelect';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
-  createContact,
+  getContact,
+  updateContact,
   ContactFormData,
   ContactType,
   LegalType,
@@ -76,11 +77,15 @@ function ToggleButton({
   );
 }
 
-export default function NewContactScreen() {
+export default function EditContactScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const contactId = Number(id);
+  
   const colors = Colors.light;
   const { success, error: showError } = useToast();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isTurkish, setIsTurkish] = useState(true);
   const [queryingEfatura, setQueryingEfatura] = useState(false);
   const [efaturaInfo, setEfaturaInfo] = useState<{
@@ -123,6 +128,63 @@ export default function NewContactScreen() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Load contact data
+  useEffect(() => {
+    const loadContact = async () => {
+      if (!contactId) {
+        showError('Hata', 'Cari ID bulunamadı');
+        router.back();
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const contact = await getContact(contactId);
+
+        // Set location type based on country
+        const isDomestic = contact.country_id === DEFAULT_TURKEY_ID;
+        setIsTurkish(isDomestic);
+
+        // Populate form data
+        setFormData({
+          type: contact.type,
+          business_type: contact.business_type || null,
+          legal_type: contact.legal_type || 'company',
+          name: contact.name || '',
+          short_name: contact.short_name || '',
+          currency_type: contact.currency_type || 'TRY',
+          status: contact.status,
+          is_active: contact.is_active,
+          email: contact.email || '',
+          phone: contact.phone || '',
+          fax: '',
+          tax_number: contact.tax_number || '',
+          tax_office_id: contact.tax_office?.id || null,
+          category: contact.category || '',
+          main_address: contact.main_address || '',
+          country_id: contact.country_id || DEFAULT_TURKEY_ID,
+          main_state_id: contact.main_state_id || null,
+          main_city_id: contact.main_city_id || null,
+          main_latitude: contact.main_latitude || null,
+          main_longitude: contact.main_longitude || null,
+          main_place_id: contact.main_place_id || null,
+          main_formatted_address: contact.main_formatted_address || null,
+          risk_limit: contact.risk_limit || null,
+          customer_segment: contact.customer_segment || null,
+          credit_rating: contact.credit_rating || null,
+          default_payment_terms: contact.default_payment_terms || null,
+        });
+      } catch (err) {
+        showError('Hata', err instanceof Error ? err.message : 'Cari bilgisi yüklenemedi');
+        router.back();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadContact();
+  }, [contactId]);
+
   // Yurtici/Yurtdisi toggle handler
   const handleLocationToggle = useCallback((isDomestic: boolean) => {
     setIsTurkish(isDomestic);
@@ -152,7 +214,7 @@ export default function NewContactScreen() {
   }, []);
 
   // E-Fatura kullanici bilgisi sorgulama
-  const queryEfaturaUser = useCallback(async (taxNumber: string) => {
+  const queryEfaturaUser = useCallback(async (taxNumber: string, currentName: string = '') => {
     if (!taxNumber || taxNumber.length < 10 || !isTurkish || taxNumber === FOREIGN_DEFAULT_TAX_NUMBER) {
       setEfaturaInfo(null);
       return;
@@ -174,7 +236,7 @@ export default function NewContactScreen() {
         });
 
         // Form alanlarini doldur
-        if (userData.unvan && !formData.name) {
+        if (userData.unvan && !currentName) {
           setFormData(prev => ({ ...prev, name: userData.unvan }));
         }
       } else {
@@ -196,16 +258,17 @@ export default function NewContactScreen() {
 
   // Vergi numarasi degistiginde sorgula (debounce ile)
   useEffect(() => {
-    if (formData.tax_number && formData.tax_number.length >= 10 && isTurkish && formData.tax_number !== FOREIGN_DEFAULT_TAX_NUMBER) {
+    const taxNumber = formData.tax_number || '';
+    if (taxNumber.length >= 10 && isTurkish && taxNumber !== FOREIGN_DEFAULT_TAX_NUMBER) {
       const timeoutId = setTimeout(() => {
-        queryEfaturaUser(formData.tax_number);
+        queryEfaturaUser(taxNumber, formData.name || '');
       }, 800);
 
       return () => clearTimeout(timeoutId);
     } else {
       setEfaturaInfo(null);
     }
-  }, [formData.tax_number, isTurkish, queryEfaturaUser]);
+  }, [formData.tax_number, formData.name, isTurkish, queryEfaturaUser]);
 
   const handleMainAddressPlaceSelect = async (place: PlaceDetails | null) => {
     if (!place) return;
@@ -289,11 +352,11 @@ export default function NewContactScreen() {
 
     setIsSubmitting(true);
     try {
-      const contact = await createContact(formData);
-      success('Başarılı', 'Cari başarıyla oluşturuldu');
-      setTimeout(() => router.replace(`/contact/${contact.id}` as any), 1000);
+      await updateContact(contactId, formData);
+      success('Başarılı', 'Cari başarıyla güncellendi');
+      router.replace(`/contact/${contactId}` as any);
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Cari oluşturulamadı');
+      showError('Hata', err instanceof Error ? err.message : 'Cari güncellenemedi');
     } finally {
       setIsSubmitting(false);
     }
@@ -338,11 +401,25 @@ export default function NewContactScreen() {
     { value: 'individual', label: 'Bireysel' },
   ];
 
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FullScreenHeader title="Cari Düzenle" showBackButton />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Brand.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Cari bilgisi yükleniyor...
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Full Screen Header */}
       <FullScreenHeader
-        title="Yeni Cari"
+        title="Cari Düzenle"
         showBackButton
         rightIcons={
           <TouchableOpacity
@@ -833,6 +910,15 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     gap: Spacing.md,
     paddingBottom: Spacing['4xl'],
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    ...Typography.bodyMD,
+    marginTop: Spacing.md,
   },
   efaturaCard: {
     padding: Spacing.md,
