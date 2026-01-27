@@ -307,7 +307,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     padding: Spacing.xl,
     marginBottom: Spacing.md,
-    marginHorizontal: Spacing.lg,
     marginTop: Spacing.md,
   },
   totalLabel: {
