@@ -18,7 +18,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { Save, Trash2, Layers } from 'lucide-react-native';
 import { Input, Card, Badge, Checkbox, ConfirmDialog, FullScreenHeader } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getProductModel,
@@ -174,14 +174,16 @@ export default function ModelDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Model Detayı"
           onBackPress={() => router.back()}
         />
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Yükleniyor...</Text>
+        <View style={styles.contentArea}>
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={Brand.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Yükleniyor...</Text>
+          </View>
         </View>
       </View>
     );
@@ -189,28 +191,30 @@ export default function ModelDetailScreen() {
 
   if (error || !model) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Model Detayı"
           onBackPress={() => router.back()}
         />
-        <View style={styles.errorState}>
-          <Text style={[styles.errorText, { color: colors.danger }]}>
-            {error || 'Model bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchModel}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
+        <View style={styles.contentArea}>
+          <View style={styles.errorState}>
+            <Text style={[styles.errorText, { color: colors.danger }]}>
+              {error || 'Model bulunamadı'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+              onPress={fetchModel}
+            >
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -222,21 +226,22 @@ export default function ModelDetailScreen() {
             !isEditing
               ? [
                   {
-                    icon: <Trash2 size={22} color={colors.danger} />,
+                    icon: <Trash2 size={22} color="#FFFFFF" />,
                     onPress: handleDelete,
                   },
                 ]
               : undefined
           }
           rightAction={{
-            icon: isSubmitting ? undefined : <Save size={22} color={Brand.primary} />,
+            icon: isSubmitting ? undefined : <Save size={22} color="#FFFFFF" />,
             onPress: isEditing ? handleSubmit : () => setIsEditing(true),
             disabled: isSubmitting,
             loading: isSubmitting,
           }}
         />
 
-        <ScrollView
+        <View style={styles.contentArea}>
+          <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
@@ -334,6 +339,7 @@ export default function ModelDetailScreen() {
             )}
           </Card>
         </ScrollView>
+        </View>
       </KeyboardAvoidingView>
 
       {/* Delete Confirmation Dialog */}
@@ -358,6 +364,13 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   content: {
     flex: 1,

@@ -151,14 +151,23 @@ export default function ModelsScreen() {
 
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Modeller"
         subtitle={pagination ? `${pagination.total} model` : undefined}
         showBackButton={true}
+        rightIcons={
+          <TouchableOpacity
+            onPress={() => router.push('/stock/models/new' as any)}
+            activeOpacity={0.7}
+          >
+            <Plus size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
       />
 
-      <StandardListContainer
+      <View style={styles.contentArea}>
+        <StandardListContainer
         data={models}
         renderItem={renderModel}
         keyExtractor={(item) => String(item.id)}
@@ -186,13 +195,8 @@ export default function ModelsScreen() {
           executeFetch(searchQuery, 1, false);
         }}
       />
+      </View>
 
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/stock/models/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -201,14 +205,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
 });

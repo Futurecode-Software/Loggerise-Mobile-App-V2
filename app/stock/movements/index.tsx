@@ -197,16 +197,29 @@ export default function StockMovementsScreen() {
 
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Stok Hareketleri"
         subtitle={pagination ? `${pagination.total} hareket` : undefined}
         showBackButton={true}
         rightIcons={
-          <TouchableOpacity
-            onPress={() => {
-              // Filter action
-            }}
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity
+              onPress={() => router.push('/stock/movements/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                // Filter action
+              }}
+              activeOpacity={0.7}
+            >
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        }
             activeOpacity={0.7}
           >
             <Filter size={22} color="#FFFFFF" />
@@ -214,7 +227,8 @@ export default function StockMovementsScreen() {
         }
       />
 
-      <StandardListContainer
+      <View style={styles.contentArea}>
+        <StandardListContainer
         data={movements}
         renderItem={renderMovement}
         keyExtractor={(item) => String(item.id)}
@@ -242,6 +256,7 @@ export default function StockMovementsScreen() {
           executeFetch(searchQuery, 1, false);
         }}
       />
+      </View>
 
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
@@ -257,6 +272,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
+  },
   quantity: {
     fontSize: 14,
     fontWeight: '700',
@@ -270,15 +292,5 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 10,
     color: Colors.light.textMuted,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

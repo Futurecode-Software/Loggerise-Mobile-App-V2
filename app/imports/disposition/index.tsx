@@ -14,9 +14,10 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
-  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import {
   Plus,
   Check,
@@ -33,6 +34,7 @@ import {
 import { Card, Badge, Button } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import LoadPickerModal, { LoadPickerModalRef } from '@/components/modals/LoadPickerModal';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -61,7 +63,6 @@ export default function DispositionScreen() {
   // UI state
   const [selectedPosition, setSelectedPosition] = useState<DraftPosition | null>(null);
   const [expandedPositions, setExpandedPositions] = useState<Set<number>>(new Set());
-  const [showLoadPicker, setShowLoadPicker] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [positionToDelete, setPositionToDelete] = useState<DraftPosition | null>(null);
 
@@ -73,6 +74,7 @@ export default function DispositionScreen() {
 
   // Refs
   const isMountedRef = useRef(true);
+  const loadPickerModalRef = useRef<LoadPickerModalRef>(null);
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -164,7 +166,7 @@ export default function DispositionScreen() {
   // Open load picker for a position
   const handleOpenLoadPicker = (position: DraftPosition) => {
     setSelectedPosition(position);
-    setShowLoadPicker(true);
+    loadPickerModalRef.current?.present();
   };
 
   // Assign load to position
@@ -174,11 +176,12 @@ export default function DispositionScreen() {
     try {
       await assignLoadToPosition(selectedPosition.id, load.id);
       success('Başarılı', 'Yük pozisyona atandı.');
-      setShowLoadPicker(false);
-      setSelectedPosition(null);
+      // Don't close modal - allow multiple selections
+      // Don't reset selectedPosition - keep modal open
       fetchData();
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Yük atanamadı.');
+      throw err; // Re-throw to let modal handle it
     } finally {
       setIsAssigning(null);
     }
@@ -358,50 +361,14 @@ export default function DispositionScreen() {
     );
   };
 
-  // Render unassigned load item (in modal)
-  const renderUnassignedLoad = ({ item: load }: { item: Load }) => {
-    const isAssigningThis = isAssigning === load.id;
-
-    return (
-      <TouchableOpacity
-        style={[styles.unassignedLoadItem, { borderColor: colors.border }]}
-        onPress={() => handleAssignLoad(load)}
-        disabled={isAssigningThis}
-        activeOpacity={0.7}
-      >
-        <View style={styles.loadInfo}>
-          <Text style={[styles.loadNumber, { color: colors.text }]}>{load.load_number}</Text>
-          <Text style={[styles.loadCargo, { color: colors.textSecondary }]} numberOfLines={1}>
-            {load.cargo_name || '-'}
-          </Text>
-          {load.customer && (
-            <Text style={[styles.loadCustomer, { color: colors.textMuted }]} numberOfLines={1}>
-              {load.customer.name}
-            </Text>
-          )}
-        </View>
-        <View style={styles.loadStatusContainer}>
-          <View style={[styles.statusDot, { backgroundColor: getStatusColor(load.status) }]} />
-          {isAssigningThis ? (
-            <ActivityIndicator size="small" color={Brand.primary} />
-          ) : (
-            <Plus size={20} color={Brand.primary} />
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Dispozisyon" showBackButton />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Yükleniyor...
-          </Text>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.loadingText}>Yükleniyor...</Text>
         </View>
       </View>
     );
@@ -410,14 +377,14 @@ export default function DispositionScreen() {
   // Error state
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Dispozisyon" showBackButton />
         <View style={styles.errorContainer}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
+          <AlertCircle size={64} color="#FFFFFF" />
+          <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+          <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+            style={styles.retryButton}
             onPress={() => {
               setIsLoading(true);
               fetchData();
@@ -434,15 +401,17 @@ export default function DispositionScreen() {
   const unassignedLoads = data?.unassigned_loads || [];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <FullScreenHeader
-        title="Dispozisyon"
-        subtitle={`${draftPositions.length} taslak • ${unassignedLoads.length} atanmamış yük`}
-        showBackButton
-      />
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: Brand.primary }]}>
+      <BottomSheetModalProvider>
+        <FullScreenHeader
+          title="Dispozisyon"
+          subtitle={`${draftPositions.length} taslak • ${unassignedLoads.length} atanmamış yük`}
+          showBackButton
+        />
 
-      {/* Stats Bar */}
-      <View style={[styles.statsBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.contentCard}>
+          {/* Stats Bar */}
+          <View style={[styles.statsBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: Brand.primary }]}>{draftPositions.length}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Taslak</Text>
@@ -499,48 +468,12 @@ export default function DispositionScreen() {
       </TouchableOpacity>
 
       {/* Load Picker Modal */}
-      <Modal
-        visible={showLoadPicker}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowLoadPicker(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Yük Seç</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowLoadPicker(false);
-                  setSelectedPosition(null);
-                }}
-              >
-                <X size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            {unassignedLoads.length > 0 ? (
-              <FlatList
-                data={unassignedLoads}
-                renderItem={renderUnassignedLoad}
-                keyExtractor={(item) => String(item.id)}
-                contentContainerStyle={styles.modalListContent}
-                showsVerticalScrollIndicator={false}
-              />
-            ) : (
-              <View style={styles.modalEmpty}>
-                <Package size={48} color={colors.textMuted} />
-                <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                  Atanmamış yük yok
-                </Text>
-                <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                  Tüm yükler pozisyonlara atanmış
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
+      <LoadPickerModal
+        ref={loadPickerModalRef}
+        loads={unassignedLoads}
+        onSelectLoad={handleAssignLoad}
+        loadingLoadId={isAssigning}
+      />
 
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
@@ -557,13 +490,24 @@ export default function DispositionScreen() {
           setPositionToDelete(null);
         }}
       />
-    </View>
+        </View>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
   loadingContainer: {
     flex: 1,
@@ -573,6 +517,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...Typography.bodyMD,
+    color: '#FFFFFF',
   },
   errorContainer: {
     flex: 1,
@@ -583,19 +528,22 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     ...Typography.headingMD,
+    color: '#FFFFFF',
   },
   errorText: {
     ...Typography.bodyMD,
     textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   retryButton: {
     marginTop: Spacing.md,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
+    backgroundColor: '#FFFFFF',
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: Brand.primary,
     ...Typography.bodyMD,
     fontWeight: '600',
   },
@@ -786,52 +734,5 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
-  },
-  modalTitle: {
-    ...Typography.headingMD,
-  },
-  modalListContent: {
-    padding: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  modalEmpty: {
-    alignItems: 'center',
-    padding: Spacing['2xl'],
-    gap: Spacing.md,
-  },
-  unassignedLoadItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    gap: Spacing.md,
-  },
-  loadStatusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
 });

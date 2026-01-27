@@ -10,13 +10,13 @@ import { router } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
 import { ScrollText, Construction } from 'lucide-react-native';
 import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
 
 export default function PromissoryNotesScreen() {
   const colors = Colors.light;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader title="Senetler" showBackButton={true} />
 
       <View style={styles.content}>
@@ -36,12 +36,17 @@ export default function PromissoryNotesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
   },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing['2xl'],
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   iconContainer: {
     width: 120,

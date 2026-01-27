@@ -40,7 +40,7 @@ import {
 import { Card, Badge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 import {
@@ -564,17 +564,19 @@ export default function TripDetailScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Sefer Detayı"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Sefer bilgileri yükleniyor...
-          </Text>
+        <View style={styles.contentArea}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Brand.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+              Sefer bilgileri yükleniyor...
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -583,37 +585,39 @@ export default function TripDetailScreen() {
   // Error state
   if (error || !trip) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Sefer Detayı"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={styles.errorContainer}>
-          <AlertTriangle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            {error || 'Sefer bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchTrip}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: colors.surface, marginTop: Spacing.sm, borderWidth: 1, borderColor: colors.border }]}
-            onPress={() => router.back()}
-          >
-            <Text style={[styles.retryButtonText, { color: colors.text }]}>Geri Dön</Text>
-          </TouchableOpacity>
+        <View style={styles.contentArea}>
+          <View style={styles.errorContainer}>
+            <AlertTriangle size={64} color={colors.danger} />
+            <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
+            <Text style={[styles.errorText, { color: colors.textSecondary }]}>
+              {error || 'Sefer bulunamadı'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+              onPress={fetchTrip}
+            >
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: colors.surface, marginTop: Spacing.sm, borderWidth: 1, borderColor: colors.border }]}
+              onPress={() => router.back()}
+            >
+              <Text style={[styles.retryButtonText, { color: colors.text }]}>Geri Dön</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title={trip.trip_number}
         showBackButton
@@ -641,163 +645,166 @@ export default function TripDetailScreen() {
         }
       />
 
-      {/* Trip Summary Card */}
-      <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={styles.summaryHeader}>
-          <View style={[styles.typeIconLarge, { backgroundColor: Brand.primary + '15' }]}>
-            <Truck size={32} color={Brand.primary} />
+      {/* Content Area */}
+      <View style={styles.contentArea}>
+        {/* Trip Summary Card */}
+        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.summaryHeader}>
+            <View style={[styles.typeIconLarge, { backgroundColor: Brand.primary + '15' }]}>
+              <Truck size={32} color={Brand.primary} />
+            </View>
+            <View style={styles.summaryInfo}>
+              <Text style={[styles.summaryNumber, { color: colors.text }]}>{trip.trip_number}</Text>
+              {trip.route && (
+                <View style={styles.routeRow}>
+                  <Route size={14} color={colors.textMuted} />
+                  <Text style={[styles.summaryRoute, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {trip.route}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
-          <View style={styles.summaryInfo}>
-            <Text style={[styles.summaryNumber, { color: colors.text }]}>{trip.trip_number}</Text>
-            {trip.route && (
-              <View style={styles.routeRow}>
-                <Route size={14} color={colors.textMuted} />
-                <Text style={[styles.summaryRoute, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {trip.route}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
 
-        {/* Transport Type Badges */}
-        {!!(trip.is_roro || trip.is_train || trip.is_mafi) && (
-          <View style={styles.transportIcons}>
-            {trip.is_roro && (
-              <View style={[styles.transportBadge, { backgroundColor: '#3b82f6' + '20' }]}>
-                <Ship size={14} color="#3b82f6" />
-                <Text style={[styles.transportText, { color: '#3b82f6' }]}>RoRo</Text>
-              </View>
-            )}
-            {trip.is_train && (
-              <View style={[styles.transportBadge, { backgroundColor: '#8b5cf6' + '20' }]}>
-                <Train size={14} color="#8b5cf6" />
-                <Text style={[styles.transportText, { color: '#8b5cf6' }]}>Tren</Text>
-              </View>
-            )}
-            {trip.is_mafi && (
-              <View style={[styles.transportBadge, { backgroundColor: '#f59e0b' + '20' }]}>
-                <Container size={14} color="#f59e0b" />
-                <Text style={[styles.transportText, { color: '#f59e0b' }]}>Mafi</Text>
-              </View>
-            )}
-          </View>
-        )}
+          {/* Transport Type Badges */}
+          {!!(trip.is_roro || trip.is_train || trip.is_mafi) && (
+            <View style={styles.transportIcons}>
+              {trip.is_roro && (
+                <View style={[styles.transportBadge, { backgroundColor: '#3b82f6' + '20' }]}>
+                  <Ship size={14} color="#3b82f6" />
+                  <Text style={[styles.transportText, { color: '#3b82f6' }]}>RoRo</Text>
+                </View>
+              )}
+              {trip.is_train && (
+                <View style={[styles.transportBadge, { backgroundColor: '#8b5cf6' + '20' }]}>
+                  <Train size={14} color="#8b5cf6" />
+                  <Text style={[styles.transportText, { color: '#8b5cf6' }]}>Tren</Text>
+                </View>
+              )}
+              {trip.is_mafi && (
+                <View style={[styles.transportBadge, { backgroundColor: '#f59e0b' + '20' }]}>
+                  <Container size={14} color="#f59e0b" />
+                  <Text style={[styles.transportText, { color: '#f59e0b' }]}>Mafi</Text>
+                </View>
+              )}
+            </View>
+          )}
 
-        {/* Status and Type Badges */}
-        <View style={styles.badgeRow}>
-          <Badge
-            label={getTripStatusLabel(trip.status)}
-            variant={getTripStatusVariant(trip.status)}
-            size="sm"
-          />
-          {trip.trip_type && (
+          {/* Status and Type Badges */}
+          <View style={styles.badgeRow}>
             <Badge
-              label={getTripTypeLabel(trip.trip_type)}
-              variant="info"
+              label={getTripStatusLabel(trip.status)}
+              variant={getTripStatusVariant(trip.status)}
               size="sm"
             />
+            {trip.trip_type && (
+              <Badge
+                label={getTripTypeLabel(trip.trip_type)}
+                variant="info"
+                size="sm"
+              />
+            )}
+            <Badge
+              label={getVehicleOwnerTypeLabel(trip.vehicle_owner_type)}
+              variant={trip.vehicle_owner_type === 'own' ? 'success' : 'warning'}
+              size="sm"
+            />
+          </View>
+
+          {/* Vehicle Info */}
+          {((trip.truck_tractor?.plate) || (trip.trailer?.plate)) && (
+            <View style={styles.vehicleRow}>
+              {trip.truck_tractor?.plate && (
+                <View style={styles.vehicleItem}>
+                  <Truck size={14} color={colors.icon} />
+                  <Text style={[styles.vehicleText, { color: colors.text }]}>
+                    {trip.truck_tractor.plate}
+                  </Text>
+                </View>
+              )}
+              {trip.truck_tractor?.plate && trip.trailer?.plate && (
+                <ArrowRight size={12} color={colors.icon} />
+              )}
+              {trip.trailer?.plate && (
+                <View style={styles.vehicleItem}>
+                  <Text style={[styles.vehicleText, { color: colors.text }]}>
+                    {trip.trailer.plate}
+                  </Text>
+                </View>
+              )}
+            </View>
           )}
-          <Badge
-            label={getVehicleOwnerTypeLabel(trip.vehicle_owner_type)}
-            variant={trip.vehicle_owner_type === 'own' ? 'success' : 'warning'}
-            size="sm"
-          />
+
+          {/* Driver Info */}
+          {trip.driver && (
+            <View style={styles.driverRow}>
+              <User size={14} color={colors.icon} />
+              <Text style={[styles.driverText, { color: colors.textSecondary }]}>
+                {getDriverFullName(trip.driver)}
+              </Text>
+              {trip.second_driver && (
+                <Text style={[styles.driverText, { color: colors.textMuted }]}>
+                  {' + '}{getDriverFullName(trip.second_driver)}
+                </Text>
+              )}
+            </View>
+          )}
         </View>
 
-        {/* Vehicle Info */}
-        {((trip.truck_tractor?.plate) || (trip.trailer?.plate)) && (
-          <View style={styles.vehicleRow}>
-            {trip.truck_tractor?.plate && (
-              <View style={styles.vehicleItem}>
-                <Truck size={14} color={colors.icon} />
-                <Text style={[styles.vehicleText, { color: colors.text }]}>
-                  {trip.truck_tractor.plate}
-                </Text>
-              </View>
-            )}
-            {trip.truck_tractor?.plate && trip.trailer?.plate && (
-              <ArrowRight size={12} color={colors.icon} />
-            )}
-            {trip.trailer?.plate && (
-              <View style={styles.vehicleItem}>
-                <Text style={[styles.vehicleText, { color: colors.text }]}>
-                  {trip.trailer.plate}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
+        {/* Tabs */}
+        <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
+            {TABS.map((tab) => {
+              const TabIcon = tab.icon;
+              const isActive = activeTab === tab.id;
+              // Count items for badge
+              let count = 0;
+              if (tab.id === 'loads') count = trip.loads?.length || 0;
+              if (tab.id === 'positions') count = positions.length;
 
-        {/* Driver Info */}
-        {trip.driver && (
-          <View style={styles.driverRow}>
-            <User size={14} color={colors.icon} />
-            <Text style={[styles.driverText, { color: colors.textSecondary }]}>
-              {getDriverFullName(trip.driver)}
-            </Text>
-            {trip.second_driver && (
-              <Text style={[styles.driverText, { color: colors.textMuted }]}>
-                {' + '}{getDriverFullName(trip.second_driver)}
-              </Text>
-            )}
-          </View>
-        )}
-      </View>
-
-      {/* Tabs */}
-      <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
-          {TABS.map((tab) => {
-            const TabIcon = tab.icon;
-            const isActive = activeTab === tab.id;
-            // Count items for badge
-            let count = 0;
-            if (tab.id === 'loads') count = trip.loads?.length || 0;
-            if (tab.id === 'positions') count = positions.length;
-
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                style={[
-                  styles.tab,
-                  isActive && { borderBottomColor: Brand.primary },
-                ]}
-                onPress={() => setActiveTab(tab.id)}
-              >
-                <View style={styles.tabIconRow}>
-                  <TabIcon size={18} color={isActive ? Brand.primary : colors.textMuted} />
-                  {count > 0 && (
-                    <View style={[styles.tabBadge, { backgroundColor: isActive ? Brand.primary : colors.textMuted }]}>
-                      <Text style={styles.tabBadgeText}>{count}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text
+              return (
+                <TouchableOpacity
+                  key={tab.id}
                   style={[
-                    styles.tabText,
-                    { color: isActive ? Brand.primary : colors.textSecondary },
+                    styles.tab,
+                    isActive && { borderBottomColor: Brand.primary },
                   ]}
+                  onPress={() => setActiveTab(tab.id)}
                 >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <View style={styles.tabIconRow}>
+                    <TabIcon size={18} color={isActive ? Brand.primary : colors.textMuted} />
+                    {count > 0 && (
+                      <View style={[styles.tabBadge, { backgroundColor: isActive ? Brand.primary : colors.textMuted }]}>
+                        <Text style={styles.tabBadgeText}>{count}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      { color: isActive ? Brand.primary : colors.textSecondary },
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Tab Content */}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
+          }
+        >
+          {renderTabContent()}
         </ScrollView>
       </View>
-
-      {/* Tab Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
-        }
-      >
-        {renderTabContent()}
-      </ScrollView>
 
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
@@ -818,6 +825,14 @@ export default function TripDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
+    overflow: 'hidden',
   },
   headerButton: {
     padding: Spacing.sm,

@@ -369,6 +369,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
+    overflow: 'hidden',
     ...Shadows.lg,
   },
   // Header styles removed - using FullScreenHeader component

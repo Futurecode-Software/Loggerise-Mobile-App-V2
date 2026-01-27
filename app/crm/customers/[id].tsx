@@ -281,7 +281,7 @@ export default function CrmCustomerDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Müşteri Detayı" onBack={() => router.back()} />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
@@ -295,7 +295,7 @@ export default function CrmCustomerDetailScreen() {
 
   if (error || !customer) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Müşteri Detayı" onBack={() => router.back()} />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
@@ -320,7 +320,7 @@ export default function CrmCustomerDetailScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Header */}
       <FullScreenHeader
         title={customer.name}
@@ -535,6 +535,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   contentContainer: {
     padding: Spacing.lg,

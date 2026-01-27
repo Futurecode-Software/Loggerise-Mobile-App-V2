@@ -304,7 +304,7 @@ export default function TireWarehouseScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       <FullScreenHeader
         title="Lastik Deposu"
         subtitle={pagination ? `${pagination.total} lastik` : undefined}
@@ -321,7 +321,8 @@ export default function TireWarehouseScreen() {
         }
       />
 
-      <StandardListContainer
+      <View style={styles.contentCard}>
+        <StandardListContainer
         data={tires}
         renderItem={renderTire}
         keyExtractor={(item) => String(item.id)}
@@ -350,12 +351,13 @@ export default function TireWarehouseScreen() {
         }}
       />
 
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/fleet/tire-warehouse/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
+          onPress={() => router.push('/fleet/tire-warehouse/new' as any)}
+        >
+          <Plus size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
 
       <ConfirmDialog
         visible={showDeleteDialog}
@@ -382,6 +384,15 @@ export default function TireWarehouseScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
   additionalInfo: {
     gap: Spacing.sm,

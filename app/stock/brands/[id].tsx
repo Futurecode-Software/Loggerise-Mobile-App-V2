@@ -19,7 +19,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Save, Trash2, Tag } from 'lucide-react-native';
 import { Input, Card, Badge, Checkbox, ConfirmDialog } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getProductBrand,
@@ -175,7 +175,7 @@ export default function BrandDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Marka Detayı" showBackButton />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
@@ -187,7 +187,7 @@ export default function BrandDetailScreen() {
 
   if (error || !brand) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Marka Detayı" showBackButton />
         <View style={styles.errorState}>
           <Text style={[styles.errorText, { color: colors.danger }]}>
@@ -205,7 +205,7 @@ export default function BrandDetailScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title={isEditing ? 'Markayı Düzenle' : 'Marka Detayı'}
         showBackButton
@@ -232,12 +232,13 @@ export default function BrandDetailScreen() {
         }
       />
 
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <View style={styles.contentArea}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
 
-        <ScrollView
+          <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
@@ -335,7 +336,8 @@ export default function BrandDetailScreen() {
             )}
           </Card>
         </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
@@ -356,6 +358,13 @@ export default function BrandDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   keyboardAvoidingView: {
     flex: 1,

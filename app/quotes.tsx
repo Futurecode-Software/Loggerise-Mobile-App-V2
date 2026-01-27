@@ -327,7 +327,7 @@ export default function QuotesScreen() {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Teklifler"
         subtitle={pagination ? `${pagination.total} teklif` : undefined}
@@ -345,34 +345,36 @@ export default function QuotesScreen() {
         }
       />
 
-      <View style={styles.searchContainer}>
-        <Input
-          placeholder="Teklif no veya müşteri ile ara..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          leftIcon={<Search size={20} color={colors.icon} />}
-          containerStyle={styles.searchInput}
+      <View style={styles.contentWrapper}>
+        <View style={styles.searchContainer}>
+          <Input
+            placeholder="Teklif no veya müşteri ile ara..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            leftIcon={<Search size={20} color={colors.icon} />}
+            containerStyle={styles.searchInput}
+          />
+        </View>
+
+        <FlatList
+          data={quotes}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderQuote}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={renderFooter}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Brand.primary}
+            />
+          }
         />
       </View>
-
-      <FlatList
-        data={quotes}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderQuote}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Brand.primary}
-          />
-        }
-      />
 
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
@@ -387,6 +389,13 @@ export default function QuotesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentWrapper: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,

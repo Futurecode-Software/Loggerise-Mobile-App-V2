@@ -27,7 +27,7 @@ import {
   FileText,
 } from 'lucide-react-native';
 import { Card, Badge, ConfirmDialog, FullScreenHeader } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getStockMovement,
@@ -115,14 +115,16 @@ export default function MovementDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Hareket Detayı"
           onBackPress={() => router.back()}
         />
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Yükleniyor...</Text>
+        <View style={styles.contentArea}>
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={Brand.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Yükleniyor...</Text>
+          </View>
         </View>
       </View>
     );
@@ -130,21 +132,23 @@ export default function MovementDetailScreen() {
 
   if (error || !movement) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Hareket Detayı"
           onBackPress={() => router.back()}
         />
-        <View style={styles.errorState}>
-          <Text style={[styles.errorText, { color: colors.danger }]}>
-            {error || 'Hareket bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchMovement}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
+        <View style={styles.contentArea}>
+          <View style={styles.errorState}>
+            <Text style={[styles.errorText, { color: colors.danger }]}>
+              {error || 'Hareket bulunamadı'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+              onPress={fetchMovement}
+            >
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -156,19 +160,20 @@ export default function MovementDetailScreen() {
     movement.movement_type === 'transfer_in' || movement.movement_type === 'transfer_out';
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Hareket Detayı"
         onBackPress={() => router.back()}
         leftActions={[
           {
-            icon: <Trash2 size={22} color={colors.danger} />,
+            icon: <Trash2 size={22} color="#FFFFFF" />,
             onPress: handleDelete,
           },
         ]}
       />
 
-      <ScrollView
+      <View style={styles.contentArea}>
+        <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
@@ -309,6 +314,7 @@ export default function MovementDetailScreen() {
           )}
         </Card>
       </ScrollView>
+      </View>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
@@ -329,6 +335,13 @@ export default function MovementDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   content: {
     flex: 1,

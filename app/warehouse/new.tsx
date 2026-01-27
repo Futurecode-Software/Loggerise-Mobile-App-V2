@@ -20,7 +20,7 @@ import { router } from 'expo-router';
 import { Save } from 'lucide-react-native';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Input, Card, Checkbox } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import { createWarehouse, WarehouseFormData } from '@/services/endpoints/warehouses';
 import { getErrorMessage, getValidationErrors } from '@/services/api';
@@ -114,7 +114,7 @@ export default function NewWarehouseScreen() {
   }, [formData, validateForm, success, showError]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Yeni Depo Ekle"
         showBackButton
@@ -139,7 +139,8 @@ export default function NewWarehouseScreen() {
       >
 
         {/* Form Content */}
-        <ScrollView
+        <View style={styles.contentArea}>
+          <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
@@ -248,6 +249,7 @@ export default function NewWarehouseScreen() {
             </View>
           </Card>
         </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );
@@ -259,6 +261,13 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   headerButton: {
     padding: Spacing.sm,

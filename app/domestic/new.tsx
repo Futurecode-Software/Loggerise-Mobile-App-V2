@@ -20,7 +20,7 @@ import { Save, Package, User, MapPin, Calendar, FileText } from 'lucide-react-na
 import { Input, Card, DateInput } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
 import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import { getErrorMessage, getValidationErrors } from '@/services/api';
 import {
@@ -379,7 +379,7 @@ export default function NewDomesticOrderScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Yeni İş Emri"
         showBackButton
@@ -399,17 +399,18 @@ export default function NewDomesticOrderScreen() {
         }
       />
 
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {/* Tabs */}
-        <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabsContent}
-          >
+      <View style={styles.contentWrapper}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          {/* Tabs */}
+          <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tabsContent}
+            >
             {TABS.map((tab) => {
               const errorCount = getTabErrorCount(tab.id);
               const isActive = activeTab === tab.id;
@@ -443,21 +444,20 @@ export default function NewDomesticOrderScreen() {
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
-        </View>
+            </ScrollView>
+          </View>
 
-        {/* Form Content */}
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Card style={styles.card}>
+          {/* Form Content */}
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             {renderTabContent()}
-          </Card>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }
@@ -465,6 +465,13 @@ export default function NewDomesticOrderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentWrapper: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -474,6 +481,7 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     borderBottomWidth: 1,
+    paddingTop: Spacing.md,
   },
   tabsContent: {
     paddingHorizontal: Spacing.sm,
@@ -518,9 +526,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: Spacing.lg,
-  },
-  card: {
     padding: Spacing.lg,
     gap: Spacing.md,
   },

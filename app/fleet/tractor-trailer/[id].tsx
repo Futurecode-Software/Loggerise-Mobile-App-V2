@@ -26,7 +26,7 @@ import { Input, Card, Checkbox } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
 import { DateInput } from '@/components/ui/date-input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getTractorTrailerAssignments,
@@ -270,7 +270,7 @@ export default function EditTractorTrailerAssignmentScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Eşleştirme Düzenle"
         showBackButton
@@ -313,7 +313,8 @@ export default function EditTractorTrailerAssignmentScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Card style={styles.card}>
+          <View style={styles.formWrapper}>
+            <Card style={styles.card}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Eşleştirme Bilgileri</Text>
 
             <SelectInput
@@ -369,7 +370,8 @@ export default function EditTractorTrailerAssignmentScreen() {
                 onValueChange={(val) => handleInputChange('is_active', val)}
               />
             </View>
-          </Card>
+            </Card>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -417,6 +419,12 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: Spacing.lg,
+  },
+  formWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    ...Shadows.lg,
+    overflow: 'hidden',
   },
   card: {
     padding: Spacing.lg,

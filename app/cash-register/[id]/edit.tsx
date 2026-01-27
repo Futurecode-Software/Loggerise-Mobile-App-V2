@@ -21,7 +21,7 @@ import { Save } from 'lucide-react-native';
 import { Input, Checkbox } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getCashRegister,
@@ -165,7 +165,7 @@ export default function CashRegisterEditScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Kasa Düzenle" showBackButton />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Brand.primary} />
@@ -178,7 +178,7 @@ export default function CashRegisterEditScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader title="Kasa Düzenle" showBackButton />
 
       <KeyboardAvoidingView
@@ -310,6 +310,7 @@ export default function CashRegisterEditScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
   },
   loadingContainer: {
     flex: 1,
@@ -325,6 +326,10 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   formContent: {
     padding: Spacing.lg,

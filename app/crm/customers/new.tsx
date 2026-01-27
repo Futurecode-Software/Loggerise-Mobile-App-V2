@@ -14,7 +14,7 @@ import { router } from 'expo-router';
 import { Save } from 'lucide-react-native';
 import { Input, Button, Card, Select } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   createCrmCustomer,
   CrmCustomerFormData,
@@ -205,7 +205,7 @@ export default function NewCrmCustomerScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Full Screen Header */}
       <FullScreenHeader
         title="Yeni CRM Müşterisi"
@@ -573,6 +573,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   contentContainer: {
     padding: Spacing.lg,

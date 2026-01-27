@@ -129,7 +129,7 @@ export default function CrmScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="CRM" showBackButton rightIcons={headerRightIcons} />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
@@ -143,7 +143,7 @@ export default function CrmScreen() {
 
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="CRM" showBackButton rightIcons={headerRightIcons} />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
@@ -170,7 +170,7 @@ export default function CrmScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader title="CRM" showBackButton rightIcons={headerRightIcons} />
 
       <ScrollView
@@ -389,6 +389,7 @@ export default function CrmScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
   },
   headerActions: {
     flexDirection: 'row',
@@ -402,6 +403,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   contentContainer: {
     padding: Spacing.lg,

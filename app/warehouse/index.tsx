@@ -168,16 +168,29 @@ export default function WarehouseScreen() {
 
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Depolar"
         subtitle={pagination ? `${pagination.total} depo` : undefined}
         showBackButton={true}
         rightIcons={
-          <TouchableOpacity
-            onPress={() => {
-              // Filter action
-            }}
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity
+              onPress={() => router.push('/warehouse/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                // Filter action
+              }}
+              activeOpacity={0.7}
+            >
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        }
             activeOpacity={0.7}
           >
             <Filter size={22} color="#FFFFFF" />
@@ -185,7 +198,8 @@ export default function WarehouseScreen() {
         }
       />
 
-      <StandardListContainer
+      <View style={styles.contentArea}>
+        <StandardListContainer
         data={warehouses}
         renderItem={renderWarehouse}
         keyExtractor={(item) => String(item.id)}
@@ -213,6 +227,7 @@ export default function WarehouseScreen() {
           executeFetch(searchQuery, 1, false);
         }}
       />
+      </View>
 
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
@@ -228,6 +243,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
+  },
   additionalInfo: {
     gap: Spacing.sm,
     marginTop: Spacing.sm,
@@ -241,15 +263,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
     color: Colors.light.textSecondary,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

@@ -256,17 +256,30 @@ export default function EmployeesScreen() {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Çalışanlar"
         subtitle={pagination ? `${pagination.total} kişi` : undefined}
         showBackButton={true}
         tabs={headerTabs}
         rightIcons={
-          <TouchableOpacity
-            onPress={() => {
-              // Filter action
-            }}
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity
+              onPress={() => router.push('/employee/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                // Filter action
+              }}
+              activeOpacity={0.7}
+            >
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        }
             activeOpacity={0.7}
           >
             <Filter size={22} color="#FFFFFF" />
@@ -274,50 +287,49 @@ export default function EmployeesScreen() {
         }
       />
 
-      <StandardListContainer
-        data={employees}
-        renderItem={(item) => (
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => router.push(`/employee/${item.id}` as any)}
-            style={styles.listItemWrapper}
-          >
-            {renderEmployee(item)}
-          </TouchableOpacity>
-        )}
-        keyExtractor={(item) => String(item.id)}
-        search={{
-          value: searchQuery,
-          onChange: setSearchQuery,
-          placeholder: 'İsim, e-posta veya telefon ile ara...',
-        }}
-        emptyState={{
-          icon: User,
-          title: searchQuery ? 'Sonuç bulunamadı' : 'Henüz çalışan eklenmemiş',
-          subtitle: searchQuery
-            ? 'Farklı bir arama terimi deneyin'
-            : 'Yeni çalışan eklemek için + butonuna tıklayın',
-        }}
-        loading={isLoading}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        onLoadMore={loadMore}
-        pagination={pagination || undefined}
-        isLoadingMore={isLoadingMore}
-        error={error}
-        onRetry={() => {
-          setIsLoading(true);
-          executeFetch(searchQuery, activeFilter, 1, false);
-        }}
-      />
+      <View style={styles.contentWrapper}>
+        <StandardListContainer
+          data={employees}
+          renderItem={(item) => (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push(`/employee/${item.id}` as any)}
+              style={styles.listItemWrapper}
+            >
+              {renderEmployee(item)}
+            </TouchableOpacity>
+          )}
+          keyExtractor={(item) => String(item.id)}
+          search={{
+            value: searchQuery,
+            onChange: setSearchQuery,
+            placeholder: 'İsim, e-posta veya telefon ile ara...',
+          }}
+          emptyState={{
+            icon: User,
+            title: searchQuery ? 'Sonuç bulunamadı' : 'Henüz çalışan eklenmemiş',
+            subtitle: searchQuery
+              ? 'Farklı bir arama terimi deneyin'
+              : 'Yeni çalışan eklemek için + butonuna tıklayın',
+          }}
+          loading={isLoading}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onLoadMore={loadMore}
+          pagination={pagination || undefined}
+          isLoadingMore={isLoadingMore}
+          error={error}
+          onRetry={() => {
+            setIsLoading(true);
+            executeFetch(searchQuery, activeFilter, 1, false);
+          }}
+        />
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/employee/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+          onPress={() => router.push('/employee/new' as any)}
+        >
+          <Plus size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -325,6 +337,13 @@ export default function EmployeesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentWrapper: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   listItemWrapper: {
     marginBottom: Spacing.md,
@@ -390,15 +409,5 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: '500',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

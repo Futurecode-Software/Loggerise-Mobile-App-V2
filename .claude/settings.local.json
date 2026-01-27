@@ -20,7 +20,10 @@
       "Bash(grep:*)",
       "Bash(ls:*)",
       "Bash(xargs basename:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(git diff:*)",
+      "Bash(node:*)",
+      "Bash(done)"
     ]
   },
   "enableAllProjectMcpServers": true,

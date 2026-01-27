@@ -29,7 +29,7 @@ import {
   AlertTriangle,
 } from 'lucide-react-native';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { DashboardTheme } from '@/constants/dashboard-theme';
 import {
   getPosition,
@@ -159,14 +159,14 @@ export default function ExportPositionDetailScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Pozisyon Detayi"
           subtitle="Yukleniyor..."
           showBackButton
         />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={DashboardTheme.accent} />
+          <ActivityIndicator size="large" color="#FFFFFF" />
           <Text style={styles.loadingText}>Pozisyon bilgileri yukleniyor...</Text>
         </View>
       </View>
@@ -176,17 +176,17 @@ export default function ExportPositionDetailScreen() {
   // Error state
   if (error || !position) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Pozisyon Detayi"
           showBackButton
         />
         <View style={styles.errorContainer}>
-          <View style={[styles.errorIcon, { backgroundColor: DashboardTheme.dangerBg }]}>
-            <AlertTriangle size={48} color={DashboardTheme.danger} />
+          <View style={styles.errorIcon}>
+            <AlertTriangle size={48} color="#FFFFFF" />
           </View>
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata olustu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
+          <Text style={styles.errorTitle}>Bir hata olustu</Text>
+          <Text style={styles.errorText}>
             {error || 'Pozisyon bulunamadi'}
           </Text>
         </View>
@@ -198,7 +198,7 @@ export default function ExportPositionDetailScreen() {
   const subtitle = position.route || getPositionTypeLabel(position.position_type);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Full Screen Header with Tabs - Dashboard Style */}
       <FullScreenHeader
         title={position.position_number || 'Pozisyon Detayi'}
@@ -207,21 +207,23 @@ export default function ExportPositionDetailScreen() {
         tabs={headerTabs}
       />
 
-      {/* Content */}
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={DashboardTheme.accent}
-          />
-        }
-      >
-        {renderTabContent()}
-      </ScrollView>
+      {/* Content Card */}
+      <View style={styles.contentCard}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Brand.primary}
+            />
+          }
+        >
+          {renderTabContent()}
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -229,7 +231,15 @@ export default function ExportPositionDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DashboardTheme.background,
+    backgroundColor: Brand.primary,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
   loadingContainer: {
     flex: 1,
@@ -239,7 +249,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...Typography.bodyMD,
-    color: DashboardTheme.textMuted,
+    color: '#FFFFFF',
   },
   errorContainer: {
     flex: 1,
@@ -255,14 +265,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   errorTitle: {
     ...Typography.headingMD,
     textAlign: 'center',
+    color: '#FFFFFF',
   },
   errorText: {
     ...Typography.bodyMD,
     textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   content: {
     flex: 1,

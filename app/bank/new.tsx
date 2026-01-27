@@ -21,7 +21,7 @@ import { Save } from 'lucide-react-native';
 import { Input, Card, Checkbox } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import { createBank, BankFormData, CurrencyType } from '@/services/endpoints/banks';
 import { getErrorMessage, getValidationErrors } from '@/services/api';
@@ -148,7 +148,7 @@ export default function NewBankAccountScreen() {
   }, [formData, validateForm, success, showError]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Yeni Banka Hesabı"
         showBackButton
@@ -302,6 +302,7 @@ export default function NewBankAccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -311,6 +312,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   contentContainer: {
     padding: Spacing.lg,

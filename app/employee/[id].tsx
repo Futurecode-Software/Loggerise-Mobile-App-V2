@@ -28,7 +28,7 @@ import {
 import { Card, Badge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getEmployee,
@@ -127,13 +127,13 @@ export default function EmployeeDetailScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Çalışan Detayı"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingCard, { backgroundColor: '#FFFFFF' }]}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Çalışan bilgileri yükleniyor...
@@ -146,13 +146,13 @@ export default function EmployeeDetailScreen() {
   // Error state
   if (error || !employee) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Çalışan Detayı"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={styles.errorContainer}>
+        <View style={[styles.errorCard, { backgroundColor: '#FFFFFF' }]}>
           <AlertCircle size={64} color={colors.danger} />
           <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>
@@ -170,7 +170,7 @@ export default function EmployeeDetailScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title={employee.full_name}
         showBackButton
@@ -198,44 +198,16 @@ export default function EmployeeDetailScreen() {
         }
       />
 
-      {/* Status Card */}
-      <View style={[styles.statusCard, { backgroundColor: Brand.primary }]}>
-        <View style={styles.statusCardHeader}>
-          <User size={32} color="#FFFFFF" />
-          <View style={styles.statusCardInfo}>
-            <Text style={styles.statusCardName}>{employee.full_name}</Text>
-            {employee.position && (
-              <Text style={styles.statusCardPosition}>{getPositionLabel(employee.position)}</Text>
-            )}
-          </View>
-        </View>
-        <View style={styles.statusCardFooter}>
-          <Badge
-            label={getEmploymentStatusLabel(employee.employment_status)}
-            variant={employee.employment_status === 'active' ? 'success' : 'default'}
-            size="sm"
-          />
-          {employee.contract_type && (
-            <Badge
-              label={getContractTypeLabel(employee.contract_type)}
-              variant="outline"
-              size="sm"
-              style={{ borderColor: '#FFFFFF', backgroundColor: 'rgba(255,255,255,0.2)' }}
-              textStyle={{ color: '#FFFFFF' }}
-            />
-          )}
-        </View>
-      </View>
-
       {/* Details */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
         }
       >
+        <View style={styles.contentCard}>
         {/* Temel Bilgiler */}
         <Card style={styles.sectionCard}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
@@ -265,6 +237,7 @@ export default function EmployeeDetailScreen() {
           {employee.start_date && renderInfoRow('Başlangıç Tarihi', new Date(employee.start_date).toLocaleDateString('tr-TR'), Calendar)}
           {employee.end_date && renderInfoRow('Bitiş Tarihi', new Date(employee.end_date).toLocaleDateString('tr-TR'), Calendar)}
         </Card>
+        </View>
       </ScrollView>
 
       {/* Delete Confirm Dialog */}
@@ -290,21 +263,27 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: Spacing.sm,
   },
-  loadingContainer: {
+  loadingCard: {
     flex: 1,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.md,
+    ...Shadows.lg,
   },
   loadingText: {
     ...Typography.bodyMD,
   },
-  errorContainer: {
+  errorCard: {
     flex: 1,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing['2xl'],
     gap: Spacing.md,
+    ...Shadows.lg,
   },
   errorTitle: {
     ...Typography.headingMD,
@@ -324,44 +303,29 @@ const styles = StyleSheet.create({
     ...Typography.bodyMD,
     fontWeight: '600',
   },
-  statusCard: {
-    margin: Spacing.lg,
-    padding: Spacing.xl,
-    borderRadius: BorderRadius.xl,
-    gap: Spacing.lg,
-  },
-  statusCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  statusCardInfo: {
-    flex: 1,
-  },
-  statusCardName: {
-    ...Typography.headingLG,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  statusCardPosition: {
-    ...Typography.bodyMD,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: Spacing.xs,
-  },
-  statusCardFooter: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
+    flexGrow: 1,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: Spacing['2xl'],
+    paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing['2xl'],
+    ...Shadows.lg,
+    gap: Spacing.md,
   },
   sectionCard: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
+    backgroundColor: Colors.light.card,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   sectionTitle: {
     ...Typography.headingSM,

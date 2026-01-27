@@ -22,7 +22,7 @@ import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Input, Card } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
 import { DateInput } from '@/components/ui/date-input';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   createDriverTractorAssignment,
@@ -166,7 +166,7 @@ export default function NewDriverTractorAssignmentScreen() {
   }, [formData, validateForm, success, showError]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Yeni Sürücü-Çekici Eşleştirme"
         showBackButton
@@ -196,7 +196,8 @@ export default function NewDriverTractorAssignmentScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Card style={styles.card}>
+          <View style={styles.formWrapper}>
+            <Card style={styles.card}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Eşleştirme Bilgileri</Text>
 
             <SelectInput
@@ -239,7 +240,8 @@ export default function NewDriverTractorAssignmentScreen() {
               multiline
               numberOfLines={3}
             />
-          </Card>
+            </Card>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -261,6 +263,12 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: Spacing.lg,
+  },
+  formWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    ...Shadows.lg,
+    overflow: 'hidden',
   },
   card: {
     padding: Spacing.lg,

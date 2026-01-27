@@ -268,7 +268,7 @@ export default function LoggyScreen() {
     const displayConversations = searchQuery.length >= 2 ? searchResults : conversations;
 
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         {/* Full Screen Header */}
         <FullScreenHeader
           title="Loggy"
@@ -282,45 +282,48 @@ export default function LoggyScreen() {
           }
         />
 
-        {/* Search */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Search size={18} color={colors.textMuted} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Sohbetlerde ara..."
-            placeholderTextColor={colors.placeholder}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {isSearching && <ActivityIndicator size="small" color={Brand.primary} />}
-        </View>
-
-        {/* Conversations List */}
-        <FlatList
-          data={displayConversations}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderConversationItem}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={renderListEmpty}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={refresh}
-              tintColor={Brand.primary}
+        {/* Content Area */}
+        <View style={styles.contentArea}>
+          {/* Search */}
+          <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Search size={18} color={colors.textMuted} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Sohbetlerde ara..."
+              placeholderTextColor={colors.placeholder}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
-          }
-        />
+            {isSearching && <ActivityIndicator size="small" color={Brand.primary} />}
+          </View>
 
-        {/* FAB */}
-        {conversations.length > 0 && (
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-            onPress={handleCreateNewConversation}
-          >
-            <Plus size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        )}
+          {/* Conversations List */}
+          <FlatList
+            data={displayConversations}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderConversationItem}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={renderListEmpty}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={refresh}
+                tintColor={Brand.primary}
+              />
+            }
+          />
+
+          {/* FAB */}
+          {conversations.length > 0 && (
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
+              onPress={handleCreateNewConversation}
+            >
+              <Plus size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Delete Confirmation Dialog */}
         <ConfirmDialog
@@ -342,7 +345,7 @@ export default function LoggyScreen() {
 
   // ============ CHAT VIEW ============
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Full Screen Header */}
       <FullScreenHeader
         title={currentConversation?.title || 'Yeni Konuşma'}
@@ -366,115 +369,118 @@ export default function LoggyScreen() {
         }
       />
 
-      {/* API Not Configured Overlay */}
-      {!isAiConfigured && (
-        <View style={styles.overlay}>
-          <View style={[styles.overlayContent, { backgroundColor: colors.card }]}>
-            <View style={[styles.overlayIcon, { backgroundColor: '#fbbf24' + '15' }]}>
-              <KeyRound size={32} color="#f59e0b" />
-            </View>
-            <Text style={[styles.overlayTitle, { color: colors.text }]}>
-              API Anahtarı Gerekli
-            </Text>
-            <Text style={[styles.overlayText, { color: colors.textSecondary }]}>
-              Loggy AI asistanını kullanabilmek için önce API ayarlarınızı yapılandırmanız
-              gerekiyor. Sistem ayarlarından API anahtarınızı ve model bilgilerinizi girin.
-            </Text>
-            <TouchableOpacity
-              style={[styles.overlayButton, { backgroundColor: Brand.primary }]}
-              onPress={() => router.push('/settings' as any)}
-            >
-              <Settings size={18} color="#FFFFFF" />
-              <Text style={styles.overlayButtonText}>Sistem Ayarlarına Git</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* Chat Content */}
-      <Pressable 
-        style={styles.chatContainer}
-        onPress={() => Keyboard.dismiss()}
-        android_disableSound
-      >
-        {/* Messages */}
-        {isLoadingMessages && messages.length === 0 ? (
-          <View style={[styles.messagesContainer, styles.centerContainer]}>
-            <ActivityIndicator size="large" color={Brand.primary} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Mesajlar yükleniyor...
-            </Text>
-          </View>
-        ) : messagesError ? (
-          <View style={[styles.messagesContainer, styles.centerContainer]}>
-            <AlertCircle size={64} color={colors.danger} />
-            <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-            <Text style={[styles.errorText, { color: colors.textSecondary }]}>{messagesError}</Text>
-          </View>
-        ) : invertedMessages.length === 0 && !isSending ? (
-          <View style={[styles.messagesContainer, styles.emptyStateContainer]}>
-            <View style={styles.emptyStateContent}>
-              <View style={[styles.emptyStateIcon, { backgroundColor: Brand.primary + '15' }]}>
-                <Sparkles size={48} color={Brand.primary} />
+      {/* Content Area */}
+      <View style={styles.contentArea}>
+        {/* API Not Configured Overlay */}
+        {!isAiConfigured && (
+          <View style={styles.overlay}>
+            <View style={[styles.overlayContent, { backgroundColor: colors.card }]}>
+              <View style={[styles.overlayIcon, { backgroundColor: '#fbbf24' + '15' }]}>
+                <KeyRound size={32} color="#f59e0b" />
               </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>Henüz mesaj yok</Text>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]} numberOfLines={0}>
-                Merhaba! Ben Loggy, sizin AI asistanınızım.{'\n'}
-                Yük oluşturma, cari arama gibi işlemlerde size yardımcı olabilirim.
+              <Text style={[styles.overlayTitle, { color: colors.text }]}>
+                API Anahtarı Gerekli
               </Text>
-            </View>
-            <View style={styles.quickSuggestionsWrapper}>
-              <QuickSuggestions
-                onSuggestionClick={handleSuggestionClick}
-                isLoading={isLoadingMessages}
-                isAiConfigured={isAiConfigured}
-              />
+              <Text style={[styles.overlayText, { color: colors.textSecondary }]}>
+                Loggy AI asistanını kullanabilmek için önce API ayarlarınızı yapılandırmanız
+                gerekiyor. Sistem ayarlarından API anahtarınızı ve model bilgilerinizi girin.
+              </Text>
+              <TouchableOpacity
+                style={[styles.overlayButton, { backgroundColor: Brand.primary }]}
+                onPress={() => router.push('/settings' as any)}
+              >
+                <Settings size={18} color="#FFFFFF" />
+                <Text style={styles.overlayButtonText}>Sistem Ayarlarına Git</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        ) : (
-          <Animated.View style={[styles.messagesContainer, animatedListStyle]}>
-            <FlatList
-              ref={flatListRef}
-              data={invertedMessages}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => <MessageBubble message={item} />}
-              inverted
-              contentContainerStyle={styles.messagesList}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="interactive"
-              removeClippedSubviews={Platform.OS === 'android'}
-              maxToRenderPerBatch={15}
-              windowSize={21}
-              initialNumToRender={20}
-              maintainVisibleContentPosition={{
-                minIndexForVisible: 0,
-                autoscrollToTopThreshold: 100,
-              }}
-              style={styles.flatList}
-              ListHeaderComponent={
-                isSending ? (
-                  <TypingIndicator />
-                ) : messagesError ? (
-                  <View style={[styles.errorBanner, { backgroundColor: colors.danger + '15' }]}>
-                    <AlertCircle size={16} color={colors.danger} />
-                    <Text style={[styles.errorText, { color: colors.danger }]}>{messagesError}</Text>
-                  </View>
-                ) : null
-              }
-            />
-          </Animated.View>
         )}
 
-        {/* Input Bar */}
-        <LoggyInput
-          value={inputValue}
-          onChangeText={setInputValue}
-          onSend={handleSend}
-          isSending={isSending}
-          disabled={!isAiConfigured}
-        />
-      </Pressable>
+        {/* Chat Content */}
+        <Pressable
+          style={styles.chatContainer}
+          onPress={() => Keyboard.dismiss()}
+          android_disableSound
+        >
+          {/* Messages */}
+          {isLoadingMessages && messages.length === 0 ? (
+            <View style={[styles.messagesContainer, styles.centerContainer]}>
+              <ActivityIndicator size="large" color={Brand.primary} />
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                Mesajlar yükleniyor...
+              </Text>
+            </View>
+          ) : messagesError ? (
+            <View style={[styles.messagesContainer, styles.centerContainer]}>
+              <AlertCircle size={64} color={colors.danger} />
+              <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
+              <Text style={[styles.errorText, { color: colors.textSecondary }]}>{messagesError}</Text>
+            </View>
+          ) : invertedMessages.length === 0 && !isSending ? (
+            <View style={[styles.messagesContainer, styles.emptyStateContainer]}>
+              <View style={styles.emptyStateContent}>
+                <View style={[styles.emptyStateIcon, { backgroundColor: Brand.primary + '15' }]}>
+                  <Sparkles size={48} color={Brand.primary} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>Henüz mesaj yok</Text>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]} numberOfLines={0}>
+                  Merhaba! Ben Loggy, sizin AI asistanınızım.{'\n'}
+                  Yük oluşturma, cari arama gibi işlemlerde size yardımcı olabilirim.
+                </Text>
+              </View>
+              <View style={styles.quickSuggestionsWrapper}>
+                <QuickSuggestions
+                  onSuggestionClick={handleSuggestionClick}
+                  isLoading={isLoadingMessages}
+                  isAiConfigured={isAiConfigured}
+                />
+              </View>
+            </View>
+          ) : (
+            <Animated.View style={[styles.messagesContainer, animatedListStyle]}>
+              <FlatList
+                ref={flatListRef}
+                data={invertedMessages}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={({ item }) => <MessageBubble message={item} />}
+                inverted
+                contentContainerStyle={styles.messagesList}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
+                removeClippedSubviews={Platform.OS === 'android'}
+                maxToRenderPerBatch={15}
+                windowSize={21}
+                initialNumToRender={20}
+                maintainVisibleContentPosition={{
+                  minIndexForVisible: 0,
+                  autoscrollToTopThreshold: 100,
+                }}
+                style={styles.flatList}
+                ListHeaderComponent={
+                  isSending ? (
+                    <TypingIndicator />
+                  ) : messagesError ? (
+                    <View style={[styles.errorBanner, { backgroundColor: colors.danger + '15' }]}>
+                      <AlertCircle size={16} color={colors.danger} />
+                      <Text style={[styles.errorText, { color: colors.danger }]}>{messagesError}</Text>
+                    </View>
+                  ) : null
+                }
+              />
+            </Animated.View>
+          )}
+
+          {/* Input Bar */}
+          <LoggyInput
+            value={inputValue}
+            onChangeText={setInputValue}
+            onSend={handleSend}
+            isSending={isSending}
+            disabled={!isAiConfigured}
+          />
+        </Pressable>
+      </View>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
@@ -497,6 +503,14 @@ export default function LoggyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
+    overflow: 'hidden',
   },
   deleteButton: {
     padding: Spacing.sm,

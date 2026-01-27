@@ -19,7 +19,7 @@ import { router } from 'expo-router';
 import { Save, Package } from 'lucide-react-native';
 import { Input, Card, Checkbox, SelectInput } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   createProduct,
@@ -196,7 +196,7 @@ export default function NewProductScreen() {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Yeni Ürün Ekle"
         showBackButton
@@ -221,7 +221,8 @@ export default function NewProductScreen() {
       >
 
         {/* Form Content */}
-        <ScrollView
+        <View style={styles.contentArea}>
+          <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
@@ -425,6 +426,7 @@ export default function NewProductScreen() {
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );
@@ -436,6 +438,13 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   headerButton: {
     padding: Spacing.sm,

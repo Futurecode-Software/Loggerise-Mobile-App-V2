@@ -20,7 +20,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Save } from 'lucide-react-native';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Input, Checkbox } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getWarehouse,
@@ -150,24 +150,26 @@ export default function WarehouseEditScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Depo Düzenle"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Depo bilgileri yükleniyor...
-          </Text>
+        <View style={styles.contentArea}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Brand.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+              Depo bilgileri yükleniyor...
+            </Text>
+          </View>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Depo Düzenle"
         showBackButton
@@ -179,7 +181,8 @@ export default function WarehouseEditScreen() {
       >
 
         {/* Form Content */}
-        <ScrollView
+        <View style={styles.contentArea}>
+          <ScrollView
           style={styles.formContainer}
           contentContainerStyle={styles.formContent}
           showsVerticalScrollIndicator={false}
@@ -286,6 +289,7 @@ export default function WarehouseEditScreen() {
             />
           </View>
         </ScrollView>
+        </View>
 
         {/* Action Buttons */}
         <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
@@ -325,6 +329,13 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   loadingContainer: {
     flex: 1,

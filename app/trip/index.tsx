@@ -1,6 +1,6 @@
 import { FullScreenHeader } from '@/components/header';
 import { Badge, Card, Input } from '@/components/ui';
-import { BorderRadius, Brand, Colors, Spacing, Typography } from '@/constants/theme';
+import { BorderRadius, Brand, Colors, Spacing, Typography, Shadows } from '@/constants/theme';
 import {
     getDriverFullName,
     getTrips,
@@ -409,7 +409,7 @@ export default function TripsScreen() {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Seferler"
         showBackButton
@@ -423,37 +423,39 @@ export default function TripsScreen() {
         }
       />
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <Input
-          placeholder="Sefer no, plaka veya güzergah ile ara..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          leftIcon={<Search size={20} color={colors.icon} />}
-          containerStyle={styles.searchInput}
+      {/* Content Area */}
+      <View style={styles.contentArea}>
+        {/* Search */}
+        <View style={styles.searchContainer}>
+          <Input
+            placeholder="Sefer no, plaka veya güzergah ile ara..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            leftIcon={<Search size={20} color={colors.icon} />}
+            containerStyle={styles.searchInput}
+          />
+        </View>
+
+        {/* Trip List */}
+        <FlatList
+          data={trips}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderTrip}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={renderFooter}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Brand.primary}
+            />
+          }
         />
       </View>
-
-      {/* Trip List */}
-      <FlatList
-        data={trips}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderTrip}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Brand.primary}
-          />
-        }
-      />
-
     </View>
   );
 }
@@ -461,6 +463,14 @@ export default function TripsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
+    overflow: 'hidden',
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,

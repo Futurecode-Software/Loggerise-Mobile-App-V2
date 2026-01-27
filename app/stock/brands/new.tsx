@@ -19,7 +19,7 @@ import { router } from 'expo-router';
 import { Save } from 'lucide-react-native';
 import { Input, Card, Checkbox } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import { createProductBrand, BrandFormData } from '@/services/endpoints/products';
 import { getErrorMessage, getValidationErrors } from '@/services/api';
@@ -100,7 +100,7 @@ export default function NewBrandScreen() {
   }, [formData, validateForm, success, showError]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Yeni Marka Ekle"
         showBackButton
@@ -119,13 +119,14 @@ export default function NewBrandScreen() {
         }
       />
 
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <View style={styles.contentArea}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
 
-        {/* Form Content */}
-        <ScrollView
+          {/* Form Content */}
+          <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
@@ -169,7 +170,8 @@ export default function NewBrandScreen() {
             </View>
           </Card>
         </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }
@@ -177,6 +179,13 @@ export default function NewBrandScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   keyboardAvoidingView: {
     flex: 1,

@@ -38,7 +38,7 @@ import {
 import { Card, Badge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getDomesticOrder,
@@ -177,9 +177,9 @@ export default function DomesticOrderDetailScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="İş Emri Detayı" onBackPress={() => router.back()} />
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingCard, { backgroundColor: '#FFFFFF' }]}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Yükleniyor...
@@ -192,9 +192,9 @@ export default function DomesticOrderDetailScreen() {
   // Error state
   if (error || !order) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="İş Emri Detayı" onBackPress={() => router.back()} />
-        <View style={styles.errorContainer}>
+        <View style={[styles.errorCard, { backgroundColor: '#FFFFFF' }]}>
           <AlertTriangle size={64} color={colors.danger} />
           <Text style={[styles.errorTitle, { color: colors.text }]}>
             {error || 'İş emri bulunamadı'}
@@ -213,7 +213,7 @@ export default function DomesticOrderDetailScreen() {
   const nextStatus = getNextStatus();
 
   const renderInfoTab = () => (
-    <View style={styles.tabContent}>
+    <View style={styles.tabContentWrapper}>
       {/* Status & Type */}
       <Card style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -384,7 +384,7 @@ export default function DomesticOrderDetailScreen() {
   );
 
   const renderItemsTab = () => (
-    <View style={styles.tabContent}>
+    <View style={styles.tabContentWrapper}>
       {order.items && order.items.length > 0 ? (
         order.items.map((item, index) => (
           <Card key={item.id} style={styles.itemCard}>
@@ -465,7 +465,7 @@ export default function DomesticOrderDetailScreen() {
     const totalRevenue = order.pricing_items?.reduce((sum, item) => sum + (item.total_amount || 0), 0) || 0;
 
     return (
-      <View style={styles.tabContent}>
+      <View style={styles.tabContentWrapper}>
         {order.pricing_items && order.pricing_items.length > 0 ? (
           <>
             {order.pricing_items.map((item, index) => (
@@ -516,7 +516,7 @@ export default function DomesticOrderDetailScreen() {
     const totalExpenses = order.expenses?.filter(e => e.status === 'approved').reduce((sum, e) => sum + (e.amount_try || 0), 0) || 0;
 
     return (
-      <View style={styles.tabContent}>
+      <View style={styles.tabContentWrapper}>
         {order.expenses && order.expenses.length > 0 ? (
           <>
             {order.expenses.map((expense) => (
@@ -573,7 +573,7 @@ export default function DomesticOrderDetailScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title={order.order_number}
         onBackPress={() => router.back()}
@@ -595,45 +595,47 @@ export default function DomesticOrderDetailScreen() {
         }
       />
 
-      {/* Tabs */}
-      <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
-          {TABS.map((tab) => (
-            <TouchableOpacity
-              key={tab.id}
-              style={[
-                styles.tab,
-                activeTab === tab.id && { borderBottomColor: Brand.primary },
-              ]}
-              onPress={() => setActiveTab(tab.id)}
-            >
-              <Text
+      <View style={styles.contentWrapper}>
+        {/* Tabs */}
+        <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
+            {TABS.map((tab) => (
+              <TouchableOpacity
+                key={tab.id}
                 style={[
-                  styles.tabText,
-                  { color: activeTab === tab.id ? Brand.primary : colors.textSecondary },
+                  styles.tab,
+                  activeTab === tab.id && { borderBottomColor: Brand.primary },
                 ]}
+                onPress={() => setActiveTab(tab.id)}
               >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.tabText,
+                    { color: activeTab === tab.id ? Brand.primary : colors.textSecondary },
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Content */}
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
+          }
+        >
+          {activeTab === 'info' && renderInfoTab()}
+          {activeTab === 'items' && renderItemsTab()}
+          {activeTab === 'pricing' && renderPricingTab()}
+          {activeTab === 'expenses' && renderExpensesTab()}
         </ScrollView>
       </View>
-
-      {/* Content */}
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
-        }
-      >
-        {activeTab === 'info' && renderInfoTab()}
-        {activeTab === 'items' && renderItemsTab()}
-        {activeTab === 'pricing' && renderPricingTab()}
-        {activeTab === 'expenses' && renderExpensesTab()}
-      </ScrollView>
 
       {/* Status Action Button */}
       {nextStatus && order.status !== 'completed' && order.status !== 'cancelled' && (
@@ -689,20 +691,33 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
+  contentWrapper: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
+  },
+  loadingCard: {
+    flex: 1,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Shadows.lg,
   },
   loadingText: {
     ...Typography.bodyMD,
     marginTop: Spacing.md,
   },
-  errorContainer: {
+  errorCard: {
     flex: 1,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.xl,
+    ...Shadows.lg,
   },
   errorTitle: {
     ...Typography.headingMD,
@@ -729,6 +744,7 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     borderBottomWidth: 1,
+    paddingTop: Spacing.md,
   },
   tabsContent: {
     paddingHorizontal: Spacing.md,
@@ -748,13 +764,17 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: Spacing.lg,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
-  tabContent: {
+  tabContentWrapper: {
     gap: Spacing.md,
   },
   section: {
     padding: Spacing.lg,
+    backgroundColor: Colors.light.card,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -867,6 +887,10 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     padding: Spacing.lg,
+    backgroundColor: Colors.light.card,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   itemHeader: {
     flexDirection: 'row',
@@ -917,6 +941,10 @@ const styles = StyleSheet.create({
   },
   pricingCard: {
     padding: Spacing.lg,
+    backgroundColor: Colors.light.card,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   pricingHeader: {
     flexDirection: 'row',
@@ -943,6 +971,10 @@ const styles = StyleSheet.create({
   },
   expenseCard: {
     padding: Spacing.lg,
+    backgroundColor: Colors.light.card,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   expenseHeader: {
     flexDirection: 'row',
@@ -972,6 +1004,7 @@ const styles = StyleSheet.create({
   totalCard: {
     padding: Spacing.lg,
     marginTop: Spacing.sm,
+    borderRadius: BorderRadius.lg,
   },
   totalRow: {
     flexDirection: 'row',
@@ -1002,6 +1035,7 @@ const styles = StyleSheet.create({
     right: 0,
     padding: Spacing.lg,
     borderTopWidth: 1,
+    backgroundColor: '#FFFFFF',
   },
   actionButton: {
     flexDirection: 'row',

@@ -234,20 +234,34 @@ export default function ProductsScreen() {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Ürünler"
         subtitle={pagination ? `${pagination.total} ürün` : undefined}
         showBackButton={true}
         tabs={headerTabs}
         rightIcons={
-          <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
-            <Filter size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity
+              onPress={() => router.push('/stock/products/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                // Filter action
+              }}
+              activeOpacity={0.7}
+            >
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
-      <StandardListContainer
+      <View style={styles.contentArea}>
+        <StandardListContainer
         data={products}
         renderItem={renderProduct}
         keyExtractor={(item) => String(item.id)}
@@ -275,6 +289,7 @@ export default function ProductsScreen() {
           executeFetch(searchQuery, activeFilter, 1, false);
         }}
       />
+      </View>
 
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
@@ -289,6 +304,13 @@ export default function ProductsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   additionalInfo: {
     gap: 2,
@@ -310,15 +332,5 @@ const styles = StyleSheet.create({
   productType: {
     fontSize: 10,
     color: Colors.light.textSecondary,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

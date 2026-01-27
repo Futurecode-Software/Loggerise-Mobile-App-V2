@@ -154,11 +154,11 @@ export default function ExportOperationsScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="İhracat Operasyonları" showBackButton />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Yükleniyor...</Text>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.loadingText}>Yükleniyor...</Text>
         </View>
       </View>
     );
@@ -167,14 +167,14 @@ export default function ExportOperationsScreen() {
   // Error state
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="İhracat Operasyonları" showBackButton />
         <View style={styles.errorContainer}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
+          <AlertCircle size={64} color="#FFFFFF" />
+          <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+          <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+            style={styles.retryButton}
             onPress={() => {
               setIsLoading(true);
               fetchData();
@@ -195,21 +195,22 @@ export default function ExportOperationsScreen() {
   const totalLoads = unassignedLoads.length + activePositions.reduce((sum, p) => sum + (p.loads_count || 0), 0);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="İhracat Operasyonları"
         subtitle={`${totalPositions} pozisyon • ${totalLoads} yük`}
         showBackButton
       />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
-        }
-      >
+      <View style={styles.contentCard}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
+            }
+          >
         {/* Stats Cards */}
         <View style={styles.statsGrid}>
           <TouchableOpacity
@@ -292,7 +293,8 @@ export default function ExportOperationsScreen() {
             </View>
           )}
         </View>
-      </ScrollView>
+          </ScrollView>
+        </View>
     </View>
   );
 }
@@ -300,6 +302,15 @@ export default function ExportOperationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
   loadingContainer: {
     flex: 1,
@@ -309,6 +320,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...Typography.bodyMD,
+    color: '#FFFFFF',
   },
   errorContainer: {
     flex: 1,
@@ -319,19 +331,22 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     ...Typography.headingMD,
+    color: '#FFFFFF',
   },
   errorText: {
     ...Typography.bodyMD,
     textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   retryButton: {
     marginTop: Spacing.md,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
+    backgroundColor: '#FFFFFF',
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: Brand.primary,
     ...Typography.bodyMD,
     fontWeight: '600',
   },

@@ -380,7 +380,7 @@ export default function TransactionsScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Mali İşlemler"
         subtitle={pagination ? `${pagination.total} işlem` : undefined}
@@ -397,6 +397,7 @@ export default function TransactionsScreen() {
         }
       />
 
+      <View style={styles.contentArea}>
       <View style={styles.searchContainer}>
         <Input
           placeholder="Açıklama veya referans ile ara..."
@@ -433,6 +434,7 @@ export default function TransactionsScreen() {
       >
         <Plus size={24} color="#FFFFFF" />
       </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -440,6 +442,14 @@ export default function TransactionsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,

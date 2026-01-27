@@ -14,7 +14,7 @@ import { FullScreenHeader } from '@/components/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Save, AlertCircle } from 'lucide-react-native';
 import { Input, Button, Card, Select } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   getCrmCustomer,
   updateCrmCustomer,
@@ -257,7 +257,7 @@ export default function EditCrmCustomerScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="CRM Müşterisi Düzenle" onBack={() => router.back()} />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
@@ -272,7 +272,7 @@ export default function EditCrmCustomerScreen() {
   // Error state
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="CRM Müşterisi Düzenle" onBack={() => router.back()} />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
@@ -292,7 +292,7 @@ export default function EditCrmCustomerScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Header */}
       <FullScreenHeader
         title="CRM Müşterisi Düzenle"
@@ -662,6 +662,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   contentContainer: {
     padding: Spacing.lg,

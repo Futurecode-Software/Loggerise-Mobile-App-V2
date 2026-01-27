@@ -281,7 +281,7 @@ export default function ProductsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Ürünler"
         subtitle={pagination ? `${pagination.total} ürün` : undefined}
@@ -298,7 +298,8 @@ export default function ProductsScreen() {
         }
       />
 
-      <View style={styles.searchContainer}>
+      <View style={styles.contentArea}>
+        <View style={styles.searchContainer}>
         <Input
           placeholder="Ürün adı veya kod ile ara..."
           value={searchQuery}
@@ -357,6 +358,7 @@ export default function ProductsScreen() {
           />
         }
       />
+      </View>
 
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
@@ -371,6 +373,13 @@ export default function ProductsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,

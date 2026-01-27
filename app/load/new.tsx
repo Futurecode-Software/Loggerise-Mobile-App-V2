@@ -14,7 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Colors, Typography, Spacing } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { useToast } from '@/hooks/use-toast';
 import LoadFormProgress from '@/components/load-form/LoadFormProgress';
@@ -366,7 +366,7 @@ export default function NewLoadScreen() {
       : 'Yeni Yük Ekle';
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       <FullScreenHeader
         title={headerTitle}
         subtitle={`Adım ${currentStep} / ${STEPS.length}: ${STEPS[currentStep - 1].description}`}
@@ -374,34 +374,36 @@ export default function NewLoadScreen() {
         onBackPress={() => router.back()}
       />
 
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        {/* Progress Steps */}
-        <LoadFormProgress steps={STEPS} currentStep={currentStep} onStepClick={handleStepClick} />
-
-        {/* Form Content */}
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+      <View style={styles.contentCard}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoid}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          {renderStep()}
-        </ScrollView>
+          {/* Progress Steps */}
+          <LoadFormProgress steps={STEPS} currentStep={currentStep} onStepClick={handleStepClick} />
 
-        {/* Navigation Buttons */}
-        <LoadFormNavigation
-          currentStep={currentStep}
-          totalSteps={STEPS.length}
-          onPrevious={handlePrevious}
-          onNext={handleNext}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-        />
-      </KeyboardAvoidingView>
+          {/* Form Content */}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {renderStep()}
+          </ScrollView>
+
+          {/* Navigation Buttons */}
+          <LoadFormNavigation
+            currentStep={currentStep}
+            totalSteps={STEPS.length}
+            onPrevious={handlePrevious}
+            onNext={handleNext}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+          />
+        </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }
@@ -409,6 +411,15 @@ export default function NewLoadScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
   keyboardAvoid: {
     flex: 1,

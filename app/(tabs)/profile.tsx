@@ -24,7 +24,7 @@ import {
 } from 'lucide-react-native';
 import { Card, Avatar, ConfirmDialog, ActionSheet } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import { useNotificationContext } from '@/context/notification-context';
 import { uploadAvatar, deleteAvatar } from '@/services/endpoints/profile';

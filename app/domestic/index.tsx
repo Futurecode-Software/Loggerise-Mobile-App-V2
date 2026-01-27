@@ -379,7 +379,7 @@ export default function DomesticOrdersScreen() {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Yurtiçi İş Emirleri"
         showBackButton
@@ -387,50 +387,55 @@ export default function DomesticOrdersScreen() {
         subtitle={pagination ? `${pagination.total} iş emri` : undefined}
         tabs={headerTabs}
         rightIcons={
-          <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
-            <Filter size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity
+              onPress={() => router.push('/domestic/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {}}
+              activeOpacity={0.7}
+            >
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <Input
-          placeholder="Sipariş no veya müşteri ile ara..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          leftIcon={<Search size={20} color={colors.icon} />}
-          containerStyle={styles.searchInput}
+      <View style={styles.contentWrapper}>
+        {/* Search */}
+        <View style={styles.searchContainer}>
+          <Input
+            placeholder="Sipariş no veya müşteri ile ara..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            leftIcon={<Search size={20} color={colors.icon} />}
+            containerStyle={styles.searchInput}
+          />
+        </View>
+
+        {/* Order List */}
+        <FlatList
+          data={orders}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderOrder}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={renderFooter}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Brand.primary}
+            />
+          }
         />
       </View>
-
-      {/* Order List */}
-      <FlatList
-        data={orders}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderOrder}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Brand.primary}
-          />
-        }
-      />
-
-      {/* FAB */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/domestic/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -439,9 +444,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  contentWrapper: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
+  },
   searchContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing['2xl'],
+    paddingBottom: Spacing.md,
   },
   searchInput: {
     marginBottom: 0,
@@ -606,15 +619,5 @@ const styles = StyleSheet.create({
   loadingMore: {
     paddingVertical: Spacing.lg,
     alignItems: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

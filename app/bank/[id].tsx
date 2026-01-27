@@ -31,7 +31,7 @@ import {
 import { Card, Badge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getBank,
@@ -147,7 +147,7 @@ export default function BankAccountDetailScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Banka Hesabı Detayı" showBackButton />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Brand.primary} />
@@ -162,7 +162,7 @@ export default function BankAccountDetailScreen() {
   // Error state
   if (error || !bank) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Banka Hesabı Detayı" showBackButton />
         <View style={styles.errorContainer}>
           <AlertCircle size={64} color={colors.danger} />
@@ -182,7 +182,7 @@ export default function BankAccountDetailScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title={bank.name}
         showBackButton
@@ -298,6 +298,7 @@ export default function BankAccountDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
   },
   headerActions: {
     flexDirection: 'row',
@@ -362,6 +363,10 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   scrollContent: {
     padding: Spacing.lg,

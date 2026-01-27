@@ -241,7 +241,7 @@ export default function CrmCustomersListScreen() {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="CRM Müşterileri"
         showBackButton={true}
@@ -257,7 +257,8 @@ export default function CrmCustomersListScreen() {
         }
       />
 
-      <StandardListContainer
+      <View style={styles.contentCard}>
+        <StandardListContainer
         data={customers}
         renderItem={renderCustomerItem}
         keyExtractor={(item) => item.id.toString()}
@@ -285,6 +286,7 @@ export default function CrmCustomersListScreen() {
           executeFetch(searchQuery, activeFilter, 1, false);
         }}
       />
+      </View>
     </View>
   );
 }
@@ -292,6 +294,15 @@ export default function CrmCustomersListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
   additionalInfo: {
     gap: Spacing.sm,

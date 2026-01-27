@@ -231,7 +231,7 @@ export default function ExportPositionsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="İhracat Pozisyonları"
         subtitle={pagination ? `${pagination.total} pozisyon` : undefined}
@@ -248,7 +248,8 @@ export default function ExportPositionsScreen() {
         }
       />
 
-      <StandardListContainer
+      <View style={styles.contentCard}>
+          <StandardListContainer
         data={positions}
         renderItem={renderPosition}
         keyExtractor={(item) => String(item.id)}
@@ -276,6 +277,7 @@ export default function ExportPositionsScreen() {
           executeFetch(searchQuery, 1, false);
         }}
       />
+        </View>
     </View>
   );
 }
@@ -283,6 +285,15 @@ export default function ExportPositionsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
   additionalInfo: {
     gap: Spacing.sm,

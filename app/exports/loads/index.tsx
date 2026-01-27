@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Filter, Package, Building2, MapPin, Truck } from 'lucide-react-native';
+import { Filter, Package, Building2, MapPin, Truck, Plus } from 'lucide-react-native';
 import { Badge, StandardListContainer, StandardListItem } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Spacing, Brand, Shadows } from '@/constants/theme';
@@ -213,24 +213,33 @@ export default function ExportLoadsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="İhracat Yükleri"
         subtitle={pagination ? `${pagination.total} yük` : undefined}
         showBackButton={true}
         rightIcons={
-          <TouchableOpacity
-            onPress={() => {
-              // Filter action - can be implemented later
-            }}
-            activeOpacity={0.7}
-          >
-            <Filter size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity
+              onPress={() => router.push('/load/new?direction=export')}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                // Filter action - can be implemented later
+              }}
+              activeOpacity={0.7}
+            >
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
-      <StandardListContainer
+      <View style={styles.contentCard}>
+          <StandardListContainer
         data={loads}
         renderItem={renderLoad}
         keyExtractor={(item) => String(item.id)}
@@ -244,7 +253,7 @@ export default function ExportLoadsScreen() {
           title: searchQuery ? 'Sonuç bulunamadı' : 'Henüz ihracat yükü yok',
           subtitle: searchQuery
             ? 'Farklı bir arama terimi deneyin'
-            : 'Yeni yük oluşturmak için yükler sekmesine gidin',
+            : 'Yeni ihracat yükü oluşturmak için + butonuna tıklayın',
         }}
         loading={isLoading}
         refreshing={refreshing}
@@ -258,6 +267,7 @@ export default function ExportLoadsScreen() {
           executeFetch(searchQuery, 1, false);
         }}
       />
+        </View>
     </View>
   );
 }
@@ -265,6 +275,15 @@ export default function ExportLoadsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
   additionalInfo: {
     gap: Spacing.sm,

@@ -13,7 +13,7 @@ import { FullScreenHeader } from '@/components/ui';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Save, Users, Phone, Mail, Clock } from 'lucide-react-native';
 import { Input, Button, Card } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   createInteraction,
   InteractionFormData,
@@ -97,7 +97,7 @@ export default function NewInteractionScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Header */}
       <FullScreenHeader
         title="Yeni Görüşme"
@@ -281,6 +281,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   contentContainer: {
     padding: Spacing.lg,

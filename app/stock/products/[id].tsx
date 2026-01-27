@@ -19,7 +19,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Save, Trash2, Package } from 'lucide-react-native';
 import { Input, Card, Badge, Checkbox, SelectInput, ConfirmDialog } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getProduct,
@@ -292,11 +292,13 @@ export default function ProductDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Ürün Detayı" showBackButton />
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Yükleniyor...</Text>
+        <View style={styles.contentArea}>
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={Brand.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Yükleniyor...</Text>
+          </View>
         </View>
       </View>
     );
@@ -304,25 +306,27 @@ export default function ProductDetailScreen() {
 
   if (error || !product) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Ürün Detayı" showBackButton />
-        <View style={styles.errorState}>
-          <Text style={[styles.errorText, { color: colors.danger }]}>
-            {error || 'Ürün bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchProduct}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
+        <View style={styles.contentArea}>
+          <View style={styles.errorState}>
+            <Text style={[styles.errorText, { color: colors.danger }]}>
+              {error || 'Ürün bulunamadı'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+              onPress={fetchProduct}
+            >
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title={isEditing ? 'Ürünü Düzenle' : 'Ürün Detayı'}
         showBackButton
@@ -354,7 +358,8 @@ export default function ProductDetailScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
 
-        <ScrollView
+        <View style={styles.contentArea}>
+          <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
@@ -709,6 +714,7 @@ export default function ProductDetailScreen() {
             )}
           </Card>
         </ScrollView>
+        </View>
       </KeyboardAvoidingView>
 
       {/* Delete Confirmation Dialog */}
@@ -733,6 +739,13 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   headerActions: {
     flexDirection: 'row',

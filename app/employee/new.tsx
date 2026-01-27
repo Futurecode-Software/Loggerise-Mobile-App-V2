@@ -21,7 +21,7 @@ import { Save } from 'lucide-react-native';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Input, Card, Checkbox } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   createEmployee,
@@ -198,7 +198,7 @@ export default function NewEmployeeScreen() {
   }, [formData, validateForm, success, showError]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Yeni Çalışan"
         showBackButton
@@ -229,7 +229,7 @@ export default function NewEmployeeScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Card style={styles.card}>
+          <View style={styles.formCard}>
             {/* Temel Bilgiler */}
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
 
@@ -399,7 +399,7 @@ export default function NewEmployeeScreen() {
                 onValueChange={(val) => handleInputChange('status', val)}
               />
             </View>
-          </Card>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -420,10 +420,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: Spacing.lg,
+    flexGrow: 1,
   },
-  card: {
-    padding: Spacing.lg,
+  formCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: Spacing['2xl'],
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing['2xl'],
+    ...Shadows.lg,
     gap: Spacing.md,
   },
   sectionTitle: {

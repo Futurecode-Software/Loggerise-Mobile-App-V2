@@ -29,7 +29,7 @@ import {
 import { Card, Badge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getWarehouse,
@@ -116,17 +116,19 @@ export default function WarehouseDetailScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Depo Detayı"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Depo bilgileri yükleniyor...
-          </Text>
+        <View style={styles.contentArea}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Brand.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+              Depo bilgileri yükleniyor...
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -135,31 +137,33 @@ export default function WarehouseDetailScreen() {
   // Error state
   if (error || !warehouse) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Depo Detayı"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={styles.errorContainer}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            {error || 'Depo bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchWarehouse}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
+        <View style={styles.contentArea}>
+          <View style={styles.errorContainer}>
+            <AlertCircle size={64} color={colors.danger} />
+            <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
+            <Text style={[styles.errorText, { color: colors.textSecondary }]}>
+              {error || 'Depo bulunamadı'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+              onPress={fetchWarehouse}
+            >
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title={warehouse.name}
         showBackButton
@@ -187,8 +191,9 @@ export default function WarehouseDetailScreen() {
         }
       />
 
-      {/* Warehouse Summary Card */}
-      <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={styles.contentArea}>
+        {/* Warehouse Summary Card */}
+        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.summaryHeader}>
           <View style={[styles.warehouseIcon, { backgroundColor: Brand.primary + '15' }]}>
             <Warehouse size={32} color={Brand.primary} />
@@ -245,6 +250,7 @@ export default function WarehouseDetailScreen() {
           </Card>
         )}
       </ScrollView>
+      </View>
 
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
@@ -265,6 +271,13 @@ export default function WarehouseDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   headerButton: {
     padding: Spacing.sm,

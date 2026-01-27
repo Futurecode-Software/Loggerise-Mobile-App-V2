@@ -24,7 +24,7 @@ import {
   Clock,
 } from 'lucide-react-native';
 import { Input, Button, Card, Badge } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   getCustomerInteraction,
   updateInteraction,
@@ -207,7 +207,7 @@ export default function InteractionDetailScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Görüşme Detayı" onBack={() => router.back()} />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
@@ -222,7 +222,7 @@ export default function InteractionDetailScreen() {
   // Error state
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader title="Görüşme Detayı" onBack={() => router.back()} />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
@@ -242,7 +242,7 @@ export default function InteractionDetailScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       {/* Header */}
       <FullScreenHeader
         title="Görüşme Detayı"
@@ -481,6 +481,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   contentContainer: {
     padding: Spacing.lg,

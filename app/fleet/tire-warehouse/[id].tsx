@@ -29,7 +29,7 @@ import { Input, Card } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
 import { DateInput } from '@/components/ui/date-input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import api, { getErrorMessage, getValidationErrors } from '@/services/api';
 import { getVehicles, Vehicle } from '@/services/endpoints/vehicles';
@@ -339,7 +339,7 @@ export default function EditTireScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Lastik Düzenle"
         showBackButton
@@ -382,9 +382,10 @@ export default function EditTireScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Action Buttons */}
-          {tire?.status === 'in_stock' && (
-            <View style={styles.actionButtonsRow}>
+          <View style={styles.formWrapper}>
+            {/* Action Buttons */}
+            {tire?.status === 'in_stock' && (
+              <View style={styles.actionButtonsRow}>
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: Brand.primary }]}
                 onPress={() => setShowAssignModal(true)}
@@ -399,11 +400,11 @@ export default function EditTireScreen() {
                 <Wrench size={20} color="#FFFFFF" />
                 <Text style={styles.actionButtonText}>Bakım Ekle</Text>
               </TouchableOpacity>
-            </View>
-          )}
+              </View>
+            )}
 
-          <Card style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
+            <Card style={styles.card}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
 
             <Input
               label="Seri Numarası *"
@@ -474,10 +475,10 @@ export default function EditTireScreen() {
               error={errors.dot_code}
               maxLength={255}
             />
-          </Card>
+            </Card>
 
-          <Card style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Satın Alma Bilgileri</Text>
+            <Card style={styles.card}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Satın Alma Bilgileri</Text>
 
             <DateInput
               label="Satın Alma Tarihi"
@@ -503,10 +504,10 @@ export default function EditTireScreen() {
               error={errors.supplier}
               maxLength={255}
             />
-          </Card>
+            </Card>
 
-          <Card style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Depo Bilgileri</Text>
+            <Card style={styles.card}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Depo Bilgileri</Text>
 
             <Input
               label="Depo Konumu"
@@ -527,7 +528,8 @@ export default function EditTireScreen() {
               numberOfLines={3}
               maxLength={1000}
             />
-          </Card>
+            </Card>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -694,6 +696,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
+    padding: Spacing.lg,
+  },
+  formWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    ...Shadows.lg,
+    overflow: 'hidden',
     padding: Spacing.lg,
   },
   actionButtonsRow: {

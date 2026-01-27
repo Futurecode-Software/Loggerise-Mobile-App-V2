@@ -22,7 +22,7 @@ import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Input, Card } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
 import { DateInput } from '@/components/ui/date-input';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import api, { getErrorMessage, getValidationErrors } from '@/services/api';
 
@@ -157,7 +157,7 @@ export default function NewTireScreen() {
   }, [formData, validateForm, success, showError]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Yeni Lastik"
         showBackButton
@@ -187,7 +187,8 @@ export default function NewTireScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Card style={styles.card}>
+          <View style={styles.formWrapper}>
+            <Card style={styles.card}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
 
             <Input
@@ -259,10 +260,10 @@ export default function NewTireScreen() {
               error={errors.dot_code}
               maxLength={255}
             />
-          </Card>
+            </Card>
 
-          <Card style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Satın Alma Bilgileri</Text>
+            <Card style={styles.card}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Satın Alma Bilgileri</Text>
 
             <DateInput
               label="Satın Alma Tarihi"
@@ -288,10 +289,10 @@ export default function NewTireScreen() {
               error={errors.supplier}
               maxLength={255}
             />
-          </Card>
+            </Card>
 
-          <Card style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Depo Bilgileri</Text>
+            <Card style={styles.card}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Depo Bilgileri</Text>
 
             <Input
               label="Depo Konumu"
@@ -312,7 +313,8 @@ export default function NewTireScreen() {
               numberOfLines={3}
               maxLength={1000}
             />
-          </Card>
+            </Card>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -334,6 +336,12 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: Spacing.lg,
+  },
+  formWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    ...Shadows.lg,
+    overflow: 'hidden',
   },
   card: {
     padding: Spacing.lg,

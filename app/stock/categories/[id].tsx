@@ -18,7 +18,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { Save, Trash2, FolderTree, CornerDownRight } from 'lucide-react-native';
 import { Input, Card, Badge, Checkbox, SelectInput, ConfirmDialog, FullScreenHeader } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getProductCategory,
@@ -205,7 +205,7 @@ export default function CategoryDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Kategori Detayı"
           onBackPress={() => router.back()}
@@ -220,7 +220,7 @@ export default function CategoryDetailScreen() {
 
   if (error || !category) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Kategori Detayı"
           onBackPress={() => router.back()}
@@ -241,12 +241,8 @@ export default function CategoryDetailScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <FullScreenHeader
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
+      <FullScreenHeader
           title={isEditing ? 'Kategoriyi Düzenle' : 'Kategori Detayı'}
           onBackPress={isEditing ? handleCancelEdit : () => router.back()}
           leftActions={
@@ -267,7 +263,12 @@ export default function CategoryDetailScreen() {
           }}
         />
 
-        <ScrollView
+      <View style={styles.contentArea}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
@@ -414,7 +415,8 @@ export default function CategoryDetailScreen() {
             )}
           </Card>
         </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
@@ -435,6 +437,13 @@ export default function CategoryDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   keyboardAvoidingView: {
     flex: 1,

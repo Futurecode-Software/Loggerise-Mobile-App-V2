@@ -273,14 +273,15 @@ export default function TractorTrailerAssignmentsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       <FullScreenHeader
         title="Çekici-Römork Eşleştirme"
         subtitle={pagination ? `${pagination.total} eşleştirme` : undefined}
         showBackButton={true}
       />
 
-      <StandardListContainer
+      <View style={styles.contentCard}>
+        <StandardListContainer
         data={assignments}
         renderItem={renderAssignment}
         keyExtractor={(item) => String(item.id)}
@@ -309,12 +310,13 @@ export default function TractorTrailerAssignmentsScreen() {
         }}
       />
 
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/fleet/tractor-trailer/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
+          onPress={() => router.push('/fleet/tractor-trailer/new' as any)}
+        >
+          <Plus size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
 
       <ConfirmDialog
         visible={showDeleteDialog}
@@ -341,6 +343,15 @@ export default function TractorTrailerAssignmentsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
   additionalInfo: {
     gap: Spacing.sm,

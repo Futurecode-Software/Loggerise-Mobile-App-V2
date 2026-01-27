@@ -21,7 +21,7 @@ import { Save } from 'lucide-react-native';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Input, Checkbox } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getEmployee,
@@ -236,13 +236,13 @@ export default function EmployeeEditScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
         <FullScreenHeader
           title="Çalışan Düzenle"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingCard, { backgroundColor: '#FFFFFF' }]}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             Çalışan bilgileri yükleniyor...
@@ -253,7 +253,7 @@ export default function EmployeeEditScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Çalışan Düzenle"
         showBackButton
@@ -271,6 +271,7 @@ export default function EmployeeEditScreen() {
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
         >
+          <View style={styles.formCard}>
           {/* Temel Bilgiler */}
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
 
@@ -440,35 +441,36 @@ export default function EmployeeEditScreen() {
               onValueChange={(val) => handleInputChange('status', val)}
             />
           </View>
-        </ScrollView>
 
-        {/* Action Buttons */}
-        <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-          <TouchableOpacity
-            style={[styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-            onPress={() => router.back()}
-            disabled={isSubmitting}
-          >
-            <Text style={[styles.cancelButtonText, { color: colors.text }]}>İptal</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              { backgroundColor: isSubmitting ? colors.textMuted : Brand.primary },
-            ]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Save size={20} color="#FFFFFF" />
-                <Text style={styles.submitButtonText}>Kaydet</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
+          {/* Action Buttons */}
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+              onPress={() => router.back()}
+              disabled={isSubmitting}
+            >
+              <Text style={[styles.cancelButtonText, { color: colors.text }]}>İptal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                { backgroundColor: isSubmitting ? colors.textMuted : Brand.primary },
+              ]}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Save size={20} color="#FFFFFF" />
+                  <Text style={styles.submitButtonText}>Kaydet</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
@@ -481,11 +483,14 @@ const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
   },
-  loadingContainer: {
+  loadingCard: {
     flex: 1,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.md,
+    ...Shadows.lg,
   },
   loadingText: {
     ...Typography.bodyMD,
@@ -494,9 +499,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   formContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
+    flexGrow: 1,
+  },
+  formCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: Spacing['2xl'],
+    paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing['2xl'],
+    ...Shadows.lg,
+    gap: Spacing.md,
   },
   sectionTitle: {
     ...Typography.headingMD,
@@ -527,8 +541,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     gap: Spacing.md,
-    padding: Spacing.lg,
-    borderTopWidth: 1,
+    marginTop: Spacing.lg,
   },
   cancelButton: {
     flex: 1,

@@ -14,7 +14,7 @@ import { Save, AlertCircle, Truck, Link2 } from 'lucide-react-native';
 import { Input, Card, Badge, Checkbox, DateInput } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import api from '@/services/api';
 import { getErrorMessage, getValidationErrors } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
@@ -994,7 +994,7 @@ export default function NewVehicleScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Yeni Araç Ekle"
         showBackButton
@@ -1069,12 +1069,13 @@ export default function NewVehicleScreen() {
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled={true}
         >
-          <Card style={styles.card}>
+          <View style={styles.formWrapper}>
+            <Card style={styles.card}>
             {renderTabContent()}
-          </Card>
+            </Card>
 
-          {/* Hidden fields that are not editable */}
-          <View style={{ display: 'none' }}>
+            {/* Hidden fields that are not editable */}
+            <View style={{ display: 'none' }}>
             <Input
               value={formData.license_info}
               onChangeText={(text) => handleInputChange('license_info', text)}
@@ -1083,6 +1084,7 @@ export default function NewVehicleScreen() {
               value={formData.sort_order}
               onChangeText={(text) => handleInputChange('sort_order', text)}
             />
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -1146,6 +1148,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
+    padding: Spacing.lg,
+  },
+  formWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    ...Shadows.lg,
+    overflow: 'hidden',
     padding: Spacing.lg,
   },
   card: {

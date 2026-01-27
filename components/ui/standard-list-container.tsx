@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LucideIcon, Search, AlertCircle } from 'lucide-react-native';
 import { Input } from './input';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 
 export interface FilterChip {
   id: string;
@@ -239,10 +239,15 @@ export function StandardListContainer<T>({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing['2xl'],
     paddingBottom: Spacing.sm,
   },
   searchInput: {

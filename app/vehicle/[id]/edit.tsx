@@ -21,7 +21,7 @@ import { Save } from 'lucide-react-native';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { Input, Checkbox, DateInput } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
-import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import api, { getErrorMessage, getValidationErrors } from '@/services/api';
 import { getVehicle } from '@/services/endpoints/vehicles';
@@ -740,7 +740,7 @@ export default function VehicleEditScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Araç Düzenle"
         showBackButton
@@ -789,7 +789,9 @@ export default function VehicleEditScreen() {
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
         >
-          {renderTab()}
+          <View style={styles.formWrapper}>
+            {renderTab()}
+          </View>
         </ScrollView>
 
         {/* Action Buttons */}
@@ -869,8 +871,15 @@ const styles = StyleSheet.create({
   },
   formContent: {
     padding: Spacing.lg,
-    gap: Spacing.md,
     paddingBottom: Spacing['2xl'],
+  },
+  formWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    ...Shadows.lg,
+    overflow: 'hidden',
+    padding: Spacing.lg,
+    gap: Spacing.md,
   },
   switchRow: {
     flexDirection: 'row',

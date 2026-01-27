@@ -18,7 +18,7 @@ import {
 import { router } from 'expo-router';
 import { Save } from 'lucide-react-native';
 import { Input, Card, Checkbox, FullScreenHeader } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import { createProductModel, ModelFormData } from '@/services/endpoints/products';
 import { getErrorMessage, getValidationErrors } from '@/services/api';
@@ -98,7 +98,7 @@ export default function NewModelScreen() {
   }, [formData, validateForm, success, showError]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -107,7 +107,7 @@ export default function NewModelScreen() {
           title="Yeni Model Ekle"
           onBackPress={() => router.back()}
           rightAction={{
-            icon: isSubmitting ? undefined : <Save size={22} color={Brand.primary} />,
+            icon: isSubmitting ? undefined : <Save size={22} color="#FFFFFF" />,
             onPress: handleSubmit,
             disabled: isSubmitting,
             loading: isSubmitting,
@@ -115,7 +115,8 @@ export default function NewModelScreen() {
         />
 
         {/* Form Content */}
-        <ScrollView
+        <View style={styles.contentArea}>
+          <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
@@ -159,6 +160,7 @@ export default function NewModelScreen() {
             </View>
           </Card>
         </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );
@@ -170,6 +172,13 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   content: {
     flex: 1,

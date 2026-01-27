@@ -188,14 +188,23 @@ export default function CategoriesScreen() {
 
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
         title="Kategoriler"
         subtitle={pagination ? `${pagination.total} kategori` : undefined}
         showBackButton={true}
+        rightIcons={
+          <TouchableOpacity
+            onPress={() => router.push('/stock/categories/new' as any)}
+            activeOpacity={0.7}
+          >
+            <Plus size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
       />
 
-      <StandardListContainer
+      <View style={styles.contentArea}>
+        <StandardListContainer
         data={categories}
         renderItem={renderCategory}
         keyExtractor={(item) => String(item.id)}
@@ -223,13 +232,8 @@ export default function CategoriesScreen() {
           executeFetch(searchQuery, 1, false);
         }}
       />
+      </View>
 
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/stock/categories/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -237,6 +241,13 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   additionalInfo: {
     gap: 2,
@@ -263,15 +274,5 @@ const styles = StyleSheet.create({
   childrenCount: {
     fontSize: 10,
     color: Colors.light.textSecondary,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

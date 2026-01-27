@@ -36,7 +36,7 @@ import {
 import { Card, Badge } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getLoad,
@@ -275,17 +275,19 @@ export default function LoadDetailScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.container}>
         <FullScreenHeader
           title="Yük Detayı"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Yük bilgileri yükleniyor...
-          </Text>
+        <View style={styles.content}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Brand.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+              Yük bilgileri yükleniyor...
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -294,24 +296,26 @@ export default function LoadDetailScreen() {
   // Error state
   if (error || !load) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.container}>
         <FullScreenHeader
           title="Yük Detayı"
           showBackButton
           onBackPress={() => router.back()}
         />
-        <View style={styles.errorContainer}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            {error || 'Yük bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchLoad}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
+        <View style={styles.content}>
+          <View style={styles.errorContainer}>
+            <AlertCircle size={64} color={colors.danger} />
+            <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
+            <Text style={[styles.errorText, { color: colors.textSecondary }]}>
+              {error || 'Yük bulunamadı'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+              onPress={fetchLoad}
+            >
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -327,7 +331,7 @@ export default function LoadDetailScreen() {
     load.packing_list_document;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       <FullScreenHeader
         title={load.load_number}
         showBackButton
@@ -355,51 +359,52 @@ export default function LoadDetailScreen() {
         }
       />
 
-      {/* Status Card */}
-      <View style={[styles.statusCard, { backgroundColor: Brand.primary }]}>
-        <View style={styles.statusCardHeader}>
-          <Package size={32} color="#FFFFFF" />
-          <View style={styles.statusCardInfo}>
-            <Text style={styles.statusCardNumber}>{load.load_number}</Text>
-            {load.cargo_name && (
-              <Text style={styles.statusCardCargo} numberOfLines={1}>
-                {load.cargo_name}
-              </Text>
-            )}
-          </View>
-        </View>
-        <View style={styles.statusCardFooter}>
-          <Badge
-            label={getStatusLabel(load.status)}
-            variant="default"
-            size="sm"
-            style={{ backgroundColor: getStatusColor(load.status) }}
-            textStyle={{ color: '#FFFFFF' }}
-          />
-          {load.direction && (
-            <Badge
-              label={getDirectionLabel(load.direction)}
-              variant="outline"
-              size="sm"
-              style={{
-                borderColor: '#FFFFFF',
-                backgroundColor: getDirectionColor(load.direction) + '40',
-              }}
-              textStyle={{ color: '#FFFFFF' }}
-            />
-          )}
-        </View>
-      </View>
-
-      {/* Details */}
+      {/* Content Area */}
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
         }
       >
+        {/* Status Card */}
+        <View style={[styles.statusCard, { backgroundColor: Brand.primary }]}>
+          <View style={styles.statusCardHeader}>
+            <Package size={32} color="#FFFFFF" />
+            <View style={styles.statusCardInfo}>
+              <Text style={styles.statusCardNumber}>{load.load_number}</Text>
+              {load.cargo_name && (
+                <Text style={styles.statusCardCargo} numberOfLines={1}>
+                  {load.cargo_name}
+                </Text>
+              )}
+            </View>
+          </View>
+          <View style={styles.statusCardFooter}>
+            <Badge
+              label={getStatusLabel(load.status)}
+              variant="default"
+              size="sm"
+              style={{ backgroundColor: getStatusColor(load.status) }}
+              textStyle={{ color: '#FFFFFF' }}
+            />
+            {load.direction && (
+              <Badge
+                label={getDirectionLabel(load.direction)}
+                variant="outline"
+                size="sm"
+                style={{
+                  borderColor: '#FFFFFF',
+                  backgroundColor: getDirectionColor(load.direction) + '40',
+                }}
+                textStyle={{ color: '#FFFFFF' }}
+              />
+            )}
+          </View>
+        </View>
+
+        {/* Details */}
         {/* Temel Bilgiler */}
         <Card style={styles.sectionCard}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
@@ -731,6 +736,18 @@ export default function LoadDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Brand.primary,
+  },
+  content: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
+  },
+  contentContainer: {
+    padding: Spacing.lg,
+    paddingBottom: Spacing['2xl'],
   },
   headerButton: {
     padding: Spacing.sm,
@@ -770,7 +787,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   statusCard: {
-    margin: Spacing.lg,
+    marginBottom: Spacing.lg,
     padding: Spacing.xl,
     borderRadius: BorderRadius.xl,
     gap: Spacing.lg,
@@ -798,16 +815,9 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     flexWrap: 'wrap',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    paddingBottom: Spacing['2xl'],
-  },
   sectionCard: {
     padding: Spacing.md,
+    marginBottom: Spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',
