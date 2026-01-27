@@ -41,7 +41,11 @@
       "Bash(\"C:/Users/ufukm/.config/herd/bin/php.bat\" artisan tenants:migrate)",
       "Bash(npx expo start:*)",
       "WebFetch(domain:loggerise.com)",
-      "Bash(composer show:*)"
+      "Bash(composer show:*)",
+      "Bash(for file in \"cargo-items.tsx\" \"addresses.tsx\" \"pricing.tsx\" \"preview.tsx\")",
+      "Bash(do grep -n \"bottomActions:\" \"C:\\\\Users\\\\Ufuk\\\\Documents\\\\GitHub\\\\loggerise_mobile_v2\\\\components\\\\quote\\\\steps$file\")",
+      "Bash(for file in *.tsx)",
+      "Bash(do awk '/<View[^>]*>/{view=1} view && /<\\\\/>/{print FILENAME\"\":\"\"NR\"\":\"\"$0; view=0}' \"$file\")"
     ]
   },
   "enableAllProjectMcpServers": true,

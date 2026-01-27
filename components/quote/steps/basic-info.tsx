@@ -97,13 +97,8 @@ export function QuoteCreateBasicInfoScreen({
   );
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Müşteri Bilgileri */}
+    <>
+      {/* Müşteri Bilgileri */}
         <Card style={styles.section}>
           <View style={styles.sectionHeader}>
             <User size={20} color={Brand.primary} />
@@ -215,7 +210,6 @@ export function QuoteCreateBasicInfoScreen({
             options={TRANSPORT_SPEED_OPTIONS}
           />
         </Card>
-      </ScrollView>
 
       {/* Bottom Actions */}
       <View style={styles.bottomActions}>
@@ -227,21 +221,11 @@ export function QuoteCreateBasicInfoScreen({
           <Text style={styles.nextButtonText}>Sonraki Adım</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
-  },
   section: {
     marginBottom: Spacing.md,
   },
@@ -265,8 +249,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xs,
   },
   bottomActions: {
+    marginTop: Spacing.lg,
     padding: Spacing.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
   },

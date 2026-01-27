@@ -1,31 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import {
-  Search,
   Filter,
   Plus,
   FileText,
-  User,
-  Calendar,
-  ChevronRight,
-  AlertCircle,
   Layers,
   Send,
   CheckCircle,
   XCircle,
 } from 'lucide-react-native';
-import { Card, Badge, Input } from '@/components/ui';
+import { StandardListContainer, StandardListItem, Badge } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+import { Colors, Spacing, Brand } from '@/constants/theme';
 import {
   getQuotes,
   Quote,
@@ -196,121 +183,24 @@ export default function QuotesScreen() {
     }
   };
 
-  const renderQuote = ({ item }: { item: Quote }) => (
-    <Card
-      style={styles.quoteCard}
+  const renderQuote = (item: Quote) => (
+    <StandardListItem
+      icon={FileText}
+      iconColor={Brand.primary}
+      title={item.quote_number}
+      subtitle={item.customer?.name || '-'}
+      additionalInfo={`Teklif: ${formatDate(item.quote_date)} • Geçerlilik: ${formatDate(item.valid_until || item.quote_date)}`}
+      status={{
+        label: getQuoteStatusLabel(item.status),
+        variant: getQuoteStatusVariant(item.status),
+      }}
+      footer={{
+        right: formatAmount(item.total_amount, item.currency),
+      }}
       onPress={() => router.push(`/quote/${item.id}` as any)}
-    >
-      <View style={styles.quoteHeader}>
-        <View style={[styles.quoteIcon, { backgroundColor: colors.surface }]}>
-          <FileText size={20} color={Brand.primary} />
-        </View>
-        <View style={styles.quoteInfo}>
-          <Text style={[styles.quoteNumber, { color: colors.text }]}>{item.quote_number}</Text>
-          {item.customer && (
-            <View style={styles.customerRow}>
-              <User size={12} color={colors.textMuted} />
-              <Text style={[styles.customerName, { color: colors.textSecondary }]} numberOfLines={1}>
-                {item.customer.name}
-              </Text>
-            </View>
-          )}
-        </View>
-        <Badge
-          label={getQuoteStatusLabel(item.status)}
-          variant={getQuoteStatusVariant(item.status)}
-          size="sm"
-        />
-      </View>
-
-      <View style={styles.metaRow}>
-        <View style={styles.metaItem}>
-          <Calendar size={14} color={colors.textMuted} />
-          <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-            Teklif: {formatDate(item.quote_date)}
-          </Text>
-        </View>
-        {item.valid_until && (
-          <View style={styles.metaItem}>
-            <Calendar size={14} color={colors.textMuted} />
-            <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-              Geçerlilik: {formatDate(item.valid_until)}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      <View style={[styles.quoteFooter, { borderTopColor: colors.border }]}>
-        <Text style={[styles.totalAmount, { color: colors.text }]}>
-          {formatAmount(item.total_amount, item.currency)}
-        </Text>
-        <ChevronRight size={18} color={colors.icon} />
-      </View>
-    </Card>
+    />
   );
 
-  const renderEmptyState = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Teklifler yükleniyor...
-          </Text>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            Bir hata oluştu
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {error}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => {
-              setIsLoading(true);
-              executeFetch(searchQuery, activeFilter, 1, false);
-            }}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.emptyState}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-          <FileText size={64} color={colors.textMuted} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {searchQuery ? 'Sonuç bulunamadı' : 'Henüz teklif eklenmemiş'}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          {searchQuery
-            ? 'Farklı bir arama terimi deneyin'
-            : 'Yeni teklif eklemek için + butonuna tıklayın'}
-        </Text>
-      </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={Brand.primary} />
-      </View>
-    );
-  };
 
   // Prepare tabs for header
   const headerTabs = STATUS_FILTERS.map((filter) => {
@@ -326,7 +216,7 @@ export default function QuotesScreen() {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
+    <View style={styles.container}>
       <FullScreenHeader
         title="Teklifler"
         subtitle={pagination ? `${pagination.total} teklif` : undefined}
@@ -352,36 +242,26 @@ export default function QuotesScreen() {
         }
       />
 
-      <View style={styles.contentWrapper}>
-        <View style={styles.searchContainer}>
-          <Input
-            placeholder="Teklif no veya müşteri ile ara..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            leftIcon={<Search size={20} color={colors.icon} />}
-            containerStyle={styles.searchInput}
-          />
-        </View>
-
-        <FlatList
-          data={quotes}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderQuote}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={renderEmptyState}
-          ListFooterComponent={renderFooter}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={Brand.primary}
-            />
-          }
-        />
-      </View>
+      <StandardListContainer
+        items={quotes}
+        renderItem={renderQuote}
+        loading={isLoading}
+        isLoadingMore={isLoadingMore}
+        error={error}
+        pagination={pagination}
+        onLoadMore={loadMore}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Teklif no veya müşteri ile ara..."
+        emptyTitle={searchQuery ? 'Sonuç bulunamadı' : 'Henüz teklif eklenmemiş'}
+        emptySubtitle={
+          searchQuery
+            ? 'Farklı bir arama terimi deneyin'
+            : 'Yeni teklif eklemek için + butonuna tıklayın'
+        }
+      />
     </View>
   );
 }
@@ -389,131 +269,6 @@ export default function QuotesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  contentWrapper: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
-  },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
-  searchInput: {
-    marginBottom: 0,
-  },
-  listContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    flexGrow: 1,
-  },
-  quoteCard: {
-    marginBottom: 0,
-  },
-  quoteHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  quoteIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  quoteInfo: {
-    flex: 1,
-  },
-  quoteNumber: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  customerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
-  },
-  customerName: {
-    ...Typography.bodySM,
-    flex: 1,
-  },
-  metaRow: {
-    flexDirection: 'column',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-    marginTop: Spacing.xs,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  metaText: {
-    ...Typography.bodySM,
-  },
-  quoteFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-  },
-  totalAmount: {
-    ...Typography.bodyLG,
-    fontWeight: '700',
-  },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
-  },
-  emptyIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xl,
-  },
-  emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  loadingMore: {
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
+    backgroundColor: Brand.primary,
   },
 });

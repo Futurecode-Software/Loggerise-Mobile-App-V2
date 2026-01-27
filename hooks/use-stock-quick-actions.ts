@@ -36,7 +36,7 @@ export const useStockQuickActions = (): QuickAction[] => {
         icon: ArrowDownToLine,
         onPress: () => {
           hapticLight();
-          router.push('/stock/new?type=stock_in');
+          router.push('/stock/new?type=stock_in' as any);
         },
         permission: 'stock_movements.create',
       },
@@ -46,7 +46,7 @@ export const useStockQuickActions = (): QuickAction[] => {
         icon: ArrowUpFromLine,
         onPress: () => {
           hapticLight();
-          router.push('/stock/new?type=stock_out');
+          router.push('/stock/new?type=stock_out' as any);
         },
         permission: 'stock_movements.create',
       },
@@ -76,7 +76,7 @@ export const useStockQuickActions = (): QuickAction[] => {
         icon: ArrowLeftRight,
         onPress: () => {
           hapticLight();
-          router.push('/stock/transfer');
+          router.push('/stock/transfer' as any);
         },
         permission: 'stock_movements.create',
       },

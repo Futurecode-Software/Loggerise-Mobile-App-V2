@@ -3,6 +3,7 @@
  *
  * Web ile %100 uyumlu 5-adımlı teklif oluşturma ekranı
  * Backend: MobileStoreQuoteRequest (güncellenmiş version)
+ * Updated to match DESIGN_STANDARDS.md
  */
 
 import React, { useState, useCallback } from 'react';
@@ -13,9 +14,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmDialog } from '@/components/ui';
@@ -219,7 +221,7 @@ export default function CreateMultiStepQuoteScreen() {
       />
 
       <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
+        style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={100}
       >
@@ -230,8 +232,15 @@ export default function CreateMultiStepQuoteScreen() {
           onStepPress={goToStep}
         />
 
-        {/* Step Content */}
-        <View style={styles.content}>{renderStepContent()}</View>
+        {/* Step Content - Scrollable */}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {renderStepContent()}
+        </ScrollView>
 
         {/* Loading Overlay */}
         {isSubmitting && (
@@ -259,13 +268,22 @@ export default function CreateMultiStepQuoteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  keyboardAvoid: {
-    flex: 1,
+    backgroundColor: Brand.primary,
   },
   content: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+    ...Shadows.lg,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: Spacing.lg,
+    paddingBottom: Spacing['4xl'],
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -273,6 +291,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
   },
   loadingText: {
     marginTop: Spacing.md,

@@ -24,9 +24,11 @@ export interface Pagination {
 }
 
 export interface StandardListContainerProps<T> {
-  data: T[];
+  data?: T[];
+  /** Backward compatibility - alternative to data prop */
+  items?: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
-  keyExtractor: (item: T, index: number) => string;
+  keyExtractor?: (item: T, index: number) => string;
   search?: {
     value: string;
     onChange: (text: string) => void;
@@ -48,6 +50,10 @@ export interface StandardListContainerProps<T> {
     showRetry?: boolean;
     onRetry?: () => void;
   };
+  /** Backward compatibility - simple empty title */
+  emptyTitle?: string;
+  /** Backward compatibility - simple empty subtitle */
+  emptySubtitle?: string;
   loading?: boolean;
   refreshing?: boolean;
   onRefresh?: () => void;
@@ -63,6 +69,7 @@ export interface StandardListContainerProps<T> {
 
 export function StandardListContainer<T>({
   data,
+  items,
   renderItem,
   keyExtractor,
   search,
@@ -71,6 +78,8 @@ export function StandardListContainer<T>({
   searchPlaceholder,
   filters,
   emptyState,
+  emptyTitle,
+  emptySubtitle,
   loading = false,
   refreshing = false,
   onRefresh,
@@ -84,6 +93,14 @@ export function StandardListContainer<T>({
   ListFooterComponent,
 }: StandardListContainerProps<T>) {
   const colors = Colors.light;
+
+  // Backward compatibility: use items or data
+  const listData = items || data || [];
+
+  // Default keyExtractor if not provided
+  const finalKeyExtractor = keyExtractor || ((item: any, index: number) =>
+    item?.id?.toString() || index.toString()
+  );
 
   // Backward compatibility: convert searchQuery/onSearchChange to search object
   const searchConfig = search || (searchQuery !== undefined && onSearchChange ? {
@@ -124,21 +141,28 @@ export function StandardListContainer<T>({
       );
     }
 
-    if (emptyState) {
-      const EmptyIcon = emptyState.icon;
+    // Support both emptyState (new) and emptyTitle/emptySubtitle (backward compatibility)
+    const finalEmptyState = emptyState || (emptyTitle || emptySubtitle ? {
+      icon: AlertCircle,
+      title: emptyTitle || 'Sonuç bulunamadı',
+      subtitle: emptySubtitle || '',
+    } : null);
+
+    if (finalEmptyState) {
+      const EmptyIcon = finalEmptyState.icon;
       return (
         <View style={styles.emptyState}>
           <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
             <EmptyIcon size={64} color={colors.textMuted} />
           </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>{emptyState.title}</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>{finalEmptyState.title}</Text>
           <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {emptyState.subtitle}
+            {finalEmptyState.subtitle}
           </Text>
-          {emptyState.showRetry && emptyState.onRetry && (
+          {finalEmptyState.showRetry && finalEmptyState.onRetry && (
             <TouchableOpacity
               style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-              onPress={emptyState.onRetry}
+              onPress={finalEmptyState.onRetry}
             >
               <Text style={styles.retryButtonText}>Tekrar Dene</Text>
             </TouchableOpacity>
@@ -167,7 +191,7 @@ export function StandardListContainer<T>({
   };
 
   const renderFilters = () => {
-    if (!filters || filters.items.length === 0) return null;
+    if (!filters || !filters.items || filters.items.length === 0) return null;
 
     return (
       <View style={styles.filterContainer}>
@@ -226,12 +250,12 @@ export function StandardListContainer<T>({
 
       {/* List */}
       <FlatList
-        data={data}
-        keyExtractor={keyExtractor}
+        data={listData}
+        keyExtractor={finalKeyExtractor}
         renderItem={({ item, index }) => renderItem(item, index)}
         contentContainerStyle={[
           styles.listContent,
-          data.length === 0 && styles.listContentEmpty,
+          listData.length === 0 && styles.listContentEmpty,
           contentContainerStyle,
         ]}
         ListEmptyComponent={renderEmptyState}

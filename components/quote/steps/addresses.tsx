@@ -108,13 +108,8 @@ export function QuoteCreateAddressesScreen({
   );
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Yükleme Adresi */}
+    <>
+      {/* Yükleme Adresi */}
         <Card style={styles.section}>
           <View style={styles.sectionHeader}>
             <MapPin size={20} color={Brand.primary} />
@@ -239,7 +234,6 @@ export function QuoteCreateAddressesScreen({
             </View>
           )}
         </Card>
-      </ScrollView>
 
       {/* Bottom Actions */}
       <View style={styles.bottomActions}>
@@ -300,22 +294,12 @@ export function QuoteCreateAddressesScreen({
             <Text style={styles.modalCloseText}>Kapat</Text>
           </TouchableOpacity>
         </View>
-      </Modal>
-    </View>
+            </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
-  },
   section: {
     marginBottom: Spacing.md,
     padding: Spacing.md,
@@ -373,8 +357,9 @@ const styles = StyleSheet.create({
   },
   bottomActions: {
     flexDirection: 'row',
+    marginTop: Spacing.lg,
     padding: Spacing.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
     gap: Spacing.sm,

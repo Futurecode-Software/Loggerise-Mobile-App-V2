@@ -84,7 +84,15 @@ export function StandardListItem({
               {meta}
             </Text>
           )}
-          {additionalInfo}
+          {additionalInfo && (
+            typeof additionalInfo === 'string' ? (
+              <Text style={[styles.additionalInfo, { color: colors.textSecondary }]} numberOfLines={2}>
+                {additionalInfo}
+              </Text>
+            ) : (
+              additionalInfo
+            )
+          )}
         </View>
         {status && statusDot && (
           <Badge
@@ -101,8 +109,24 @@ export function StandardListItem({
       {/* Footer */}
       {footer && (footer.left || footer.right) && (
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <View style={styles.footerLeft}>{footer.left}</View>
-          {footer.right && <View style={styles.footerRight}>{footer.right}</View>}
+          <View style={styles.footerLeft}>
+            {footer.left && (
+              typeof footer.left === 'string' ? (
+                <Text style={[styles.footerText, { color: colors.text }]}>{footer.left}</Text>
+              ) : (
+                footer.left
+              )
+            )}
+          </View>
+          {footer.right && (
+            <View style={styles.footerRight}>
+              {typeof footer.right === 'string' ? (
+                <Text style={[styles.footerAmount, { color: colors.text }]}>{footer.right}</Text>
+              ) : (
+                footer.right
+              )}
+            </View>
+          )}
         </View>
       )}
     </Card>
@@ -153,6 +177,10 @@ const styles = StyleSheet.create({
     ...Typography.bodyXS,
     marginTop: 2,
   },
+  additionalInfo: {
+    ...Typography.bodySM,
+    marginTop: Spacing.xs,
+  },
   chevron: {
     marginLeft: Spacing.xs,
     flexShrink: 0,
@@ -175,5 +203,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+  },
+  footerText: {
+    ...Typography.bodySM,
+  },
+  footerAmount: {
+    ...Typography.bodyLG,
+    fontWeight: '700',
   },
 });

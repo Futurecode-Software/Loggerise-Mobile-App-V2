@@ -99,13 +99,8 @@ export function QuoteCreateCargoItemsScreen({
   );
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {cargoItems.length === 0 && (
+    <>
+      {cargoItems.length === 0 && (
           <Card style={styles.emptyCard}>
             <Package size={48} color="#9CA3AF" />
             <Text style={styles.emptyText}>Henüz kargo kalemi eklenmedi</Text>
@@ -263,7 +258,6 @@ export function QuoteCreateCargoItemsScreen({
           <Plus size={20} color={Brand.primary} />
           <Text style={styles.addButtonText}>Kalem Ekle</Text>
         </TouchableOpacity>
-      </ScrollView>
 
       {/* Bottom Actions */}
       <View style={styles.bottomActions}>
@@ -295,21 +289,11 @@ export function QuoteCreateCargoItemsScreen({
         onCancel={() => setDeleteDialogOpen(false)}
         variant="destructive"
       />
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
-  },
   emptyCard: {
     padding: Spacing.xl,
     alignItems: 'center',
@@ -386,8 +370,9 @@ const styles = StyleSheet.create({
   },
   bottomActions: {
     flexDirection: 'row',
+    marginTop: Spacing.lg,
     padding: Spacing.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
     gap: Spacing.sm,

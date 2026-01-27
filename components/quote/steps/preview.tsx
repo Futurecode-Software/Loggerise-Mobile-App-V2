@@ -114,13 +114,8 @@ export function QuoteCreatePreviewScreen({
   }, [data]);
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
+    <>
+      {/* Header */}
         <View style={styles.header}>
           <Eye size={24} color={Brand.primary} />
           <Text style={styles.headerTitle}>Teklif Özeti</Text>
@@ -310,7 +305,6 @@ export function QuoteCreatePreviewScreen({
             )}
           </Card>
         )}
-      </ScrollView>
 
       {/* Bottom Actions */}
       <View style={styles.bottomActions}>
@@ -339,22 +333,12 @@ export function QuoteCreatePreviewScreen({
           <Send size={20} color="#FFFFFF" />
           <Text style={styles.sendButtonText}>Gönder</Text>
         </TouchableOpacity>
-      </View>
-    </View>
+            </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -474,8 +458,9 @@ const styles = StyleSheet.create({
   },
   bottomActions: {
     flexDirection: 'row',
+    marginTop: Spacing.lg,
     padding: Spacing.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
     gap: Spacing.sm,

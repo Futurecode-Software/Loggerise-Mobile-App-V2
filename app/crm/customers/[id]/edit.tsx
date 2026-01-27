@@ -467,10 +467,10 @@ export default function EditCrmCustomerScreen() {
                 placeholder="Vergi dairesi seçiniz"
                 loading={loadingTaxOffices}
                 onSearch={async (query) => {
-                  const results = await searchTaxOffices(query);
-                  return results.map((office) => ({
-                    label: office.name,
-                    value: office.id.toString(),
+                  const results = await searchTaxOffices(undefined, query);
+                  return results.map((office: any) => ({
+                    label: office.label,
+                    value: office.value.toString(),
                   }));
                 }}
               />
