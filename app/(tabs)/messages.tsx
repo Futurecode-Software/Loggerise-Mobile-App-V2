@@ -44,6 +44,7 @@ export default function MessagesTabScreen() {
 
   // Refs
   const isFirstRender = useRef(true);
+  const hasInitialFetchRef = useRef(false);
   const appState = useRef(AppState.currentState);
   const conversationsRef = useRef<Conversation[]>([]);
 
@@ -79,6 +80,8 @@ export default function MessagesTabScreen() {
       setTotalUnreadCount(response.totalUnreadCount);
       // Update global context
       updateUnreadCount(response.totalUnreadCount);
+      // Mark initial fetch as complete
+      hasInitialFetchRef.current = true;
     } catch (err) {
       console.error('Conversations fetch error:', err);
       setError(err instanceof Error ? err.message : 'Mesajlar yüklenemedi');

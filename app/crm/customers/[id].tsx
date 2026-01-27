@@ -283,7 +283,7 @@ export default function CrmCustomerDetailScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Müşteri Detayı" onBack={() => router.back()} />
+        <FullScreenHeader title="Müşteri Detayı" showBackButton />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
@@ -297,7 +297,7 @@ export default function CrmCustomerDetailScreen() {
   if (error || !customer) {
     return (
       <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Müşteri Detayı" onBack={() => router.back()} />
+        <FullScreenHeader title="Müşteri Detayı" showBackButton />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
             <AlertCircle size={64} color={colors.danger} />
@@ -325,17 +325,28 @@ export default function CrmCustomerDetailScreen() {
       {/* Header */}
       <FullScreenHeader
         title={customer.name}
-        onBack={() => router.back()}
-        rightIcons={[
-          {
-            icon: <Edit size={20} color="#FFFFFF" />,
-            onPress: () => router.push(`/crm/customers/${customerId}/edit` as any),
-          },
-          {
-            icon: <Trash2 size={20} color="#FFFFFF" />,
-            onPress: handleDelete,
-          },
-        ]}
+        showBackButton
+        rightIcons={
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity
+              onPress={() => router.push(`/crm/customers/${customerId}/edit` as any)}
+              activeOpacity={0.7}
+            >
+              <Edit size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDelete}
+              activeOpacity={0.7}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Trash2 size={20} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+          </View>
+        }
       />
 
       {/* Customer Summary Card */}

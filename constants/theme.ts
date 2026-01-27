@@ -173,6 +173,23 @@ export const Typography = {
     fontWeight: '500' as const,
     lineHeight: 16,
   },
+
+  // Helper properties for inline usage
+  sizes: {
+    xs: 10,
+    sm: 12,
+    md: 14,
+    lg: 16,
+    xl: 20,
+    '2xl': 24,
+    '3xl': 28,
+  },
+  fontWeights: {
+    regular: '400' as const,
+    medium: '500' as const,
+    semibold: '600' as const,
+    bold: '700' as const,
+  },
 };
 
 // Spacing

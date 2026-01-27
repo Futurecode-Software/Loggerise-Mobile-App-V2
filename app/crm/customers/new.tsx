@@ -196,7 +196,7 @@ export default function NewCrmCustomerScreen() {
     try {
       const customer = await createCrmCustomer(formData);
       success('Başarılı', 'CRM müşterisi başarıyla oluşturuldu');
-      setTimeout(() => router.replace(`/crm/customers/${customer.id}` as any), 1000);
+      router.replace(`/crm/customers/${customer.id}` as any);
     } catch (err) {
       showError('Hata', err instanceof Error ? err.message : 'Müşteri oluşturulamadı');
     } finally {

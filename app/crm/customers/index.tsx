@@ -261,7 +261,7 @@ export default function CrmCustomersListScreen() {
             onPress={() => router.push('/crm/customers/new' as any)}
             activeOpacity={0.7}
           >
-            <Plus size={24} color="#FFFFFF" />
+            <Plus size={22} color="#FFFFFF" />
           </TouchableOpacity>
         }
       />

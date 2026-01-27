@@ -75,7 +75,7 @@ export const useFinanceQuickActions = (): QuickAction[] => {
         icon: Banknote,
         onPress: () => {
           hapticLight();
-          router.push('/invoices/new');
+          router.push('/finance/invoices/new');
         },
         permission: 'invoices.create',
       },

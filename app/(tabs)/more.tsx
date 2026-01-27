@@ -95,7 +95,7 @@ const MENU_SECTIONS: MenuSection[] = [
       // Contact Management (Cari Yönetimi)
       { id: 'contacts', label: 'Cariler', icon: Users, color: '#f59e0b', route: '/contacts' },
       // Invoice Management (Fatura Yönetimi)
-      { id: 'invoices', label: 'Faturalar', icon: FileText, color: '#ef4444', route: '/invoices' },
+      { id: 'invoices', label: 'Faturalar', icon: FileText, color: '#ef4444', route: '/finance/invoices' },
       // Stock Management (Stok Yönetimi)
       { id: 'products', label: 'Ürünler', icon: Box, color: '#10b981', route: '/products' },
       { id: 'brands', label: 'Markalar', icon: Tag, color: '#8b5cf6', route: '/stock/brands' },
@@ -220,16 +220,11 @@ const MENU_SECTIONS: MenuSection[] = [
     ],
   },
   {
-    id: 'system',
-    title: 'Sistem Yönetimi',
-    icon: Settings,
-    iconColor: '#6366f1',
-    items: [
-      { id: 'users', label: 'Kullanıcılar', icon: Users, color: '#3b82f6', route: '/settings/users' },
-      { id: 'roles', label: 'Roller', icon: Shield, color: '#8b5cf6', route: '/settings/roles' },
-      { id: 'system-settings', label: 'Sistem Ayarları', icon: Settings, color: '#6366f1', route: '/settings/system' },
-      { id: 'demo-data', label: 'Demo Veri Yönetimi', icon: Sparkles, color: '#ec4899', route: '/settings/demo-data' },
-    ],
+    id: 'users',
+    title: 'Kullanıcı Yönetimi',
+    icon: Users,
+    iconColor: '#3b82f6',
+    route: '/under-construction?title=Kullanıcı Yönetimi',
   },
 ];
 

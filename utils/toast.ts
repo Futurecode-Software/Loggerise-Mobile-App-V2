@@ -6,7 +6,7 @@
 import Toast from 'react-native-toast-message';
 
 interface ToastOptions {
-  type: 'success' | 'error' | 'info' | 'warning';
+  type: 'success' | 'error' | 'info';
   message: string;
   duration?: number;
 }

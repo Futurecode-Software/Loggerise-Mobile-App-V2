@@ -258,7 +258,7 @@ export default function EditCrmCustomerScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="CRM Müşterisi Düzenle" onBack={() => router.back()} />
+        <FullScreenHeader title="CRM Müşterisi Düzenle" showBackButton />
         <View style={styles.loadingState}>
           <ActivityIndicator size="large" color={Brand.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
@@ -273,7 +273,7 @@ export default function EditCrmCustomerScreen() {
   if (error) {
     return (
       <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="CRM Müşterisi Düzenle" onBack={() => router.back()} />
+        <FullScreenHeader title="CRM Müşterisi Düzenle" showBackButton />
         <View style={styles.errorState}>
           <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
             <AlertCircle size={64} color={colors.danger} />
@@ -296,14 +296,20 @@ export default function EditCrmCustomerScreen() {
       {/* Header */}
       <FullScreenHeader
         title="CRM Müşterisi Düzenle"
-        onBack={() => router.back()}
-        rightIcons={[
-          {
-            icon: <Save size={20} color="#FFFFFF" />,
-            onPress: handleSubmit,
-            disabled: isSubmitting,
-          },
-        ]}
+        showBackButton
+        rightIcons={
+          <TouchableOpacity
+            onPress={handleSubmit}
+            activeOpacity={0.7}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Save size={20} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+        }
       />
 
       <KeyboardAvoidingView

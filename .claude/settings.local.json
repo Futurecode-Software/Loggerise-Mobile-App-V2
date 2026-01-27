@@ -38,7 +38,10 @@
       "Bash(C:Usersufukm.configherdbinphp.bat artisan tenants:migrate --tenants=all)",
       "Bash(\"C:/Users/ufukm/.config/herd/bin/php.bat\" artisan tenants:migrate --tenants=all)",
       "Bash(\"C:/Users/ufukm/.config/herd/bin/php.bat\" artisan list)",
-      "Bash(\"C:/Users/ufukm/.config/herd/bin/php.bat\" artisan tenants:migrate)"
+      "Bash(\"C:/Users/ufukm/.config/herd/bin/php.bat\" artisan tenants:migrate)",
+      "Bash(npx expo start:*)",
+      "WebFetch(domain:loggerise.com)",
+      "Bash(composer show:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
