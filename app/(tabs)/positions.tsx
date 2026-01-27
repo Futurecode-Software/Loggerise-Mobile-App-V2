@@ -352,9 +352,17 @@ export default function PositionsScreen() {
         title="Pozisyonlar"
         subtitle={pagination ? `${pagination.total} kayıt` : undefined}
         rightIcons={
-          <TouchableOpacity activeOpacity={0.7}>
-            <Filter size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity
+              onPress={() => router.push('/position/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity activeOpacity={0.7}>
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -430,14 +438,6 @@ export default function PositionsScreen() {
           />
         }
       />
-
-        {/* FAB */}
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-          onPress={() => router.push('/position/new' as any)}
-        >
-          <Plus size={24} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -622,15 +622,5 @@ const styles = StyleSheet.create({
   loadingMore: {
     paddingVertical: Spacing.lg,
     alignItems: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

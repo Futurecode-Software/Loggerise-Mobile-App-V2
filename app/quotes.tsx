@@ -334,14 +334,22 @@ export default function QuotesScreen() {
         showBackButton={true}
         tabs={headerTabs}
         rightIcons={
-          <TouchableOpacity
-            onPress={() => {
-              // Filter action
-            }}
-            activeOpacity={0.7}
-          >
-            <Filter size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <TouchableOpacity
+              onPress={() => {
+                // Filter action
+              }}
+              activeOpacity={0.7}
+            >
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/quote/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -375,13 +383,6 @@ export default function QuotesScreen() {
           }
         />
       </View>
-
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/quote/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -515,15 +516,5 @@ const styles = StyleSheet.create({
   loadingMore: {
     paddingVertical: Spacing.lg,
     alignItems: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

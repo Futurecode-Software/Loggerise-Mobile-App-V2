@@ -278,6 +278,14 @@ export default function TractorTrailerAssignmentsScreen() {
         title="Çekici-Römork Eşleştirme"
         subtitle={pagination ? `${pagination.total} eşleştirme` : undefined}
         showBackButton={true}
+        rightIcons={
+          <TouchableOpacity
+            onPress={() => router.push('/fleet/tractor-trailer/new' as any)}
+            activeOpacity={0.7}
+          >
+            <Plus size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
       />
 
       <View style={styles.contentCard}>
@@ -309,13 +317,6 @@ export default function TractorTrailerAssignmentsScreen() {
           executeFetch(searchQuery, 1, false);
         }}
       />
-
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-          onPress={() => router.push('/fleet/tractor-trailer/new' as any)}
-        >
-          <Plus size={24} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
 
       <ConfirmDialog
@@ -378,15 +379,5 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: Spacing.xs,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

@@ -287,14 +287,22 @@ export default function ProductsScreen() {
         subtitle={pagination ? `${pagination.total} ürün` : undefined}
         showBackButton={true}
         rightIcons={
-          <TouchableOpacity
-            onPress={() => {
-              // Filter action
-            }}
-            activeOpacity={0.7}
-          >
-            <Filter size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity
+              onPress={() => router.push('/stock/products/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                // Filter action
+              }}
+              activeOpacity={0.7}
+            >
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -359,13 +367,6 @@ export default function ProductsScreen() {
         }
       />
       </View>
-
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/stock/products/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -535,15 +536,5 @@ const styles = StyleSheet.create({
   loadingMore: {
     paddingVertical: Spacing.lg,
     alignItems: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

@@ -442,14 +442,13 @@ export default function AIReportsScreen() {
         <FullScreenHeader
           title="Loggy AI"
           subtitle={pagination ? `${pagination.total} rapor` : 'Verilerinizi doğal dille sorgula'}
-          onBack={() => router.back()}
+          showBackButton
           leftIcon={<Sparkles size={20} color="#FFFFFF" />}
-          rightIcons={[
-            {
-              icon: <Plus size={22} color="#FFFFFF" />,
-              onPress: startNewChat,
-            },
-          ]}
+          rightIcons={
+            <TouchableOpacity onPress={startNewChat} activeOpacity={0.7}>
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          }
         />
 
         {/* Report List */}
@@ -471,16 +470,6 @@ export default function AIReportsScreen() {
             />
           }
         />
-
-        {/* FAB */}
-        {reports.length > 0 && (
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-            onPress={startNewChat}
-          >
-            <Plus size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        )}
       </View>
     );
   }
@@ -494,17 +483,15 @@ export default function AIReportsScreen() {
       <FullScreenHeader
         title={currentReport?.title || 'Yeni Sorgu'}
         subtitle={currentReport ? formatReportTime(currentReport.created_at) : 'Doğal dille sorgula'}
-        onBack={goBackToList}
+        showBackButton
+        onBackPress={goBackToList}
         leftIcon={<Sparkles size={20} color="#FFFFFF" />}
         rightIcons={
-          currentReport
-            ? [
-                {
-                  icon: <Trash2 size={20} color="#FFFFFF" />,
-                  onPress: () => handleDelete(currentReport.id),
-                },
-              ]
-            : undefined
+          currentReport ? (
+            <TouchableOpacity onPress={() => handleDelete(currentReport.id)} activeOpacity={0.7}>
+              <Trash2 size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : undefined
         }
       />
 
@@ -706,16 +693,6 @@ const styles = StyleSheet.create({
   loadingMore: {
     paddingVertical: Spacing.lg,
     alignItems: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   // Chat styles
   chatContainer: {

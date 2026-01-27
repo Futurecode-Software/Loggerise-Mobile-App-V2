@@ -407,6 +407,20 @@ export default function DispositionScreen() {
           title="Dispozisyon"
           subtitle={`${draftPositions.length} taslak • ${unassignedLoads.length} atanmamış yük`}
           showBackButton
+          rightIcons={
+            <TouchableOpacity
+              onPress={handleCreateDraft}
+              disabled={isCreating}
+              activeOpacity={0.7}
+              style={{ padding: Spacing.sm }}
+            >
+              {isCreating ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Plus size={22} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+          }
         />
 
         <View style={styles.contentCard}>
@@ -452,20 +466,6 @@ export default function DispositionScreen() {
           </View>
         }
       />
-
-      {/* FAB - Create Draft */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={handleCreateDraft}
-        disabled={isCreating}
-        activeOpacity={0.8}
-      >
-        {isCreating ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <Plus size={24} color="#FFFFFF" />
-        )}
-      </TouchableOpacity>
 
       {/* Load Picker Modal */}
       <LoadPickerModal
@@ -724,15 +724,5 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     ...Typography.bodyMD,
     textAlign: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

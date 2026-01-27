@@ -346,12 +346,24 @@ export default function PositionsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FullScreenHeader
         title="Pozisyonlar"
-        onBackPress={() => router.back()}
+        showBackButton
         subtitle={pagination ? `${pagination.total} kayıt` : undefined}
-        rightAction={{
-          icon: <Filter size={22} color={colors.icon} />,
-          onPress: () => {},
-        }}
+        rightIcons={
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <TouchableOpacity
+              onPress={() => {}}
+              activeOpacity={0.7}
+            >
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/position/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        }
       />
 
       {/* Search */}
@@ -424,14 +436,6 @@ export default function PositionsScreen() {
           />
         }
       />
-
-      {/* FAB */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/position/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -596,15 +600,5 @@ const styles = StyleSheet.create({
   loadingMore: {
     paddingVertical: Spacing.lg,
     alignItems: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

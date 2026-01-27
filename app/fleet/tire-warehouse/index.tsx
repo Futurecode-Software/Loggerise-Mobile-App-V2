@@ -310,14 +310,22 @@ export default function TireWarehouseScreen() {
         subtitle={pagination ? `${pagination.total} lastik` : undefined}
         showBackButton={true}
         rightIcons={
-          <TouchableOpacity
-            onPress={() => {
-              // Filter modal açılabilir
-            }}
-            activeOpacity={0.7}
-          >
-            <Filter size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+            <TouchableOpacity
+              onPress={() => router.push('/fleet/tire-warehouse/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                // Filter modal açılabilir
+              }}
+              activeOpacity={0.7}
+            >
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -350,13 +358,6 @@ export default function TireWarehouseScreen() {
           executeFetch(searchQuery, 1, false);
         }}
       />
-
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-          onPress={() => router.push('/fleet/tire-warehouse/new' as any)}
-        >
-          <Plus size={24} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
 
       <ConfirmDialog
@@ -424,15 +425,5 @@ const styles = StyleSheet.create({
   },
   badgeLabel: {
     fontSize: 11,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

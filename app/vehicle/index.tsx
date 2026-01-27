@@ -216,14 +216,22 @@ export default function VehicleScreen() {
         subtitle={pagination ? `${pagination.total} araç` : undefined}
         showBackButton={true}
         rightIcons={
-          <TouchableOpacity
-            onPress={() => {
-              // Filter action - can be implemented later
-            }}
-            activeOpacity={0.7}
-          >
-            <Filter size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <TouchableOpacity
+              onPress={() => {
+                // Filter action - can be implemented later
+              }}
+              activeOpacity={0.7}
+            >
+              <Filter size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/vehicle/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -255,13 +263,6 @@ export default function VehicleScreen() {
           executeFetch(searchQuery, 1, false);
         }}
       />
-
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/vehicle/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -283,15 +284,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
     color: Colors.light.textSecondary,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

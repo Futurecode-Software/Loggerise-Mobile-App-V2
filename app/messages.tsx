@@ -350,7 +350,7 @@ export default function MessagesScreen() {
         title="Mesajlar"
         showBackButton
         rightIcons={
-          <View style={styles.headerRight}>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' }}>
             {/* Yeni Grup Butonu */}
             <TouchableOpacity
               onPress={() => router.push('/message/group/new' as any)}
@@ -358,6 +358,13 @@ export default function MessagesScreen() {
               activeOpacity={0.7}
             >
               <Users size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+            {/* Plus Butonu */}
+            <TouchableOpacity
+              onPress={() => router.push('/message/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
             </TouchableOpacity>
             {totalUnreadCount > 0 && (
               <View style={[styles.headerUnreadBadge, { backgroundColor: colors.danger }]}>
@@ -397,14 +404,6 @@ export default function MessagesScreen() {
           />
         }
       />
-
-      {/* FAB - New Conversation */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/message/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -558,15 +557,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     ...Typography.bodyMD,
     fontWeight: '600',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

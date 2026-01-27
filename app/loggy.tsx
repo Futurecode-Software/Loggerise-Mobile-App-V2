@@ -314,15 +314,6 @@ export default function LoggyScreen() {
             }
           />
 
-          {/* FAB */}
-          {conversations.length > 0 && (
-            <TouchableOpacity
-              style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-              onPress={handleCreateNewConversation}
-            >
-              <Plus size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* Delete Confirmation Dialog */}
@@ -624,16 +615,6 @@ const styles = StyleSheet.create({
       includeFontPadding: false,
       textAlignVertical: 'center',
     }),
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   chatContainer: {
     flex: 1,

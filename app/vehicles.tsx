@@ -451,13 +451,23 @@ export default function VehiclesScreen() {
       <FullScreenHeader
         title="Araçlar"
         subtitle={pagination ? `${pagination.total} araç` : undefined}
-        onBack={() => router.back()}
-        rightIcons={[
-          {
-            icon: <Settings2 size={22} color="#FFFFFF" />,
-            onPress: () => setShowFilters(!showFilters),
-          },
-        ]}
+        showBackButton
+        rightIcons={
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <TouchableOpacity
+              onPress={() => setShowFilters(!showFilters)}
+              activeOpacity={0.7}
+            >
+              <Settings2 size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/vehicle/new' as any)}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        }
       />
 
       {/* Advanced Filters */}
@@ -606,14 +616,6 @@ export default function VehiclesScreen() {
           />
         }
       />
-
-      {/* FAB */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-        onPress={() => router.push('/vehicle/new' as any)}
-      >
-        <Plus size={24} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -844,15 +846,5 @@ const styles = StyleSheet.create({
   loadingMore: {
     paddingVertical: Spacing.lg,
     alignItems: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

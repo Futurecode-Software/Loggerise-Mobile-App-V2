@@ -13,11 +13,13 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 
 import { router } from 'expo-router';
 import { Save } from 'lucide-react-native';
-import { Input, Card, Checkbox, SelectInput, FullScreenHeader } from '@/components/ui';
+import { Input, Card, Checkbox, SelectInput } from '@/components/ui';
+import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -135,13 +137,22 @@ export default function NewCategoryScreen() {
     <View style={[styles.container, { backgroundColor: Brand.primary }]}>
       <FullScreenHeader
           title="Yeni Kategori Ekle"
+          showBackButton
           onBackPress={() => router.back()}
-          rightAction={{
-            icon: isSubmitting ? undefined : <Save size={22} color={Brand.primary} />,
-            onPress: handleSubmit,
-            disabled: isSubmitting,
-            loading: isSubmitting,
-          }}
+          rightIcons={
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={styles.saveButton}
+              activeOpacity={0.7}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Save size={22} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+          }
         />
 
       <View style={styles.contentArea}>
@@ -228,6 +239,9 @@ export default function NewCategoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  saveButton: {
+    padding: Spacing.sm,
   },
   contentArea: {
     flex: 1,

@@ -356,6 +356,14 @@ export default function MessagesTabScreen() {
         title="Mesajlar"
         rightIcons={
           <View style={styles.headerRight}>
+            {/* Yeni Mesaj Butonu */}
+            <TouchableOpacity
+              onPress={() => router.push('/message/new' as any)}
+              style={{ padding: Spacing.sm }}
+              activeOpacity={0.7}
+            >
+              <Plus size={22} color="#FFFFFF" />
+            </TouchableOpacity>
             {/* Yeni Grup Butonu */}
             <TouchableOpacity
               onPress={() => router.push('/message/group/new' as any)}
@@ -404,14 +412,6 @@ export default function MessagesTabScreen() {
           />
         }
       />
-
-        {/* FAB - New Conversation */}
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: Brand.primary, ...Shadows.lg }]}
-          onPress={() => router.push('/message/new' as any)}
-        >
-          <Plus size={24} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -574,15 +574,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     ...Typography.bodyMD,
     fontWeight: '600',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
