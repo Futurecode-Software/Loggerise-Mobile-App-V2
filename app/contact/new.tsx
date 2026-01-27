@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import {
 import { router } from 'expo-router';
 import { Save } from 'lucide-react-native';
 import { Input, Button, Card } from '@/components/ui';
+import { GooglePlacesAutocomplete } from '@/components/ui/GooglePlacesAutocomplete';
+import { CountrySelect, StateSelect, CitySelect } from '@/components/ui/LocationSelects';
+import { TaxOfficeSelect } from '@/components/ui/TaxOfficeSelect';
 import { FullScreenHeader } from '@/components/header';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
@@ -22,19 +25,74 @@ import {
   ContactStatus,
   BusinessType,
 } from '@/services/endpoints/contacts';
+import { PlaceDetails, lookupLocation } from '@/services/endpoints/locations';
 import { useToast } from '@/hooks/use-toast';
+import api from '@/services/api';
 
-// Default Turkey country ID
+// Yabanci firma varsayilan vergi numarasi
+const FOREIGN_DEFAULT_TAX_NUMBER = '22222222222';
+// Turkiye varsayilan ID
 const DEFAULT_TURKEY_ID = 228;
+
+// Toggle Button Component
+function ToggleButton({
+  active,
+  onClick,
+  children,
+  color = 'blue',
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  color?: 'blue' | 'orange';
+}) {
+  const colors = Colors.light;
+  const activeColors = {
+    blue: Brand.primary,
+    orange: '#FF9800',
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={onClick}
+      style={[
+        styles.toggleButton,
+        {
+          backgroundColor: active ? activeColors[color] : colors.surface,
+          borderColor: active ? activeColors[color] : colors.border,
+        },
+      ]}
+      activeOpacity={0.7}
+    >
+      <Text
+        style={[
+          styles.toggleButtonText,
+          { color: active ? '#FFFFFF' : colors.text },
+        ]}
+      >
+        {children}
+      </Text>
+    </TouchableOpacity>
+  );
+}
 
 export default function NewContactScreen() {
   const colors = Colors.light;
   const { success, error: showError } = useToast();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTurkish, setIsTurkish] = useState(true);
+  const [queryingEfatura, setQueryingEfatura] = useState(false);
+  const [efaturaInfo, setEfaturaInfo] = useState<{
+    unvan?: string;
+    efatura_kayitli?: boolean;
+    earsiv_kayitli?: boolean;
+  } | null>(null);
+
   const [formData, setFormData] = useState<ContactFormData>({
     // Required fields
     type: 'customer',
+    business_type: null,
     legal_type: 'company',
     name: '',
     short_name: '',
@@ -42,7 +100,6 @@ export default function NewContactScreen() {
     status: 'active',
     is_active: true,
     // Optional fields
-    business_type: null,
     email: '',
     phone: '',
     fax: '',
@@ -51,10 +108,131 @@ export default function NewContactScreen() {
     category: '',
     main_address: '',
     country_id: DEFAULT_TURKEY_ID,
+    main_state_id: null,
+    main_city_id: null,
+    main_latitude: null,
+    main_longitude: null,
+    main_place_id: null,
+    main_formatted_address: null,
     risk_limit: null,
+    // Müşteri segment alanları
+    customer_segment: null,
+    credit_rating: null,
+    default_payment_terms: null,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Yurtici/Yurtdisi toggle handler
+  const handleLocationToggle = useCallback((isDomestic: boolean) => {
+    setIsTurkish(isDomestic);
+
+    if (isDomestic) {
+      // Yurtici: Turkiye sec, vergi no temizle
+      setFormData(prev => ({
+        ...prev,
+        country_id: DEFAULT_TURKEY_ID,
+        tax_number: '',
+        main_state_id: null,
+        main_city_id: null,
+      }));
+      setEfaturaInfo(null);
+    } else {
+      // Yurtdisi: Ulke temizle, vergi no otomatik doldur
+      setFormData(prev => ({
+        ...prev,
+        country_id: undefined,
+        tax_number: FOREIGN_DEFAULT_TAX_NUMBER,
+        tax_office_id: null,
+        main_state_id: null,
+        main_city_id: null,
+      }));
+      setEfaturaInfo(null);
+    }
+  }, []);
+
+  // E-Fatura kullanici bilgisi sorgulama
+  const queryEfaturaUser = useCallback(async (taxNumber: string) => {
+    if (!taxNumber || taxNumber.length < 10 || !isTurkish || taxNumber === FOREIGN_DEFAULT_TAX_NUMBER) {
+      setEfaturaInfo(null);
+      return;
+    }
+
+    setQueryingEfatura(true);
+    try {
+      const response = await api.get('/invoice-data/efatura-user/query', {
+        params: { tax_number: taxNumber },
+      });
+
+      if (response.data.success && response.data.data) {
+        const userData = response.data.data;
+
+        setEfaturaInfo({
+          unvan: userData.unvan || undefined,
+          efatura_kayitli: userData.efatura_kayitli ?? undefined,
+          earsiv_kayitli: userData.earsiv_kayitli ?? undefined,
+        });
+
+        // Form alanlarini doldur
+        if (userData.unvan && !formData.name) {
+          setFormData(prev => ({ ...prev, name: userData.unvan }));
+        }
+      } else {
+        setEfaturaInfo(null);
+      }
+    } catch (error) {
+      console.error('E-Fatura API Hatasi:', error);
+      setEfaturaInfo(null);
+    } finally {
+      setQueryingEfatura(false);
+    }
+  }, [isTurkish, formData.name]);
+
+  // Vergi numarasi degistiginde sorgula (debounce ile)
+  useEffect(() => {
+    if (formData.tax_number && formData.tax_number.length >= 10 && isTurkish && formData.tax_number !== FOREIGN_DEFAULT_TAX_NUMBER) {
+      const timeoutId = setTimeout(() => {
+        queryEfaturaUser(formData.tax_number);
+      }, 800);
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      setEfaturaInfo(null);
+    }
+  }, [formData.tax_number, isTurkish, queryEfaturaUser]);
+
+  const handleMainAddressPlaceSelect = async (place: PlaceDetails | null) => {
+    if (!place) return;
+
+    const updated = {
+      main_address: place.formatted_address || place.address,
+      main_formatted_address: place.formatted_address,
+      main_latitude: place.latitude,
+      main_longitude: place.longitude,
+      main_place_id: place.place_id,
+    };
+
+    // Location lookup
+    if (place.country_code || place.country || place.state || place.city) {
+      try {
+        const locationIds = await lookupLocation(place);
+        if (locationIds.country_id) {
+          setFormData(prev => ({
+            ...prev,
+            ...updated,
+            country_id: locationIds.country_id,
+            main_state_id: locationIds.state_id || null,
+            main_city_id: locationIds.city_id || null,
+          }));
+          return;
+        }
+      } catch (error) {
+        console.error('Location lookup error:', error);
+      }
+    }
+
+    setFormData(prev => ({ ...prev, ...updated }));
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -65,6 +243,12 @@ export default function NewContactScreen() {
 
     if (!formData.short_name?.trim()) {
       newErrors.short_name = 'Kısa ad zorunludur';
+    }
+
+    if (!formData.email?.trim()) {
+      newErrors.email = 'E-posta zorunludur';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Geçerli bir e-posta adresi giriniz';
     }
 
     if (!formData.type) {
@@ -83,8 +267,8 @@ export default function NewContactScreen() {
       newErrors.status = 'Durum zorunludur';
     }
 
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Geçerli bir e-posta adresi giriniz';
+    if (!formData.main_address?.trim()) {
+      newErrors.main_address = 'Ana adres zorunludur';
     }
 
     setErrors(newErrors);
@@ -113,13 +297,18 @@ export default function NewContactScreen() {
     { value: 'customer', label: 'Müşteri' },
     { value: 'supplier', label: 'Tedarikçi' },
     { value: 'both', label: 'Her İkisi' },
+    { value: 'self', label: 'Kendi Şirketim' },
     { value: 'potential', label: 'Potansiyel' },
     { value: 'other', label: 'Diğer' },
   ];
 
-  const legalTypes: { value: LegalType; label: string }[] = [
-    { value: 'company', label: 'Şirket' },
-    { value: 'individual', label: 'Bireysel' },
+  const businessTypes: { value: BusinessType | ''; label: string }[] = [
+    { value: '', label: 'Seçiniz...' },
+    { value: 'customs_agent', label: 'Gümrük Müşaviri' },
+    { value: 'logistics_partner', label: 'Lojistik Ortağı' },
+    { value: 'bank', label: 'Banka' },
+    { value: 'insurance', label: 'Sigorta' },
+    { value: 'other', label: 'Diğer' },
   ];
 
   const statusTypes: { value: ContactStatus; label: string; color: string }[] = [
@@ -129,10 +318,18 @@ export default function NewContactScreen() {
   ];
 
   const currencyTypes = [
-    { value: 'TRY', label: 'TRY - Türk Lirası' },
-    { value: 'USD', label: 'USD - ABD Doları' },
-    { value: 'EUR', label: 'EUR - Euro' },
-    { value: 'GBP', label: 'GBP - İngiliz Sterlini' },
+    { value: 'TRY', label: 'TRY' },
+    { value: 'USD', label: 'USD' },
+    { value: 'EUR', label: 'EUR' },
+    { value: 'GBP', label: 'GBP' },
+  ];
+
+  const customerSegments = [
+    { value: '', label: 'Seçiniz...' },
+    { value: 'enterprise', label: 'Kurumsal' },
+    { value: 'mid_market', label: 'Orta Ölçek' },
+    { value: 'small_business', label: 'Küçük İşletme' },
+    { value: 'individual', label: 'Bireysel' },
   ];
 
   return (
@@ -166,13 +363,34 @@ export default function NewContactScreen() {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Cari Tipi */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Cari Tipi</Text>
+          {/* E-Fatura/E-Arsiv Logo Gosterimi */}
+          {efaturaInfo && (efaturaInfo.efatura_kayitli || efaturaInfo.earsiv_kayitli) && (
+            <Card style={styles.efaturaCard}>
+              {efaturaInfo.efatura_kayitli && (
+                <View style={styles.efaturaItem}>
+                  <Text style={[styles.efaturaText, { color: colors.success }]}>
+                    ✓ e-Fatura Kayıtlı
+                  </Text>
+                </View>
+              )}
+              {efaturaInfo.earsiv_kayitli && (
+                <View style={styles.efaturaItem}>
+                  <Text style={[styles.efaturaText, { color: colors.success }]}>
+                    ✓ e-Arşiv Kayıtlı
+                  </Text>
+                </View>
+              )}
+            </Card>
+          )}
 
+          {/* Cari Tipi ve Faaliyet Alanı */}
+          <Card style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Cari Tipi ve Faaliyet Alanı</Text>
+
+            {/* Cari Tipi */}
             <View style={styles.formGroup}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>
-                Tip <Text style={{ color: colors.danger }}>*</Text>
+                Cari Tipi <Text style={{ color: colors.danger }}>*</Text>
               </Text>
               <View style={styles.chipGroup}>
                 {contactTypes.map((type) => (
@@ -201,36 +419,26 @@ export default function NewContactScreen() {
               {errors.type && <Text style={[styles.errorText, { color: colors.danger }]}>{errors.type}</Text>}
             </View>
 
+            {/* Faaliyet Alanı */}
             <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                Yasal Tip <Text style={{ color: colors.danger }}>*</Text>
-              </Text>
-              <View style={styles.radioGroup}>
-                {legalTypes.map((type) => (
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Faaliyet Alanı</Text>
+              <View style={styles.chipGroup}>
+                {businessTypes.filter(b => b.value !== '').map((type) => (
                   <TouchableOpacity
                     key={type.value}
                     style={[
-                      styles.radioButton,
-                      formData.legal_type === type.value && [
-                        styles.radioButtonActive,
+                      styles.chip,
+                      formData.business_type === type.value && [
+                        styles.chipActive,
                         { backgroundColor: Brand.primary + '15', borderColor: Brand.primary },
                       ],
                     ]}
-                    onPress={() => setFormData({ ...formData, legal_type: type.value })}
+                    onPress={() => setFormData({ ...formData, business_type: (type.value as BusinessType) || null })}
                   >
-                    <View
-                      style={[
-                        styles.radioCircle,
-                        formData.legal_type === type.value && [
-                          styles.radioCircleActive,
-                          { backgroundColor: Brand.primary },
-                        ],
-                      ]}
-                    />
                     <Text
                       style={[
-                        styles.radioText,
-                        { color: formData.legal_type === type.value ? Brand.primary : colors.text },
+                        styles.chipText,
+                        { color: formData.business_type === type.value ? Brand.primary : colors.text },
                       ]}
                     >
                       {type.label}
@@ -254,6 +462,92 @@ export default function NewContactScreen() {
               required
             />
 
+            {/* Legal Type ve Yurtici/Yurtdisi Toggle */}
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleColumn}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Yasal Tip</Text>
+                <View style={styles.toggleGroup}>
+                  <ToggleButton
+                    active={formData.legal_type === 'company'}
+                    onClick={() => setFormData({ ...formData, legal_type: 'company' })}
+                    color="blue"
+                  >
+                    Şirket
+                  </ToggleButton>
+                  <ToggleButton
+                    active={formData.legal_type === 'individual'}
+                    onClick={() => setFormData({ ...formData, legal_type: 'individual' })}
+                    color="blue"
+                  >
+                    Bireysel
+                  </ToggleButton>
+                </View>
+              </View>
+
+              <View style={styles.toggleColumn}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Konum</Text>
+                <View style={styles.toggleGroup}>
+                  <ToggleButton
+                    active={isTurkish}
+                    onClick={() => handleLocationToggle(true)}
+                    color="orange"
+                  >
+                    Yurt İçi
+                  </ToggleButton>
+                  <ToggleButton
+                    active={!isTurkish}
+                    onClick={() => handleLocationToggle(false)}
+                    color="orange"
+                  >
+                    Yurt Dışı
+                  </ToggleButton>
+                </View>
+              </View>
+            </View>
+
+            {/* Vergi Dairesi - Sadece Turk firmalari icin */}
+            {isTurkish && (
+              <TaxOfficeSelect
+                label="Vergi Dairesi"
+                value={formData.tax_office_id}
+                onChange={(value) => setFormData({ ...formData, tax_office_id: value })}
+                error={errors.tax_office_id}
+                placeholder="Vergi dairesi ara..."
+              />
+            )}
+
+            {/* Vergi Numarası */}
+            <View>
+              <Input
+                label={
+                  queryingEfatura
+                    ? 'Vergi Numarası (Sorgulanıyor...)'
+                    : 'Vergi Numarası'
+                }
+                placeholder="1234567890"
+                value={formData.tax_number}
+                onChangeText={(value) => setFormData({ ...formData, tax_number: value })}
+                keyboardType="numeric"
+                maxLength={11}
+              />
+              {!isTurkish && formData.tax_number === FOREIGN_DEFAULT_TAX_NUMBER && (
+                <Text style={[styles.noteText, { color: colors.warning }]}>
+                  * Yabancı firma varsayılan vergi numarası
+                </Text>
+              )}
+            </View>
+
+            {/* Country Select - Sadece yurtdisi firmalar icin */}
+            {!isTurkish && (
+              <CountrySelect
+                label="Ülke"
+                value={formData.country_id}
+                onChange={(value) => setFormData({ ...formData, country_id: value ? Number(value) : undefined })}
+                error={errors.country_id}
+                placeholder="Ülke seçiniz"
+              />
+            )}
+
             <Input
               label="Kısa Ad"
               placeholder="Örn: ABC"
@@ -264,67 +558,37 @@ export default function NewContactScreen() {
             />
 
             <Input
-              label="Kategori"
-              placeholder="Örn: VIP, Kurumsal"
-              value={formData.category}
-              onChangeText={(value) => setFormData({ ...formData, category: value })}
-            />
-          </Card>
-
-          {/* İletişim Bilgileri */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>İletişim Bilgileri</Text>
-
-            <Input
               label="E-posta"
-              placeholder="ornek@sirket.com"
+              placeholder="info@abc.com"
               value={formData.email}
               onChangeText={(value) => setFormData({ ...formData, email: value })}
               keyboardType="email-address"
               autoCapitalize="none"
               error={errors.email}
+              required
             />
 
             <Input
               label="Telefon"
-              placeholder="+90 XXX XXX XX XX"
+              placeholder="+90 212 555 1234"
               value={formData.phone}
               onChangeText={(value) => setFormData({ ...formData, phone: value })}
               keyboardType="phone-pad"
             />
-
-            <Input
-              label="Faks"
-              placeholder="+90 XXX XXX XX XX"
-              value={formData.fax}
-              onChangeText={(value) => setFormData({ ...formData, fax: value })}
-              keyboardType="phone-pad"
-            />
           </Card>
-
-          {/* Vergi Bilgileri */}
-          {formData.legal_type === 'company' && (
-            <Card style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Vergi Bilgileri</Text>
-
-              <Input
-                label="Vergi Numarası"
-                placeholder="XXXXXXXXXX"
-                value={formData.tax_number}
-                onChangeText={(value) => setFormData({ ...formData, tax_number: value })}
-                keyboardType="numeric"
-                maxLength={11}
-              />
-
-              <Text style={[styles.noteText, { color: colors.textMuted }]}>
-                * Vergi dairesi seçimi için web uygulamasını kullanınız
-              </Text>
-            </Card>
-          )}
 
           {/* Adres Bilgileri */}
           <Card style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Adres Bilgileri</Text>
+
+            {/* Google Places Autocomplete */}
+            <GooglePlacesAutocomplete
+              label="Adres Ara (Google Maps)"
+              placeholder="Adres aramak için yazmaya başlayın..."
+              value={formData.main_formatted_address || formData.main_address}
+              onChange={(value) => setFormData({ ...formData, main_address: value })}
+              onPlaceSelect={handleMainAddressPlaceSelect}
+            />
 
             <Input
               label="Ana Adres"
@@ -333,11 +597,51 @@ export default function NewContactScreen() {
               onChangeText={(value) => setFormData({ ...formData, main_address: value })}
               multiline
               numberOfLines={3}
+              error={errors.main_address}
+              required
             />
 
-            <Text style={[styles.noteText, { color: colors.textMuted }]}>
-              * İl/İlçe seçimi için web uygulamasını kullanınız
-            </Text>
+            {/* Koordinat Bilgisi */}
+            {formData.main_latitude && formData.main_longitude && (
+              <View style={styles.coordinatesContainer}>
+                <Text style={[styles.coordinatesLabel, { color: colors.textMuted }]}>
+                  📍 Koordinatlar (Google Maps'ten otomatik)
+                </Text>
+                <Text style={[styles.coordinatesText, { color: colors.textSecondary }]}>
+                  Enlem: {formData.main_latitude.toFixed(6)} • Boylam: {formData.main_longitude.toFixed(6)}
+                </Text>
+              </View>
+            )}
+
+            {/* Manuel Konum Seçimi */}
+            <View style={styles.divider}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.textMuted }]}>
+                veya Manuel Girdi
+              </Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            </View>
+
+            {/* İl */}
+            <StateSelect
+              label={isTurkish ? 'İl' : 'Eyalet/Bölge'}
+              countryId={formData.country_id}
+              value={formData.main_state_id}
+              onChange={(value) => {
+                setFormData({ ...formData, main_state_id: value ? Number(value) : null, main_city_id: null });
+              }}
+              placeholder={isTurkish ? 'İl seçiniz' : 'Eyalet seçiniz'}
+            />
+
+            {/* İlçe */}
+            <CitySelect
+              label={isTurkish ? 'İlçe' : 'Şehir'}
+              stateId={formData.main_state_id}
+              countryId={formData.country_id}
+              value={formData.main_city_id}
+              onChange={(value) => setFormData({ ...formData, main_city_id: value ? Number(value) : null })}
+              placeholder={isTurkish ? 'İlçe seçiniz' : 'Şehir seçiniz'}
+            />
           </Card>
 
           {/* Finansal Ayarlar */}
@@ -364,10 +668,7 @@ export default function NewContactScreen() {
                     <Text
                       style={[
                         styles.chipText,
-                        {
-                          color:
-                            formData.currency_type === currency.value ? Brand.primary : colors.text,
-                        },
+                        { color: formData.currency_type === currency.value ? Brand.primary : colors.text },
                       ]}
                     >
                       {currency.value}
@@ -375,9 +676,6 @@ export default function NewContactScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-              {errors.currency_type && (
-                <Text style={[styles.errorText, { color: colors.danger }]}>{errors.currency_type}</Text>
-              )}
             </View>
 
             <Input
@@ -389,11 +687,76 @@ export default function NewContactScreen() {
               }
               keyboardType="numeric"
             />
+            <Text style={[styles.noteText, { color: colors.textMuted }]}>
+              * Boş bırakılırsa limitsiz kredi
+            </Text>
           </Card>
 
-          {/* Durum */}
+          {/* Müşteri Segmentasyonu - Sadece customer/both/potential için */}
+          {(formData.type === 'customer' || formData.type === 'both' || formData.type === 'potential') && (
+            <Card style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Müşteri Segmentasyonu</Text>
+
+              <View style={styles.formGroup}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Müşteri Segmenti</Text>
+                <View style={styles.chipGroup}>
+                  {customerSegments.filter(s => s.value !== '').map((segment) => (
+                    <TouchableOpacity
+                      key={segment.value}
+                      style={[
+                        styles.chip,
+                        formData.customer_segment === segment.value && [
+                          styles.chipActive,
+                          { backgroundColor: Brand.primary + '15', borderColor: Brand.primary },
+                        ],
+                      ]}
+                      onPress={() => setFormData({ ...formData, customer_segment: segment.value as any || null })}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: formData.customer_segment === segment.value ? Brand.primary : colors.text },
+                        ]}
+                      >
+                        {segment.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <Input
+                label="Kredi Notu (1-10)"
+                placeholder="1=Çok Düşük, 10=Mükemmel"
+                value={formData.credit_rating?.toString() || ''}
+                onChangeText={(value) => {
+                  const num = value ? parseInt(value, 10) : null;
+                  if (num === null || (num >= 1 && num <= 10)) {
+                    setFormData({ ...formData, credit_rating: num });
+                  }
+                }}
+                keyboardType="numeric"
+              />
+
+              <Input
+                label="Varsayılan Ödeme Vadesi (gün)"
+                placeholder="Örn: 30"
+                value={formData.default_payment_terms?.toString() || ''}
+                onChangeText={(value) => {
+                  const num = value ? parseInt(value, 10) : null;
+                  setFormData({ ...formData, default_payment_terms: num });
+                }}
+                keyboardType="numeric"
+              />
+              <Text style={[styles.noteText, { color: colors.textMuted }]}>
+                * Varsayılan fatura vade günü
+              </Text>
+            </Card>
+          )}
+
+          {/* Durum ve Kategori */}
           <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Durum</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Durum ve Kategori</Text>
 
             <View style={styles.formGroup}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>
@@ -415,9 +778,7 @@ export default function NewContactScreen() {
                     <Text
                       style={[
                         styles.statusButtonText,
-                        {
-                          color: formData.status === status.value ? status.color : colors.text,
-                        },
+                        { color: formData.status === status.value ? status.color : colors.text },
                       ]}
                     >
                       {status.label}
@@ -426,6 +787,13 @@ export default function NewContactScreen() {
                 ))}
               </View>
             </View>
+
+            <Input
+              label="Kategori"
+              placeholder="Örn: VIP, Kurumsal"
+              value={formData.category}
+              onChangeText={(value) => setFormData({ ...formData, category: value })}
+            />
           </Card>
 
           {/* Submit Button */}
@@ -459,6 +827,19 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     gap: Spacing.md,
     paddingBottom: Spacing['4xl'],
+  },
+  efaturaCard: {
+    padding: Spacing.md,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  efaturaItem: {
+    marginBottom: Spacing.xs,
+  },
+  efaturaText: {
+    ...Typography.bodySM,
+    fontWeight: '600',
   },
   section: {
     padding: Spacing.lg,
@@ -494,37 +875,30 @@ const styles = StyleSheet.create({
     ...Typography.bodySM,
     fontWeight: '500',
   },
-  radioGroup: {
+  toggleRow: {
     flexDirection: 'row',
     gap: Spacing.md,
+    marginBottom: Spacing.lg,
   },
-  radioButton: {
+  toggleColumn: {
     flex: 1,
+  },
+  toggleGroup: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
+    gap: Spacing.xs,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  radioButtonActive: {
     borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.light.border,
-    marginRight: Spacing.sm,
-  },
-  radioCircleActive: {
-    borderWidth: 6,
-    borderColor: '#FFFFFF',
-  },
-  radioText: {
-    ...Typography.bodyMD,
-    fontWeight: '500',
+  toggleButtonText: {
+    ...Typography.bodySM,
+    fontWeight: '600',
   },
   statusButtons: {
     flexDirection: 'row',
@@ -548,11 +922,39 @@ const styles = StyleSheet.create({
   noteText: {
     ...Typography.bodyXS,
     fontStyle: 'italic',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   errorText: {
     ...Typography.bodyXS,
     marginTop: Spacing.xs,
+  },
+  coordinatesContainer: {
+    padding: Spacing.md,
+    backgroundColor: '#f3f4f6',
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+  },
+  coordinatesLabel: {
+    ...Typography.bodyXS,
+    marginBottom: 4,
+  },
+  coordinatesText: {
+    ...Typography.bodySM,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    ...Typography.bodyXS,
+    marginHorizontal: Spacing.md,
+    textTransform: 'uppercase',
   },
   submitButton: {
     marginTop: Spacing.lg,

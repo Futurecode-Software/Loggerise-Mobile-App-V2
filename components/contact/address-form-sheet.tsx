@@ -25,6 +25,8 @@ import {
   useBottomSheetSpringConfigs,
 } from '@gorhom/bottom-sheet';
 import { Input } from '@/components/ui';
+import { GooglePlacesAutocomplete } from '@/components/ui/GooglePlacesAutocomplete';
+import { CountrySelect, StateSelect, CitySelect } from '@/components/ui/LocationSelects';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
   ContactAddress,
@@ -32,6 +34,7 @@ import {
   createContactAddress,
   updateContactAddress,
 } from '@/services/endpoints/contacts';
+import { PlaceDetails, lookupLocation } from '@/services/endpoints/locations';
 
 export interface AddressFormSheetRef {
   present: () => void;
@@ -44,14 +47,6 @@ interface AddressFormSheetProps {
   onSuccess: () => void;
 }
 
-type AddressType = 'billing' | 'shipping' | 'both';
-
-const ADDRESS_TYPES: { value: AddressType; label: string }[] = [
-  { value: 'billing', label: 'Fatura Adresi' },
-  { value: 'shipping', label: 'Sevkiyat Adresi' },
-  { value: 'both', label: 'Fatura & Sevkiyat' },
-];
-
 const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
   ({ contactId, address, onSuccess }, ref) => {
     const colors = Colors.light;
@@ -63,12 +58,21 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
 
     const [formData, setFormData] = useState<AddressFormData>({
       title: '',
-      address_line_1: '',
-      address_line_2: '',
+      address: '',
+      country_id: undefined,
+      state_id: undefined,
+      city_id: undefined,
       postal_code: '',
       phone: '',
+      fax: '',
       email: '',
-      address_type: 'both',
+      latitude: null,
+      longitude: null,
+      place_id: null,
+      formatted_address: null,
+      is_main: false,
+      is_billing: false,
+      is_shipping: false,
       is_default: false,
       is_active: true,
     });
@@ -80,7 +84,7 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
     }));
 
     // Snap points - tek sabit yükseklik (sürüklenmeyi önler)
-    const snapPoints = useMemo(() => (isSuccess ? ['30%'] : ['85%']), [isSuccess]);
+    const snapPoints = useMemo(() => (isSuccess ? ['30%'] : ['90%']), [isSuccess]);
     const initialIndex = useMemo(() => 0, []);
 
     // iOS-like spring animation
@@ -111,28 +115,43 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
       if (address) {
         setFormData({
           title: address.title || '',
-          address_line_1: address.address_line_1 || '',
-          address_line_2: address.address_line_2 || '',
+          address: address.address_line_1 || '',
           country_id: address.country?.id,
           state_id: address.state?.id,
           city_id: address.city?.id,
           postal_code: address.postal_code || '',
           phone: address.phone || '',
           email: address.email || '',
-          address_type: address.address_type || 'both',
+          is_main: false, // Backend'de yok, is_default kullanıyoruz
+          is_billing: address.address_type === 'billing' || address.address_type === 'both',
+          is_shipping: address.address_type === 'shipping' || address.address_type === 'both',
           is_default: address.is_default,
           is_active: address.is_active,
+          // Google Maps fields - mevcut adreste yok ama gönderebiliriz
+          latitude: null,
+          longitude: null,
+          place_id: null,
+          formatted_address: null,
         });
       } else {
         // Yeni adres - formu temizle
         setFormData({
           title: '',
-          address_line_1: '',
-          address_line_2: '',
+          address: '',
+          country_id: undefined,
+          state_id: undefined,
+          city_id: undefined,
           postal_code: '',
           phone: '',
+          fax: '',
           email: '',
-          address_type: 'both',
+          latitude: null,
+          longitude: null,
+          place_id: null,
+          formatted_address: null,
+          is_main: false,
+          is_billing: false,
+          is_shipping: false,
           is_default: false,
           is_active: true,
         });
@@ -149,12 +168,43 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
       }, 200);
     }, []);
 
-    const handleChange = (field: keyof AddressFormData, value: string | boolean) => {
+    const handleChange = (field: keyof AddressFormData, value: any) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
       // Hata mesajını temizle
       if (errors[field]) {
         setErrors((prev) => ({ ...prev, [field]: '' }));
       }
+    };
+
+    /**
+     * Google Places seçildiğinde
+     */
+    const handlePlaceSelect = async (place: PlaceDetails | null) => {
+      if (!place) return;
+
+      const updated = {
+        ...formData,
+        address: place.formatted_address || place.address,
+        formatted_address: place.formatted_address,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        place_id: place.place_id,
+        postal_code: place.postal_code || formData.postal_code,
+      };
+
+      // Location lookup - Google'dan gelen adres bilgilerini database ID'lerine çevir
+      if (place.country_code || place.country || place.state || place.city) {
+        try {
+          const locationIds = await lookupLocation(place);
+          if (locationIds.country_id) updated.country_id = locationIds.country_id;
+          if (locationIds.state_id) updated.state_id = locationIds.state_id;
+          if (locationIds.city_id) updated.city_id = locationIds.city_id;
+        } catch (error) {
+          console.error('Location lookup error:', error);
+        }
+      }
+
+      setFormData(updated);
     };
 
     const validate = (): boolean => {
@@ -164,8 +214,12 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
         newErrors.title = 'Adres başlığı zorunludur';
       }
 
-      if (!formData.address_line_1.trim()) {
-        newErrors.address_line_1 = 'Adres zorunludur';
+      if (!formData.address.trim()) {
+        newErrors.address = 'Adres zorunludur';
+      }
+
+      if (!formData.country_id) {
+        newErrors.country_id = 'Ülke seçimi zorunludur';
       }
 
       setErrors(newErrors);
@@ -177,12 +231,21 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
 
       setLoading(true);
       try {
+        // Backend'e gönderilecek data hazırla
+        const payload = {
+          ...formData,
+          // Backend validation'a uygun format
+          country_id: formData.country_id,
+          state_id: formData.state_id || undefined,
+          city_id: formData.city_id || undefined,
+        };
+
         if (address) {
           // Güncelle
-          await updateContactAddress(contactId, address.id, formData);
+          await updateContactAddress(contactId, address.id, payload);
         } else {
           // Yeni oluştur
-          await createContactAddress(contactId, formData);
+          await createContactAddress(contactId, payload);
         }
         setIsSuccess(true);
         onSuccess();
@@ -199,27 +262,30 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
       }
     };
 
-    const renderHeader = useCallback(() => (
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <View style={styles.headerLeft}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            {isSuccess ? 'İşlem Başarılı!' : address ? 'Adresi Düzenle' : 'Yeni Adres'}
-          </Text>
-          {!isSuccess && (
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              {address ? 'Adres bilgilerini güncelleyin' : 'Yeni adres bilgilerini girin'}
+    const renderHeader = useCallback(
+      () => (
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerLeft}>
+            <Text style={[styles.title, { color: colors.text }]}>
+              {isSuccess ? 'İşlem Başarılı!' : address ? 'Adresi Düzenle' : 'Yeni Adres'}
             </Text>
-          )}
+            {!isSuccess && (
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                {address ? 'Adres bilgilerini güncelleyin' : 'Yeni adres bilgilerini girin'}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            onPress={() => bottomSheetRef.current?.dismiss()}
+            style={styles.closeButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <X size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          onPress={() => bottomSheetRef.current?.dismiss()}
-          style={styles.closeButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <X size={24} color={colors.textMuted} />
-        </TouchableOpacity>
-      </View>
-    ), [address, isSuccess, colors]);
+      ),
+      [address, isSuccess, colors]
+    );
 
     const renderFormContent = () => (
       <KeyboardAvoidingView
@@ -250,28 +316,85 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
             />
           </View>
 
-          {/* Adres Satırı 1 */}
+          {/* Google Places Autocomplete */}
+          <GooglePlacesAutocomplete
+            label="Adres Ara (Google Maps)"
+            placeholder="Adres aramak için yazmaya başlayın..."
+            value={formData.formatted_address || formData.address}
+            onChange={(value) => handleChange('address', value)}
+            onPlaceSelect={handlePlaceSelect}
+            error={errors.address}
+          />
+
+          {/* Açık Adres */}
           <View style={styles.inputContainer}>
             <Input
-              label="Adres *"
-              placeholder="Sokak, mahalle, bina no"
-              value={formData.address_line_1}
-              onChangeText={(value) => handleChange('address_line_1', value)}
-              error={errors.address_line_1}
+              label="Açık Adres *"
+              placeholder="Cadde, sokak, bina no, daire no"
+              value={formData.address}
+              onChangeText={(value) => handleChange('address', value)}
+              error={errors.address}
               multiline
-              numberOfLines={2}
+              numberOfLines={3}
             />
           </View>
 
-          {/* Adres Satırı 2 */}
-          <View style={styles.inputContainer}>
-            <Input
-              label="Adres (devam)"
-              placeholder="Kat, daire, ek bilgi"
-              value={formData.address_line_2}
-              onChangeText={(value) => handleChange('address_line_2', value)}
-            />
+          {/* Koordinat Bilgisi (readonly) */}
+          {formData.latitude && formData.longitude && (
+            <View style={styles.coordinatesContainer}>
+              <Text style={[styles.coordinatesLabel, { color: colors.textMuted }]}>
+                📍 Koordinatlar (Google Maps'ten otomatik)
+              </Text>
+              <Text style={[styles.coordinatesText, { color: colors.textSecondary }]}>
+                Enlem: {formData.latitude.toFixed(6)} • Boylam: {formData.longitude.toFixed(6)}
+              </Text>
+            </View>
+          )}
+
+          {/* Manuel Konum Seçimi */}
+          <View style={styles.divider}>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textMuted }]}>
+              veya Manuel Girdi
+            </Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
           </View>
+
+          {/* Ülke */}
+          <CountrySelect
+            label="Ülke *"
+            value={formData.country_id}
+            onChange={(value) =>
+              handleChange('country_id', value ? Number(value) : undefined)
+            }
+            error={errors.country_id}
+            placeholder="Ülke seçiniz"
+          />
+
+          {/* İl */}
+          <StateSelect
+            label="İl *"
+            countryId={formData.country_id}
+            value={formData.state_id}
+            onChange={(value) =>
+              handleChange('state_id', value ? Number(value) : undefined)
+            }
+            error={errors.state_id}
+            placeholder="İl seçiniz"
+          />
+
+          {/* İlçe */}
+          <CitySelect
+            label="İlçe *"
+            stateId={formData.state_id}
+            countryId={formData.country_id}
+            value={formData.city_id}
+            onChange={(value) =>
+              handleChange('city_id', value ? Number(value) : undefined)
+            }
+            error={errors.city_id}
+            placeholder="İlçe seçiniz"
+          />
 
           {/* Posta Kodu */}
           <View style={styles.inputContainer}>
@@ -295,6 +418,17 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
             />
           </View>
 
+          {/* Fax */}
+          <View style={styles.inputContainer}>
+            <Input
+              label="Fax"
+              placeholder="+90 212 000 00 01"
+              value={formData.fax}
+              onChangeText={(value) => handleChange('fax', value)}
+              keyboardType="phone-pad"
+            />
+          </View>
+
           {/* E-posta */}
           <View style={styles.inputContainer}>
             <Input
@@ -307,43 +441,69 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
             />
           </View>
 
-          {/* Adres Tipi */}
+          {/* Adres Türü */}
           <View style={styles.field}>
-            <Text style={[styles.label, { color: colors.text }]}>Adres Tipi</Text>
-            <View style={styles.typeSelector}>
-              {ADDRESS_TYPES.map((type) => (
-                <TouchableOpacity
-                  key={type.value}
+            <Text style={[styles.label, { color: colors.text }]}>Adres Türü</Text>
+            <View style={styles.checkboxGroup}>
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => handleChange('is_main', !formData.is_main)}
+              >
+                <View
                   style={[
-                    styles.typeOption,
+                    styles.checkbox,
                     {
-                      backgroundColor:
-                        formData.address_type === type.value
-                          ? Brand.primary
-                          : colors.card,
-                      borderColor:
-                        formData.address_type === type.value
-                          ? Brand.primary
-                          : colors.border,
+                      backgroundColor: formData.is_main ? Brand.primary : 'transparent',
+                      borderColor: formData.is_main ? Brand.primary : colors.border,
                     },
                   ]}
-                  onPress={() => handleChange('address_type', type.value)}
                 >
-                  <Text
-                    style={[
-                      styles.typeOptionText,
-                      {
-                        color:
-                          formData.address_type === type.value
-                            ? '#FFFFFF'
-                            : colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    {type.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                  {formData.is_main && <Check size={14} color="#FFFFFF" />}
+                </View>
+                <Text style={[styles.checkboxLabel, { color: colors.text }]}>
+                  Ana Adres
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => handleChange('is_billing', !formData.is_billing)}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    {
+                      backgroundColor: formData.is_billing ? Brand.primary : 'transparent',
+                      borderColor: formData.is_billing ? Brand.primary : colors.border,
+                    },
+                  ]}
+                >
+                  {formData.is_billing && <Check size={14} color="#FFFFFF" />}
+                </View>
+                <Text style={[styles.checkboxLabel, { color: colors.text }]}>
+                  Fatura Adresi
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => handleChange('is_shipping', !formData.is_shipping)}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    {
+                      backgroundColor: formData.is_shipping ? Brand.primary : 'transparent',
+                      borderColor: formData.is_shipping ? Brand.primary : colors.border,
+                    },
+                  ]}
+                >
+                  {formData.is_shipping && <Check size={14} color="#FFFFFF" />}
+                </View>
+                <Text style={[styles.checkboxLabel, { color: colors.text }]}>
+                  Teslimat Adresi
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -356,9 +516,7 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
               style={[
                 styles.checkbox,
                 {
-                  backgroundColor: formData.is_default
-                    ? Brand.primary
-                    : 'transparent',
+                  backgroundColor: formData.is_default ? Brand.primary : 'transparent',
                   borderColor: formData.is_default ? Brand.primary : colors.border,
                 },
               ]}
@@ -379,9 +537,7 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
               style={[
                 styles.checkbox,
                 {
-                  backgroundColor: formData.is_active
-                    ? Brand.primary
-                    : 'transparent',
+                  backgroundColor: formData.is_active ? Brand.primary : 'transparent',
                   borderColor: formData.is_active ? Brand.primary : colors.border,
                 },
               ]}
@@ -406,11 +562,7 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
               style={styles.submitButtonGradient}
             >
               <Text style={styles.submitButtonText}>
-                {loading
-                  ? 'Kaydediliyor...'
-                  : address
-                  ? 'Güncelle'
-                  : 'Ekle'}
+                {loading ? 'Kaydediliyor...' : address ? 'Güncelle' : 'Ekle'}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -420,9 +572,7 @@ const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheetProps>(
 
     const renderSuccessContent = () => (
       <View style={styles.successContainer}>
-        <View
-          style={[styles.successIcon, { backgroundColor: colors.successLight }]}
-        >
+        <View style={[styles.successIcon, { backgroundColor: colors.successLight }]}>
           <CheckCircle size={28} color={colors.success} />
         </View>
         <Text style={[styles.successTitle, { color: colors.text }]}>
@@ -511,6 +661,34 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: Spacing.md,
   },
+  coordinatesContainer: {
+    padding: Spacing.md,
+    backgroundColor: '#f3f4f6',
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+  },
+  coordinatesLabel: {
+    ...Typography.bodyXS,
+    marginBottom: 4,
+  },
+  coordinatesText: {
+    ...Typography.bodySM,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    ...Typography.bodyXS,
+    marginHorizontal: Spacing.md,
+    textTransform: 'uppercase',
+  },
   field: {
     marginBottom: Spacing.md,
   },
@@ -519,28 +697,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: Spacing.sm,
   },
-  typeSelector: {
-    flexDirection: 'row',
+  checkboxGroup: {
     gap: Spacing.sm,
-  },
-  typeOption: {
-    flex: 1,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  typeOptionText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
-    textAlign: 'center',
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: Spacing.sm,
-    marginBottom: Spacing.sm,
   },
   checkbox: {
     width: 22,
@@ -559,7 +722,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
-    marginTop: Spacing.md,
+    marginTop: Spacing.lg,
   },
   submitButtonDisabled: {
     opacity: 0.6,

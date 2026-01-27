@@ -1,58 +1,33 @@
 /**
  * Locations API Endpoints
  *
- * Handles location data (countries, states, cities, tax offices) for mobile app.
+ * Handles country, state, city lookups for address forms
  */
 
 import api, { getErrorMessage } from '../api';
 
 /**
- * Location entity interfaces
+ * Location option for selects
  */
-export interface Country {
-  id: number;
-  name: string;
-  code?: string;
-  phone_code?: string;
-}
-
-export interface State {
-  id: number;
-  name: string;
-  country_id: number;
-  code?: string;
-}
-
-export interface City {
-  id: number;
-  name: string;
-  state_id: number;
-  country_id?: number;
-}
-
-export interface TaxOffice {
-  id: number;
-  name: string;
-  code?: string;
+export interface LocationOption {
+  value: string | number;
+  label: string;
 }
 
 /**
- * Search response wrapper
+ * Get countries with search
  */
-interface LocationSearchResponse<T> {
-  success: boolean;
-  data: T[];
-}
-
-/**
- * Search countries by name
- */
-export async function searchCountries(query?: string): Promise<Country[]> {
+export async function searchCountries(search?: string): Promise<LocationOption[]> {
   try {
-    const response = await api.get<LocationSearchResponse<Country>>('/locations/countries', {
-      params: { search: query || '' },
-    });
-    return response.data.data;
+    const response = await api.get<{ success: boolean; data: any[] }>(
+      '/locations/countries',
+      { params: { search } }
+    );
+    // Map backend response (id, name) to frontend format (value, label)
+    return response.data.data.map((item: any) => ({
+      value: item.id,
+      label: item.name,
+    }));
   } catch (error) {
     const message = getErrorMessage(error);
     throw new Error(message);
@@ -60,17 +35,22 @@ export async function searchCountries(query?: string): Promise<Country[]> {
 }
 
 /**
- * Search states/provinces by country
+ * Get states by country with search
  */
-export async function searchStates(countryId?: number, query?: string): Promise<State[]> {
+export async function searchStates(
+  countryId: number | string,
+  search?: string
+): Promise<LocationOption[]> {
   try {
-    const response = await api.get<LocationSearchResponse<State>>('/locations/states', {
-      params: {
-        country_id: countryId,
-        search: query || '',
-      },
-    });
-    return response.data.data;
+    const response = await api.get<{ success: boolean; data: any[] }>(
+      '/locations/states',
+      { params: { country_id: countryId, search } }
+    );
+    // Map backend response (id, name) to frontend format (value, label)
+    return response.data.data.map((item: any) => ({
+      value: item.id,
+      label: item.name,
+    }));
   } catch (error) {
     const message = getErrorMessage(error);
     throw new Error(message);
@@ -78,103 +58,80 @@ export async function searchStates(countryId?: number, query?: string): Promise<
 }
 
 /**
- * Search cities/districts by state
+ * Get cities by state with search
  */
-export async function searchCities(stateId?: number, query?: string): Promise<City[]> {
+export async function searchCities(
+  stateId: number | string,
+  countryId?: number | string,
+  search?: string
+): Promise<LocationOption[]> {
   try {
-    const response = await api.get<LocationSearchResponse<City>>('/locations/cities', {
-      params: {
-        state_id: stateId,
-        search: query || '',
-      },
-    });
-    return response.data.data;
-  } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
-  }
-}
-
-/**
- * Search tax offices by name
- */
-export async function searchTaxOffices(query?: string): Promise<TaxOffice[]> {
-  try {
-    const response = await api.get<LocationSearchResponse<TaxOffice>>('/locations/tax-offices', {
-      params: { search: query || '' },
-    });
-    return response.data.data;
-  } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
-  }
-}
-
-/**
- * Get Turkey country ID (constant)
- */
-export const TURKEY_ID = 228;
-
-/**
- * Foreign company default tax number (constant)
- */
-export const FOREIGN_DEFAULT_TAX_NUMBER = '22222222222';
-
-/**
- * Port interface
- */
-export interface Port {
-  id: number;
-  name: string;
-  name_en?: string;
-  port_code?: string;
-  city?: string;
-  country_id?: number;
-  country_name?: string;
-  country_iso2?: string;
-}
-
-/**
- * Ferry company interface
- */
-export interface FerryCompany {
-  id: number;
-  name: string;
-  short_code?: string;
-}
-
-/**
- * Search ports by name
- */
-export async function searchPorts(query?: string, countryId?: number): Promise<Port[]> {
-  try {
-    const response = await api.get<LocationSearchResponse<Port>>('/locations/ports', {
-      params: {
-        search: query || '',
-        country_id: countryId,
-      },
-    });
-    return response.data.data;
-  } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
-  }
-}
-
-/**
- * Search ferry companies by name
- */
-export async function searchFerryCompanies(query?: string): Promise<FerryCompany[]> {
-  try {
-    const response = await api.get<LocationSearchResponse<FerryCompany>>(
-      '/locations/ferry-companies',
+    const response = await api.get<{ success: boolean; data: any[] }>(
+      '/locations/cities',
       {
-        params: { search: query || '' },
+        params: {
+          state_id: stateId,
+          country_id: countryId,
+          search,
+        },
       }
     );
-    return response.data.data;
+    // Map backend response (id, name) to frontend format (value, label)
+    return response.data.data.map((item: any) => ({
+      value: item.id,
+      label: item.name,
+    }));
   } catch (error) {
     const message = getErrorMessage(error);
     throw new Error(message);
+  }
+}
+
+/**
+ * Place details from Google Maps
+ */
+export interface PlaceDetails {
+  address: string;
+  formatted_address: string;
+  place_id: string;
+  latitude: number;
+  longitude: number;
+  country?: string;
+  country_code?: string;
+  state?: string;
+  city?: string;
+  district?: string;
+  postal_code?: string;
+  street?: string;
+  street_number?: string;
+}
+
+/**
+ * Location lookup response
+ */
+interface LocationLookupResponse {
+  country_id?: number;
+  state_id?: number;
+  city_id?: number;
+}
+
+/**
+ * Lookup location IDs from Google Maps place details
+ */
+export async function lookupLocation(place: Partial<PlaceDetails>): Promise<LocationLookupResponse> {
+  try {
+    const response = await api.post<{ success: boolean; data: LocationLookupResponse }>(
+      '/locations/lookup',
+      {
+        country_code: place.country_code,
+        country_name: place.country,
+        state_name: place.state,
+        city_name: place.city || place.district,
+      }
+    );
+    return response.data.data || {};
+  } catch (error) {
+    console.error('Location lookup error:', error);
+    return {}; // Silent fail - user can manually select
   }
 }

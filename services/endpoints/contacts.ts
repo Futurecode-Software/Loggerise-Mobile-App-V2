@@ -9,12 +9,22 @@ import api, { getErrorMessage, PaginatedResponse } from '../api';
 /**
  * Contact type enum
  */
-export type ContactType = 'company' | 'individual' | 'self';
+export type ContactType = 'customer' | 'supplier' | 'both' | 'self' | 'potential' | 'other';
+
+/**
+ * Legal type enum
+ */
+export type LegalType = 'company' | 'individual' | 'government' | 'public';
+
+/**
+ * Business type enum
+ */
+export type BusinessType = 'customs_agent' | 'logistics_partner' | 'bank' | 'insurance' | 'other';
 
 /**
  * Contact status enum
  */
-export type ContactStatus = 'active' | 'passive' | 'blacklisted';
+export type ContactStatus = 'active' | 'passive' | 'blacklist';
 
 /**
  * Contact entity
@@ -135,17 +145,48 @@ interface ContactResponse {
  * Create/Update contact data
  */
 export interface ContactFormData {
+  // Basic info
   name: string;
-  short_name?: string;
+  short_name: string;
   type: ContactType;
+  business_type?: BusinessType | null;
+  legal_type?: LegalType;
   status?: ContactStatus;
-  is_customer?: boolean;
-  is_supplier?: boolean;
+  is_active?: boolean;
+  category?: string;
+
+  // Contact info
   email?: string;
   phone?: string;
+  fax?: string;
+
+  // Tax info
   tax_number?: string;
+  tax_office_id?: number | null;
   identity_number?: string;
-  tax_office_id?: number;
+
+  // Financial settings
+  currency_type?: string;
+  risk_limit?: number | null;
+
+  // Address info
+  country_id?: number;
+  main_address?: string;
+  main_state_id?: number | null;
+  main_city_id?: number | null;
+  main_latitude?: number | null;
+  main_longitude?: number | null;
+  main_place_id?: string | null;
+  main_formatted_address?: string | null;
+
+  // Customer segmentation (only for customer/both/potential types)
+  customer_segment?: 'enterprise' | 'mid_market' | 'small_business' | 'individual' | null;
+  credit_rating?: number | null;
+  default_payment_terms?: number | null;
+
+  // Deprecated fields (for compatibility)
+  is_customer?: boolean;
+  is_supplier?: boolean;
   addresses?: Partial<ContactAddress>[];
   authorities?: Partial<ContactAuthority>[];
 }
@@ -230,15 +271,26 @@ export async function deleteContact(id: number): Promise<void> {
  */
 export interface AddressFormData {
   title: string;
-  address_line_1: string;
+  address: string; // Backend'de "address" field'i var
+  address_line_1?: string; // Opsiyonel (backward compatibility)
   address_line_2?: string;
-  country_id?: number;
+  country_id?: number; // Backend validation'da required
   state_id?: number;
   city_id?: number;
   postal_code?: string;
   phone?: string;
+  fax?: string;
   email?: string;
-  address_type: 'billing' | 'shipping' | 'both';
+  // Google Maps Fields
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
+  formatted_address?: string | null;
+  // Adres tipleri
+  is_main?: boolean;
+  is_billing?: boolean;
+  is_shipping?: boolean;
+  address_type?: 'billing' | 'shipping' | 'both'; // Opsiyonel (backward compatibility)
   is_default?: boolean;
   is_active?: boolean;
 }

@@ -68,6 +68,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '',
     googleAndroidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '',
     googleExpoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || '',
+    // Google Maps API Key
+    googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '',
     // API Configuration
     apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:8000/api/v1/mobile',
     // WebSocket/Reverb Configuration (Laravel Reverb - Pusher compatible)
