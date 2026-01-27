@@ -7,6 +7,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,11 +21,42 @@ import {
   Check,
   AlertCircle,
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path, G } from 'react-native-svg';
 import { Button, Input, Divider } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 // useColorScheme kaldirildi - her zaman light mode kullanilir
 import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { useAuth } from '@/context/auth-context';
+
+const { height } = Dimensions.get('window');
+
+// Logo images
+const LogoWhite = require('@/assets/images/logo-white.png');
+
+// Google Logo Component
+const GoogleLogo = ({ size = 24 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G>
+      <Path
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+        fill="#4285F4"
+      />
+      <Path
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        fill="#34A853"
+      />
+      <Path
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+        fill="#FBBC05"
+      />
+      <Path
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+        fill="#EA4335"
+      />
+    </G>
+  </Svg>
+);
 
 const STEPS = ['Hesap', 'Sirket'];
 
@@ -212,9 +245,20 @@ export default function RegisterScreen() {
   // Don't show register page while checking auth state or if already authenticated
   if (isInitializing || isAuthenticated) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer} />
-      </SafeAreaView>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.loadingContainer}
+        >
+          <Image
+            source={LogoWhite}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </LinearGradient>
+      </View>
     );
   }
 
@@ -303,99 +347,127 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Kayıt Ol</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientBackground}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        {/* Header with Back Button */}
+        <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <ChevronLeft size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
         >
-          {/* Google Error */}
-          {googleError && (
-            <View style={[styles.errorContainer, { backgroundColor: colors.danger + '15' }]}>
-              <AlertCircle size={20} color={colors.danger} />
-              <Text style={[styles.errorText, { color: colors.danger }]}>
-                {googleError}
-              </Text>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+          >
+            {/* Top Section - Logo & Title */}
+            <View style={styles.topSection}>
+              <Image
+                source={LogoWhite}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.welcomeTitle}>Kayıt Ol</Text>
+              <Text style={styles.welcomeSubtitle}>Hemen başlamak için bilgilerinizi girin</Text>
             </View>
-          )}
 
-          {/* Google Register */}
-          <Button
-            title="Google ile Kayıt Ol"
-            onPress={handleGoogleRegister}
-            variant="outline"
-            fullWidth
-            size="lg"
-            loading={isGoogleLoading}
-            disabled={isLoading || isGoogleLoading}
-            icon={
-              !isGoogleLoading ? (
-                <View style={styles.googleIcon}>
-                  <Text style={styles.googleIconText}>G</Text>
+            {/* Bottom Section - White Card with Form */}
+            <View style={styles.formCard}>
+              {/* Google Error */}
+              {googleError && (
+                <View style={[styles.errorContainer, { backgroundColor: colors.danger + '15' }]}>
+                  <AlertCircle size={20} color={colors.danger} />
+                  <Text style={[styles.errorText, { color: colors.danger }]}>
+                    {googleError}
+                  </Text>
                 </View>
-              ) : undefined
-            }
-          />
+              )}
 
-          <Divider text="veya e-posta ile" />
+              {/* Google Register */}
+              <TouchableOpacity
+                style={[
+                  styles.googleButton,
+                  { borderColor: colors.border, backgroundColor: '#FFFFFF' },
+                  (isLoading || isGoogleLoading) && styles.googleButtonDisabled,
+                ]}
+                onPress={handleGoogleRegister}
+                disabled={isLoading || isGoogleLoading}
+              >
+                {!isGoogleLoading && <GoogleLogo size={22} />}
+                <Text style={[styles.googleButtonText, { color: colors.text }]}>
+                  {isGoogleLoading ? 'Kayıt yapılıyor...' : 'Google ile Kayıt Ol'}
+                </Text>
+              </TouchableOpacity>
 
-          {/* Step Indicator */}
-          {renderStepIndicator()}
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                <Text style={[styles.dividerText, { color: colors.textMuted }]}>veya e-posta ile</Text>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              </View>
 
-          {/* Form */}
-          <View style={styles.formContainer}>{renderStep()}</View>
-        </ScrollView>
+              {/* Step Indicator */}
+              {renderStepIndicator()}
 
-        {/* Bottom Buttons */}
-        <View style={[styles.bottomButtons, { borderTopColor: colors.border }]}>
-          {currentStep === STEPS.length - 1 ? (
-            <Button
-              title="Kayıt Ol"
-              onPress={handleRegister}
-              loading={isLoading}
-              disabled={isLoading || isGoogleLoading}
-              fullWidth
-              size="lg"
-            />
-          ) : (
-            <Button
-              title="Devam Et"
-              onPress={handleNext}
-              disabled={isGoogleLoading}
-              fullWidth
-              size="lg"
-            />
-          )}
-        </View>
-      </KeyboardAvoidingView>
+              {/* Form */}
+              <View style={styles.formContainer}>{renderStep()}</View>
 
-      {/* Login Link */}
-      <View style={styles.footer}>
-        <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-          Zaten hesabınız var mı?{' '}
-        </Text>
-        <Link href="/(auth)/login" asChild>
-          <TouchableOpacity>
-            <Text style={[styles.footerLink, { color: Brand.primary }]}>
-              Giriş Yap
-            </Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
-    </SafeAreaView>
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  (isLoading || isGoogleLoading) && styles.submitButtonDisabled,
+                ]}
+                onPress={currentStep === STEPS.length - 1 ? handleRegister : handleNext}
+                disabled={isLoading || isGoogleLoading}
+              >
+                <LinearGradient
+                  colors={[Brand.primary, Brand.primaryLight]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.submitButtonGradient}
+                >
+                  <Text style={styles.submitButtonText}>
+                    {isLoading
+                      ? 'Kayıt yapılıyor...'
+                      : currentStep === STEPS.length - 1
+                      ? 'Kayıt Ol'
+                      : 'Devam Et'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* Login Link */}
+              <View style={styles.footer}>
+                <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+                  Zaten hesabınız var mı?{' '}
+                </Text>
+                <Link href="/(auth)/login" asChild>
+                  <TouchableOpacity>
+                    <Text style={[styles.footerLink, { color: Brand.primary }]}>
+                      Giriş Yap
+                    </Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </View>
   );
 }
 
@@ -403,95 +475,148 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  gradientBackground: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerSafeArea: {
+    backgroundColor: 'transparent',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingVertical: 0,
+    height: Platform.OS === 'ios' ? 8 : 38,
   },
   backButton: {
     padding: Spacing.sm,
     marginLeft: -Spacing.sm,
-  },
-  headerTitle: {
-    ...Typography.headingMD,
-  },
-  placeholder: {
-    width: 40,
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing.lg,
   },
-  googleIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#4285F4',
+  topSection: {
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingTop: 0,
+    paddingBottom: Spacing['3xl'],
+    paddingHorizontal: Spacing['2xl'],
   },
-  googleIconText: {
+  logoImage: {
+    width: 160,
+    height: 45,
+    marginBottom: Spacing.lg,
+  },
+  logo: {
+    width: 180,
+    height: 50,
+  },
+  welcomeTitle: {
+    fontSize: 22,
+    fontWeight: '700',
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    marginBottom: Spacing.xs,
+    textAlign: 'center',
+  },
+  welcomeSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+  },
+  formCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: Spacing['2xl'],
+    paddingHorizontal: Spacing['2xl'],
+    paddingBottom: Spacing['2xl'],
+    ...Shadows.lg,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: 8,
-    marginBottom: Spacing.lg,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
   },
   errorText: {
     ...Typography.bodySM,
     flex: 1,
   },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    marginBottom: Spacing.md,
+    ...Shadows.sm,
+  },
+  googleButtonDisabled: {
+    opacity: 0.6,
+  },
+  googleButtonText: {
+    ...Typography.bodyMD,
+    fontWeight: '600',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    ...Typography.bodySM,
+    marginHorizontal: Spacing.lg,
+  },
   stepIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: Spacing['2xl'],
+    marginBottom: Spacing.lg,
   },
   stepItem: {
     alignItems: 'center',
   },
   stepCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.xs,
   },
   stepNumber: {
-    ...Typography.bodySM,
+    fontSize: 11,
     fontWeight: '600',
   },
   stepLabel: {
-    ...Typography.bodyXS,
+    fontSize: 10,
     fontWeight: '500',
   },
   stepLine: {
-    width: 60,
+    width: 50,
     height: 2,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.xl,
+    marginHorizontal: Spacing.sm,
+    marginBottom: Spacing.lg,
   },
   formContainer: {
-    flex: 1,
+    marginBottom: Spacing.lg,
   },
   stepTitle: {
     ...Typography.headingMD,
@@ -499,25 +624,40 @@ const styles = StyleSheet.create({
   },
   stepDescription: {
     ...Typography.bodyMD,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
     lineHeight: 22,
   },
-  bottomButtons: {
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing.lg,
-    borderTopWidth: 1,
+  submitButton: {
+    width: '100%',
+    height: 52,
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+    marginBottom: Spacing.lg,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: Spacing.lg,
+    marginTop: Spacing.sm,
   },
   footerText: {
-    ...Typography.bodyMD,
+    ...Typography.bodySM,
   },
   footerLink: {
-    ...Typography.bodyMD,
+    ...Typography.bodySM,
     fontWeight: '600',
   },
 });

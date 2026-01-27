@@ -7,14 +7,22 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mail, ChevronLeft, CheckCircle, RotateCcw } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Button, Input } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 // useColorScheme kaldirildi - her zaman light mode kullanilir
 import { useAuth } from '@/context/auth-context';
+
+const { height } = Dimensions.get('window');
+
+// Logo images
+const LogoWhite = require('@/assets/images/logo-white.png');
 
 export default function ForgotPasswordScreen() {
   // Her zaman light mode kullanilir
@@ -40,9 +48,20 @@ export default function ForgotPasswordScreen() {
   // Don't show page while checking auth state or if already authenticated
   if (isInitializing || isAuthenticated) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer} />
-      </SafeAreaView>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.loadingContainer}
+        >
+          <Image
+            source={LogoWhite}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </LinearGradient>
+      </View>
     );
   }
 
@@ -89,137 +108,178 @@ export default function ForgotPasswordScreen() {
 
   if (isSent) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={colors.text} />
-          </TouchableOpacity>
-          <View style={styles.placeholder} />
-          <View style={styles.placeholder} />
-        </View>
-
-        <View style={styles.successContainer}>
-          <View style={[styles.successIcon, { backgroundColor: colors.successLight }]}>
-            <CheckCircle size={48} color={colors.success} />
-          </View>
-
-          <Text style={[styles.successTitle, { color: colors.text }]}>
-            E-postanızı Kontrol Edin
-          </Text>
-
-          <Text style={[styles.successText, { color: colors.textSecondary }]}>
-            Şifre sıfırlama bağlantısı{'\n'}
-            <Text style={{ fontWeight: '600' }}>{email}</Text>
-            {'\n'}adresine gönderildi.
-          </Text>
-
-          <View style={styles.resendContainer}>
-            {countdown > 0 ? (
-              <Text style={[styles.countdownText, { color: colors.textMuted }]}>
-                Yeniden gönder ({countdown}s)
-              </Text>
-            ) : (
-              <TouchableOpacity
-                style={styles.resendButton}
-                onPress={handleResend}
-                disabled={isLoading}
-              >
-                <RotateCcw size={16} color={Brand.primary} />
-                <Text style={[styles.resendText, { color: Brand.primary }]}>
-                  Yeniden Gönder
-                </Text>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradientBackground}
+        >
+          <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <ChevronLeft size={24} color="#FFFFFF" />
               </TouchableOpacity>
-            )}
-          </View>
+            </View>
+          </SafeAreaView>
 
-          <Button
-            title="Giriş Sayfasına Dön"
-            onPress={() => router.replace('/(auth)/login')}
-            variant="outline"
-            fullWidth
-            size="lg"
-            style={styles.backToLoginButton}
-          />
-        </View>
-      </SafeAreaView>
+          <View style={styles.successFullContainer}>
+            {/* Top Section */}
+            <View style={styles.topSection}>
+              <Image
+                source={LogoWhite}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+
+            {/* Success Card */}
+            <View style={styles.successCard}>
+              <View style={[styles.successIcon, { backgroundColor: colors.successLight }]}>
+                <CheckCircle size={48} color={colors.success} />
+              </View>
+
+              <Text style={[styles.successTitle, { color: colors.text }]}>
+                E-postanızı Kontrol Edin
+              </Text>
+
+              <Text style={[styles.successText, { color: colors.textSecondary }]}>
+                Şifre sıfırlama bağlantısı{'\n'}
+                <Text style={{ fontWeight: '600' }}>{email}</Text>
+                {'\n'}adresine gönderildi.
+              </Text>
+
+              <View style={styles.resendContainer}>
+                {countdown > 0 ? (
+                  <Text style={[styles.countdownText, { color: colors.textMuted }]}>
+                    Yeniden gönder ({countdown}s)
+                  </Text>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.resendButton}
+                    onPress={handleResend}
+                    disabled={isLoading}
+                  >
+                    <RotateCcw size={16} color={Brand.primary} />
+                    <Text style={[styles.resendText, { color: Brand.primary }]}>
+                      Yeniden Gönder
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={styles.backToLoginButton}
+                onPress={() => router.replace('/(auth)/login')}
+              >
+                <LinearGradient
+                  colors={[Brand.primary, Brand.primaryLight]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.backToLoginButtonGradient}
+                >
+                  <Text style={styles.backToLoginButtonText}>Giriş Sayfasına Dön</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.placeholder} />
-        <View style={styles.placeholder} />
-      </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientBackground}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ChevronLeft size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
         >
-          {/* Icon */}
-          <View style={[styles.iconContainer, { backgroundColor: colors.surface }]}>
-            <Mail size={64} color={Brand.primary} />
-          </View>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+          >
+            {/* Top Section - Logo & Title */}
+            <View style={styles.topSection}>
+              <Image
+                source={LogoWhite}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.welcomeTitle}>Şifrenizi mi Unuttunuz?</Text>
+              <Text style={styles.welcomeSubtitle}>
+                E-posta adresinize sıfırlama bağlantısı göndereceğiz
+              </Text>
+            </View>
 
-          {/* Title */}
-          <Text style={[styles.title, { color: colors.text }]}>
-            Şifrenizi mi Unuttunuz?
-          </Text>
+            {/* Form Card */}
+            <View style={styles.formCard}>
+              <Input
+                label="E-posta"
+                placeholder="ornek@email.com"
+                value={email}
+                onChangeText={(v) => {
+                  setEmail(v);
+                  if (error) setError('');
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                error={error}
+                leftIcon={<Mail size={20} color={colors.icon} />}
+                containerStyle={styles.inputContainer}
+              />
 
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            E-posta adresinize sıfırlama bağlantısı göndereceğiz.
-          </Text>
+              <TouchableOpacity
+                style={[styles.sendButton, isLoading && styles.sendButtonDisabled]}
+                onPress={handleSendReset}
+                disabled={isLoading}
+              >
+                <LinearGradient
+                  colors={[Brand.primary, Brand.primaryLight]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.sendButtonGradient}
+                >
+                  <Text style={styles.sendButtonText}>
+                    {isLoading ? 'Gönderiliyor...' : 'Sıfırlama Bağlantısı Gönder'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
 
-          {/* Form */}
-          <View style={styles.formContainer}>
-            <Input
-              label="E-posta"
-              placeholder="ornek@email.com"
-              value={email}
-              onChangeText={(v) => {
-                setEmail(v);
-                if (error) setError('');
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              error={error}
-              leftIcon={<Mail size={20} color={colors.icon} />}
-            />
-
-            <Button
-              title="Sıfırlama Bağlantısı Gönder"
-              onPress={handleSendReset}
-              loading={isLoading}
-              fullWidth
-              size="lg"
-            />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      {/* Login Link */}
-      <View style={styles.footer}>
-        <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-          Şifrenizi hatırladınız mı?{' '}
-        </Text>
-        <Link href="/(auth)/login" asChild>
-          <TouchableOpacity>
-            <Text style={[styles.footerLink, { color: Brand.primary }]}>
-              Giriş Yap
-            </Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
-    </SafeAreaView>
+              {/* Login Link */}
+              <View style={styles.footer}>
+                <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+                  Şifrenizi hatırladınız mı?{' '}
+                </Text>
+                <Link href="/(auth)/login" asChild>
+                  <TouchableOpacity>
+                    <Text style={[styles.footerLink, { color: Brand.primary }]}>
+                      Giriş Yap
+                    </Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </View>
   );
 }
 
@@ -227,73 +287,120 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  gradientBackground: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerSafeArea: {
+    backgroundColor: 'transparent',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingVertical: 0,
+    height: Platform.OS === 'ios' ? 8 : 38,
   },
   backButton: {
     padding: Spacing.sm,
     marginLeft: -Spacing.sm,
-  },
-  placeholder: {
-    width: 40,
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing['3xl'],
   },
-  iconContainer: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+  topSection: {
     alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: Spacing['2xl'],
+    paddingTop: 0,
+    paddingBottom: Spacing['3xl'],
+    paddingHorizontal: Spacing['2xl'],
   },
-  title: {
-    ...Typography.headingXL,
+  logoImage: {
+    width: 160,
+    height: 45,
+    marginBottom: Spacing.lg,
+  },
+  logo: {
+    width: 180,
+    height: 50,
+  },
+  welcomeTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: Spacing.xs,
     textAlign: 'center',
-    marginBottom: Spacing.sm,
   },
-  subtitle: {
-    ...Typography.bodyMD,
+  welcomeSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
-    marginBottom: Spacing['3xl'],
   },
-  formContainer: {
+  formCard: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: Spacing['2xl'],
+    paddingHorizontal: Spacing['2xl'],
+    paddingBottom: Spacing['2xl'],
+    ...Shadows.lg,
+  },
+  inputContainer: {
+    marginBottom: Spacing.xl,
+  },
+  sendButton: {
+    width: '100%',
+    height: 56,
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+    marginBottom: Spacing.xl,
+  },
+  sendButtonDisabled: {
+    opacity: 0.6,
+  },
+  sendButtonGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: Spacing.lg,
+    marginTop: Spacing.md,
   },
   footerText: {
-    ...Typography.bodyMD,
+    ...Typography.bodySM,
   },
   footerLink: {
-    ...Typography.bodyMD,
+    ...Typography.bodySM,
     fontWeight: '600',
   },
-  successContainer: {
+  // Success Screen Styles
+  successFullContainer: {
     flex: 1,
-    alignItems: 'center',
+  },
+  successCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: Spacing['3xl'],
     paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing['4xl'],
+    alignItems: 'center',
+    ...Shadows.lg,
   },
   successIcon: {
     width: 96,
@@ -330,6 +437,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   backToLoginButton: {
-    marginTop: Spacing.md,
+    width: '100%',
+    height: 56,
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+  },
+  backToLoginButtonGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backToLoginButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
