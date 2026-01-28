@@ -10,10 +10,19 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { router, useFocusEffect } from 'expo-router';
+import {
+  Search,
+  X,
+  Mail,
+  Plus,
+  Pencil,
+  Trash2,
+  Users
+} from 'lucide-react-native';
+import { FullScreenHeader } from '@/components/header';
 import { userManagementService } from '../../services/api/userManagementService';
-import { colors } from '../../constants/colors';
+import { Colors, Spacing, Typography, BorderRadius, Shadows, Brand } from '@/constants/theme';
 import { User, UserFilters } from '../../types/user';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -24,8 +33,10 @@ const ROLE_LABELS: Record<string, string> = {
   'Muhasebeci': 'Muhasebeci',
 };
 
+// Use colors from theme
+const colors = Colors.light;
+
 export const UserManagementScreen: React.FC = () => {
-  const navigation = useNavigation();
 
   // State
   const [users, setUsers] = useState<User[]>([]);
@@ -147,8 +158,8 @@ export const UserManagementScreen: React.FC = () => {
 
   // Navigate to edit
   const handleEdit = useCallback((user: User) => {
-    navigation.navigate('UserForm', { userId: user.id });
-  }, [navigation]);
+    router.push(`/settings/users/${user.id}/edit` as any);
+  }, []);
 
   // Navigate to create
   const handleCreate = useCallback(() => {
@@ -159,13 +170,13 @@ export const UserManagementScreen: React.FC = () => {
       );
       return;
     }
-    navigation.navigate('UserForm', {});
-  }, [navigation, userLimits]);
+    router.push('/settings/users/new' as any);
+  }, [userLimits]);
 
   // Navigate to invitations
   const handleInvitations = useCallback(() => {
-    navigation.navigate('UserInvitations', {});
-  }, [navigation]);
+    router.push('/settings/users/invitations' as any);
+  }, []);
 
   // Render user item
   const renderUserItem = ({ item }: { item: User }) => (
@@ -200,7 +211,7 @@ export const UserManagementScreen: React.FC = () => {
             style={[styles.actionButton, styles.editButton]}
             onPress={() => handleEdit(item)}
           >
-            <Icon name="pencil" size={16} color={colors.warning.DEFAULT} />
+            <Pencil size={16} color="#f59e0b" />
             <Text style={styles.editButtonText}>Düzenle</Text>
           </TouchableOpacity>
 
@@ -208,7 +219,7 @@ export const UserManagementScreen: React.FC = () => {
             style={[styles.actionButton, styles.deleteButton]}
             onPress={() => handleDelete(item)}
           >
-            <Icon name="delete" size={16} color={colors.danger.DEFAULT} />
+            <Trash2 size={16} color="#ef4444" />
             <Text style={styles.deleteButtonText}>Sil</Text>
           </TouchableOpacity>
         </View>
@@ -225,13 +236,13 @@ export const UserManagementScreen: React.FC = () => {
   // Empty state
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Icon name="account-multiple-outline" size={80} color={colors.gray[400]} />
+      <Users size={80} color={colors.textMuted} />
       <Text style={styles.emptyTitle}>Henüz kullanıcı kaydı yok</Text>
       <Text style={styles.emptyDescription}>
         Kullanıcı ekleyerek veya davet ederek başlayın
       </Text>
       <TouchableOpacity style={styles.emptyButton} onPress={handleCreate}>
-        <Icon name="plus" size={20} color="#fff" />
+        <Plus size={20} color="#fff" />
         <Text style={styles.emptyButtonText}>Kullanıcı Ekle</Text>
       </TouchableOpacity>
     </View>
@@ -240,76 +251,74 @@ export const UserManagementScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>Kullanıcı Yönetimi</Text>
-          {userLimits && userLimits.max_users !== null && (
-            <View style={styles.limitBadge}>
-              <Text style={styles.limitText}>
-                {userLimits.current_users} / {userLimits.max_users}
-              </Text>
-            </View>
-          )}
-        </View>
+      <FullScreenHeader
+        title="Kullanıcı Yönetimi"
+        subtitle={userLimits && userLimits.max_users !== null
+          ? `${userLimits.current_users} / ${userLimits.max_users} kullanıcı`
+          : `${users.length} kullanıcı`
+        }
+        showBackButton
+        rightIcons={
+          <TouchableOpacity
+            onPress={handleCreate}
+            activeOpacity={0.7}
+            disabled={userLimits && !userLimits.can_add_more}
+          >
+            <Plus size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
-        {/* Search */}
-        <View style={styles.searchContainer}>
-          <Icon name="magnify" size={20} color={colors.gray[400]} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Kullanıcı ara... (ad, e-posta)"
-            placeholderTextColor={colors.gray[400]}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="close-circle" size={20} color={colors.gray[400]} />
-            </TouchableOpacity>
-          )}
-        </View>
+      {/* Content Area */}
+      <View style={styles.content}>
+        {/* Search and Actions */}
+        <View style={styles.topActions}>
+          {/* Search */}
+          <View style={styles.searchContainer}>
+            <Search size={20} color={colors.textMuted} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Kullanıcı ara... (ad, e-posta)"
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <X size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
 
-        {/* Actions */}
-        <View style={styles.headerActions}>
+          {/* Davetler Button */}
           <TouchableOpacity
             style={styles.invitationsButton}
             onPress={handleInvitations}
           >
-            <Icon name="email-outline" size={20} color={colors.primary.DEFAULT} />
+            <Mail size={20} color={colors.primary} />
             <Text style={styles.invitationsButtonText}>Davetler</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.addButton,
-              userLimits && !userLimits.can_add_more && styles.addButtonDisabled,
-            ]}
-            onPress={handleCreate}
-            disabled={userLimits && !userLimits.can_add_more}
-          >
-            <Icon name="plus" size={20} color="#fff" />
-            <Text style={styles.addButtonText}>Kullanıcı Ekle</Text>
-          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* List */}
-      {loading && !refreshing ? (
-        <ActivityIndicator size="large" color={colors.primary.DEFAULT} style={styles.loader} />
-      ) : (
-        <FlatList
-          data={users}
-          renderItem={renderUserItem}
-          keyExtractor={item => item.id.toString()}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={renderEmpty}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-        />
-      )}
+        {/* List */}
+        {loading && !refreshing ? (
+          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+        ) : (
+          <FlatList
+            data={users}
+            renderItem={renderUserItem}
+            keyExtractor={item => item.id.toString()}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={renderEmpty}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
     </View>
   );
 };
@@ -317,94 +326,58 @@ export const UserManagementScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray[50],
+    backgroundColor: Brand.primary,
   },
-  header: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
+  content: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: colors.gray[900],
-  },
-  limitBadge: {
-    backgroundColor: colors.gray[100],
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  limitText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.gray[900],
+  topActions: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+    gap: Spacing.md,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.gray[50],
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: Spacing.sm,
   },
   searchInput: {
     flex: 1,
     height: 44,
     fontSize: 16,
-    color: colors.gray[900],
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
+    color: colors.text,
   },
   invitationsButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.gray[100],
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 8,
+    backgroundColor: colors.surface,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   invitationsButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary.DEFAULT,
-  },
-  addButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary.DEFAULT,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 8,
-  },
-  addButtonDisabled: {
-    opacity: 0.5,
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
+    ...Typography.headingSM,
+    color: colors.primary,
   },
   listContent: {
-    padding: 16,
+    padding: Spacing.lg,
+    paddingBottom: Spacing['3xl'],
   },
   userCard: {
     backgroundColor: '#fff',
@@ -412,7 +385,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.gray[200],
+    borderColor: colors.border,
   },
   userHeader: {
     flexDirection: 'row',
@@ -423,7 +396,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.primary.DEFAULT,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -439,12 +412,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.gray[900],
+    color: colors.text,
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: colors.gray[600],
+    color: colors.textSecondary,
   },
   rolesContainer: {
     flexDirection: 'row',
@@ -453,7 +426,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   roleBadge: {
-    backgroundColor: colors.info.light,
+    backgroundColor: colors.infoLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -461,7 +434,7 @@ const styles = StyleSheet.create({
   roleText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.info.DEFAULT,
+    color: colors.info,
   },
   actionsContainer: {
     flexDirection: 'row',
@@ -477,23 +450,23 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   editButton: {
-    backgroundColor: colors.warning.light,
+    backgroundColor: colors.warningLight,
   },
   editButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.warning.DEFAULT,
+    color: colors.warning,
   },
   deleteButton: {
-    backgroundColor: colors.danger.light,
+    backgroundColor: colors.dangerLight,
   },
   deleteButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.danger.DEFAULT,
+    color: colors.danger,
   },
   protectedBadge: {
-    backgroundColor: colors.success.light,
+    backgroundColor: colors.successLight,
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
@@ -501,7 +474,7 @@ const styles = StyleSheet.create({
   protectedText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.success.DEFAULT,
+    color: colors.success,
   },
   loader: {
     flex: 1,
@@ -517,20 +490,20 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.gray[900],
+    color: colors.text,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyDescription: {
     fontSize: 14,
-    color: colors.gray[600],
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
   },
   emptyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary.DEFAULT,
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,

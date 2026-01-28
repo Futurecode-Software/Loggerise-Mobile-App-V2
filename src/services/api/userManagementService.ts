@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import api from '@/services/api';
 import { User, Role, Invitation, UserFilters, UserPayload, InvitePayload } from '../../types/user';
 
 export const userManagementService = {
@@ -12,7 +12,7 @@ export const userManagementService = {
     per_page: number;
     total: number;
   }> {
-    const response = await apiClient.get('/settings/users', { params: filters });
+    const response = await api.get('/settings/users', { params: filters });
     return response.data;
   },
 
@@ -20,7 +20,7 @@ export const userManagementService = {
    * Get single user by ID
    */
   async getUser(id: number): Promise<User> {
-    const response = await apiClient.get(`/settings/users/${id}`);
+    const response = await api.get(`/settings/users/${id}`);
     return response.data.data;
   },
 
@@ -28,7 +28,7 @@ export const userManagementService = {
    * Create new user
    */
   async createUser(payload: UserPayload): Promise<User> {
-    const response = await apiClient.post('/settings/users', payload);
+    const response = await api.post('/settings/users', payload);
     return response.data.data;
   },
 
@@ -36,7 +36,7 @@ export const userManagementService = {
    * Update existing user
    */
   async updateUser(id: number, payload: Partial<UserPayload>): Promise<User> {
-    const response = await apiClient.put(`/settings/users/${id}`, payload);
+    const response = await api.put(`/settings/users/${id}`, payload);
     return response.data.data;
   },
 
@@ -44,14 +44,14 @@ export const userManagementService = {
    * Delete user
    */
   async deleteUser(id: number): Promise<void> {
-    await apiClient.delete(`/settings/users/${id}`);
+    await api.delete(`/settings/users/${id}`);
   },
 
   /**
    * Get available roles
    */
   async getRoles(): Promise<Role[]> {
-    const response = await apiClient.get('/settings/users/meta/roles');
+    const response = await api.get('/settings/users/meta/roles');
     return response.data.data;
   },
 
@@ -63,7 +63,7 @@ export const userManagementService = {
     current_users: number;
     can_add_more: boolean;
   }> {
-    const response = await apiClient.get('/settings/users/meta/limits');
+    const response = await api.get('/settings/users/meta/limits');
     return response.data;
   },
 
@@ -71,7 +71,7 @@ export const userManagementService = {
    * Get pending invitations
    */
   async getInvitations(): Promise<Invitation[]> {
-    const response = await apiClient.get('/settings/users/invitations/pending');
+    const response = await api.get('/settings/users/invitations/pending');
     return response.data.data;
   },
 
@@ -83,7 +83,7 @@ export const userManagementService = {
     success_count: number;
     errors: string[];
   }> {
-    const response = await apiClient.post('/settings/users/invitations/send', payload);
+    const response = await api.post('/settings/users/invitations/send', payload);
     return response.data;
   },
 
@@ -91,13 +91,13 @@ export const userManagementService = {
    * Resend invitation
    */
   async resendInvitation(id: number): Promise<void> {
-    await apiClient.post(`/settings/users/invitations/${id}/resend`);
+    await api.post(`/settings/users/invitations/${id}/resend`);
   },
 
   /**
    * Cancel invitation
    */
   async cancelInvitation(id: number): Promise<void> {
-    await apiClient.delete(`/settings/users/invitations/${id}`);
+    await api.delete(`/settings/users/invitations/${id}`);
   },
 };

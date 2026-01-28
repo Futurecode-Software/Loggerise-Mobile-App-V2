@@ -121,7 +121,6 @@ function RootLayoutNav() {
         <Stack.Screen name="finance" />
         <Stack.Screen name="positions" />
         <Stack.Screen name="messages" />
-        <Stack.Screen name="event" />
       </Stack>
       {/* StatusBar artık her sayfada FullScreenHeader içinde yönetiliyor */}
       <Toast position='top' topOffset={60} />

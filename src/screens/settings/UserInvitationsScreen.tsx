@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,28 @@ import {
   RefreshControl,
   StyleSheet,
   Alert,
-  Modal,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  BottomSheetModal,
+  BottomSheetScrollView,
+  BottomSheetBackdrop,
+  BottomSheetBackdropProps,
+  useBottomSheetSpringConfigs,
+} from '@gorhom/bottom-sheet';
+import { router, useFocusEffect } from 'expo-router';
+import {
+  ArrowLeft,
+  Plus,
+  Mail,
+  Clock,
+  RefreshCw,
+  X,
+  Check,
+  Info,
+} from 'lucide-react-native';
+import { FullScreenHeader } from '@/components/header';
 import { userManagementService } from '../../services/api/userManagementService';
-import { colors } from '../../constants/colors';
+import { Colors, Spacing, Typography, BorderRadius, Shadows, Brand } from '@/constants/theme';
 import { Invitation, Role } from '../../types/user';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -25,20 +41,47 @@ const ROLE_LABELS: Record<string, string> = {
   'Muhasebeci': 'Muhasebeci',
 };
 
+// Use colors from theme
+const colors = Colors.light;
+
 export const UserInvitationsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  // Refs
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
 
   // State
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
   const [sending, setSending] = useState(false);
 
   // Invite form state
   const [emails, setEmails] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+
+  // Bottom Sheet Configuration
+  const snapPoints = useMemo(() => ['85%'], []);
+
+  const animationConfigs = useBottomSheetSpringConfigs({
+    damping: 80,
+    overshootClamping: true,
+    restDisplacementThreshold: 0.1,
+    restSpeedThreshold: 0.1,
+    stiffness: 500,
+  });
+
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    []
+  );
 
   // Load invitations
   const loadInvitations = useCallback(async () => {
@@ -147,6 +190,14 @@ export const UserInvitationsScreen: React.FC = () => {
     );
   }, []);
 
+  // Modal dismiss handler
+  const handleDismiss = useCallback(() => {
+    setTimeout(() => {
+      setEmails('');
+      setSelectedRoles([]);
+    }, 200);
+  }, []);
+
   // Send invitation
   const handleSendInvitation = useCallback(async () => {
     if (!emails.trim()) {
@@ -167,9 +218,7 @@ export const UserInvitationsScreen: React.FC = () => {
       });
 
       Alert.alert('Başarılı', 'Davet(ler) başarıyla gönderildi.');
-      setShowInviteModal(false);
-      setEmails('');
-      setSelectedRoles([]);
+      bottomSheetRef.current?.dismiss();
       loadInvitations();
     } catch (error: any) {
       const errorMessage =
@@ -184,11 +233,11 @@ export const UserInvitationsScreen: React.FC = () => {
   const renderInvitationItem = ({ item }: { item: Invitation }) => (
     <View style={styles.invitationCard}>
       <View style={styles.invitationHeader}>
-        <Icon
-          name={item.is_expired ? 'clock-alert-outline' : 'email-outline'}
-          size={24}
-          color={item.is_expired ? colors.danger.DEFAULT : colors.info.DEFAULT}
-        />
+        {item.is_expired ? (
+          <Clock size={24} color={colors.danger} />
+        ) : (
+          <Mail size={24} color={colors.info} />
+        )}
         <View style={styles.invitationInfo}>
           <Text style={styles.invitationEmail}>{item.email}</Text>
           <Text style={styles.invitationMeta}>
@@ -236,7 +285,7 @@ export const UserInvitationsScreen: React.FC = () => {
             style={[styles.actionButton, styles.resendButton]}
             onPress={() => handleResend(item)}
           >
-            <Icon name="refresh" size={16} color={colors.success.DEFAULT} />
+            <RefreshCw size={16} color={colors.success} />
             <Text style={styles.resendButtonText}>Yeniden Gönder</Text>
           </TouchableOpacity>
         )}
@@ -245,7 +294,7 @@ export const UserInvitationsScreen: React.FC = () => {
           style={[styles.actionButton, styles.cancelButton]}
           onPress={() => handleCancel(item)}
         >
-          <Icon name="close" size={16} color={colors.danger.DEFAULT} />
+          <X size={16} color={colors.danger} />
           <Text style={styles.cancelButtonText}>İptal Et</Text>
         </TouchableOpacity>
       </View>
@@ -255,7 +304,7 @@ export const UserInvitationsScreen: React.FC = () => {
   // Empty state
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Icon name="email-outline" size={80} color={colors.gray[400]} />
+      <Mail size={80} color={colors.textMuted} />
       <Text style={styles.emptyTitle}>Bekleyen davet yok</Text>
       <Text style={styles.emptyDescription}>
         Kullanıcı davet ederek başlayın
@@ -266,55 +315,69 @@ export const UserInvitationsScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={24} color={colors.gray[900]} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          Bekleyen Davetler ({invitations.length})
-        </Text>
-        <TouchableOpacity onPress={() => setShowInviteModal(true)}>
-          <Icon name="plus" size={24} color={colors.primary.DEFAULT} />
-        </TouchableOpacity>
+      <FullScreenHeader
+        title="Kullanıcı Davetleri"
+        subtitle={`${invitations.length} bekleyen davet`}
+        showBackButton
+        rightIcons={
+          <TouchableOpacity
+            onPress={() => bottomSheetRef.current?.present()}
+            activeOpacity={0.7}
+          >
+            <Plus size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
+
+      {/* Content Area */}
+      <View style={styles.content}>
+        {loading && !refreshing ? (
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+            style={styles.loader}
+          />
+        ) : (
+          <FlatList
+            data={invitations}
+            renderItem={renderInvitationItem}
+            keyExtractor={item => item.id.toString()}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={renderEmpty}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </View>
 
-      {/* List */}
-      {loading && !refreshing ? (
-        <ActivityIndicator
-          size="large"
-          color={colors.primary.DEFAULT}
-          style={styles.loader}
-        />
-      ) : (
-        <FlatList
-          data={invitations}
-          renderItem={renderInvitationItem}
-          keyExtractor={item => item.id.toString()}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={renderEmpty}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        />
-      )}
-
       {/* Invite Modal */}
-      <Modal
-        visible={showInviteModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowInviteModal(false)}
+      <BottomSheetModal
+        ref={bottomSheetRef}
+        index={0}
+        snapPoints={snapPoints}
+        enablePanDownToClose={true}
+        enableContentPanningGesture={false}
+        enableDynamicSizing={false}
+        animateOnMount={true}
+        animationConfigs={animationConfigs}
+        backdropComponent={renderBackdrop}
+        backgroundStyle={styles.modalBackground}
+        handleIndicatorStyle={styles.modalHandleIndicator}
+        onDismiss={handleDismiss}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Kullanıcı Davet Et</Text>
-              <TouchableOpacity onPress={() => setShowInviteModal(false)}>
-                <Icon name="close" size={24} color={colors.gray[600]} />
-              </TouchableOpacity>
-            </View>
+        <BottomSheetScrollView
+          contentContainerStyle={styles.modalContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Kullanıcı Davet Et</Text>
+          </View>
 
-            <View style={styles.modalBody}>
+          {/* Body */}
+          <View style={styles.modalBody}>
               <View style={styles.formGroup}>
                 <Text style={styles.label}>
                   E-posta Adresleri <Text style={styles.required}>*</Text>
@@ -322,7 +385,7 @@ export const UserInvitationsScreen: React.FC = () => {
                 <TextInput
                   style={styles.textArea}
                   placeholder="ornek1@email.com; ornek2@email.com"
-                  placeholderTextColor={colors.gray[400]}
+                  placeholderTextColor={colors.textMuted}
                   value={emails}
                   onChangeText={setEmails}
                   multiline
@@ -353,7 +416,7 @@ export const UserInvitationsScreen: React.FC = () => {
                         ]}
                       >
                         {selectedRoles.includes(role.name) && (
-                          <Icon name="check" size={16} color="#fff" />
+                          <Check size={16} color="#fff" />
                         )}
                       </View>
                       <Text style={styles.roleSelectText}>
@@ -365,7 +428,7 @@ export const UserInvitationsScreen: React.FC = () => {
               </View>
 
               <View style={styles.infoBox}>
-                <Icon name="information" size={20} color={colors.info.DEFAULT} />
+                <Info size={20} color={colors.info} />
                 <Text style={styles.infoText}>
                   Davet e-postası 7 gün geçerli olacaktır. Kullanıcı bu süre içinde
                   kayıt olmalıdır.
@@ -373,33 +436,33 @@ export const UserInvitationsScreen: React.FC = () => {
               </View>
             </View>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setShowInviteModal(false)}
-                disabled={sending}
-              >
-                <Text style={styles.modalCancelButtonText}>İptal</Text>
-              </TouchableOpacity>
+          {/* Footer */}
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => bottomSheetRef.current?.dismiss()}
+              disabled={sending}
+            >
+              <Text style={styles.modalCancelButtonText}>İptal</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[
-                  styles.modalSendButton,
-                  sending && styles.modalSendButtonDisabled,
-                ]}
-                onPress={handleSendInvitation}
-                disabled={sending}
-              >
-                {sending ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.modalSendButtonText}>Davet Gönder</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[
+                styles.modalSendButton,
+                sending && styles.modalSendButtonDisabled,
+              ]}
+              onPress={handleSendInvitation}
+              disabled={sending}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.modalSendButtonText}>Davet Gönder</Text>
+              )}
+            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+        </BottomSheetScrollView>
+      </BottomSheetModal>
     </View>
   );
 };
@@ -407,24 +470,18 @@ export const UserInvitationsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray[50],
+    backgroundColor: Brand.primary,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.gray[900],
+  content: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
   },
   listContent: {
-    padding: 16,
+    padding: Spacing.lg,
+    paddingBottom: Spacing['3xl'],
   },
   invitationCard: {
     backgroundColor: '#fff',
@@ -432,7 +489,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.gray[200],
+    borderColor: colors.border,
   },
   invitationHeader: {
     flexDirection: 'row',
@@ -446,12 +503,12 @@ const styles = StyleSheet.create({
   invitationEmail: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.gray[900],
+    color: colors.text,
     marginBottom: 4,
   },
   invitationMeta: {
     fontSize: 13,
-    color: colors.gray[600],
+    color: colors.textSecondary,
   },
   rolesContainer: {
     flexDirection: 'row',
@@ -460,7 +517,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   roleBadge: {
-    backgroundColor: colors.info.light,
+    backgroundColor: colors.infoLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -468,7 +525,7 @@ const styles = StyleSheet.create({
   roleText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.info.DEFAULT,
+    color: colors.info,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -483,26 +540,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   pendingBadge: {
-    borderColor: colors.warning.DEFAULT,
-    backgroundColor: colors.warning.light,
+    borderColor: colors.warning,
+    backgroundColor: colors.warningLight,
   },
   expiredBadge: {
-    borderColor: colors.danger.DEFAULT,
-    backgroundColor: colors.danger.light,
+    borderColor: colors.danger,
+    backgroundColor: colors.dangerLight,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
   },
   pendingText: {
-    color: colors.warning.DEFAULT,
+    color: colors.warning,
   },
   expiredText: {
-    color: colors.danger.DEFAULT,
+    color: colors.danger,
   },
   expiresText: {
     fontSize: 12,
-    color: colors.gray[600],
+    color: colors.textSecondary,
   },
   actionsContainer: {
     flexDirection: 'row',
@@ -518,20 +575,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   resendButton: {
-    backgroundColor: colors.success.light,
+    backgroundColor: colors.successLight,
   },
   resendButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.success.DEFAULT,
+    color: colors.success,
   },
   cancelButton: {
-    backgroundColor: colors.danger.light,
+    backgroundColor: colors.dangerLight,
   },
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.danger.DEFAULT,
+    color: colors.danger,
   },
   loader: {
     flex: 1,
@@ -547,149 +604,146 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.gray[900],
+    color: colors.text,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyDescription: {
     fontSize: 14,
-    color: colors.gray[600],
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  modalBackground: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+  },
+  modalHandleIndicator: {
+    backgroundColor: '#D1D5DB',
+    width: 40,
+    height: 4,
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '90%',
+    paddingHorizontal: Spacing['2xl'],
+    paddingBottom: Spacing.lg,
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
+    borderBottomColor: colors.border,
+    marginBottom: Spacing.lg,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.gray[900],
+    ...Typography.headingMD,
+    color: colors.text,
+    textAlign: 'center',
   },
   modalBody: {
-    padding: 16,
+    marginBottom: Spacing.lg,
   },
   formGroup: {
-    marginBottom: 20,
+    marginBottom: Spacing['2xl'],
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.gray[700],
-    marginBottom: 8,
+    ...Typography.headingSM,
+    color: colors.text,
+    marginBottom: Spacing.sm,
   },
   required: {
-    color: colors.danger.DEFAULT,
+    color: colors.danger,
   },
   textArea: {
-    backgroundColor: colors.gray[50],
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.gray[300],
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: colors.gray[900],
+    borderColor: colors.border,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    ...Typography.bodyMD,
+    color: colors.text,
     minHeight: 100,
     textAlignVertical: 'top',
   },
   hint: {
-    fontSize: 12,
-    color: colors.gray[500],
-    marginTop: 4,
+    ...Typography.bodyXS,
+    color: colors.textMuted,
+    marginTop: Spacing.xs,
   },
   bold: {
     fontWeight: '600',
   },
   rolesSelectContainer: {
-    gap: 12,
+    gap: Spacing.md,
   },
   roleSelectItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.md,
   },
   checkbox: {
     width: 24,
     height: 24,
     borderWidth: 2,
-    borderColor: colors.gray[300],
-    borderRadius: 6,
+    borderColor: colors.border,
+    borderRadius: BorderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: colors.primary.DEFAULT,
-    borderColor: colors.primary.DEFAULT,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   roleSelectText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.gray[900],
+    ...Typography.bodyMD,
+    color: colors.text,
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.info.light,
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
+    backgroundColor: colors.infoLight,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
   },
   infoText: {
     flex: 1,
-    fontSize: 13,
-    color: colors.info.DEFAULT,
+    ...Typography.bodySM,
+    color: colors.info,
   },
   modalFooter: {
     flexDirection: 'row',
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray[200],
-    gap: 12,
+    paddingTop: Spacing.lg,
+    gap: Spacing.md,
   },
   modalCancelButton: {
     flex: 1,
-    paddingVertical: 14,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.gray[300],
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   modalCancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.gray[700],
+    ...Typography.buttonMD,
+    color: colors.text,
   },
   modalSendButton: {
     flex: 1,
-    paddingVertical: 14,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
-    backgroundColor: colors.primary.DEFAULT,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: colors.primary,
   },
   modalSendButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   modalSendButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    ...Typography.buttonMD,
+    color: '#FFFFFF',
   },
 });

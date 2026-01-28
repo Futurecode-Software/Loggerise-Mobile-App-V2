@@ -10,17 +10,16 @@ import {
   Alert,
   Switch,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { router } from 'expo-router';
+import { ArrowLeft, Save } from 'lucide-react-native';
+import { FullScreenHeader } from '@/components/header';
 import { userManagementService } from '../../services/api/userManagementService';
-import { colors } from '../../constants/colors';
+import { Colors, Spacing, Typography, BorderRadius, Shadows, Brand } from '@/constants/theme';
 import { User, Role } from '../../types/user';
 
-type RouteParams = {
-  UserForm: {
-    userId?: number;
-  };
-};
+interface UserFormScreenProps {
+  userId?: number;
+}
 
 const ROLE_LABELS: Record<string, string> = {
   'Süper Yönetici': 'Süper Yönetici',
@@ -30,11 +29,10 @@ const ROLE_LABELS: Record<string, string> = {
   'Muhasebeci': 'Muhasebeci',
 };
 
-export const UserFormScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const route = useRoute<RouteProp<RouteParams, 'UserForm'>>();
-  const { userId } = route.params || {};
+// Use colors from theme
+const colors = Colors.light;
 
+export const UserFormScreen: React.FC<UserFormScreenProps> = ({ userId }) => {
   const isEditing = !!userId;
 
   // State
@@ -78,11 +76,11 @@ export const UserFormScreen: React.FC = () => {
     } catch (error) {
       console.error('Error loading user:', error);
       Alert.alert('Hata', 'Kullanıcı yüklenirken bir hata oluştu.');
-      navigation.goBack();
+      router.back();
     } finally {
       setLoading(false);
     }
-  }, [userId, navigation]);
+  }, [userId]);
 
   // Initial load
   useEffect(() => {
@@ -159,19 +157,19 @@ export const UserFormScreen: React.FC = () => {
         Alert.alert('Başarılı', 'Kullanıcı başarıyla oluşturuldu.');
       }
 
-      navigation.goBack();
+      router.back();
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || 'Bir hata oluştu.';
       Alert.alert('Hata', errorMessage);
     } finally {
       setSaving(false);
     }
-  }, [formData, validateForm, isEditing, userId, navigation]);
+  }, [formData, validateForm, isEditing, userId]);
 
   if (loading) {
     return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color={colors.primary.DEFAULT} />
+      <View style={[styles.container, styles.loaderContainer]}>
+        <ActivityIndicator size="large" color="#FFFFFF" />
       </View>
     );
   }
@@ -179,17 +177,31 @@ export const UserFormScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={24} color={colors.gray[900]} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isEditing ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı'}
-        </Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <FullScreenHeader
+        title={isEditing ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı'}
+        subtitle="Kullanıcı bilgilerini girin"
+        showBackButton
+        rightIcons={
+          <TouchableOpacity
+            onPress={handleSubmit}
+            activeOpacity={0.7}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Save size={22} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+        }
+      />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      {/* Content Area */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Temel Bilgiler */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
@@ -271,9 +283,8 @@ export const UserFormScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Rol Atamaları</Text>
           {userId === 1 && (
             <View style={styles.warningBox}>
-              <Icon name="alert" size={20} color={colors.warning.DEFAULT} />
               <Text style={styles.warningText}>
-                İlk kullanıcının rolü değiştirilemez. Bu kullanıcı daima Süper Admin
+                ⚠️ İlk kullanıcının rolü değiştirilemez. Bu kullanıcı daima Süper Admin
                 yetkilerine sahiptir.
               </Text>
             </View>
@@ -294,7 +305,7 @@ export const UserFormScreen: React.FC = () => {
                   ]}
                 >
                   {formData.roles.includes(role.name) && (
-                    <Icon name="check" size={16} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>✓</Text>
                   )}
                 </View>
                 <Text style={styles.roleText}>
@@ -305,31 +316,6 @@ export const UserFormScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => navigation.goBack()}
-          disabled={saving}
-        >
-          <Text style={styles.cancelButtonText}>İptal</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.saveButtonText}>
-              {isEditing ? 'Güncelle' : 'Oluştur'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
@@ -337,82 +323,70 @@ export const UserFormScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray[50],
+    backgroundColor: Brand.primary,
   },
   loaderContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.gray[900],
-  },
   content: {
     flex: 1,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
+  },
+  contentContainer: {
+    padding: Spacing.lg,
+    paddingBottom: Spacing['4xl'],
   },
   section: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    marginBottom: Spacing['2xl'],
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.gray[900],
-    marginBottom: 4,
+    ...Typography.headingMD,
+    color: colors.text,
+    marginBottom: Spacing.xs,
   },
   sectionDescription: {
-    fontSize: 14,
-    color: colors.gray[600],
-    marginBottom: 16,
+    ...Typography.bodySM,
+    color: colors.textSecondary,
+    marginBottom: Spacing.lg,
   },
   formGroup: {
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.gray[700],
+    color: colors.text,
     marginBottom: 8,
   },
   required: {
-    color: colors.danger.DEFAULT,
+    color: colors.danger,
   },
   input: {
-    backgroundColor: colors.gray[50],
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.gray[300],
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: colors.gray[900],
+    color: colors.text,
   },
   inputError: {
-    borderColor: colors.danger.DEFAULT,
+    borderColor: colors.danger,
   },
   errorText: {
     fontSize: 12,
-    color: colors.danger.DEFAULT,
+    color: colors.danger,
     marginTop: 4,
   },
   warningBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.warning.light,
+    backgroundColor: colors.warningLight,
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
@@ -421,7 +395,7 @@ const styles = StyleSheet.create({
   warningText: {
     flex: 1,
     fontSize: 13,
-    color: colors.warning.DEFAULT,
+    color: colors.warning,
   },
   rolesContainer: {
     gap: 12,
@@ -435,56 +409,17 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderWidth: 2,
-    borderColor: colors.gray[300],
+    borderColor: colors.border,
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: colors.primary.DEFAULT,
-    borderColor: colors.primary.DEFAULT,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   roleText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.gray[900],
-  },
-  footer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray[200],
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.gray[300],
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.gray[700],
-  },
-  saveButton: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    backgroundColor: colors.primary.DEFAULT,
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    ...Typography.bodyMD,
+    color: colors.text,
   },
 });

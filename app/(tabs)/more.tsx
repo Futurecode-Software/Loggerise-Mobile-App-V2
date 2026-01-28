@@ -224,7 +224,7 @@ const MENU_SECTIONS: MenuSection[] = [
     title: 'Kullanıcı Yönetimi',
     icon: Users,
     iconColor: '#3b82f6',
-    route: '/under-construction?title=Kullanıcı Yönetimi',
+    route: '/settings/users',
   },
 ];
 
