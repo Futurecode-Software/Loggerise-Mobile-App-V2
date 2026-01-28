@@ -3,14 +3,13 @@
  */
 
 import { useMemo } from 'react';
-import { router, RelativePathString } from 'expo-router';
+import { router } from 'expo-router';
 import {
   UserPlus,
-  Award,
   Users,
   Briefcase,
-  CalendarCheck,
-  UserCheck,
+  FileText,
+  Calendar,
 } from 'lucide-react-native';
 import { QuickAction } from '@/contexts/quick-actions-context';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -21,67 +20,54 @@ export const useHrQuickActions = (): QuickAction[] => {
   return useMemo(
     () => [
       {
+        id: 'view-employees',
+        label: 'Personeller',
+        icon: Users,
+        onPress: () => {
+          hapticLight();
+          router.push('/employee' as any);
+        },
+        permission: 'employees.view',
+      },
+      {
         id: 'new-employee',
         label: 'Yeni Personel',
         icon: UserPlus,
         onPress: () => {
           hapticLight();
-          router.push('/employee/new');
+          router.push('/employee/new' as any);
         },
         permission: 'employees.create',
       },
       {
-        id: 'certificate',
-        label: 'Belge Ekle',
-        icon: Award,
-        onPress: () => {
-          hapticLight();
-          router.push('/employees/certificates/new' as RelativePathString);
-        },
-        permission: 'employee_certificates.create',
-      },
-      {
-        id: 'family-member',
-        label: 'Aile Üyesi Ekle',
-        icon: Users,
-        onPress: () => {
-          hapticLight();
-          router.push('/employees/family-members/new' as RelativePathString);
-        },
-        permission: 'employee_family_members.create',
-      },
-      {
-        id: 'job-posting',
-        label: 'İş İlanı Oluştur',
+        id: 'job-postings',
+        label: 'İş İlanları',
         icon: Briefcase,
         onPress: () => {
           hapticLight();
-          router.push('/job-postings/new' as RelativePathString);
+          router.push('/hr/job-postings' as any);
         },
-        disabled: true, // Backend endpoint eksik
-        permission: 'job_postings.create',
+        permission: 'job_postings.view',
       },
       {
-        id: 'evaluate-application',
-        label: 'Başvuru Değerlendir',
-        icon: UserCheck,
+        id: 'job-applications',
+        label: 'İşe Alım Başvuruları',
+        icon: FileText,
         onPress: () => {
           hapticLight();
-          router.push('/job-applications' as RelativePathString);
+          router.push('/hr/job-applications' as any);
         },
-        disabled: true, // Backend endpoint eksik
-        permission: 'job_applications.update',
+        permission: 'job_applications.view',
       },
       {
-        id: 'schedule-interview',
-        label: 'Mülakat Planla',
-        icon: CalendarCheck,
+        id: 'view-events',
+        label: 'Ajandam',
+        icon: Calendar,
         onPress: () => {
           hapticLight();
-          router.push('/job-applications/interviews' as RelativePathString);
+          router.push('/event' as any);
         },
-        disabled: true, // Backend endpoint eksik
-        permission: 'job_applications.update',
+        permission: 'events.view',
       },
     ],
     [hapticLight]

@@ -3,14 +3,14 @@
  */
 
 import { useMemo } from 'react';
-import { router, RelativePathString } from 'expo-router';
+import { router } from 'expo-router';
 import {
   FileText,
-  Copy,
+  Users,
   UserPlus,
   MessageSquare,
-  Send,
   Package,
+  Sparkles,
 } from 'lucide-react-native';
 import { QuickAction } from '@/contexts/quick-actions-context';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -26,19 +26,29 @@ export const useCrmQuickActions = (): QuickAction[] => {
         icon: FileText,
         onPress: () => {
           hapticLight();
-          router.push('/quote/new');
+          router.push('/quote/new' as any);
         },
         permission: 'quotes.create',
       },
       {
-        id: 'duplicate-quote',
-        label: 'Teklif Kopyala',
-        icon: Copy,
+        id: 'view-quotes',
+        label: 'Teklifleri Gör',
+        icon: Sparkles,
         onPress: () => {
           hapticLight();
-          router.push('/quotes');
+          router.push('/quotes' as any);
         },
-        permission: 'quotes.create',
+        permission: 'quotes.view',
+      },
+      {
+        id: 'view-customers',
+        label: 'Müşteriler',
+        icon: Users,
+        onPress: () => {
+          hapticLight();
+          router.push('/crm' as any);
+        },
+        permission: 'crm.view',
       },
       {
         id: 'new-customer',
@@ -46,39 +56,29 @@ export const useCrmQuickActions = (): QuickAction[] => {
         icon: UserPlus,
         onPress: () => {
           hapticLight();
-          router.push('/contact/new?type=customer');
+          router.push('/contact/new?type=customer' as any);
         },
         permission: 'contacts.create',
       },
       {
-        id: 'new-interaction',
-        label: 'Etkileşim Ekle',
-        icon: MessageSquare,
-        onPress: () => {
-          hapticLight();
-          router.push('/crm/interactions/new' as RelativePathString);
-        },
-        permission: 'crm_interactions.create',
-      },
-      {
-        id: 'send-quote',
-        label: 'Teklifi Gönder',
-        icon: Send,
-        onPress: () => {
-          hapticLight();
-          router.push('/quotes');
-        },
-        permission: 'quotes.send',
-      },
-      {
-        id: 'convert-to-loads',
+        id: 'view-loads',
         label: 'Yüklere Dönüştür',
         icon: Package,
         onPress: () => {
           hapticLight();
-          router.push('/quotes');
+          router.push('/(tabs)/loads' as any);
         },
-        permission: 'quotes.convert',
+        permission: 'loads.view',
+      },
+      {
+        id: 'new-message',
+        label: 'Müşteriye Mesaj',
+        icon: MessageSquare,
+        onPress: () => {
+          hapticLight();
+          router.push('/message/new' as any);
+        },
+        permission: 'messages.create',
       },
     ],
     [hapticLight]

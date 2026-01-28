@@ -14,6 +14,7 @@ import Animated, {
   withTiming,
   interpolate,
   Extrapolation,
+  runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -39,15 +40,17 @@ export const QuickActionButton: React.FC<QuickActionButtonProps> = ({
   const gesture = Gesture.Tap()
     .enabled(!disabled)
     .onBegin(() => {
+      'worklet';
       scale.value = withSpring(0.95, { damping: 15, stiffness: 400 });
       pressed.value = withTiming(1, { duration: 100 });
     })
     .onFinalize((_, success) => {
+      'worklet';
       scale.value = withSpring(1, { damping: 15, stiffness: 400 });
       pressed.value = withTiming(0, { duration: 150 });
       if (success && !disabled) {
-        hapticLight();
-        onPress();
+        runOnJS(hapticLight)();
+        runOnJS(onPress)();
       }
     });
 

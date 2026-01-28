@@ -3,13 +3,15 @@
  */
 
 import { useMemo } from 'react';
-import { router, RelativePathString } from 'expo-router';
+import { router } from 'expo-router';
 import {
   Truck,
   Package,
   FileText,
-  Brain,
+  Bot,
   MessageSquare,
+  Users,
+  MapPin,
 } from 'lucide-react-native';
 import { QuickAction } from '@/contexts/quick-actions-context';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -20,22 +22,12 @@ export const useOverviewQuickActions = (): QuickAction[] => {
   return useMemo(
     () => [
       {
-        id: 'new-trip',
-        label: 'Yeni Sefer Oluştur',
-        icon: Truck,
-        onPress: () => {
-          hapticLight();
-          router.push('/trips/new' as RelativePathString);
-        },
-        permission: 'trips.create',
-      },
-      {
         id: 'new-load',
         label: 'Yeni Yük Ekle',
         icon: Package,
         onPress: () => {
           hapticLight();
-          router.push('/loads/new' as RelativePathString);
+          router.push('/load/new' as any);
         },
         permission: 'loads.create',
       },
@@ -45,19 +37,49 @@ export const useOverviewQuickActions = (): QuickAction[] => {
         icon: FileText,
         onPress: () => {
           hapticLight();
-          router.push('/quote/new');
+          router.push('/quote/new' as any);
         },
         permission: 'quotes.create',
       },
       {
-        id: 'ai-report',
-        label: 'AI Rapor Oluştur',
-        icon: Brain,
+        id: 'new-contact',
+        label: 'Yeni Cari Ekle',
+        icon: Users,
         onPress: () => {
           hapticLight();
-          router.push('/ai-reports');
+          router.push('/contact/new' as any);
         },
-        permission: 'ai_reports.create',
+        permission: 'contacts.create',
+      },
+      {
+        id: 'view-positions',
+        label: 'Pozisyonları Gör',
+        icon: MapPin,
+        onPress: () => {
+          hapticLight();
+          router.push('/positions' as any);
+        },
+        permission: 'positions.view',
+      },
+      {
+        id: 'view-trips',
+        label: 'Seferleri Gör',
+        icon: Truck,
+        onPress: () => {
+          hapticLight();
+          router.push('/trip' as any);
+        },
+        permission: 'trips.view',
+      },
+      {
+        id: 'ai-assistant',
+        label: 'Loggy AI Asistan',
+        icon: Bot,
+        onPress: () => {
+          hapticLight();
+          router.push('/loggy' as any);
+        },
+        permission: 'ai_assistant.access',
       },
       {
         id: 'new-message',
@@ -65,7 +87,7 @@ export const useOverviewQuickActions = (): QuickAction[] => {
         icon: MessageSquare,
         onPress: () => {
           hapticLight();
-          router.push('/messages');
+          router.push('/message/new' as any);
         },
         permission: 'messages.create',
       },

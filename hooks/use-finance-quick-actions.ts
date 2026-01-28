@@ -3,13 +3,15 @@
  */
 
 import { useMemo } from 'react';
-import { router, RelativePathString } from 'expo-router';
+import { router } from 'expo-router';
 import {
-  DollarSign,
-  CreditCard,
-  FileText,
-  Banknote,
+  Building2,
+  Wallet,
+  Users,
   ArrowUpDown,
+  Receipt,
+  Banknote,
+  FileText,
 } from 'lucide-react-native';
 import { QuickAction } from '@/contexts/quick-actions-context';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -20,62 +22,72 @@ export const useFinanceQuickActions = (): QuickAction[] => {
   return useMemo(
     () => [
       {
-        id: 'collection',
-        label: 'Tahsilat Kaydet',
-        icon: DollarSign,
+        id: 'view-cash-registers',
+        label: 'Kasalar',
+        icon: Wallet,
         onPress: () => {
           hapticLight();
-          router.push('/(tabs)/transactions' as RelativePathString);
+          router.push('/cash-register' as any);
         },
-        permission: 'financial_transactions.create',
+        permission: 'cash_registers.view',
       },
       {
-        id: 'payment',
-        label: 'Ödeme Kaydet',
-        icon: CreditCard,
+        id: 'view-banks',
+        label: 'Bankalar',
+        icon: Building2,
         onPress: () => {
           hapticLight();
-          router.push('/(tabs)/transactions' as RelativePathString);
+          router.push('/bank' as any);
         },
-        permission: 'financial_transactions.create',
+        permission: 'banks.view',
       },
       {
-        id: 'check',
+        id: 'view-contacts',
+        label: 'Cariler',
+        icon: Users,
+        onPress: () => {
+          hapticLight();
+          router.push('/(tabs)/contacts' as any);
+        },
+        permission: 'contacts.view',
+      },
+      {
+        id: 'view-transactions',
+        label: 'Mali Hareketler',
+        icon: ArrowUpDown,
+        onPress: () => {
+          hapticLight();
+          router.push('/transactions' as any);
+        },
+        permission: 'financial_transactions.view',
+      },
+      {
+        id: 'new-check',
         label: 'Çek Ekle',
-        icon: FileText,
+        icon: Receipt,
         onPress: () => {
           hapticLight();
-          router.push('/check/new');
+          router.push('/check/new' as any);
         },
         permission: 'checks.create',
       },
       {
-        id: 'promissory-note',
+        id: 'new-promissory-note',
         label: 'Senet Ekle',
         icon: Banknote,
         onPress: () => {
           hapticLight();
-          router.push('/promissory-note/new');
+          router.push('/promissory-note/new' as any);
         },
         permission: 'promissory_notes.create',
       },
       {
-        id: 'bank-transfer',
-        label: 'Banka Transferi',
-        icon: ArrowUpDown,
-        onPress: () => {
-          hapticLight();
-          router.push('/(tabs)/transactions' as RelativePathString);
-        },
-        permission: 'financial_transactions.create',
-      },
-      {
-        id: 'invoice',
+        id: 'new-invoice',
         label: 'Fatura Kes',
-        icon: Banknote,
+        icon: FileText,
         onPress: () => {
           hapticLight();
-          router.push('/finance/invoices/new');
+          router.push('/finance/invoices/new' as any);
         },
         permission: 'invoices.create',
       },

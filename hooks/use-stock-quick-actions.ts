@@ -6,11 +6,12 @@ import { useMemo } from 'react';
 import { router } from 'expo-router';
 import {
   Package,
-  ArrowDownToLine,
-  ArrowUpFromLine,
   FolderTree,
   Tag,
+  Layers,
+  Box,
   ArrowLeftRight,
+  Warehouse,
 } from 'lucide-react-native';
 import { QuickAction } from '@/contexts/quick-actions-context';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -21,64 +22,74 @@ export const useStockQuickActions = (): QuickAction[] => {
   return useMemo(
     () => [
       {
-        id: 'new-product',
-        label: 'Yeni Ürün Ekle',
+        id: 'view-products',
+        label: 'Ürünleri Gör',
         icon: Package,
         onPress: () => {
           hapticLight();
-          router.push('/products');
+          router.push('/products' as any);
+        },
+        permission: 'products.view',
+      },
+      {
+        id: 'new-product',
+        label: 'Yeni Ürün Ekle',
+        icon: Box,
+        onPress: () => {
+          hapticLight();
+          router.push('/stock/products/new' as any);
         },
         permission: 'products.create',
       },
       {
-        id: 'stock-in',
-        label: 'Stok Giriş',
-        icon: ArrowDownToLine,
-        onPress: () => {
-          hapticLight();
-          router.push('/stock/new?type=stock_in' as any);
-        },
-        permission: 'stock_movements.create',
-      },
-      {
-        id: 'stock-out',
-        label: 'Stok Çıkış',
-        icon: ArrowUpFromLine,
-        onPress: () => {
-          hapticLight();
-          router.push('/stock/new?type=stock_out' as any);
-        },
-        permission: 'stock_movements.create',
-      },
-      {
-        id: 'category',
-        label: 'Kategori Ekle',
+        id: 'view-categories',
+        label: 'Kategoriler',
         icon: FolderTree,
         onPress: () => {
           hapticLight();
-          router.push('/products');
+          router.push('/stock/categories' as any);
         },
-        permission: 'product_categories.create',
+        permission: 'product_categories.view',
       },
       {
-        id: 'brand',
-        label: 'Marka Ekle',
+        id: 'view-brands',
+        label: 'Markalar',
         icon: Tag,
         onPress: () => {
           hapticLight();
-          router.push('/products');
+          router.push('/stock/brands' as any);
         },
-        permission: 'product_brands.create',
+        permission: 'product_brands.view',
       },
       {
-        id: 'transfer',
-        label: 'Stok Transfer',
+        id: 'view-models',
+        label: 'Modeller',
+        icon: Layers,
+        onPress: () => {
+          hapticLight();
+          router.push('/stock/models' as any);
+        },
+        permission: 'product_models.view',
+      },
+      {
+        id: 'view-warehouses',
+        label: 'Depolar',
+        icon: Warehouse,
+        onPress: () => {
+          hapticLight();
+          router.push('/warehouse' as any);
+        },
+        permission: 'warehouses.view',
+      },
+      {
+        id: 'stock-movements',
+        label: 'Stok Hareketleri',
         icon: ArrowLeftRight,
         onPress: () => {
           hapticLight();
-          router.push('/stock/transfer' as any);
+          router.push('/stock/movements' as any);
         },
-        permission: 'stock_movements.create',
+        permission: 'stock_movements.view',
       },
     ],
     [hapticLight]

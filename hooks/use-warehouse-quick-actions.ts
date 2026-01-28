@@ -4,7 +4,7 @@
 
 import { useMemo } from 'react';
 import { router } from 'expo-router';
-import { PackageCheck, Truck, Warehouse, Send } from 'lucide-react-native';
+import { Warehouse, PackageCheck, Boxes, Truck, MapPin } from 'lucide-react-native';
 import { QuickAction } from '@/contexts/quick-actions-context';
 import { useHaptics } from '@/hooks/use-haptics';
 
@@ -14,44 +14,54 @@ export const useWarehouseQuickActions = (): QuickAction[] => {
   return useMemo(
     () => [
       {
-        id: 'warehouse-receiving',
-        label: 'Depo Kabul Ekle',
-        icon: PackageCheck,
+        id: 'view-warehouses',
+        label: 'Depoları Gör',
+        icon: Warehouse,
         onPress: () => {
           hapticLight();
-          router.push('/(tabs)/positions');
+          router.push('/warehouse' as any);
         },
-        permission: 'positions.create',
-      },
-      {
-        id: 'pre-carriage',
-        label: 'Ön Taşıma Ekle',
-        icon: Truck,
-        onPress: () => {
-          hapticLight();
-          router.push('/(tabs)/positions');
-        },
-        permission: 'positions.create',
+        permission: 'warehouses.view',
       },
       {
         id: 'new-warehouse',
         label: 'Yeni Depo Ekle',
-        icon: Warehouse,
+        icon: PackageCheck,
         onPress: () => {
           hapticLight();
-          router.push('/warehouse/new');
+          router.push('/warehouse/new' as any);
         },
         permission: 'warehouses.create',
       },
       {
-        id: 'ready-shipment',
-        label: 'Hazır Sevkiyat',
-        icon: Send,
+        id: 'export-warehouse-items',
+        label: 'Depo Malları',
+        icon: Boxes,
         onPress: () => {
           hapticLight();
-          router.push('/(tabs)/positions');
+          router.push('/export-warehouse/items' as any);
         },
-        disabled: true, // Backend endpoint eksik
+        permission: 'export_warehouse.view',
+      },
+      {
+        id: 'export-expected',
+        label: 'Beklenen Mallar',
+        icon: Truck,
+        onPress: () => {
+          hapticLight();
+          router.push('/export-warehouse/expected' as any);
+        },
+        permission: 'export_warehouse.view',
+      },
+      {
+        id: 'export-positions',
+        label: 'Pozisyon Durumu',
+        icon: MapPin,
+        onPress: () => {
+          hapticLight();
+          router.push('/export-warehouse/positions' as any);
+        },
+        permission: 'export_warehouse.view',
       },
     ],
     [hapticLight]
