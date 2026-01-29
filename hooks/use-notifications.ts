@@ -75,15 +75,18 @@ export function useNotifications() {
     // Get initial unread count from API
     await refreshUnreadCount();
 
-    // Push: sadece Expo doc – registerForPushNotificationsAsync + console.log
+    // Push: token al + backend'e kaydet (mesaj bildirimleri için)
     if (isPushNotificationsSupported() && Platform.OS !== "web") {
       try {
-        const { registerForPushNotificationsAsync } =
-          await import("@/services/notifications");
+        const {
+          registerForPushNotificationsAsync,
+          registerPushTokenWithBackend,
+        } = await import("@/services/notifications");
         const token = await registerForPushNotificationsAsync();
         setPushToken(token ?? null);
         if (token) {
           console.log(token);
+          await registerPushTokenWithBackend(token);
         }
       } catch (error) {
         console.warn("Push notifications not available:", error);
@@ -160,12 +163,22 @@ export function useNotifications() {
   }, []);
 
   /**
-   * Clear notification state
+   * Clear notification state (logout'ta çağrılır – backend'den token kaldır)
    */
   const clearNotifications = useCallback(async () => {
+    if (pushToken) {
+      try {
+        const { unregisterPushTokenFromBackend } =
+          await import("@/services/notifications");
+        await unregisterPushTokenFromBackend(pushToken);
+      } catch {
+        // ignore
+      }
+      setPushToken(null);
+    }
     setNotifications([]);
     setUnreadCount(0);
-  }, []);
+  }, [pushToken]);
 
   return {
     // State

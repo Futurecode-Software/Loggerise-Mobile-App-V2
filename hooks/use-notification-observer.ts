@@ -5,17 +5,17 @@
  * Uses expo-notifications with expo-router for deep linking.
  */
 
-import { useEffect, useRef } from 'react';
-import { router } from 'expo-router';
-import { AppState, AppStateStatus, Platform } from 'react-native';
-import Constants from 'expo-constants';
-import * as Device from 'expo-device';
+import Constants from "expo-constants";
+import * as Device from "expo-device";
+import { router } from "expo-router";
+import { useEffect, useRef } from "react";
+import { AppState, AppStateStatus, Platform } from "react-native";
 
 /**
  * Check if running in Expo Go (push notifications not supported on Android SDK 53+)
  */
 function isExpoGo(): boolean {
-  return Constants.appOwnership === 'expo';
+  return Constants.appOwnership === "expo";
 }
 
 /**
@@ -28,7 +28,7 @@ function isPushNotificationsSupported(): boolean {
   }
 
   // Push notifications are not supported in Expo Go on Android (SDK 53+)
-  if (Platform.OS === 'android' && isExpoGo()) {
+  if (Platform.OS === "android" && isExpoGo()) {
     return false;
   }
 
@@ -36,22 +36,30 @@ function isPushNotificationsSupported(): boolean {
 }
 
 // Conditionally import notifications only if supported
-let Notifications: typeof import('expo-notifications') | null = null;
+let Notifications: typeof import("expo-notifications") | null = null;
 
 if (isPushNotificationsSupported()) {
   // Dynamic import to avoid loading the module in Expo Go
-  import('expo-notifications').then((module) => {
-    Notifications = module;
-  }).catch((error) => {
-    console.warn('Failed to load expo-notifications:', error);
-  });
+  import("expo-notifications")
+    .then((module) => {
+      Notifications = module;
+    })
+    .catch((error) => {
+      console.warn("Failed to load expo-notifications:", error);
+    });
 }
 
 /**
  * Notification data structure expected from backend
  */
 interface NotificationData {
-  type?: 'message' | 'load_update' | 'alert' | 'document_expiry' | 'payment_reminder' | 'system';
+  type?:
+    | "message"
+    | "load_update"
+    | "alert"
+    | "document_expiry"
+    | "payment_reminder"
+    | "system";
   url?: string;
   conversation_id?: number | string;
   id?: number | string;
@@ -62,11 +70,13 @@ interface NotificationData {
 /**
  * Parse notification data and navigate to the appropriate screen
  */
-function handleNotificationNavigation(notification: import('expo-notifications').Notification) {
+function handleNotificationNavigation(
+  notification: import("expo-notifications").Notification,
+) {
   const data = notification.request.content.data as NotificationData;
 
   // If there's a direct URL, use it
-  if (typeof data?.url === 'string' && data.url) {
+  if (typeof data?.url === "string" && data.url) {
     router.push(data.url as any);
     return;
   }
@@ -75,29 +85,29 @@ function handleNotificationNavigation(notification: import('expo-notifications')
   const type = data?.type;
 
   switch (type) {
-    case 'message':
+    case "message":
       if (data.conversation_id) {
         router.push(`/message/${data.conversation_id}` as any);
       }
       break;
 
-    case 'load_update':
+    case "load_update":
       if (data.id) {
         router.push(`/load/${data.id}` as any);
       }
       break;
 
-    case 'alert':
-      router.push('/alerts' as any);
+    case "alert":
+      router.push("/alerts" as any);
       break;
 
-    case 'document_expiry':
+    case "document_expiry":
       if (data.employee_id) {
         router.push(`/employee/${data.employee_id}` as any);
       }
       break;
 
-    case 'payment_reminder':
+    case "payment_reminder":
       if (data.contact_id) {
         router.push(`/contact/${data.contact_id}` as any);
       }
@@ -126,60 +136,74 @@ export function useNotificationObserver() {
     }
 
     // Ensure notifications module is loaded
-    let notificationsModule: typeof import('expo-notifications') | null = null;
-    let subscription: import('expo-notifications').EventSubscription | null = null;
+    let notificationsModule: typeof import("expo-notifications") | null = null;
+    let subscription: import("expo-notifications").EventSubscription | null =
+      null;
 
     // Load notifications module
-    import('expo-notifications').then((module) => {
-      notificationsModule = module;
-      Notifications = module;
+    import("expo-notifications")
+      .then((module) => {
+        notificationsModule = module;
+        Notifications = module;
 
-      // Handle initial notification (app was opened from notification)
-      async function handleInitialNotification() {
-        if (hasHandledInitial.current || !notificationsModule) return;
+        // Handle initial notification (app was opened from notification)
+        async function handleInitialNotification() {
+          if (hasHandledInitial.current || !notificationsModule) return;
 
-        const response = await notificationsModule.getLastNotificationResponseAsync();
-        if (response?.notification) {
-          hasHandledInitial.current = true;
-          // Small delay to ensure navigation is ready
-          setTimeout(() => {
-            handleNotificationNavigation(response.notification);
-          }, 500);
+          const response =
+            await notificationsModule.getLastNotificationResponseAsync();
+          if (response?.notification) {
+            hasHandledInitial.current = true;
+            // Small delay to ensure navigation is ready
+            setTimeout(() => {
+              handleNotificationNavigation(response.notification);
+            }, 500);
+          }
         }
-      }
 
-      // Check on mount
-      handleInitialNotification();
+        // Check on mount
+        handleInitialNotification();
 
-      // Listen for notification taps while app is running
-      subscription = notificationsModule.addNotificationResponseReceivedListener((response) => {
-        handleNotificationNavigation(response.notification);
+        // Listen for notification taps while app is running
+        subscription =
+          notificationsModule.addNotificationResponseReceivedListener(
+            (response) => {
+              handleNotificationNavigation(response.notification);
+            },
+          );
+      })
+      .catch((error) => {
+        console.warn("Failed to load expo-notifications:", error);
       });
-    }).catch((error) => {
-      console.warn('Failed to load expo-notifications:', error);
-    });
 
     // Also check when app comes to foreground (cold start scenario)
-    const appStateSubscription = AppState.addEventListener('change', async (nextAppState: AppStateStatus) => {
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        if (!notificationsModule) {
-          try {
-            notificationsModule = await import('expo-notifications');
-            Notifications = notificationsModule;
-          } catch (error) {
-            console.warn('Failed to load expo-notifications:', error);
-            return;
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      async (nextAppState: AppStateStatus) => {
+        if (
+          appState.current.match(/inactive|background/) &&
+          nextAppState === "active"
+        ) {
+          if (!notificationsModule) {
+            try {
+              notificationsModule = await import("expo-notifications");
+              Notifications = notificationsModule;
+            } catch (error) {
+              console.warn("Failed to load expo-notifications:", error);
+              return;
+            }
+          }
+          if (notificationsModule) {
+            const response =
+              await notificationsModule.getLastNotificationResponseAsync();
+            if (response?.notification) {
+              handleNotificationNavigation(response.notification);
+            }
           }
         }
-        if (notificationsModule) {
-          const response = await notificationsModule.getLastNotificationResponseAsync();
-          if (response?.notification) {
-            handleNotificationNavigation(response.notification);
-          }
-        }
-      }
-      appState.current = nextAppState;
-    });
+        appState.current = nextAppState;
+      },
+    );
 
     return () => {
       if (subscription) {
@@ -217,7 +241,7 @@ export async function scheduleMessageNotification(
   senderName: string,
   messageText: string,
   conversationId: number,
-  conversationType: 'private' | 'group' = 'private'
+  conversationType: "private" | "group" = "private",
 ): Promise<string | null> {
   // Skip if push notifications are not supported
   if (!isPushNotificationsSupported()) {
@@ -232,9 +256,9 @@ export async function scheduleMessageNotification(
   // Ensure notifications module is loaded
   if (!Notifications) {
     try {
-      Notifications = await import('expo-notifications');
+      Notifications = await import("expo-notifications");
     } catch (error) {
-      console.error('Error loading expo-notifications:', error);
+      console.error("Error loading expo-notifications:", error);
       return null;
     }
   }
@@ -242,22 +266,26 @@ export async function scheduleMessageNotification(
   try {
     const identifier = await Notifications.scheduleNotificationAsync({
       content: {
-        title: conversationType === 'group' ? `${senderName} (Grup)` : senderName,
-        body: messageText.length > 100 ? `${messageText.substring(0, 100)}...` : messageText,
+        title:
+          conversationType === "group" ? `${senderName} (Grup)` : senderName,
+        body:
+          messageText.length > 100
+            ? `${messageText.substring(0, 100)}...`
+            : messageText,
         data: {
-          type: 'message',
+          type: "message",
           conversation_id: conversationId,
           url: `/message/${conversationId}`,
         },
         sound: true,
-        categoryIdentifier: 'message',
+        categoryIdentifier: "message",
       },
       trigger: null, // Immediate
     });
 
     return identifier;
   } catch (error) {
-    console.error('Error scheduling message notification:', error);
+    console.error("Error scheduling message notification:", error);
     return null;
   }
 }

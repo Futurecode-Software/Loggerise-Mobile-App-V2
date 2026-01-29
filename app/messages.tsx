@@ -1,41 +1,52 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { FullScreenHeader } from "@/components/header";
+import { Avatar, Input } from "@/components/ui";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
+  BorderRadius,
+  Brand,
+  Colors,
+  Spacing,
+  Typography,
+} from "@/constants/theme";
+import { useAuth } from "@/context/auth-context";
+import { useMessagingWebSocket } from "@/hooks/use-messaging-websocket";
+import { scheduleMessageNotification } from "@/hooks/use-notification-observer";
+import {
+  Conversation,
+  ConversationFilters,
+  getConversationAvatar,
+  getConversationName,
+  getConversations,
+  getLastMessageTime,
+  getMessagePreview,
+  Message,
+} from "@/services/endpoints/messaging";
+import { useFocusEffect } from "@react-navigation/native";
+import { router } from "expo-router";
+import {
+  AlertCircle,
+  MessageCircle,
+  Plus,
+  Search,
+  Users,
+} from "lucide-react-native";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
   ActivityIndicator,
   AppState,
   AppStateStatus,
-  Alert,
-} from 'react-native';
-import { router } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
-import {
-  Search,
-  Plus,
-  MessageCircle,
-  Users,
-  AlertCircle,
-} from 'lucide-react-native';
-import { Avatar, Input } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useAuth } from '@/context/auth-context';
-import {
-  getConversations,
-  Conversation,
-  ConversationFilters,
-  getConversationName,
-  getConversationAvatar,
-  getMessagePreview,
-  getLastMessageTime,
-  Message,
-} from '@/services/endpoints/messaging';
-import { useMessagingWebSocket } from '@/hooks/use-messaging-websocket';
-import { scheduleMessageNotification } from '@/hooks/use-notification-observer';
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function MessagesScreen() {
   const colors = Colors.light;
@@ -47,7 +58,7 @@ export default function MessagesScreen() {
   const conversationsRef = useRef<Conversation[]>([]);
 
   // State
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
@@ -60,72 +71,82 @@ export default function MessagesScreen() {
   }, [conversations]);
 
   // Current user ID
-  const currentUserId = typeof user?.id === 'string' ? parseInt(user.id, 10) : user?.id || 0;
+  const currentUserId =
+    typeof user?.id === "string" ? parseInt(user.id, 10) : user?.id || 0;
 
   // Fetch conversations from API
-  const fetchConversations = useCallback(async (showLoading = true) => {
-    try {
-      setError(null);
-      if (showLoading) setIsLoading(true);
+  const fetchConversations = useCallback(
+    async (showLoading = true) => {
+      try {
+        setError(null);
+        if (showLoading) setIsLoading(true);
 
-      const filters: ConversationFilters = {};
-      if (searchQuery.trim()) {
-        filters.search = searchQuery.trim();
+        const filters: ConversationFilters = {};
+        if (searchQuery.trim()) {
+          filters.search = searchQuery.trim();
+        }
+
+        const response = await getConversations(filters);
+        setConversations(response.conversations);
+        setTotalUnreadCount(response.totalUnreadCount);
+      } catch (err) {
+        console.error("Conversations fetch error:", err);
+        setError(err instanceof Error ? err.message : "Mesajlar yüklenemedi");
+      } finally {
+        setIsLoading(false);
       }
-
-      const response = await getConversations(filters);
-      setConversations(response.conversations);
-      setTotalUnreadCount(response.totalUnreadCount);
-    } catch (err) {
-      console.error('Conversations fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Mesajlar yüklenemedi');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchQuery]);
+    },
+    [searchQuery],
+  );
 
   // Handle new message from WebSocket
-  const handleNewConversationMessage = useCallback((message: Message, conversationId: number) => {
-    setConversations((prevConversations) => {
-      const existingConversation = prevConversations.find((c) => c.id === conversationId);
-
-      if (existingConversation) {
-        // Show local notification for new message
-        const senderName = message.user?.name || 'Bilinmeyen';
-        const messageText = message.message || '';
-        const conversationType = existingConversation.type === 'group' ? 'group' : 'private';
-
-        scheduleMessageNotification(
-          senderName,
-          messageText,
-          conversationId,
-          conversationType
+  const handleNewConversationMessage = useCallback(
+    (message: Message, conversationId: number) => {
+      setConversations((prevConversations) => {
+        const existingConversation = prevConversations.find(
+          (c) => c.id === conversationId,
         );
 
-        const updatedConversation: Conversation = {
-          ...existingConversation,
-          last_message: {
-            message: message.message,
-            created_at: 'Şimdi',
-            sender_name: senderName,
-          },
-          unread_count: (existingConversation.unread_count || 0) + 1,
-          updated_at: new Date().toISOString(),
-        };
+        if (existingConversation) {
+          // Show local notification for new message
+          const senderName = message.user?.name || "Bilinmeyen";
+          const messageText = message.message || "";
+          const conversationType =
+            existingConversation.type === "group" ? "group" : "private";
 
-        return [
-          updatedConversation,
-          ...prevConversations.filter((c) => c.id !== conversationId),
-        ];
-      }
+          scheduleMessageNotification(
+            senderName,
+            messageText,
+            conversationId,
+            conversationType,
+          );
 
-      // If conversation doesn't exist, fetch the list (using ref to avoid closure issues)
-      fetchConversations(false);
-      return prevConversations;
-    });
+          const updatedConversation: Conversation = {
+            ...existingConversation,
+            last_message: {
+              message: message.message,
+              created_at: "Şimdi",
+              sender_name: senderName,
+            },
+            unread_count: (existingConversation.unread_count || 0) + 1,
+            updated_at: new Date().toISOString(),
+          };
 
-    setTotalUnreadCount((prev) => prev + 1);
-  }, [fetchConversations]);
+          return [
+            updatedConversation,
+            ...prevConversations.filter((c) => c.id !== conversationId),
+          ];
+        }
+
+        // If conversation doesn't exist, fetch the list (using ref to avoid closure issues)
+        fetchConversations(false);
+        return prevConversations;
+      });
+
+      setTotalUnreadCount((prev) => prev + 1);
+    },
+    [fetchConversations],
+  );
 
   // Handle participant added
   const handleParticipantAdded = useCallback(() => {
@@ -141,16 +162,22 @@ export default function MessagesScreen() {
 
   // Handle AppState changes (background/foreground)
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', async (nextAppState: AppStateStatus) => {
-      // App came to foreground
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        // Re-initialize WebSocket connection
-        await reconnect();
-        // Refresh conversations
-        fetchConversations(false);
-      }
-      appState.current = nextAppState;
-    });
+    const subscription = AppState.addEventListener(
+      "change",
+      async (nextAppState: AppStateStatus) => {
+        // App came to foreground
+        if (
+          appState.current.match(/inactive|background/) &&
+          nextAppState === "active"
+        ) {
+          // Re-initialize WebSocket connection
+          await reconnect();
+          // Refresh conversations
+          fetchConversations(false);
+        }
+        appState.current = nextAppState;
+      },
+    );
 
     return () => {
       subscription.remove();
@@ -184,7 +211,7 @@ export default function MessagesScreen() {
 
       // Refresh without showing loading spinner
       fetchConversations(false);
-    }, [fetchConversations])
+    }, [fetchConversations]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -221,8 +248,10 @@ export default function MessagesScreen() {
         onPress={() => router.push(`/message/${item.id}` as any)}
       >
         <View style={styles.avatarContainer}>
-          {item.type === 'group' ? (
-            <View style={[styles.groupAvatar, { backgroundColor: Brand.primary }]}>
+          {item.type === "group" ? (
+            <View
+              style={[styles.groupAvatar, { backgroundColor: Brand.primary }]}
+            >
               {avatar.url ? (
                 <Avatar name={displayName} size="md" />
               ) : (
@@ -257,7 +286,7 @@ export default function MessagesScreen() {
             </View>
           </View>
 
-          {item.type === 'group' && item.participant_count && (
+          {item.type === "group" && item.participant_count && (
             <Text style={[styles.participants, { color: colors.textMuted }]}>
               {item.participant_count} kişi
             </Text>
@@ -274,12 +303,14 @@ export default function MessagesScreen() {
             >
               {item.last_message?.sender_name
                 ? `${item.last_message.sender_name}: ${lastMessagePreview}`
-                : lastMessagePreview || 'Henüz mesaj yok'}
+                : lastMessagePreview || "Henüz mesaj yok"}
             </Text>
             {hasUnread && (
-              <View style={[styles.unreadBadge, { backgroundColor: colors.danger }]}>
+              <View
+                style={[styles.unreadBadge, { backgroundColor: colors.danger }]}
+              >
                 <Text style={styles.unreadCount}>
-                  {item.unread_count! > 99 ? '99+' : item.unread_count}
+                  {item.unread_count! > 99 ? "99+" : item.unread_count}
                 </Text>
               </View>
             )}
@@ -304,7 +335,12 @@ export default function MessagesScreen() {
     if (error) {
       return (
         <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
+          <View
+            style={[
+              styles.emptyIcon,
+              { backgroundColor: colors.danger + "15" },
+            ]}
+          >
             <AlertCircle size={64} color={colors.danger} />
           </View>
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
@@ -332,12 +368,12 @@ export default function MessagesScreen() {
           <MessageCircle size={64} color={colors.textMuted} />
         </View>
         <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {searchQuery ? 'Sonuç bulunamadı' : 'Henüz mesajınız yok'}
+          {searchQuery ? "Sonuç bulunamadı" : "Henüz mesajınız yok"}
         </Text>
         <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
           {searchQuery
-            ? 'Farklı bir arama terimi deneyin'
-            : 'Yeni konuşma başlatmak için + butonuna tıklayın'}
+            ? "Farklı bir arama terimi deneyin"
+            : "Yeni konuşma başlatmak için + butonuna tıklayın"}
         </Text>
       </View>
     );
@@ -350,26 +386,40 @@ export default function MessagesScreen() {
         title="Mesajlar"
         showBackButton
         rightIcons={
-          <View style={{ flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' }}>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: Spacing.sm,
+              alignItems: "center",
+            }}
+          >
             {/* Yeni Grup Butonu */}
             <TouchableOpacity
-              onPress={() => router.push('/message/group/new' as any)}
-              style={[styles.groupButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+              onPress={() => router.push("/message/group/new" as any)}
+              style={[
+                styles.groupButton,
+                { backgroundColor: "rgba(255,255,255,0.2)" },
+              ]}
               activeOpacity={0.7}
             >
               <Users size={18} color="#FFFFFF" />
             </TouchableOpacity>
             {/* Plus Butonu */}
             <TouchableOpacity
-              onPress={() => router.push('/message/new' as any)}
+              onPress={() => router.push("/message/new" as any)}
               activeOpacity={0.7}
             >
               <Plus size={22} color="#FFFFFF" />
             </TouchableOpacity>
             {totalUnreadCount > 0 && (
-              <View style={[styles.headerUnreadBadge, { backgroundColor: colors.danger }]}>
+              <View
+                style={[
+                  styles.headerUnreadBadge,
+                  { backgroundColor: colors.danger },
+                ]}
+              >
                 <Text style={styles.headerUnreadCount}>
-                  {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                  {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
                 </Text>
               </View>
             )}
@@ -413,29 +463,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
   },
   groupButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerUnreadBadge: {
     minWidth: 24,
     height: 24,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 8,
   },
   headerUnreadCount: {
     ...Typography.bodyXS,
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,
@@ -450,7 +500,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   conversationItem: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: Spacing.lg,
     borderBottomWidth: 1,
   },
@@ -461,16 +511,16 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   conversationContent: {
     flex: 1,
   },
   conversationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 2,
   },
   conversationName: {
@@ -479,7 +529,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   unreadName: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
   timestamp: {
     ...Typography.bodyXS,
@@ -489,35 +539,35 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   lastMessageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   lastMessage: {
     ...Typography.bodySM,
     flex: 1,
   },
   unreadMessage: {
-    fontWeight: '500',
+    fontWeight: "500",
   },
   unreadBadge: {
     minWidth: 20,
     height: 20,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 6,
     marginLeft: Spacing.sm,
   },
   unreadCount: {
     ...Typography.bodyXS,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   loadingState: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing["4xl"],
   },
   loadingText: {
     ...Typography.bodyMD,
@@ -525,27 +575,27 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing["2xl"],
+    paddingVertical: Spacing["4xl"],
   },
   emptyIcon: {
     width: 128,
     height: 128,
     borderRadius: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: Spacing.xl,
   },
   emptyTitle: {
     ...Typography.headingMD,
     marginBottom: Spacing.sm,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptySubtitle: {
     ...Typography.bodyMD,
-    textAlign: 'center',
+    textAlign: "center",
   },
   retryButton: {
     marginTop: Spacing.xl,
@@ -554,8 +604,8 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     ...Typography.bodyMD,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

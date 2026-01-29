@@ -1,5 +1,5 @@
 /**
- * Push Notifications – sadece Expo dokümanına göre
+ * Push Notifications – Expo doc + backend token kaydı (mesaj bildirimleri için)
  * https://docs.expo.dev/push-notifications/push-notifications-setup/
  */
 
@@ -7,6 +7,7 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import api from "./api";
 
 // Dokümandaki gibi: shouldShowBanner ve shouldShowList (shouldShowAlert deprecated)
 Notifications.setNotificationHandler({
@@ -63,7 +64,12 @@ export async function registerForPushNotificationsAsync(): Promise<
     ).data;
     console.log(pushTokenString);
     return pushTokenString;
-  } catch {
+  } catch (e) {
+    // Android: sık sebep FIS_AUTH_ERROR – Firebase’e SHA-1/SHA-256 ekleyin
+    console.warn(
+      "[Push] Token alınamadı:",
+      e instanceof Error ? e.message : String(e),
+    );
     return undefined;
   }
 }
@@ -84,4 +90,43 @@ export function addNotificationResponseReceivedListener(
   callback: (response: Notifications.NotificationResponse) => void,
 ): Notifications.EventSubscription {
   return Notifications.addNotificationResponseReceivedListener(callback);
+}
+
+/**
+ * Backend'e push token kaydet – yeni mesaj geldiğinde sunucu bu token'a push atar
+ */
+export async function registerPushTokenWithBackend(
+  token: string,
+): Promise<boolean> {
+  try {
+    const payload = {
+      token,
+      device_type: Platform.OS as "ios" | "android",
+      device_name: Device.modelName ?? "Unknown",
+    };
+    await api.post("/device-tokens", payload);
+    return true;
+  } catch (e) {
+    if (__DEV__) {
+      console.warn(
+        "[Push] Backend token kaydı başarısız:",
+        e instanceof Error ? e.message : e,
+      );
+    }
+    return false;
+  }
+}
+
+/**
+ * Çıkışta backend'den push token kaldır
+ */
+export async function unregisterPushTokenFromBackend(
+  token: string,
+): Promise<boolean> {
+  try {
+    await api.delete("/device-tokens", { params: { token } });
+    return true;
+  } catch {
+    return false;
+  }
 }
