@@ -28,8 +28,21 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>loggerisev2</string>
-          <string>com.loggerise.app</string>
         </array>
+        <key>CFBundleURLName</key>
+        <string>Main</string>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.729255118841-9qek2fqb8i951kn65s2s8b3k53j22ukn</string>
+        </array>
+        <key>CFBundleURLName</key>
+        <string>Google OAuth</string>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
       </dict>
       <dict>
         <key>CFBundleURLSchemes</key>

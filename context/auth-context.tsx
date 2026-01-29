@@ -7,26 +7,25 @@
 
 import React, {
   createContext,
-  useContext,
-  useState,
-  useEffect,
   ReactNode,
   useCallback,
-} from 'react';
-import { setAuthStateChangeCallback } from '../services/api';
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { setAuthStateChangeCallback } from "../services/api";
 import {
+  forgotPassword as apiForgotPassword,
   login as apiLogin,
   loginWithGoogle as apiLoginWithGoogle,
-  register as apiRegister,
   logout as apiLogout,
-  forgotPassword as apiForgotPassword,
+  register as apiRegister,
+  RegisterData as ApiRegisterData,
+  User as ApiUser,
   getCurrentUser,
   getStoredUser,
   hasStoredAuth,
-  User as ApiUser,
-  RegisterData as ApiRegisterData,
-  AuthResult,
-} from '../services/endpoints/auth';
+} from "../services/endpoints/auth";
 
 /**
  * User interface for the app
@@ -63,7 +62,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isSetupComplete: boolean;
   error: string | null;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ isSetupComplete: boolean }>;
+  login: (
+    email: string,
+    password: string,
+    rememberMe?: boolean,
+  ) => Promise<{ isSetupComplete: boolean }>;
   loginWithGoogle: (idToken: string) => Promise<{ isSetupComplete: boolean }>;
   register: (data: RegisterData) => Promise<{ isSetupComplete: boolean }>;
   logout: () => Promise<void>;
@@ -133,12 +136,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(transformUser(currentUser));
           } catch (err) {
             // Token may be invalid, clear auth state
-            console.log('Token validation failed:', err);
+            console.log("Token validation failed:", err);
             setUser(null);
           }
         }
       } catch (err) {
-        console.error('Auth initialization error:', err);
+        console.error("Auth initialization error:", err);
       } finally {
         setIsInitializing(false);
       }
@@ -153,7 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (
     email: string,
     password: string,
-    rememberMe: boolean = false
+    rememberMe: boolean = false,
   ): Promise<{ isSetupComplete: boolean }> => {
     setIsLoading(true);
     setError(null);
@@ -164,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsSetupComplete(result.isSetupComplete);
       return { isSetupComplete: result.isSetupComplete };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Giris yapilamadi';
+      const message = err instanceof Error ? err.message : "Giris yapilamadi";
       setError(message);
       throw err;
     } finally {
@@ -175,7 +178,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /**
    * Login with Google OAuth
    */
-  const loginWithGoogle = async (idToken: string): Promise<{ isSetupComplete: boolean }> => {
+  const loginWithGoogle = async (
+    idToken: string,
+  ): Promise<{ isSetupComplete: boolean }> => {
     setIsLoading(true);
     setError(null);
 
@@ -185,8 +190,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsSetupComplete(result.isSetupComplete);
       return { isSetupComplete: result.isSetupComplete };
     } catch (err) {
+      console.error("[Auth] Google loginWithGoogle error:", err);
+      if (err && typeof err === "object" && "response" in err) {
+        const res = (err as { response?: { data?: unknown; status?: number } })
+          .response;
+        if (res) console.error("[Auth] API response:", res.status, res.data);
+      }
       const message =
-        err instanceof Error ? err.message : 'Google ile giris yapilamadi';
+        err instanceof Error ? err.message : "Google ile giris yapilamadi";
       setError(message);
       throw err;
     } finally {
@@ -197,7 +208,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /**
    * Register a new user
    */
-  const register = async (data: RegisterData): Promise<{ isSetupComplete: boolean }> => {
+  const register = async (
+    data: RegisterData,
+  ): Promise<{ isSetupComplete: boolean }> => {
     setIsLoading(true);
     setError(null);
 
@@ -215,7 +228,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsSetupComplete(result.isSetupComplete);
       return { isSetupComplete: result.isSetupComplete };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Kayıt oluşturulamadı';
+      const message =
+        err instanceof Error ? err.message : "Kayıt oluşturulamadı";
       setError(message);
       throw err;
     } finally {
@@ -232,7 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiLogout();
     } catch (err) {
-      console.error('Logout error:', err);
+      console.error("Logout error:", err);
     } finally {
       // Reset all auth state
       setUser(null);
@@ -256,7 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const message =
         err instanceof Error
           ? err.message
-          : 'Şifre sıfırlama isteği gönderilemedi';
+          : "Şifre sıfırlama isteği gönderilemedi";
       setError(message);
       throw err;
     } finally {
@@ -274,7 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentUser = await getCurrentUser();
       setUser(transformUser(currentUser));
     } catch (err) {
-      console.error('Refresh user error:', err);
+      console.error("Refresh user error:", err);
     }
   };
 
@@ -314,7 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

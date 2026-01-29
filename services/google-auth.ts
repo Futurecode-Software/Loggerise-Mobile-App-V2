@@ -11,12 +11,13 @@
  * - iosClientId: For iOS native builds
  */
 
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { AuthSessionResult } from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import Constants from "expo-constants";
 import * as WebBrowser from "expo-web-browser";
+import { Platform } from "react-native";
 
-// Complete auth session for web browser redirect
 WebBrowser.maybeCompleteAuthSession();
 
 /**
@@ -79,18 +80,104 @@ export function getGoogleAuthConfig() {
   return GOOGLE_CONFIG;
 }
 
-/**
- * Hook configuration for Google Auth Request
- * Use this with useAuthRequest hook in components
- */
-export function useGoogleAuthRequest() {
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: GOOGLE_CONFIG.expoClientId,
+/** Android DEVELOPER_ERROR için kullanıcı mesajı (package + SHA-1 talimatı) */
+export const ANDROID_DEVELOPER_ERROR_MESSAGE =
+  "Google Cloud Console'da bu uygulama tanımlı değil.\n\n" +
+  "1. Package name: com.loggerise.app\n" +
+  "2. SHA-1 parmak izini alın: android/app dizininde 'npm run android:sha1' veya:\n" +
+  "   keytool -keystore android/app/debug.keystore -list -v -alias androiddebugkey -storepass android -keypass android\n" +
+  "3. Google Cloud Console → APIs & Credentials → Android OAuth client oluşturun/düzenleyin → Package name ve SHA-1 ekleyin.";
+
+export function configureNativeGoogleSignIn(): void {
+  const config: {
+    webClientId: string;
+    iosClientId?: string;
+    offlineAccess?: boolean;
+  } = {
     webClientId: GOOGLE_CONFIG.webClientId,
-    androidClientId: GOOGLE_CONFIG.androidClientId,
-    iosClientId: GOOGLE_CONFIG.iosClientId,
-    scopes: ["profile", "email"],
-  });
+    offlineAccess: true,
+  };
+  if (Platform.OS === "ios" && GOOGLE_CONFIG.iosClientId) {
+    config.iosClientId = GOOGLE_CONFIG.iosClientId;
+  }
+  GoogleSignin.configure(config);
+}
+
+export async function signInWithNativeGoogleSignIn(): Promise<{
+  idToken: string;
+} | null> {
+  if (Platform.OS !== "android" && Platform.OS !== "ios") return null;
+  try {
+    configureNativeGoogleSignIn();
+    if (Platform.OS === "android") {
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+    }
+    const response = await GoogleSignin.signIn();
+    // Kütüphane başarıda { type: 'success', data: User }, iptalde { type: 'cancelled', data: null } döner
+    const isSuccess =
+      response &&
+      (response as { type?: string }).type === "success" &&
+      (response as { data?: unknown }).data != null;
+    if (!isSuccess) {
+      console.warn("[GoogleAuth] signIn: no user (cancelled or no account)");
+      try {
+        await GoogleSignin.signOut();
+      } catch {
+        // Oturumu temizle ki bir sonraki tıklamada picker tekrar açılsın
+      }
+      return null;
+    }
+    let tokens: { idToken?: string };
+    try {
+      tokens = await GoogleSignin.getTokens();
+    } catch (getTokensErr) {
+      console.error("[GoogleAuth] getTokens error:", getTokensErr);
+      if (getTokensErr instanceof Error) {
+        console.error("[GoogleAuth] getTokens message:", getTokensErr.message);
+        console.error("[GoogleAuth] getTokens stack:", getTokensErr.stack);
+      }
+      return null;
+    }
+    const idToken = tokens?.idToken;
+    if (!idToken) {
+      console.error("[GoogleAuth] getTokens returned no idToken");
+      return null;
+    }
+    return { idToken };
+  } catch (err) {
+    console.error("[GoogleAuth] signInWithNativeGoogleSignIn error:", err);
+    if (err instanceof Error) {
+      console.error("[GoogleAuth] message:", err.message);
+      console.error("[GoogleAuth] stack:", err.stack);
+    }
+    throw err;
+  }
+}
+
+function getGoogleIosRedirectUri(iosClientId: string): string {
+  const suffix = iosClientId.replace(/\.apps\.googleusercontent\.com$/, "");
+  return `com.googleusercontent.apps.${suffix}:/oauthredirect`;
+}
+
+export function useGoogleAuthRequest() {
+  const iosRedirectUri =
+    Platform.OS === "ios" && GOOGLE_CONFIG.iosClientId
+      ? getGoogleIosRedirectUri(GOOGLE_CONFIG.iosClientId)
+      : undefined;
+
+  const [request, response, promptAsync] = Google.useAuthRequest(
+    {
+      clientId: GOOGLE_CONFIG.expoClientId || undefined,
+      webClientId: GOOGLE_CONFIG.webClientId || undefined,
+      androidClientId: GOOGLE_CONFIG.androidClientId || undefined,
+      iosClientId: GOOGLE_CONFIG.iosClientId || undefined,
+      scopes: ["profile", "email"],
+      ...(iosRedirectUri && { redirectUri: iosRedirectUri }),
+    },
+    {},
+  );
 
   return { request, response, promptAsync };
 }

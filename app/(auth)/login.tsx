@@ -1,26 +1,42 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { Input } from "@/components/ui";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
+  BorderRadius,
+  Brand,
+  Colors,
+  Shadows,
+  Spacing,
+  Typography,
+} from "@/constants/theme";
+import { LinearGradient } from "expo-linear-gradient";
+import { Link, router } from "expo-router";
+import {
+  AlertCircle,
+  CheckSquare,
+  Lock,
+  Mail,
+  Square,
+} from "lucide-react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Dimensions,
+  Image,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
-  Image,
-  Dimensions,
-} from 'react-native';
-import { Link, router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mail, Lock, CheckSquare, Square, AlertCircle } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path, G } from 'react-native-svg';
-import { Button, Input, Divider } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { G, Path } from "react-native-svg";
 // useColorScheme kaldirildi - her zaman light mode kullanilir
-import { useGoogleAuth } from '@/hooks/use-google-auth';
-import { useAuth } from '@/context/auth-context';
-import ForgotPasswordModal, { ForgotPasswordModalRef } from '@/components/modals/ForgotPasswordModal';
+import ForgotPasswordModal, {
+  ForgotPasswordModalRef,
+} from "@/components/modals/ForgotPasswordModal";
+import { useAuth } from "@/context/auth-context";
+import { useGoogleAuth } from "@/hooks/use-google-auth";
+import { configureNativeGoogleSignIn } from "@/services/google-auth";
 
 // Google Logo Component
 const GoogleLogo = ({ size = 24 }: { size?: number }) => (
@@ -46,16 +62,24 @@ const GoogleLogo = ({ size = 24 }: { size?: number }) => (
   </Svg>
 );
 
-const { height } = Dimensions.get('window');
+const { height } = Dimensions.get("window");
 
 // Logo images
-const LogoDark = require('@/assets/images/logo-dark.png');
-const LogoWhite = require('@/assets/images/logo-white.png');
+const LogoDark = require("@/assets/images/logo-dark.png");
+const LogoWhite = require("@/assets/images/logo-white.png");
 
 export default function LoginScreen() {
   // Her zaman light mode kullanilir
   const colors = Colors.light;
-  const { login, isLoading, isInitializing, error, clearError, isAuthenticated, isSetupComplete } = useAuth();
+  const {
+    login,
+    isLoading,
+    isInitializing,
+    error,
+    clearError,
+    isAuthenticated,
+    isSetupComplete,
+  } = useAuth();
   const {
     signIn: googleSignIn,
     isLoading: isGoogleLoading,
@@ -65,10 +89,18 @@ export default function LoginScreen() {
 
   const forgotPasswordModalRef = useRef<ForgotPasswordModalRef>(null);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+    {},
+  );
+
+  useEffect(() => {
+    if (Platform.OS === "android" || Platform.OS === "ios") {
+      configureNativeGoogleSignIn();
+    }
+  }, []);
 
   // Clear auth error when component mounts or when user types
   useEffect(() => {
@@ -84,15 +116,15 @@ export default function LoginScreen() {
     if (isAuthenticated) {
       // Navigate based on setup status
       if (isSetupComplete) {
-        router.replace('/(tabs)');
+        router.replace("/(tabs)");
       } else {
-        router.replace('/(auth)/setup-status');
+        router.replace("/(auth)/setup-status");
       }
     }
   }, [isAuthenticated, isSetupComplete]);
 
-  const handleInputChange = (field: 'email' | 'password', value: string) => {
-    if (field === 'email') {
+  const handleInputChange = (field: "email" | "password", value: string) => {
+    if (field === "email") {
       setEmail(value);
     } else {
       setPassword(value);
@@ -110,15 +142,15 @@ export default function LoginScreen() {
     const newErrors: { email?: string; password?: string } = {};
 
     if (!email) {
-      newErrors.email = 'E-posta adresi gerekli';
+      newErrors.email = "E-posta adresi gerekli";
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Geçerli bir e-posta adresi girin';
+      newErrors.email = "Geçerli bir e-posta adresi girin";
     }
 
     if (!password) {
-      newErrors.password = 'Şifre gerekli';
+      newErrors.password = "Şifre gerekli";
     } else if (password.length < 6) {
-      newErrors.password = 'Şifre en az 6 karakter olmalı';
+      newErrors.password = "Şifre en az 6 karakter olmalı";
     }
 
     setErrors(newErrors);
@@ -131,13 +163,13 @@ export default function LoginScreen() {
         const result = await login(email, password, rememberMe);
         // Navigate based on setup status
         if (result.isSetupComplete) {
-          router.replace('/(tabs)');
+          router.replace("/(tabs)");
         } else {
-          router.replace('/(auth)/setup-status');
+          router.replace("/(auth)/setup-status");
         }
       } catch (err) {
         // Error is already handled by auth context
-        console.log('Login error:', err);
+        console.log("Login error:", err);
       }
     }
   };
@@ -148,7 +180,7 @@ export default function LoginScreen() {
       // Navigation is handled by the isAuthenticated effect
     } catch (err) {
       // Error is already handled by the hook
-      console.log('Google login error:', err);
+      console.log("Google login error:", err);
     }
   };
 
@@ -162,11 +194,7 @@ export default function LoginScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.loadingContainer}
         >
-          <Image
-            source={LogoWhite}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <Image source={LogoWhite} style={styles.logo} resizeMode="contain" />
         </LinearGradient>
       </View>
     );
@@ -179,159 +207,180 @@ export default function LoginScreen() {
       end={{ x: 1, y: 1 }}
       style={styles.gradientBackground}
     >
-        {/* Header Space - invisible header to match register/forgot-password pages */}
-        <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
-          <View style={styles.header} />
-        </SafeAreaView>
+      {/* Header Space - invisible header to match register/forgot-password pages */}
+      <SafeAreaView edges={["top"]} style={styles.headerSafeArea}>
+        <View style={styles.header} />
+      </SafeAreaView>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+          overScrollMode="never"
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            bounces={false}
-            overScrollMode="never"
-          >
-            {/* Top Section - Logo & Welcome */}
-            <View style={styles.topSection}>
-              <Image
-                source={LogoWhite}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-              <Text style={styles.welcomeTitle}>Hoş Geldiniz</Text>
-              <Text style={styles.welcomeSubtitle}>Devam etmek için bilgilerinizi girin</Text>
-            </View>
+          {/* Top Section - Logo & Welcome */}
+          <View style={styles.topSection}>
+            <Image
+              source={LogoWhite}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.welcomeTitle}>Hoş Geldiniz</Text>
+            <Text style={styles.welcomeSubtitle}>
+              Devam etmek için bilgilerinizi girin
+            </Text>
+          </View>
 
-            {/* Bottom Section - White Card with Form */}
-            <View style={styles.formCard}>
-              {/* API Error Message */}
-              {(error || googleError) && (
-                <View style={[styles.errorContainer, { backgroundColor: colors.danger + '15' }]}>
-                  <AlertCircle size={20} color={colors.danger} />
-                  <Text style={[styles.errorText, { color: colors.danger }]}>
-                    {error || googleError}
-                  </Text>
-                </View>
-              )}
-
-              {/* Email Input */}
-              <Input
-                label="E-posta Adresi"
-                placeholder="ornek@email.com"
-                value={email}
-                onChangeText={(value) => handleInputChange('email', value)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                error={errors.email}
-                leftIcon={<Mail size={20} color={colors.icon} />}
-                containerStyle={styles.inputContainer}
-              />
-
-              {/* Password Input */}
-              <Input
-                label="Şifre"
-                placeholder="••••••••"
-                value={password}
-                onChangeText={(value) => handleInputChange('password', value)}
-                isPassword
-                autoComplete="password"
-                error={errors.password}
-                leftIcon={<Lock size={20} color={colors.icon} />}
-                containerStyle={styles.inputContainer}
-              />
-
-              {/* Remember Me & Forgot Password */}
-              <View style={styles.optionsRow}>
-                <TouchableOpacity
-                  style={styles.rememberMe}
-                  onPress={() => setRememberMe(!rememberMe)}
-                >
-                  {rememberMe ? (
-                    <CheckSquare size={18} color={Brand.primary} />
-                  ) : (
-                    <Square size={18} color={colors.icon} />
-                  )}
-                  <Text style={[styles.rememberText, { color: colors.textSecondary }]}>
-                    Beni hatırla
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={() => forgotPasswordModalRef.current?.present()}>
-                  <Text style={[styles.forgotText, { color: Brand.primary }]}>
-                    Şifremi unuttum?
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Login Button */}
-              <TouchableOpacity
+          {/* Bottom Section - White Card with Form */}
+          <View style={styles.formCard}>
+            {/* API Error Message */}
+            {(error || googleError) && (
+              <View
                 style={[
-                  styles.signInButton,
-                  (isLoading || isGoogleLoading) && styles.signInButtonDisabled,
+                  styles.errorContainer,
+                  { backgroundColor: colors.danger + "15" },
                 ]}
-                onPress={handleLogin}
-                disabled={isLoading || isGoogleLoading}
               >
-                <LinearGradient
-                  colors={[Brand.primary, Brand.primaryLight]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.signInButtonGradient}
-                >
-                  <Text style={styles.signInButtonText}>
-                    {isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              {/* Divider */}
-              <View style={styles.dividerContainer}>
-                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                <Text style={[styles.dividerText, { color: colors.textMuted }]}>veya</Text>
-                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                <AlertCircle size={20} color={colors.danger} />
+                <Text style={[styles.errorText, { color: colors.danger }]}>
+                  {error || googleError}
+                </Text>
               </View>
+            )}
 
-              {/* Google Login Button */}
+            {/* Email Input */}
+            <Input
+              label="E-posta Adresi"
+              placeholder="ornek@email.com"
+              value={email}
+              onChangeText={(value) => handleInputChange("email", value)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              error={errors.email}
+              leftIcon={<Mail size={20} color={colors.icon} />}
+              containerStyle={styles.inputContainer}
+            />
+
+            {/* Password Input */}
+            <Input
+              label="Şifre"
+              placeholder="••••••••"
+              value={password}
+              onChangeText={(value) => handleInputChange("password", value)}
+              isPassword
+              autoComplete="password"
+              error={errors.password}
+              leftIcon={<Lock size={20} color={colors.icon} />}
+              containerStyle={styles.inputContainer}
+            />
+
+            {/* Remember Me & Forgot Password */}
+            <View style={styles.optionsRow}>
               <TouchableOpacity
-                style={[
-                  styles.googleButton,
-                  { borderColor: colors.border, backgroundColor: '#FFFFFF' },
-                  (isLoading || isGoogleLoading) && styles.googleButtonDisabled,
-                ]}
-                onPress={handleGoogleLogin}
-                disabled={isLoading || isGoogleLoading}
+                style={styles.rememberMe}
+                onPress={() => setRememberMe(!rememberMe)}
               >
-                {!isGoogleLoading && <GoogleLogo size={22} />}
-                <Text style={[styles.googleButtonText, { color: colors.text }]}>
-                  {isGoogleLoading ? 'Giriş yapılıyor...' : 'Google ile Giriş Yap'}
+                {rememberMe ? (
+                  <CheckSquare size={18} color={Brand.primary} />
+                ) : (
+                  <Square size={18} color={colors.icon} />
+                )}
+                <Text
+                  style={[styles.rememberText, { color: colors.textSecondary }]}
+                >
+                  Beni hatırla
                 </Text>
               </TouchableOpacity>
 
-              {/* Register Link */}
-              <View style={styles.footer}>
-                <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-                  Hesabınız yok mu?{' '}
+              <TouchableOpacity
+                onPress={() => forgotPasswordModalRef.current?.present()}
+              >
+                <Text style={[styles.forgotText, { color: Brand.primary }]}>
+                  Şifremi unuttum?
                 </Text>
-                <Link href="/(auth)/register" asChild>
-                  <TouchableOpacity>
-                    <Text style={[styles.footerLink, { color: Brand.primary }]}>
-                      Kayıt Ol
-                    </Text>
-                  </TouchableOpacity>
-                </Link>
-              </View>
+              </TouchableOpacity>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
 
-        {/* Forgot Password Modal */}
-        <ForgotPasswordModal ref={forgotPasswordModalRef} />
-      </LinearGradient>
+            {/* Login Button */}
+            <TouchableOpacity
+              style={[
+                styles.signInButton,
+                (isLoading || isGoogleLoading) && styles.signInButtonDisabled,
+              ]}
+              onPress={handleLogin}
+              disabled={isLoading || isGoogleLoading}
+            >
+              <LinearGradient
+                colors={[Brand.primary, Brand.primaryLight]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.signInButtonGradient}
+              >
+                <Text style={styles.signInButtonText}>
+                  {isLoading ? "Giriş yapılıyor..." : "Giriş Yap"}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View
+                style={[styles.dividerLine, { backgroundColor: colors.border }]}
+              />
+              <Text style={[styles.dividerText, { color: colors.textMuted }]}>
+                veya
+              </Text>
+              <View
+                style={[styles.dividerLine, { backgroundColor: colors.border }]}
+              />
+            </View>
+
+            {/* Google Login Button */}
+            <TouchableOpacity
+              style={[
+                styles.googleButton,
+                { borderColor: colors.border, backgroundColor: "#FFFFFF" },
+                (isLoading || isGoogleLoading) && styles.googleButtonDisabled,
+              ]}
+              onPress={handleGoogleLogin}
+              disabled={isLoading || isGoogleLoading}
+            >
+              {!isGoogleLoading && <GoogleLogo size={22} />}
+              <Text style={[styles.googleButtonText, { color: colors.text }]}>
+                {isGoogleLoading
+                  ? "Giriş yapılıyor..."
+                  : "Google ile Giriş Yap"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Register Link */}
+            <View style={styles.footer}>
+              <Text
+                style={[styles.footerText, { color: colors.textSecondary }]}
+              >
+                Hesabınız yok mu?{" "}
+              </Text>
+              <Link href="/(auth)/register" asChild>
+                <TouchableOpacity>
+                  <Text style={[styles.footerLink, { color: Brand.primary }]}>
+                    Kayıt Ol
+                  </Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal ref={forgotPasswordModalRef} />
+    </LinearGradient>
   );
 }
 
@@ -344,14 +393,14 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerSafeArea: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   header: {
-    height: Platform.OS === 'ios' ? 8 : 38,
+    height: Platform.OS === "ios" ? 8 : 38,
   },
   keyboardView: {
     flex: 1,
@@ -360,10 +409,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   topSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 0,
-    paddingBottom: Spacing['3xl'],
-    paddingHorizontal: Spacing['2xl'],
+    paddingBottom: Spacing["3xl"],
+    paddingHorizontal: Spacing["2xl"],
   },
   logoImage: {
     width: 160,
@@ -376,29 +425,29 @@ const styles = StyleSheet.create({
   },
   welcomeTitle: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
     marginBottom: Spacing.xs,
-    textAlign: 'center',
+    textAlign: "center",
   },
   welcomeSubtitle: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
+    color: "rgba(255, 255, 255, 0.9)",
+    textAlign: "center",
   },
   formCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    paddingTop: Spacing['2xl'],
-    paddingHorizontal: Spacing['2xl'],
-    paddingBottom: Spacing['4xl'],
+    paddingTop: Spacing["2xl"],
+    paddingHorizontal: Spacing["2xl"],
+    paddingBottom: Spacing["4xl"],
     ...Shadows.lg,
   },
   errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
@@ -412,14 +461,14 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing['2xl'],
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing["2xl"],
   },
   rememberMe: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.xs,
   },
   rememberText: {
@@ -427,32 +476,32 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     ...Typography.bodySM,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   signInButton: {
-    width: '100%',
+    width: "100%",
     height: 56,
     borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-    marginBottom: Spacing['2xl'],
+    overflow: "hidden",
+    marginBottom: Spacing["2xl"],
   },
   signInButtonDisabled: {
     opacity: 0.6,
   },
   signInButtonGradient: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   signInButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing['2xl'],
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing["2xl"],
   },
   dividerLine: {
     flex: 1,
@@ -463,14 +512,14 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.lg,
   },
   googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: Spacing.md,
     paddingVertical: Spacing.lg,
     borderRadius: BorderRadius.lg,
     borderWidth: 1.5,
-    marginBottom: Spacing['2xl'],
+    marginBottom: Spacing["2xl"],
     ...Shadows.sm,
   },
   googleButtonDisabled: {
@@ -478,12 +527,12 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     ...Typography.bodyMD,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: Spacing.md,
   },
   footerText: {
@@ -491,6 +540,6 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     ...Typography.bodySM,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
