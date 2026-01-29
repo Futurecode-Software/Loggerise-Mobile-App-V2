@@ -18,6 +18,9 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Secrets / sensitive (Firebase Admin SDK)
+*firebase*adminsdk*.json
+
 # Metro
 .metro-health-check*
 
@@ -36,6 +39,13 @@ yarn-error.*
 
 app-example
 
-# generated native folders
-/ios
-/android
+# Bare workflow: ios/ and android/ are committed
+# Build outputs (do not commit)
+/ios/build
+/android/app/build
+/android/build
+*.xcworkspace/xcuserdata
+*.xcodeproj/xcuserdata
+*.xcodeproj/project.xcworkspace/xcuserdata
+Pods/
+ios/Pods

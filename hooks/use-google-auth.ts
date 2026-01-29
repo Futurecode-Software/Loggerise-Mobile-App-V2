@@ -5,15 +5,15 @@
  * Works with Expo Go and production builds.
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/context/auth-context';
+import { useAuth } from "@/context/auth-context";
 import {
-  useGoogleAuthRequest,
   extractTokensFromResponse,
-  isUserCancellation,
   getErrorFromResponse,
   isGoogleSignInConfigured,
-} from '@/services/google-auth';
+  isUserCancellation,
+  useGoogleAuthRequest,
+} from "@/services/google-auth";
+import { useCallback, useEffect, useState } from "react";
 
 /**
  * Hook return type
@@ -73,7 +73,7 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
       // Extract tokens
       const tokens = extractTokensFromResponse(response);
       if (!tokens) {
-        setError('Google ile giris yapilamadi: Token alinamadi');
+        setError("Google ile giris yapilamadi: Token alinamadi");
         setIsLoading(false);
         return;
       }
@@ -83,7 +83,8 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
         await loginWithGoogle(tokens.idToken);
         setError(null);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Google ile giriş yapılamadı';
+        const message =
+          err instanceof Error ? err.message : "Google ile giriş yapılamadı";
         setError(message);
       } finally {
         setIsLoading(false);
@@ -99,16 +100,16 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
   const signIn = useCallback(async () => {
     if (!isGoogleSignInConfigured()) {
       setError(
-        'Google Sign-In yapilandirilmamis. .env dosyasina Google Client ID\'leri ekleyin:\n' +
-        '- EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID (Expo Go için)\n' +
-        '- EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID (Android için)\n' +
-        '- EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID (iOS için)'
+        "Google Sign-In yapilandirilmamis. .env dosyasina Google Client ID'leri ekleyin:\n" +
+          "- EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID (Expo Go için)\n" +
+          "- EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID (Android için)\n" +
+          "- EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID (iOS için)",
       );
       return;
     }
 
     if (!request) {
-      setError('Google Sign-In yükleniyor, lütfen bekleyin...');
+      setError("Google Sign-In yükleniyor, lütfen bekleyin...");
       return;
     }
 
@@ -119,7 +120,8 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
       await promptAsync();
       // Response will be handled by the useEffect above
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Google ile giriş yapılamadı';
+      const message =
+        err instanceof Error ? err.message : "Google ile giriş yapılamadı";
       setError(message);
       setIsLoading(false);
     }

@@ -11,10 +11,10 @@
  * - iosClientId: For iOS native builds
  */
 
-import * as Google from 'expo-auth-session/providers/google';
-import { AuthSessionResult } from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
-import Constants from 'expo-constants';
+import { AuthSessionResult } from "expo-auth-session";
+import * as Google from "expo-auth-session/providers/google";
+import Constants from "expo-constants";
+import * as WebBrowser from "expo-web-browser";
 
 // Complete auth session for web browser redirect
 WebBrowser.maybeCompleteAuthSession();
@@ -23,10 +23,10 @@ WebBrowser.maybeCompleteAuthSession();
  * Google OAuth Client IDs from environment
  */
 const GOOGLE_CONFIG = {
-  expoClientId: Constants.expoConfig?.extra?.googleExpoClientId || '',
-  webClientId: Constants.expoConfig?.extra?.googleWebClientId || '',
-  androidClientId: Constants.expoConfig?.extra?.googleAndroidClientId || '',
-  iosClientId: Constants.expoConfig?.extra?.googleIosClientId || '',
+  expoClientId: Constants.expoConfig?.extra?.googleExpoClientId || "",
+  webClientId: Constants.expoConfig?.extra?.googleWebClientId || "",
+  androidClientId: Constants.expoConfig?.extra?.googleAndroidClientId || "",
+  iosClientId: Constants.expoConfig?.extra?.googleIosClientId || "",
 };
 
 /**
@@ -41,10 +41,10 @@ export interface GoogleSignInResult {
  * Google Sign-In error types
  */
 export type GoogleSignInErrorType =
-  | 'SIGN_IN_CANCELLED'
-  | 'NOT_CONFIGURED'
-  | 'NETWORK_ERROR'
-  | 'UNKNOWN';
+  | "SIGN_IN_CANCELLED"
+  | "NOT_CONFIGURED"
+  | "NETWORK_ERROR"
+  | "UNKNOWN";
 
 /**
  * Custom error class for Google Sign-In errors
@@ -54,7 +54,7 @@ export class GoogleSignInError extends Error {
 
   constructor(type: GoogleSignInErrorType, message: string) {
     super(message);
-    this.name = 'GoogleSignInError';
+    this.name = "GoogleSignInError";
     this.type = type;
   }
 }
@@ -89,7 +89,7 @@ export function useGoogleAuthRequest() {
     webClientId: GOOGLE_CONFIG.webClientId,
     androidClientId: GOOGLE_CONFIG.androidClientId,
     iosClientId: GOOGLE_CONFIG.iosClientId,
-    scopes: ['profile', 'email'],
+    scopes: ["profile", "email"],
   });
 
   return { request, response, promptAsync };
@@ -99,11 +99,11 @@ export function useGoogleAuthRequest() {
  * Extract tokens from Google auth response
  */
 export function extractTokensFromResponse(
-  response: AuthSessionResult | null
+  response: AuthSessionResult | null,
 ): GoogleSignInResult | null {
   if (!response) return null;
 
-  if (response.type === 'success') {
+  if (response.type === "success") {
     const { authentication } = response;
 
     if (!authentication?.idToken && !authentication?.accessToken) {
@@ -111,8 +111,8 @@ export function extractTokensFromResponse(
     }
 
     return {
-      idToken: authentication.idToken || '',
-      accessToken: authentication.accessToken || '',
+      idToken: authentication.idToken || "",
+      accessToken: authentication.accessToken || "",
     };
   }
 
@@ -123,27 +123,27 @@ export function extractTokensFromResponse(
  * Check if response indicates user cancelled
  */
 export function isUserCancellation(
-  response: AuthSessionResult | null
+  response: AuthSessionResult | null,
 ): boolean {
-  return response?.type === 'cancel' || response?.type === 'dismiss';
+  return response?.type === "cancel" || response?.type === "dismiss";
 }
 
 /**
  * Get error message from response
  */
 export function getErrorFromResponse(
-  response: AuthSessionResult | null
+  response: AuthSessionResult | null,
 ): GoogleSignInError | null {
   if (!response) return null;
 
   switch (response.type) {
-    case 'cancel':
-    case 'dismiss':
-      return new GoogleSignInError('SIGN_IN_CANCELLED', 'Giriş iptal edildi');
-    case 'error':
+    case "cancel":
+    case "dismiss":
+      return new GoogleSignInError("SIGN_IN_CANCELLED", "Giriş iptal edildi");
+    case "error":
       return new GoogleSignInError(
-        'UNKNOWN',
-        response.error?.message || 'Google ile giriş yapılamadı'
+        "UNKNOWN",
+        response.error?.message || "Google ile giriş yapılamadı",
       );
     default:
       return null;

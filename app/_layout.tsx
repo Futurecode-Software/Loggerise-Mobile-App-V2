@@ -1,34 +1,35 @@
-import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, router, useSegments, useRootNavigationState } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
-import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { LogBox } from 'react-native';
-import Toast from 'react-native-toast-message';
-import 'react-native-reanimated';
-import { useState, useEffect } from 'react';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import {
+  Stack,
+  router,
+  useRootNavigationState,
+  useSegments,
+} from "expo-router";
+import { useEffect, useState } from "react";
+import { LogBox } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
+import "react-native-reanimated";
+import {
+  SafeAreaProvider,
+  initialWindowMetrics,
+} from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 
-import { AuthProvider, useAuth } from '@/context/auth-context';
-import { NotificationProvider } from '@/context/notification-context';
-import { MessageProvider } from '@/context/message-context';
-import { DashboardProvider, useDashboard } from '@/contexts/dashboard-context';
-import { Colors } from '@/constants/theme';
-import { useNotificationObserver } from '@/hooks/use-notification-observer';
-import { SplashScreen } from '@/components/dashboard/splash-screen';
+import { SplashScreen } from "@/components/dashboard/splash-screen";
+import { Colors } from "@/constants/theme";
+import { AuthProvider, useAuth } from "@/context/auth-context";
+import { MessageProvider } from "@/context/message-context";
+import { NotificationProvider } from "@/context/notification-context";
+import { DashboardProvider, useDashboard } from "@/contexts/dashboard-context";
+import { useNotificationObserver } from "@/hooks/use-notification-observer";
 
 // Suppress known non-critical warnings from dependencies
 // These warnings come from react-navigation and react-native-toast-message internals
 // and cannot be fixed without modifying node_modules
 const IGNORED_WARNINGS = [
-  'SafeAreaView has been deprecated', // React Navigation internal usage
+  "SafeAreaView has been deprecated", // React Navigation internal usage
   "Modal with 'fullScreen' presentation style and 'transparent' value is not supported", // react-native-toast-message
 ];
 
@@ -38,7 +39,10 @@ LogBox.ignoreLogs(IGNORED_WARNINGS);
 const originalWarn = console.warn;
 console.warn = (...args) => {
   const message = args[0];
-  if (typeof message === 'string' && IGNORED_WARNINGS.some((w) => message.includes(w))) {
+  if (
+    typeof message === "string" &&
+    IGNORED_WARNINGS.some((w) => message.includes(w))
+  ) {
     return;
   }
   originalWarn(...args);
@@ -60,7 +64,7 @@ const LoggeriseLight = {
 };
 
 export const unstable_settings = {
-  anchor: '(auth)',
+  anchor: "(auth)",
 };
 
 /**
@@ -78,14 +82,14 @@ function useAuthGuard() {
       return;
     }
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const inAuthGroup = segments[0] === "(auth)";
 
     if (!isAuthenticated && !inAuthGroup) {
       // Not authenticated and not in auth group - redirect to login
-      router.replace('/(auth)/login');
+      router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
       // Authenticated but still in auth group - redirect to tabs
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
     }
   }, [isAuthenticated, isInitializing, segments, navigationState?.key]);
 }
@@ -108,8 +112,14 @@ function RootLayoutNav() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="profile" />
-        <Stack.Screen name="notifications" options={{ presentation: 'formSheet', title: 'Bildirimler' }} />
-        <Stack.Screen name="modal" options={{ presentation: 'formSheet', title: 'Modal' }} />
+        <Stack.Screen
+          name="notifications"
+          options={{ presentation: "formSheet", title: "Bildirimler" }}
+        />
+        <Stack.Screen
+          name="modal"
+          options={{ presentation: "formSheet", title: "Modal" }}
+        />
         <Stack.Screen name="employee" />
         <Stack.Screen name="warehouse" />
         <Stack.Screen name="bank" />
@@ -123,7 +133,7 @@ function RootLayoutNav() {
         <Stack.Screen name="messages" />
       </Stack>
       {/* StatusBar artık her sayfada FullScreenHeader içinde yönetiliyor */}
-      <Toast position='top' topOffset={60} />
+      <Toast position="top" topOffset={60} />
     </ThemeProvider>
   );
 }
@@ -140,7 +150,8 @@ function SplashScreenController() {
   const [hasShownOnce, setHasShownOnce] = useState(false);
 
   // Determine if app is ready (auth initialized and dashboard data loaded if authenticated)
-  const isAppReady = !isInitializing && (!isAuthenticated || !isLoadingAvailable);
+  const isAppReady =
+    !isInitializing && (!isAuthenticated || !isLoadingAvailable);
 
   useEffect(() => {
     // Only show splash on first load

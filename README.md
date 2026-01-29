@@ -30,6 +30,7 @@ The app supports **iOS**, **Android**, and **Web** platforms with a unified code
 ## Features
 
 ### Authentication & Security
+
 - Email/password authentication
 - Google OAuth integration
 - Secure token storage (encrypted)
@@ -37,38 +38,45 @@ The app supports **iOS**, **Android**, and **Web** platforms with a unified code
 - Password reset flow
 
 ### Dashboard
+
 - Real-time business metrics
 - Multiple dashboard views (Overview, Logistics, Finance, CRM, Fleet, HR)
 - Quick action buttons
 - Recent activity feed
 
 ### Logistics Management
+
 - **Loads/Shipments**: Track shipments with status (Pending, In Transit, Delivered)
 - **Vehicles**: Fleet inventory with maintenance tracking
 - **Positions**: Real-time vehicle/driver location tracking
 
 ### Finance
+
 - Bank account management
 - Multi-currency support (TRY, USD, EUR, GBP)
 - Transaction history
 
 ### CRM & Contacts
+
 - Customer/supplier management
 - Contact details with multiple addresses
 - Authority contacts
 - Status tracking (Active, Passive, Blacklisted)
 
 ### Communication
+
 - Real-time messaging
 - Push notifications
 - Unread message indicators
 
 ### AI Reports (Loggy AI)
+
 - Natural language to SQL queries
 - Interactive report generation
 - Report history and management
 
 ### Additional Features
+
 - Dark/Light theme support
 - Offline detection with banner
 - Haptic feedback
@@ -79,18 +87,18 @@ The app supports **iOS**, **Android**, and **Web** platforms with a unified code
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|------------|
-| **Framework** | React Native 0.81.5 + Expo 54 |
-| **Language** | TypeScript 5.9 |
-| **UI** | React 19 + Custom Components |
-| **Navigation** | Expo Router 6 (File-based) |
-| **State** | React Context API |
-| **HTTP Client** | Axios |
-| **Auth** | expo-auth-session + expo-secure-store |
-| **Notifications** | expo-notifications |
-| **Animations** | react-native-reanimated |
-| **Icons** | lucide-react-native |
+| Category          | Technology                            |
+| ----------------- | ------------------------------------- |
+| **Framework**     | React Native 0.81.5 + Expo 54         |
+| **Language**      | TypeScript 5.9                        |
+| **UI**            | React 19 + Custom Components          |
+| **Navigation**    | Expo Router 6 (File-based)            |
+| **State**         | React Context API                     |
+| **HTTP Client**   | Axios                                 |
+| **Auth**          | expo-auth-session + expo-secure-store |
+| **Notifications** | expo-notifications                    |
+| **Animations**    | react-native-reanimated               |
+| **Icons**         | lucide-react-native                   |
 
 ---
 
@@ -122,12 +130,38 @@ npx expo start
 
 ### Running the App
 
-After starting the development server:
+This project uses **Expo prebuild (bare workflow)**. Native `ios/` and `android/` folders are generated and committed. Use a **development build**, not Expo Go, for full features (push notifications, etc.).
 
-- Press `a` - Open in Android Emulator
-- Press `i` - Open in iOS Simulator
-- Press `w` - Open in Web Browser
-- Scan QR code - Open in Expo Go app
+**Option A – Development build (recommended)**
+
+```bash
+# Install dependencies (if not already)
+npm install
+
+# iOS (Mac only; requires Xcode)
+npx expo run:ios
+
+# Android (requires Android Studio / SDK)
+npx expo run:android
+```
+
+First run compiles the native app. After that you can use `npx expo start` and open the app from the dev client (same device/simulator).
+
+**Option B – Start Metro and open existing build**
+
+```bash
+npx expo start
+```
+
+Then open the app from the development build already installed on the device/emulator (not Expo Go).
+
+**Web**
+
+```bash
+npx expo start --web
+```
+
+- **Expo Go** is not used for this project; push notifications and some native features require a development build.
 
 ---
 
@@ -151,11 +185,11 @@ EXPO_PUBLIC_EAS_PROJECT_ID=your-eas-project-id
 
 ### API URL by Platform
 
-| Environment | URL |
-|-------------|-----|
-| Android Emulator | `http://10.0.2.2:8000/api/v1/mobile` |
-| iOS Simulator | `http://localhost:8000/api/v1/mobile` |
-| Production | `https://api.loggerise.com/api/v1/mobile` |
+| Environment      | URL                                       |
+| ---------------- | ----------------------------------------- |
+| Android Emulator | `http://10.0.2.2:8000/api/v1/mobile`      |
+| iOS Simulator    | `http://localhost:8000/api/v1/mobile`     |
+| Production       | `https://api.loggerise.com/api/v1/mobile` |
 
 ---
 
@@ -236,8 +270,19 @@ loggerise_v2/
 ## Available Scripts
 
 ```bash
-# Start development server
+# Start Metro bundler (use with existing dev build)
 npx expo start
+
+# Run on iOS (builds native app if needed)
+npm run ios
+# or: npx expo run:ios
+
+# Run on Android (builds native app if needed)
+npm run android
+# or: npx expo run:android
+
+# Regenerate native projects (e.g. after adding a native plugin)
+npx expo prebuild --clean
 
 # Start with cache cleared
 npx expo start -c
@@ -284,12 +329,12 @@ The app communicates with a Laravel backend via RESTful API.
 
 ### Error Handling
 
-| Status | Handling |
-|--------|----------|
-| 401 | Clear auth, redirect to login |
-| 403 | Permission denied |
-| 422 | Validation errors displayed per field |
-| 500+ | Server error message |
+| Status | Handling                              |
+| ------ | ------------------------------------- |
+| 401    | Clear auth, redirect to login         |
+| 403    | Permission denied                     |
+| 422    | Validation errors displayed per field |
+| 500+   | Server error message                  |
 
 ---
 
@@ -298,22 +343,24 @@ The app communicates with a Laravel backend via RESTful API.
 All components follow the [Design System](./DESIGN_SYSTEM.md) standards.
 
 ### Button
+
 ```tsx
-import { Button } from '@/components/ui';
+import { Button } from "@/components/ui";
 
 <Button
   onPress={handleSubmit}
   variant="primary" // primary | outline | destructive
-  size="md"         // sm | md | lg
+  size="md" // sm | md | lg
   disabled={isLoading}
 >
   Submit
-</Button>
+</Button>;
 ```
 
 ### Input
+
 ```tsx
-import { Input } from '@/components/ui';
+import { Input } from "@/components/ui";
 
 <Input
   label="Email"
@@ -322,23 +369,25 @@ import { Input } from '@/components/ui';
   onChangeText={setEmail}
   error={errors.email}
   keyboardType="email-address"
-/>
+/>;
 ```
 
 ### DateInput (New!)
+
 ```tsx
-import { DateInput } from '@/components/ui';
+import { DateInput } from "@/components/ui";
 
 <DateInput
   label="Tescil Tarihi"
   placeholder="Tarih seçiniz"
-  value={dateValue}  // YYYY-MM-DD format
+  value={dateValue} // YYYY-MM-DD format
   onChangeText={setDateValue}
   error={errors.date}
-/>
+/>;
 ```
 
 **Features:**
+
 - ✅ Native date picker (iOS spinner, Android calendar)
 - ✅ Turkish display format (DD/MM/YYYY)
 - ✅ Backend-ready format (YYYY-MM-DD)
@@ -346,31 +395,34 @@ import { DateInput } from '@/components/ui';
 - ✅ Error handling & disabled states
 
 ### SelectInput
+
 ```tsx
-import { SelectInput } from '@/components/ui/select-input';
+import { SelectInput } from "@/components/ui/select-input";
 
 <SelectInput
   label="Araç Tipi"
   options={[
-    { label: 'Çekici', value: 'truck_tractor' },
-    { label: 'Römork', value: 'trailer' },
+    { label: "Çekici", value: "truck_tractor" },
+    { label: "Römork", value: "trailer" },
   ]}
   selectedValue={selectedValue}
   onValueChange={setValue}
   error={errors.type}
-/>
+/>;
 ```
 
 ### Card
+
 ```tsx
-import { Card } from '@/components/ui';
+import { Card } from "@/components/ui";
 
 <Card style={styles.card}>
   <Text>Card Content</Text>
-</Card>
+</Card>;
 ```
 
 ### Badge
+
 ```tsx
 import { Badge } from '@/components/ui';
 
@@ -380,13 +432,11 @@ import { Badge } from '@/components/ui';
 ```
 
 ### Checkbox
-```tsx
-import { Checkbox } from '@/components/ui';
 
-<Checkbox
-  value={isChecked}
-  onValueChange={setIsChecked}
-/>
+```tsx
+import { Checkbox } from "@/components/ui";
+
+<Checkbox value={isChecked} onValueChange={setIsChecked} />;
 ```
 
 ---
@@ -400,16 +450,19 @@ Loggerise Mobile follows a comprehensive design system for consistency and quali
 ### Quick Reference
 
 **Brand Colors:**
+
 - **Primary**: `#13452d` (Dark Green) - Ana marka rengi
 - **Primary Light**: `#227d53` - Hover, success
 - **Secondary**: `#5fbd92` - İkincil aksiyonlar
 - **Accent**: `#b4f25a` - Vurgular
 
 **Status Colors:**
+
 - **Success**: `#227d53` | **Warning**: `#f5a623`
 - **Danger**: `#d0021b` | **Info**: `#3b82f6`
 
 **Typography Scale:**
+
 ```tsx
 import { Typography } from '@/constants/theme';
 
@@ -419,6 +472,7 @@ import { Typography } from '@/constants/theme';
 ```
 
 **Spacing System (8px based):**
+
 ```tsx
 import { Spacing } from '@/constants/theme';
 
@@ -428,6 +482,7 @@ gap: Spacing.sm,          // 8px
 ```
 
 **UI Components:**
+
 - `<Input />` - Standard text input
 - `<DateInput />` - Native date picker (iOS spinner, Android calendar)
 - `<Button />` - Multiple variants (primary, outline, destructive)
@@ -437,6 +492,7 @@ gap: Spacing.sm,          // 8px
 - `<SelectInput />` - Dropdown select with native picker
 
 **Theme Support:**
+
 - ✅ Light & Dark mode automatic detection
 - ✅ Platform-specific styling (iOS/Android)
 - ✅ Accessibility compliance (WCAG AA)

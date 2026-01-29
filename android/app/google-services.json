@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1013696628877",
+    "project_id": "loggerise-77803",
+    "storage_bucket": "loggerise-77803.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1013696628877:android:2f2709045be1de6ca13ac4",
+        "android_client_info": {
+          "package_name": "com.loggerise.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJqlsBarlOq3giZDvkSgJMswqTtXs2GRM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
