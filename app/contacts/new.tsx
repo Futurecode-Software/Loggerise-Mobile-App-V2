@@ -1013,6 +1013,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: DashboardSpacing.lg,
+    paddingTop:0,
     gap: DashboardSpacing.md,
     paddingBottom: DashboardSpacing['4xl']
   },

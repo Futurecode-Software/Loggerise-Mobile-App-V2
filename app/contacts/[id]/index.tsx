@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useState, useCallback, useRef, useEffect } from 'react'
@@ -14,7 +14,7 @@ import { ContactDetailSkeleton } from '@/components/contacts/ContactDetailSkelet
 import { Skeleton } from '@/components/ui/skeleton'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import { getContactTypeLabel, getLegalTypeLabel, getSegmentLabel, getCreditRatingLabel } from '@/utils/contacts/labels'
-import { DashboardColors, DashboardSpacing, DashboardFontSizes, DashboardBorderRadius } from '@/constants/dashboard-theme'
+import { DashboardColors, DashboardSpacing, DashboardFontSizes, DashboardBorderRadius, DashboardShadows } from '@/constants/dashboard-theme'
 
 interface SectionHeaderProps {
   title: string
@@ -58,23 +58,33 @@ interface InfoRowProps {
   label: string
   value: string
   icon?: keyof typeof Ionicons.glyphMap
+  highlight?: boolean
 }
 
-function InfoRow({ label, value, icon }: InfoRowProps) {
+function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
   return (
     <View style={styles.infoRow}>
       <View style={styles.infoLabel}>
-        {icon && <Ionicons name={icon} size={14} color={DashboardColors.textMuted} />}
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={14}
+            color={DashboardColors.textMuted}
+            style={styles.infoIcon}
+          />
+        )}
         <Text style={styles.infoLabelText}>{label}</Text>
       </View>
-      <Text style={styles.infoValue}>{value}</Text>
+      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
+        {value}
+      </Text>
     </View>
   )
 }
 
 function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
-    <View style={styles.errorContainer}>
+    <View style={styles.errorState}>
       <View style={styles.errorIcon}>
         <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
       </View>
@@ -226,6 +236,7 @@ export default function ContactDetailScreen() {
         <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
           <View style={styles.headerBar}>
             <TouchableOpacity
+              style={styles.headerButton}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                 router.back()
@@ -237,20 +248,27 @@ export default function ContactDetailScreen() {
             {!isLoading && contact && (
               <View style={styles.headerActions}>
                 <TouchableOpacity
+                  style={styles.headerButton}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                     router.push(`/contacts/${id}/edit`)
                   }}
                 >
-                  <Ionicons name="create-outline" size={24} color="#fff" />
+                  <Ionicons name="create-outline" size={22} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity
+                  style={[styles.headerButton, styles.deleteButton]}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
                     deleteDialogRef.current?.present()
                   }}
+                  disabled={isDeleting}
                 >
-                  <Ionicons name="trash-outline" size={24} color="#fff" />
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={22} color="#fff" />
+                  )}
                 </TouchableOpacity>
               </View>
             )}
@@ -410,10 +428,11 @@ export default function ContactDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DashboardColors.background
+    backgroundColor: DashboardColors.primary
   },
   headerContainer: {
     position: 'relative',
+    overflow: 'hidden',
     paddingBottom: 24
   },
   glowOrb1: {
@@ -427,17 +446,16 @@ const styles = StyleSheet.create({
   },
   glowOrb2: {
     position: 'absolute',
-    top: 80,
-    left: -30,
+    bottom: 30,
+    left: -50,
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(16, 185, 129, 0.08)'
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
   },
   headerContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingBottom: DashboardSpacing.lg,
-    zIndex: 1
+    paddingBottom: DashboardSpacing.lg
   },
   headerBar: {
     flexDirection: 'row',
@@ -445,9 +463,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: DashboardSpacing.lg
   },
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   headerActions: {
     flexDirection: 'row',
-    gap: DashboardSpacing.md
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)'
   },
   contactInfo: {
     gap: DashboardSpacing.sm
@@ -477,16 +507,18 @@ const styles = StyleSheet.create({
     borderTopRightRadius: DashboardBorderRadius['2xl']
   },
   scrollView: {
-    flex: 1
+    flex: 1,
+    backgroundColor: DashboardColors.background
   },
   scrollContent: {
-    padding: DashboardSpacing.lg
+    padding: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md
   },
   card: {
     backgroundColor: DashboardColors.surface,
     borderRadius: DashboardBorderRadius.xl,
     marginBottom: DashboardSpacing.md,
-    overflow: 'hidden'
+    ...DashboardShadows.sm
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -512,7 +544,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: DashboardFontSizes.base,
     fontWeight: '600',
-    color: DashboardColors.text
+    color: DashboardColors.textPrimary
   },
   countBadge: {
     backgroundColor: DashboardColors.primary,
@@ -533,90 +565,109 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: DashboardSpacing.xs
+    paddingVertical: DashboardSpacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
   },
   infoLabel: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: DashboardSpacing.xs,
-    flex: 1
+    alignItems: 'center'
+  },
+  infoIcon: {
+    marginRight: DashboardSpacing.sm
   },
   infoLabelText: {
     fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textMuted
+    color: DashboardColors.textSecondary
   },
   infoValue: {
     fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.text,
     fontWeight: '500',
-    textAlign: 'right',
-    flex: 1
+    color: DashboardColors.textPrimary,
+    maxWidth: '50%',
+    textAlign: 'right'
+  },
+  infoValueHighlight: {
+    color: DashboardColors.primary,
+    fontWeight: '600'
   },
   expandedContent: {
     gap: DashboardSpacing.md,
     marginTop: DashboardSpacing.md
   },
   addressCard: {
-    padding: DashboardSpacing.md,
-    backgroundColor: DashboardColors.inputBackground,
+    backgroundColor: DashboardColors.background,
     borderRadius: DashboardBorderRadius.lg,
-    gap: DashboardSpacing.xs
+    padding: DashboardSpacing.md,
+    marginTop: DashboardSpacing.sm
   },
   addressTitle: {
-    fontSize: DashboardFontSizes.md,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
-    color: DashboardColors.text
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.xs
   },
   addressText: {
     fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textMuted,
+    color: DashboardColors.textSecondary,
     lineHeight: 20
   },
   addressContact: {
-    fontSize: DashboardFontSizes.xs,
-    color: DashboardColors.textMuted
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.xs
   },
   authorityCard: {
-    padding: DashboardSpacing.md,
-    backgroundColor: DashboardColors.inputBackground,
+    backgroundColor: DashboardColors.background,
     borderRadius: DashboardBorderRadius.lg,
-    gap: DashboardSpacing.xs
+    padding: DashboardSpacing.md,
+    marginTop: DashboardSpacing.sm
   },
   authorityName: {
-    fontSize: DashboardFontSizes.md,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
-    color: DashboardColors.text
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.xs
   },
   authorityTitle: {
     fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.text
+    color: DashboardColors.textPrimary
   },
   authorityDepartment: {
     fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textMuted
+    color: DashboardColors.textSecondary
   },
   authorityContact: {
-    fontSize: DashboardFontSizes.xs,
-    color: DashboardColors.textMuted
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.xs
   },
-  errorContainer: {
+  errorState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: DashboardSpacing.xl
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
   },
   errorIcon: {
-    marginBottom: DashboardSpacing.lg
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
   },
   errorTitle: {
     fontSize: DashboardFontSizes.xl,
-    fontWeight: '700',
-    color: DashboardColors.text,
-    marginBottom: DashboardSpacing.sm
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
   },
   errorText: {
-    fontSize: DashboardFontSizes.md,
-    color: DashboardColors.textMuted,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
     textAlign: 'center',
     marginBottom: DashboardSpacing.xl
   },
@@ -624,13 +675,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
     paddingHorizontal: DashboardSpacing.xl,
     paddingVertical: DashboardSpacing.md,
-    backgroundColor: DashboardColors.primary,
     borderRadius: DashboardBorderRadius.lg
   },
   retryButtonText: {
-    fontSize: DashboardFontSizes.md,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
     color: '#fff'
   }
