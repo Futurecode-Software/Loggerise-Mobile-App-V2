@@ -4,36 +4,47 @@
  * Web versiyonu ile %100 uyumlu - Mevcut yükü düzenleme
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
-  TouchableOpacity,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Save } from 'lucide-react-native';
-import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { useToast } from '@/hooks/use-toast';
-import LoadFormProgress from '@/components/load-form/LoadFormProgress';
-import LoadFormNavigation from '@/components/load-form/LoadFormNavigation';
-import Step1BasicInfo from '@/components/load-form/Step1BasicInfo';
-import Step2LoadItems, { type LoadItem } from '@/components/load-form/Step2LoadItems';
-import Step3Addresses, { type LoadAddress } from '@/components/load-form/Step3Addresses';
-import Step4Pricing, { type LoadPricingItem } from '@/components/load-form/Step4Pricing';
-import Step5InvoiceDeclaration from '@/components/load-form/Step5InvoiceDeclaration';
-import Step6CustomsDocuments from '@/components/load-form/Step6CustomsDocuments';
+  TouchableOpacity
+} from 'react-native'
+import { router, useLocalSearchParams } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import Toast from 'react-native-toast-message'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
+import LoadFormProgress from '@/components/load-form/LoadFormProgress'
+import LoadFormNavigation from '@/components/load-form/LoadFormNavigation'
+import Step1BasicInfo from '@/components/load-form/Step1BasicInfo'
+import Step2LoadItems, { type LoadItem } from '@/components/load-form/Step2LoadItems'
+import Step3Addresses, { type LoadAddress } from '@/components/load-form/Step3Addresses'
+import Step4Pricing, { type LoadPricingItem } from '@/components/load-form/Step4Pricing'
+import Step5InvoiceDeclaration from '@/components/load-form/Step5InvoiceDeclaration'
+import Step6CustomsDocuments from '@/components/load-form/Step6CustomsDocuments'
 import {
   getLoad,
   updateLoad,
   type LoadFormData,
-  type LoadDetail,
-} from '@/services/endpoints/loads';
+  type LoadDetail
+} from '@/services/endpoints/loads'
 
 // SelectOption tipi
 interface SelectOption {
@@ -80,13 +91,55 @@ const getDefaultLoadItem = (): LoadItem => ({
 });
 
 export default function EditLoadScreen() {
-  const colors = Colors.light;
-  const { id: rawId } = useLocalSearchParams<{ id: string }>();
-  const { success, error: showError } = useToast();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const isMountedRef = useRef(true);
+  const insets = useSafeAreaInsets()
+  const { id: rawId } = useLocalSearchParams<{ id: string }>()
+  const [currentStep, setCurrentStep] = useState(1)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const isMountedRef = useRef(true)
+
+  // Animated orbs for header
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
+
+  useEffect(() => {
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
 
   // Parse ID safely
   const loadId = React.useMemo(() => {
@@ -128,14 +181,19 @@ export default function EditLoadScreen() {
   useEffect(() => {
     const fetchLoad = async () => {
       if (!loadId) {
-        showError('Hata', 'Geçersiz yük ID');
-        setIsLoading(false);
-        return;
+        Toast.show({
+          type: 'error',
+          text1: 'Geçersiz yük ID',
+          position: 'top',
+          visibilityTime: 1500
+        })
+        setIsLoading(false)
+        return
       }
 
       try {
-        const load = await getLoad(loadId);
-        if (!isMountedRef.current) return;
+        const load = await getLoad(loadId)
+        if (!isMountedRef.current) return
 
         // Map load to form data
         const mappedFormData: LoadFormData = {
@@ -254,19 +312,24 @@ export default function EditLoadScreen() {
           });
         }
       } catch (err) {
-        console.error('Load fetch error:', err);
+        console.error('Load fetch error:', err)
         if (isMountedRef.current) {
-          showError('Hata', err instanceof Error ? err.message : 'Yük yüklenemedi');
+          Toast.show({
+            type: 'error',
+            text1: err instanceof Error ? err.message : 'Yük yüklenemedi',
+            position: 'top',
+            visibilityTime: 1500
+          })
         }
       } finally {
         if (isMountedRef.current) {
-          setIsLoading(false);
+          setIsLoading(false)
         }
       }
-    };
+    }
 
-    fetchLoad();
-  }, [loadId]);
+    fetchLoad()
+  }, [loadId])
 
   // Form data güncelleme
   const updateFormData = useCallback((field: keyof LoadFormData, value: any) => {
@@ -316,52 +379,77 @@ export default function EditLoadScreen() {
 
   // Validation
   const validateStep = (step: number): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {}
 
     if (step === 1) {
       if (!formData.direction) {
-        newErrors.direction = 'Yük yönü zorunludur';
+        newErrors.direction = 'Yük yönü zorunludur'
       }
       if (!formData.loading_type) {
-        newErrors.loading_type = 'Yükleme tipi zorunludur';
+        newErrors.loading_type = 'Yükleme tipi zorunludur'
       }
       if (!formData.transport_speed) {
-        newErrors.transport_speed = 'Taşıma hızı zorunludur';
+        newErrors.transport_speed = 'Taşıma hızı zorunludur'
       }
 
       if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        showError('Hata', 'Lütfen zorunlu alanları doldurunuz');
-        return false;
+        setErrors(newErrors)
+        Toast.show({
+          type: 'error',
+          text1: 'Lütfen zorunlu alanları doldurunuz',
+          position: 'top',
+          visibilityTime: 1500
+        })
+        return false
       }
     }
 
     if (step === 2) {
       if (items.length === 0) {
-        showError('Hata', 'En az bir yük kalemi eklemelisiniz');
-        return false;
+        Toast.show({
+          type: 'error',
+          text1: 'En az bir yük kalemi eklemelisiniz',
+          position: 'top',
+          visibilityTime: 1500
+        })
+        return false
       }
 
       // Mal adı kontrolü
       for (let i = 0; i < items.length; i++) {
-        const item = items[i];
+        const item = items[i]
         if (!item.cargo_name || !item.cargo_name.trim()) {
-          showError('Hata', `Kalem #${i + 1}: Mal adı zorunludur`);
-          return false;
+          Toast.show({
+            type: 'error',
+            text1: `Kalem #${i + 1}: Mal adı zorunludur`,
+            position: 'top',
+            visibilityTime: 1500
+          })
+          return false
         }
       }
 
       // Tehlikeli madde kontrolü
       for (let i = 0; i < items.length; i++) {
-        const item = items[i];
+        const item = items[i]
         if (item.is_hazardous) {
           if (!item.hazmat_un_no || !item.hazmat_un_no.trim()) {
-            showError('Hata', `Kalem #${i + 1}: Tehlikeli madde için UN No zorunludur`);
-            return false;
+            Toast.show({
+              type: 'error',
+              text1: `Kalem #${i + 1}: Tehlikeli madde için UN No zorunludur`,
+              position: 'top',
+              visibilityTime: 1500
+            })
+            return false
           }
           if (!item.hazmat_class || !item.hazmat_class.trim()) {
-            showError('Hata', `Kalem #${i + 1}: Tehlikeli madde için Sınıf zorunludur`);
-            return false;
+            Toast.show({
+              type: 'error',
+              text1: `Kalem #${i + 1}: Tehlikeli madde için Sınıf zorunludur`,
+              position: 'top',
+              visibilityTime: 1500
+            })
+            return false
           }
         }
       }
@@ -369,64 +457,88 @@ export default function EditLoadScreen() {
 
     if (step === 3) {
       if (addresses.length < 2) {
-        showError('Hata', 'Alış ve teslim adreslerini ekleyiniz');
-        return false;
+        Toast.show({
+          type: 'error',
+          text1: 'Alış ve teslim adreslerini ekleyiniz',
+          position: 'top',
+          visibilityTime: 1500
+        })
+        return false
       }
 
-      const pickupAddress = addresses.find((a) => a.type === 'pickup');
-      const deliveryAddress = addresses.find((a) => a.type === 'delivery');
+      const pickupAddress = addresses.find((a) => a.type === 'pickup')
+      const deliveryAddress = addresses.find((a) => a.type === 'delivery')
 
       if (!pickupAddress?.pickup_type) {
-        showError('Hata', 'Teslim alma tipi seçiniz');
-        return false;
+        Toast.show({
+          type: 'error',
+          text1: 'Teslim alma tipi seçiniz',
+          position: 'top',
+          visibilityTime: 1500
+        })
+        return false
       }
       if (!deliveryAddress?.delivery_type) {
-        showError('Hata', 'Teslim etme tipi seçiniz');
-        return false;
+        Toast.show({
+          type: 'error',
+          text1: 'Teslim etme tipi seçiniz',
+          position: 'top',
+          visibilityTime: 1500
+        })
+        return false
       }
     }
 
-    return true;
-  };
+    return true
+  }
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
+      setCurrentStep((prev) => Math.min(prev + 1, STEPS.length))
     }
-  };
+  }
 
   const handlePrevious = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
-  };
+    setCurrentStep((prev) => Math.max(prev - 1, 1))
+  }
 
   const handleStepClick = (stepId: number) => {
     // Önceki adımları validate et
     for (let i = 1; i < stepId; i++) {
       if (!validateStep(i)) {
-        return;
+        return
       }
     }
-    setCurrentStep(stepId);
-  };
+    setCurrentStep(stepId)
+  }
+
+  const handleBack = () => {
+    router.back()
+  }
 
   const handleSubmit = async () => {
     if (!loadId) {
-      showError('Hata', 'Geçersiz yük ID');
-      return;
+      Toast.show({
+        type: 'error',
+        text1: 'Geçersiz yük ID',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
     }
 
     // Tüm adımları validate et
     for (let step = 1; step <= 3; step++) {
       if (!validateStep(step)) {
-        setCurrentStep(step);
-        return;
+        setCurrentStep(step)
+        return
       }
     }
 
     // Form verilerini hazırla - empty strings'leri null'a çevir
     const cleanedFormData = Object.fromEntries(
       Object.entries(formData).map(([key, value]) => [key, value === '' ? null : value])
-    ) as LoadFormData;
+    ) as LoadFormData
 
     const submitData: LoadFormData = {
       ...cleanedFormData,
@@ -480,23 +592,32 @@ export default function EditLoadScreen() {
     };
 
     try {
-      setIsSubmitting(true);
-      const response = await updateLoad(loadId, submitData);
+      setIsSubmitting(true)
+      const response = await updateLoad(loadId, submitData)
 
       if (response) {
-        success('Başarılı', 'Yük başarıyla güncellendi');
-        // ANINDA geri dön - setTimeout KULLANMA
-        router.back();
+        Toast.show({
+          type: 'success',
+          text1: 'Yük başarıyla güncellendi',
+          position: 'top',
+          visibilityTime: 1500
+        })
+        router.back()
       }
     } catch (error: any) {
-      console.error('Load update error:', error);
-      showError('Hata', error?.message || 'Yük güncellenemedi');
+      console.error('Load update error:', error)
+      Toast.show({
+        type: 'error',
+        text1: error?.message || 'Yük güncellenemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
     } finally {
       if (isMountedRef.current) {
-        setIsSubmitting(false);
+        setIsSubmitting(false)
       }
     }
-  };
+  }
 
   const renderStep = () => {
     switch (currentStep) {
@@ -536,21 +657,42 @@ export default function EditLoadScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <FullScreenHeader
-          title="Yük Düzenle"
-          showBackButton
-          onBackPress={() => router.back()}
-        />
-        <View style={styles.contentCard}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Brand.primary} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Yük bilgileri yükleniyor...
-            </Text>
+        {/* Loading Header */}
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+
+          <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+          <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Yük Düzenle</Text>
+              </View>
+
+              <View style={styles.saveButton} />
+            </View>
           </View>
+
+          <View style={styles.bottomCurve} />
+        </View>
+
+        {/* Loading Content */}
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Yük bilgileri yükleniyor...</Text>
         </View>
       </View>
-    );
+    )
   }
 
   const headerTitle =
@@ -558,102 +700,192 @@ export default function EditLoadScreen() {
       ? 'İhracat Yükü Düzenle'
       : formData.direction === 'import'
         ? 'İthalat Yükü Düzenle'
-        : 'Yük Düzenle';
+        : 'Yük Düzenle'
 
   return (
     <View style={styles.container}>
-      <FullScreenHeader
-        title={headerTitle}
-        subtitle={`Adım ${currentStep} / ${STEPS.length}: ${STEPS[currentStep - 1].description}`}
-        showBackButton
-        onBackPress={() => router.back()}
-        rightIcons={
-          <TouchableOpacity
-            onPress={handleSubmit}
-            activeOpacity={0.7}
-            disabled={isSubmitting}
-            style={styles.saveButton}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+      {/* Header with gradient and animated orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Orta: Başlık ve Alt Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>{headerTitle}</Text>
+              <Text style={styles.headerSubtitle}>
+                Adım {currentStep} / {STEPS.length}
+              </Text>
+            </View>
+
+            {/* Sağ: Kaydet Butonu (sadece son adımda) */}
+            {currentStep === STEPS.length ? (
+              <TouchableOpacity
+                onPress={handleSubmit}
+                disabled={isSubmitting}
+                style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="checkmark" size={24} color="#fff" />
+                )}
+              </TouchableOpacity>
             ) : (
-              <Save size={22} color="#FFFFFF" />
+              <View style={styles.saveButton} />
             )}
-          </TouchableOpacity>
-        }
-      />
+          </View>
+        </View>
 
-      <View style={styles.contentCard}>
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoid}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          {/* Progress Steps */}
-          <LoadFormProgress
-            steps={STEPS}
-            currentStep={currentStep}
-            onStepClick={handleStepClick}
-          />
-
-          {/* Form Content */}
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {renderStep()}
-          </ScrollView>
-
-          {/* Navigation Buttons */}
-          <LoadFormNavigation
-            currentStep={currentStep}
-            totalSteps={STEPS.length}
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
-          />
-        </KeyboardAvoidingView>
+        <View style={styles.bottomCurve} />
       </View>
+
+      {/* Content */}
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        bottomOffset={20}
+      >
+        {/* Progress Steps */}
+        <LoadFormProgress steps={STEPS} currentStep={currentStep} onStepClick={handleStepClick} />
+
+        {/* Form Content */}
+        <View style={styles.formContent}>
+          {renderStep()}
+        </View>
+
+        {/* Navigation Buttons */}
+        <LoadFormNavigation
+          currentStep={currentStep}
+          totalSteps={STEPS.length}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+        />
+      </KeyboardAwareScrollView>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.background
   },
-  contentCard: {
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: DashboardSpacing.lg
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-    ...Shadows.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.md
   },
-  keyboardAvoid: {
-    flex: 1,
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 2
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: 100,
+  headerSubtitle: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center'
   },
   saveButton: {
-    padding: Spacing.sm,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  saveButtonDisabled: {
+    opacity: 0.5
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+  content: {
+    flex: 1
+  },
+  contentContainer: {
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
+  },
+  formContent: {
+    marginTop: DashboardSpacing.md
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.md,
+    paddingTop: DashboardSpacing['4xl']
   },
   loadingText: {
-    ...Typography.bodyMD,
-  },
-});
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.md
+  }
+})
