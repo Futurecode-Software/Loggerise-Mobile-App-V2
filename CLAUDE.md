@@ -415,6 +415,332 @@ bottomCurve: {
 - ✅ Animasyon süreleri ve easing değerleri **değiştirilmemeli**
 - ✅ LinearGradient renkleri **sabit**: `['#022920', '#044134', '#065f4a']`
 
+### 8. Detay Sayfası Header Standardı (load/[id].tsx referans)
+```typescript
+// ZORUNLU - Tüm detay sayfalarında ([id]/index.tsx) bu header yapısı kullanılmalı
+
+// 1. Container - DashboardColors.primary arka plan
+container: { flex: 1, backgroundColor: DashboardColors.primary }
+
+// 2. Header yapısı - Statik glow orbs (animasyonsuz)
+<View style={styles.headerContainer}>
+  <LinearGradient
+    colors={['#022920', '#044134', '#065f4a']}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={StyleSheet.absoluteFill}
+  />
+  <View style={styles.glowOrb1} />
+  <View style={styles.glowOrb2} />
+
+  <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+    <View style={styles.headerBar}>
+      {/* Sol: Geri Butonu */}
+      <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+        <Ionicons name="chevron-back" size={24} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Sağ: Düzenle + Sil Butonları */}
+      {!isLoading && data && (
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.headerButton} onPress={handleEdit}>
+            <Ionicons name="create-outline" size={22} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.headerButton, styles.deleteButton]}
+            onPress={handleDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="trash-outline" size={22} color="#fff" />
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+
+    {/* Header içeriği: Başlık, badge'ler vb. */}
+    {renderHeaderContent()}
+  </View>
+
+  <View style={styles.bottomCurve} />
+</View>
+
+// 3. Content - ScrollView ile background renk
+<ScrollView
+  style={styles.content}
+  contentContainerStyle={styles.contentContainer}
+  refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+>
+  {/* İçerik */}
+</ScrollView>
+
+// 4. Styles
+headerContainer: {
+  position: 'relative',
+  overflow: 'hidden',
+  paddingBottom: 24
+},
+headerButton: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  alignItems: 'center',
+  justifyContent: 'center'
+},
+headerActions: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: DashboardSpacing.sm
+},
+deleteButton: {
+  backgroundColor: 'rgba(239, 68, 68, 0.2)'  // Kırmızı yarı saydam
+},
+content: {
+  flex: 1,
+  backgroundColor: DashboardColors.background
+},
+contentContainer: {
+  paddingHorizontal: DashboardSpacing.lg,
+  paddingTop: DashboardSpacing.md
+}
+```
+
+**Detay Sayfası vs Form Sayfası Farkları:**
+| Özellik | Detay Sayfası | Form Sayfası |
+|---------|---------------|--------------|
+| Container bg | `DashboardColors.primary` | `DashboardColors.background` |
+| Glow orbs | Statik `<View>` | Animasyonlu `<Animated.View>` |
+| Header butonları | 44x44 | 40x40 |
+| Sağ butonlar | Düzenle + Sil | Kaydet |
+| Silme butonu | Kırmızı yarı saydam bg | - |
+
+### 9. Detay Sayfası İçerik Yapısı (SectionHeader + InfoRow)
+```typescript
+// ZORUNLU - Tüm detay sayfalarında bu component yapısını kullan
+
+// SectionHeader Component
+interface SectionHeaderProps {
+  title: string
+  icon: keyof typeof Ionicons.glyphMap
+  count?: number           // Opsiyonel: Liste sayısı
+  isExpanded?: boolean     // Opsiyonel: Açılır/kapanır bölüm
+  onToggle?: () => void    // Opsiyonel: Toggle handler
+}
+
+function SectionHeader({ title, icon, count, isExpanded, onToggle }: SectionHeaderProps) {
+  return (
+    <TouchableOpacity
+      style={styles.sectionHeader}
+      onPress={onToggle}
+      disabled={!onToggle}
+      activeOpacity={onToggle ? 0.7 : 1}
+    >
+      <View style={styles.sectionHeaderLeft}>
+        <View style={styles.sectionIcon}>
+          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
+        </View>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {count !== undefined && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{count}</Text>
+          </View>
+        )}
+      </View>
+      {onToggle && (
+        <Ionicons
+          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={DashboardColors.textMuted}
+        />
+      )}
+    </TouchableOpacity>
+  )
+}
+
+// InfoRow Component
+interface InfoRowProps {
+  label: string
+  value: string
+  icon?: keyof typeof Ionicons.glyphMap
+  highlight?: boolean  // Önemli değerler için primary renk
+}
+
+function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={styles.infoLabel}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={14}
+            color={DashboardColors.textMuted}
+            style={styles.infoIcon}
+          />
+        )}
+        <Text style={styles.infoLabelText}>{label}</Text>
+      </View>
+      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
+        {value}
+      </Text>
+    </View>
+  )
+}
+
+// Card Yapısı
+<View style={styles.card}>
+  <SectionHeader title="Bölüm Başlığı" icon="information-circle-outline" />
+  <View style={styles.cardContent}>
+    <InfoRow label="Alan" value="Değer" icon="car-outline" />
+    <InfoRow label="Önemli Alan" value="Değer" highlight />
+  </View>
+</View>
+
+// Styles
+card: {
+  backgroundColor: DashboardColors.surface,
+  borderRadius: DashboardBorderRadius.xl,
+  marginBottom: DashboardSpacing.md,
+  ...DashboardShadows.sm
+},
+sectionHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: DashboardSpacing.lg,
+  borderBottomWidth: 1,
+  borderBottomColor: DashboardColors.borderLight
+},
+sectionHeaderLeft: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: DashboardSpacing.sm
+},
+sectionIcon: {
+  width: 32,
+  height: 32,
+  borderRadius: 10,
+  backgroundColor: DashboardColors.primaryGlow,
+  alignItems: 'center',
+  justifyContent: 'center'
+},
+sectionTitle: {
+  fontSize: DashboardFontSizes.base,
+  fontWeight: '600',
+  color: DashboardColors.textPrimary
+},
+countBadge: {
+  backgroundColor: DashboardColors.primary,
+  paddingHorizontal: 8,
+  paddingVertical: 2,
+  borderRadius: 10
+},
+countText: {
+  fontSize: DashboardFontSizes.xs,
+  fontWeight: '600',
+  color: '#fff'
+},
+cardContent: {
+  paddingHorizontal: DashboardSpacing.lg,
+  paddingBottom: DashboardSpacing.lg
+},
+infoRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingVertical: DashboardSpacing.sm,
+  borderBottomWidth: 1,
+  borderBottomColor: DashboardColors.borderLight
+},
+infoLabel: {
+  flexDirection: 'row',
+  alignItems: 'center'
+},
+infoIcon: {
+  marginRight: DashboardSpacing.sm
+},
+infoLabelText: {
+  fontSize: DashboardFontSizes.sm,
+  color: DashboardColors.textSecondary
+},
+infoValue: {
+  fontSize: DashboardFontSizes.sm,
+  fontWeight: '500',
+  color: DashboardColors.textPrimary,
+  maxWidth: '50%',
+  textAlign: 'right'
+},
+infoValueHighlight: {
+  color: DashboardColors.primary,
+  fontWeight: '600'
+}
+```
+
+### 10. Hata Durumu (Error State) Standardı
+```typescript
+// ZORUNLU - Tüm detay sayfalarında bu error state yapısını kullan
+
+<View style={styles.errorState}>
+  <View style={styles.errorIcon}>
+    <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+  </View>
+  <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+  <Text style={styles.errorText}>{error}</Text>
+  <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+    <Ionicons name="refresh" size={18} color="#fff" />
+    <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+  </TouchableOpacity>
+</View>
+
+// Styles
+errorState: {
+  flex: 1,
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingHorizontal: DashboardSpacing['2xl'],
+  paddingVertical: DashboardSpacing['3xl']
+},
+errorIcon: {
+  width: 96,
+  height: 96,
+  borderRadius: 48,
+  backgroundColor: DashboardColors.dangerBg,
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: DashboardSpacing.xl
+},
+errorTitle: {
+  fontSize: DashboardFontSizes.xl,
+  fontWeight: '600',
+  color: DashboardColors.textPrimary,
+  marginBottom: DashboardSpacing.sm,
+  textAlign: 'center'
+},
+errorText: {
+  fontSize: DashboardFontSizes.base,
+  color: DashboardColors.textSecondary,
+  textAlign: 'center',
+  marginBottom: DashboardSpacing.xl
+},
+retryButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: DashboardSpacing.sm,
+  backgroundColor: DashboardColors.danger,  // DANGER renk - primary DEĞİL
+  paddingHorizontal: DashboardSpacing.xl,
+  paddingVertical: DashboardSpacing.md,
+  borderRadius: DashboardBorderRadius.lg
+},
+retryButtonText: {
+  fontSize: DashboardFontSizes.base,
+  fontWeight: '600',
+  color: '#fff'
+}
+```
+
 ---
 
 ## Routing

@@ -1,31 +1,46 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+/**
+ * Mesajlar Listesi Ekranı
+ *
+ * Ana mesaj listesi - arama, WebSocket ve pull-to-refresh
+ * CLAUDE.md standartlarına uygun - DashboardColors, PageHeader
+ */
+
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  TextInput,
   RefreshControl,
   ActivityIndicator,
   AppState,
   AppStateStatus,
-  Alert,
-} from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+  Pressable
+} from 'react-native'
+import { router, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring
+} from 'react-native-reanimated'
+import { Avatar } from '@/components/ui'
+import { PageHeader } from '@/components/navigation'
+import UserSelectModal, { UserSelectModalRef } from '@/components/modals/UserSelectModal'
+import GroupCreateModal, { GroupCreateModalRef } from '@/components/modals/GroupCreateModal'
 import {
-  Search,
-  Plus,
-  MessageCircle,
-  Users,
-  AlertCircle,
-} from 'lucide-react-native';
-import { Avatar, Input } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
-import UserSelectModal, { UserSelectModalRef } from '@/components/modals/UserSelectModal';
-import GroupCreateModal, { GroupCreateModalRef } from '@/components/modals/GroupCreateModal';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useAuth } from '@/context/auth-context';
-import { useMessageContext } from '@/context/message-context';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows,
+  DashboardAnimations
+} from '@/constants/dashboard-theme'
+import { useAuth } from '@/context/auth-context'
+import { useMessageContext } from '@/context/message-context'
 import {
   getConversations,
   Conversation,
@@ -34,226 +49,60 @@ import {
   getConversationAvatar,
   getMessagePreview,
   getLastMessageTime,
-  Message,
-} from '@/services/endpoints/messaging';
-import { useMessagingWebSocket } from '@/hooks/use-messaging-websocket';
-import { scheduleMessageNotification } from '@/hooks/use-notification-observer';
+  Message
+} from '@/services/endpoints/messaging'
+import { useMessagingWebSocket } from '@/hooks/use-messaging-websocket'
+import { scheduleMessageNotification } from '@/hooks/use-notification-observer'
 
-export default function MessagesTabScreen() {
-  const colors = Colors.light;
-  const { user } = useAuth();
-  const { updateUnreadCount, incrementUnreadCount } = useMessageContext();
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
-  // Refs
-  const isFirstRender = useRef(true);
-  const hasInitialFetchRef = useRef(false);
-  const appState = useRef(AppState.currentState);
-  const conversationsRef = useRef<Conversation[]>([]);
-  const userSelectModalRef = useRef<UserSelectModalRef>(null);
-  const groupCreateModalRef = useRef<GroupCreateModalRef>(null);
+// Konuşma kartı bileşeni
+interface ConversationCardProps {
+  item: Conversation
+  currentUserId: number
+  onPress: () => void
+}
 
-  // State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function ConversationCard({ item, currentUserId, onPress }: ConversationCardProps) {
+  const scale = useSharedValue(1)
 
-  // Keep conversations ref in sync
-  useEffect(() => {
-    conversationsRef.current = conversations;
-  }, [conversations]);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }))
 
-  // Current user ID
-  const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : 0;
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy)
+  }
 
-  // Fetch conversations from API
-  const fetchConversations = useCallback(async (showLoading = true) => {
-    try {
-      setError(null);
-      if (showLoading) setIsLoading(true);
+  const handlePressOut = () => {
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
 
-      const filters: ConversationFilters = {};
-      if (searchQuery.trim()) {
-        filters.search = searchQuery.trim();
-      }
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    onPress()
+  }
 
-      const response = await getConversations(filters);
-      setConversations(response.conversations);
-      setTotalUnreadCount(response.totalUnreadCount);
-      // Update global context
-      updateUnreadCount(response.totalUnreadCount);
-      // Mark initial fetch as complete
-      hasInitialFetchRef.current = true;
-    } catch (err) {
-      console.error('Conversations fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Mesajlar yüklenemedi');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchQuery, updateUnreadCount]);
+  const hasUnread = (item.unread_count || 0) > 0
+  const displayName = getConversationName(item, currentUserId)
+  const avatar = getConversationAvatar(item, currentUserId)
+  const lastMessagePreview = getMessagePreview(item.last_message)
+  const timestamp = getLastMessageTime(item.last_message)
+  const isGroup = item.type === 'group'
 
-  // Handle new message from WebSocket
-  const handleNewConversationMessage = useCallback((message: Message, conversationId: number) => {
-    setConversations((prevConversations) => {
-      const existingConversation = prevConversations.find((c) => c.id === conversationId);
-
-      if (existingConversation) {
-        // Show local notification for new message
-        const senderName = message.user?.name || 'Bilinmeyen';
-        const messageText = message.message || '';
-        const conversationType = existingConversation.type === 'group' ? 'group' : 'private';
-
-        scheduleMessageNotification(
-          senderName,
-          messageText,
-          conversationId,
-          conversationType
-        );
-
-        const updatedConversation: Conversation = {
-          ...existingConversation,
-          last_message: {
-            message: message.message,
-            created_at: 'Şimdi',
-            sender_name: senderName,
-          },
-          unread_count: (existingConversation.unread_count || 0) + 1,
-          updated_at: new Date().toISOString(),
-        };
-
-        return [
-          updatedConversation,
-          ...prevConversations.filter((c) => c.id !== conversationId),
-        ];
-      }
-
-      // If conversation doesn't exist, fetch the list (using ref to avoid closure issues)
-      fetchConversations(false);
-      return prevConversations;
-    });
-
-    setTotalUnreadCount((prev) => prev + 1);
-    // Update global context
-    incrementUnreadCount();
-  }, [fetchConversations, incrementUnreadCount]);
-
-  // Handle participant added
-  const handleParticipantAdded = useCallback(() => {
-    fetchConversations(false);
-  }, [fetchConversations]);
-
-  // WebSocket for real-time updates
-  const { isConnected, reconnect } = useMessagingWebSocket({
-    userId: currentUserId,
-    onNewConversationMessage: handleNewConversationMessage,
-    onParticipantAdded: handleParticipantAdded,
-  });
-
-  // Handle AppState changes (background/foreground)
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', async (nextAppState: AppStateStatus) => {
-      // App came to foreground
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        // Re-initialize WebSocket connection
-        await reconnect();
-        // Refresh conversations
-        fetchConversations(false);
-      }
-      appState.current = nextAppState;
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, [fetchConversations, reconnect]);
-
-  // Initial load
-  useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
-
-  // Search with debounce
-  useEffect(() => {
-    // Skip initial render
-    if (isFirstRender.current) return;
-
-    const timeoutId = setTimeout(() => {
-      fetchConversations();
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, fetchConversations]);
-
-  // Refresh on screen focus
-  useFocusEffect(
-    useCallback(() => {
-      if (hasInitialFetchRef.current) {
-        fetchConversations(false);
-      }
-    }, [fetchConversations])
-  );
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchConversations(false);
-    setRefreshing(false);
-  }, [fetchConversations]);
-
-  const handleOpenNewMessage = () => {
-    userSelectModalRef.current?.present();
-  };
-
-  const handleOpenNewGroup = () => {
-    groupCreateModalRef.current?.present();
-  };
-
-  const handleConversationCreated = (conversationId: number) => {
-    // Refresh conversations after new conversation created
-    fetchConversations(false);
-  };
-
-  const handleGroupCreated = (conversationId: number) => {
-    // Refresh conversations after new group created
-    fetchConversations(false);
-  };
-
-  // Sort conversations by last message time (newest first) - memoized
-  const sortedConversations = useMemo(() => {
-    return [...conversations].sort((a, b) => {
-      const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-      const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-      return dateB - dateA;
-    });
-  }, [conversations]);
-
-  const renderConversation = ({ item }: { item: Conversation }) => {
-    const hasUnread = (item.unread_count || 0) > 0;
-    const displayName = getConversationName(item, currentUserId);
-    const avatar = getConversationAvatar(item, currentUserId);
-    const lastMessagePreview = getMessagePreview(item.last_message);
-    const timestamp = getLastMessageTime(item.last_message);
-
-    return (
-      <TouchableOpacity
-        style={[
-          styles.conversationItem,
-          {
-            backgroundColor: hasUnread ? colors.card : colors.surface,
-            borderBottomColor: colors.border,
-          },
-        ]}
-        onPress={() => router.push(`/message/${item.id}` as any)}
+  return (
+    <View>
+      <AnimatedPressable
+        style={[styles.conversationCard, hasUnread && styles.conversationCardUnread, animStyle]}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
       >
+        {/* Avatar */}
         <View style={styles.avatarContainer}>
-          {item.type === 'group' ? (
-            <View style={[styles.groupAvatar, { backgroundColor: Brand.primary }]}>
-              {avatar.url ? (
-                <Avatar name={displayName} size="md" />
-              ) : (
-                <Users size={24} color="#FFFFFF" />
-              )}
+          {isGroup ? (
+            <View style={styles.groupAvatar}>
+              <Ionicons name="people" size={22} color={DashboardColors.textOnPrimary} />
             </View>
           ) : (
             <Avatar
@@ -262,40 +111,38 @@ export default function MessagesTabScreen() {
               source={avatar.url || undefined}
             />
           )}
+          {/* Online göstergesi - sadece bireysel konuşmalar için */}
+          {!isGroup && (
+            <View style={styles.onlineIndicator} />
+          )}
         </View>
 
+        {/* İçerik */}
         <View style={styles.conversationContent}>
+          {/* Üst satır: İsim + Zaman */}
           <View style={styles.conversationHeader}>
-            <Text
-              style={[
-                styles.conversationName,
-                { color: colors.text },
-                hasUnread && styles.unreadName,
-              ]}
-              numberOfLines={1}
-            >
-              {displayName}
-            </Text>
-            <View style={styles.headerRight}>
-              <Text style={[styles.timestamp, { color: colors.textMuted }]}>
-                {timestamp}
+            <View style={styles.nameContainer}>
+              <Text
+                style={[styles.conversationName, hasUnread && styles.conversationNameUnread]}
+                numberOfLines={1}
+              >
+                {displayName}
               </Text>
+              {isGroup && item.participant_count && (
+                <View style={styles.participantBadge}>
+                  <Text style={styles.participantCount}>{item.participant_count}</Text>
+                </View>
+              )}
             </View>
+            <Text style={[styles.timestamp, hasUnread && styles.timestampUnread]}>
+              {timestamp}
+            </Text>
           </View>
 
-          {item.type === 'group' && item.participant_count && (
-            <Text style={[styles.participants, { color: colors.textMuted }]}>
-              {item.participant_count} kişi
-            </Text>
-          )}
-
-          <View style={styles.lastMessageRow}>
+          {/* Alt satır: Son mesaj + Okunmamış sayısı */}
+          <View style={styles.messageRow}>
             <Text
-              style={[
-                styles.lastMessage,
-                { color: colors.textSecondary },
-                hasUnread && styles.unreadMessage,
-              ]}
+              style={[styles.lastMessage, hasUnread && styles.lastMessageUnread]}
               numberOfLines={2}
             >
               {item.last_message?.sender_name
@@ -303,7 +150,7 @@ export default function MessagesTabScreen() {
                 : lastMessagePreview || 'Henüz mesaj yok'}
             </Text>
             {hasUnread && (
-              <View style={[styles.unreadBadge, { backgroundColor: colors.danger }]}>
+              <View style={styles.unreadBadge}>
                 <Text style={styles.unreadCount}>
                   {item.unread_count! > 99 ? '99+' : item.unread_count}
                 </Text>
@@ -311,127 +158,355 @@ export default function MessagesTabScreen() {
             )}
           </View>
         </View>
-      </TouchableOpacity>
-    );
-  };
 
+        {/* Sağ ok */}
+        <View style={styles.cardArrow}>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={DashboardColors.textMuted}
+          />
+        </View>
+      </AnimatedPressable>
+    </View>
+  )
+}
+
+export default function MessagesScreen() {
+  const { user } = useAuth()
+  const { updateUnreadCount, incrementUnreadCount } = useMessageContext()
+
+  // Refs
+  const isFirstRender = useRef(true)
+  const hasInitialFetchRef = useRef(false)
+  const appState = useRef(AppState.currentState)
+  const conversationsRef = useRef<Conversation[]>([])
+  const userSelectModalRef = useRef<UserSelectModalRef>(null)
+  const groupCreateModalRef = useRef<GroupCreateModalRef>(null)
+
+  // State
+  const [searchQuery, setSearchQuery] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Keep conversations ref in sync
+  useEffect(() => {
+    conversationsRef.current = conversations
+  }, [conversations])
+
+  // Current user ID
+  const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : 0
+
+  // Fetch conversations from API
+  const fetchConversations = useCallback(async (showLoading = true) => {
+    try {
+      setError(null)
+      if (showLoading) setIsLoading(true)
+
+      const filters: ConversationFilters = {}
+      if (searchQuery.trim()) {
+        filters.search = searchQuery.trim()
+      }
+
+      const response = await getConversations(filters)
+      setConversations(response.conversations)
+      setTotalUnreadCount(response.totalUnreadCount)
+      updateUnreadCount(response.totalUnreadCount)
+      hasInitialFetchRef.current = true
+    } catch (err) {
+      console.error('Conversations fetch error:', err)
+      setError(err instanceof Error ? err.message : 'Mesajlar yüklenemedi')
+    } finally {
+      setIsLoading(false)
+      setRefreshing(false)
+    }
+  }, [searchQuery, updateUnreadCount])
+
+  // Handle new message from WebSocket
+  const handleNewConversationMessage = useCallback((message: Message, conversationId: number) => {
+    setConversations((prevConversations) => {
+      const existingConversation = prevConversations.find((c) => c.id === conversationId)
+
+      if (existingConversation) {
+        const senderName = message.user?.name || 'Bilinmeyen'
+        const messageText = message.message || ''
+        const conversationType = existingConversation.type === 'group' ? 'group' : 'private'
+
+        scheduleMessageNotification(
+          senderName,
+          messageText,
+          conversationId,
+          conversationType
+        )
+
+        const updatedConversation: Conversation = {
+          ...existingConversation,
+          last_message: {
+            message: message.message,
+            created_at: 'Şimdi',
+            sender_name: senderName
+          },
+          unread_count: (existingConversation.unread_count || 0) + 1,
+          updated_at: new Date().toISOString()
+        }
+
+        return [
+          updatedConversation,
+          ...prevConversations.filter((c) => c.id !== conversationId)
+        ]
+      }
+
+      fetchConversations(false)
+      return prevConversations
+    })
+
+    setTotalUnreadCount((prev) => prev + 1)
+    incrementUnreadCount()
+  }, [fetchConversations, incrementUnreadCount])
+
+  // Handle participant added
+  const handleParticipantAdded = useCallback(() => {
+    fetchConversations(false)
+  }, [fetchConversations])
+
+  // WebSocket for real-time updates
+  const { reconnect } = useMessagingWebSocket({
+    userId: currentUserId,
+    onNewConversationMessage: handleNewConversationMessage,
+    onParticipantAdded: handleParticipantAdded
+  })
+
+  // Handle AppState changes (background/foreground)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState: AppStateStatus) => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        await reconnect()
+        fetchConversations(false)
+      }
+      appState.current = nextAppState
+    })
+
+    return () => {
+      subscription.remove()
+    }
+  }, [fetchConversations, reconnect])
+
+  // Initial load
+  useEffect(() => {
+    fetchConversations()
+  }, [fetchConversations])
+
+  // Search with debounce
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+
+    const timeoutId = setTimeout(() => {
+      fetchConversations()
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery, fetchConversations])
+
+  // Refresh on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (hasInitialFetchRef.current) {
+        fetchConversations(false)
+      }
+    }, [fetchConversations])
+  )
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await fetchConversations(false)
+  }, [fetchConversations])
+
+  const handleOpenNewMessage = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    userSelectModalRef.current?.present()
+  }
+
+  const handleOpenNewGroup = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    groupCreateModalRef.current?.present()
+  }
+
+  const handleConversationCreated = () => {
+    fetchConversations(false)
+  }
+
+  const handleGroupCreated = () => {
+    fetchConversations(false)
+  }
+
+  const handleConversationPress = (conversation: Conversation) => {
+    router.push(`/message/${conversation.id}` as never)
+  }
+
+  // Sort conversations by last message time (newest first)
+  const sortedConversations = useMemo(() => {
+    return [...conversations].sort((a, b) => {
+      const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0
+      const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0
+      return dateB - dateA
+    })
+  }, [conversations])
+
+  // Boş durum render
   const renderEmptyState = () => {
     if (isLoading) {
       return (
         <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Mesajlar yükleniyor...
-          </Text>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Mesajlar yükleniyor...</Text>
         </View>
-      );
+      )
     }
 
     if (error) {
       return (
         <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
+          <View style={styles.errorIcon}>
+            <Ionicons
+              name="alert-circle"
+              size={48}
+              color={DashboardColors.danger}
+            />
           </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            Bir hata oluştu
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {error}
-          </Text>
+          <Text style={styles.emptyStateTitle}>Bir hata oluştu</Text>
+          <Text style={styles.emptyStateText}>{error}</Text>
           <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+            style={styles.retryButton}
             onPress={() => {
-              setIsLoading(true);
-              fetchConversations();
+              setIsLoading(true)
+              setError(null)
+              fetchConversations()
             }}
           >
+            <Ionicons name="refresh" size={18} color="#fff" />
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
-      );
+      )
     }
 
     return (
       <View style={styles.emptyState}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-          <MessageCircle size={64} color={colors.textMuted} />
+        <View style={styles.emptyIcon}>
+          <Ionicons
+            name="chatbubbles-outline"
+            size={48}
+            color={DashboardColors.textMuted}
+          />
         </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
+        <Text style={styles.emptyStateTitle}>
           {searchQuery ? 'Sonuç bulunamadı' : 'Henüz mesajınız yok'}
         </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+        <Text style={styles.emptyStateText}>
           {searchQuery
             ? 'Farklı bir arama terimi deneyin'
             : 'Yeni konuşma başlatmak için + butonuna tıklayın'}
         </Text>
+        {!searchQuery && (
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={handleOpenNewMessage}
+          >
+            <Ionicons name="chatbubble-ellipses" size={18} color="#fff" />
+            <Text style={styles.createButtonText}>Yeni Mesaj</Text>
+          </TouchableOpacity>
+        )}
       </View>
-    );
-  };
+    )
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      {/* Full Screen Header */}
-      <FullScreenHeader
+    <View style={styles.container}>
+      {/* Header */}
+      <PageHeader
         title="Mesajlar"
-        rightIcons={
-          <View style={styles.headerRight}>
-            {/* Yeni Mesaj Butonu */}
-            <TouchableOpacity
-              onPress={handleOpenNewMessage}
-              style={{ padding: Spacing.sm }}
-              activeOpacity={0.7}
-            >
-              <Plus size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-            {/* Yeni Grup Butonu */}
-            <TouchableOpacity
-              onPress={handleOpenNewGroup}
-              style={[styles.groupButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
-              activeOpacity={0.7}
-            >
-              <Users size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-            {totalUnreadCount > 0 && (
-              <View style={[styles.headerUnreadBadge, { backgroundColor: colors.danger }]}>
-                <Text style={styles.headerUnreadCount}>
-                  {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                </Text>
-              </View>
+        icon="chatbubbles-outline"
+        subtitle={
+          totalUnreadCount > 0
+            ? `${totalUnreadCount} okunmamış mesaj`
+            : 'Tüm konuşmalarınız'
+        }
+        leftAction={{
+          icon: 'people-outline',
+          onPress: handleOpenNewGroup
+        }}
+        rightAction={{
+          icon: 'add',
+          onPress: handleOpenNewMessage
+        }}
+      />
+
+      {/* İçerik */}
+      <View style={styles.content}>
+        {/* Arama Kutusu */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons
+              name="search"
+              size={20}
+              color={DashboardColors.textMuted}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Kişi veya mesaj ara..."
+              placeholderTextColor={DashboardColors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                style={styles.clearButton}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={DashboardColors.textMuted}
+                />
+              </TouchableOpacity>
             )}
           </View>
-        }
-      />
+        </View>
 
-      {/* Content Area with White Background and Rounded Corners */}
-      <View style={styles.contentArea}>
-        {/* Search */}
-        <View style={styles.searchContainer}>
-        <Input
-          placeholder="Kişi veya mesaj ara..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          leftIcon={<Search size={20} color={colors.icon} />}
-          containerStyle={styles.searchInput}
+        {/* Konuşma Listesi */}
+        <FlatList
+          data={sortedConversations}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <ConversationCard
+              item={item}
+              currentUserId={currentUserId}
+              onPress={() => handleConversationPress(item)}
+            />
+          )}
+          contentContainerStyle={[
+            styles.listContent,
+            sortedConversations.length === 0 && styles.listContentEmpty
+          ]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmptyState}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={DashboardColors.primary}
+              colors={[DashboardColors.primary]}
+            />
+          }
         />
-      </View>
-
-      {/* Conversation List */}
-      <FlatList
-        data={sortedConversations}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderConversation}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Brand.primary}
-          />
-        }
-      />
       </View>
 
       {/* User Select Modal */}
@@ -446,165 +521,249 @@ export default function MessagesTabScreen() {
         onGroupCreated={handleGroupCreated}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary
   },
-  contentArea: {
+  content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    backgroundColor: DashboardColors.background
   },
-  // Header styles removed - using FullScreenHeader component
-  headerRight: {
+
+  // Arama
+  searchContainer: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing.sm
+  },
+  searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.lg,
+    paddingHorizontal: DashboardSpacing.md,
+    ...DashboardShadows.sm
   },
-  groupButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerUnreadBadge: {
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  headerUnreadCount: {
-    ...Typography.bodyXS,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
+  searchIcon: {
+    marginRight: DashboardSpacing.sm
   },
   searchInput: {
-    marginBottom: 0,
+    flex: 1,
+    height: 48,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
   },
+  clearButton: {
+    padding: DashboardSpacing.xs
+  },
+
+  // Liste
   listContent: {
-    flexGrow: 1,
-    paddingBottom: 100,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
   },
-  conversationItem: {
+  listContentEmpty: {
+    flex: 1
+  },
+
+  // Konuşma Kartı
+  conversationCard: {
     flexDirection: 'row',
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
+    alignItems: 'center',
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.md,
+    marginBottom: DashboardSpacing.sm,
+    ...DashboardShadows.sm
+  },
+  conversationCardUnread: {
+    backgroundColor: DashboardColors.surface,
+    borderLeftWidth: 3,
+    borderLeftColor: DashboardColors.primary
   },
   avatarContainer: {
-    marginRight: Spacing.md,
+    position: 'relative',
+    marginRight: DashboardSpacing.md
   },
   groupAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
+    backgroundColor: DashboardColors.primary,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: DashboardColors.success,
+    borderWidth: 2,
+    borderColor: DashboardColors.surface
   },
   conversationContent: {
     flex: 1,
+    marginRight: DashboardSpacing.sm
   },
   conversationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: DashboardSpacing.xs
   },
-  conversationName: {
-    ...Typography.bodyMD,
-    flex: 1,
-    marginRight: Spacing.sm,
-  },
-  unreadName: {
-    fontWeight: '700',
-  },
-  timestamp: {
-    ...Typography.bodyXS,
-  },
-  participants: {
-    ...Typography.bodyXS,
-    marginBottom: 2,
-  },
-  lastMessageRow: {
+  nameContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: DashboardSpacing.sm
+  },
+  conversationName: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '500',
+    color: DashboardColors.textPrimary,
+    flexShrink: 1
+  },
+  conversationNameUnread: {
+    fontWeight: '700'
+  },
+  participantBadge: {
+    backgroundColor: DashboardColors.primaryGlow,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: DashboardBorderRadius.sm,
+    marginLeft: DashboardSpacing.xs
+  },
+  participantCount: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600',
+    color: DashboardColors.primary
+  },
+  timestamp: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted
+  },
+  timestampUnread: {
+    color: DashboardColors.primary,
+    fontWeight: '600'
+  },
+  messageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start'
   },
   lastMessage: {
-    ...Typography.bodySM,
     flex: 1,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    lineHeight: 18
   },
-  unreadMessage: {
-    fontWeight: '500',
+  lastMessageUnread: {
+    color: DashboardColors.textPrimary,
+    fontWeight: '500'
   },
   unreadBadge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: DashboardColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 6,
-    marginLeft: Spacing.sm,
+    marginLeft: DashboardSpacing.sm
   },
   unreadCount: {
-    ...Typography.bodyXS,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '700',
+    color: DashboardColors.textOnPrimary
   },
+  cardArrow: {
+    padding: DashboardSpacing.xs
+  },
+
+  // Loading State
   loadingState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
+    paddingVertical: DashboardSpacing['4xl']
   },
   loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.md
   },
+
+  // Boş durum
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
+    paddingHorizontal: DashboardSpacing['2xl']
   },
   emptyIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: DashboardSpacing.xl,
+    ...DashboardShadows.sm
   },
-  emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
   },
-  emptySubtitle: {
-    ...Typography.bodyMD,
+  emptyStateTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
+  },
+  emptyStateText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
     textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
   },
   retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
   },
   retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: '#fff'
   },
-});
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.primary,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
+  },
+  createButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  }
+})
