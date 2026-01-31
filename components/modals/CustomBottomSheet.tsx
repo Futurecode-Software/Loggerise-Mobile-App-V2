@@ -7,6 +7,7 @@ import {
   useBottomSheetSpringConfigs,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
+import { useKeyboardState } from 'react-native-keyboard-controller';
 import { BorderRadius, Shadows } from '@/constants/theme';
 
 interface CustomBottomSheetProps {
@@ -60,6 +61,9 @@ const CustomBottomSheet = forwardRef<BottomSheetModal, CustomBottomSheetProps>(
       []
     );
 
+    const keyboardHeight = useKeyboardState((state) => state.height);
+    const keyboardState = useKeyboardState((state) => state.isKeyboardVisible);
+
     return (
       <BottomSheetModal
         ref={ref}
@@ -76,7 +80,12 @@ const CustomBottomSheet = forwardRef<BottomSheetModal, CustomBottomSheetProps>(
         onDismiss={onDismiss}
         style={styles.shadow}
       >
-        <BottomSheetView style={styles.contentContainer}>
+        <BottomSheetView
+          style={[
+            styles.contentContainer,
+            keyboardState && { paddingBottom: keyboardHeight }
+          ]}
+        >
           {children}
         </BottomSheetView>
       </BottomSheetModal>
@@ -99,6 +108,9 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   contentContainer: {
+    flex: 1,
+  },
+  bottomSheetView: {
     flex: 1,
   },
   shadow: {

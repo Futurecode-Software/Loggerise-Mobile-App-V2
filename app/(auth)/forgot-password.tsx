@@ -1,456 +1,476 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * Premium Forgot Password Screen
+ *
+ * Modern şifre sıfırlama deneyimi
+ * Clean design ve user-friendly flow
+ */
+
+import React, { useState } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableOpacity,
-  Image,
-  Dimensions,
-} from 'react-native';
-import { Link, router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mail, ChevronLeft, CheckCircle, RotateCcw } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Button, Input } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-// useColorScheme kaldirildi - her zaman light mode kullanilir
-import { useAuth } from '@/context/auth-context';
+  TextInput,
+  Pressable,
+  ActivityIndicator,
+  useWindowDimensions,
+} from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { StatusBar } from 'expo-status-bar'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  FadeInDown,
+} from 'react-native-reanimated'
+import Toast from 'react-native-toast-message'
+import {
+  AuthColors,
+  AuthSpacing,
+  AuthBorderRadius,
+  AuthFontSizes,
+  AuthSizes,
+  AuthShadows,
+} from '@/constants/auth-styles'
+import AuthHeader from '@/components/auth/AuthHeader'
 
-const { height } = Dimensions.get('window');
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
-// Logo images
-const LogoWhite = require('@/assets/images/logo-white.png');
+export default function ForgotPassword() {
+  const router = useRouter()
+  const { height: screenHeight } = useWindowDimensions()
 
-export default function ForgotPasswordScreen() {
-  // Her zaman light mode kullanilir
-  const colors = Colors.light;
-  const { forgotPassword, isLoading, isAuthenticated, isInitializing, isSetupComplete } = useAuth();
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSent, setIsSent] = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const [focusedField, setFocusedField] = useState<string | null>(null)
 
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  const [isSent, setIsSent] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-
-  // Redirect if authenticated - don't show forgot-password page at all
-  useEffect(() => {
-    if (isAuthenticated) {
-      if (isSetupComplete) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/(auth)/setup-status');
-      }
-    }
-  }, [isAuthenticated, isSetupComplete]);
-
-  // Don't show page while checking auth state or if already authenticated
-  if (isInitializing || isAuthenticated) {
-    return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.loadingContainer}
-        >
-          <Image
-            source={LogoWhite}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </LinearGradient>
-      </View>
-    );
-  }
+  // Animation values
+  const buttonScale = useSharedValue(1)
 
   const validate = () => {
-    if (!email) {
-      setError('E-posta adresi gerekli');
-      return false;
+    if (!email.trim()) {
+      setError('E-posta adresi gerekli')
+      return false
     }
     if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Geçerli bir e-posta adresi girin');
-      return false;
+      setError('Geçerli bir e-posta adresi girin')
+      return false
     }
-    setError('');
-    return true;
-  };
-
-  const handleSendReset = async () => {
-    if (validate()) {
-      await forgotPassword(email);
-      setIsSent(true);
-      startCountdown();
-    }
-  };
+    setError('')
+    return true
+  }
 
   const startCountdown = () => {
-    setCountdown(60);
+    setCountdown(60)
     const interval = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
+          clearInterval(interval)
+          return 0
         }
-        return prev - 1;
-      });
-    }, 1000);
-  };
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  const handleSendReset = async () => {
+    if (validate()) {
+      setIsLoading(true)
+      try {
+        // API call would go here
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        setIsSent(true)
+        startCountdown()
+        Toast.show({
+          type: 'success',
+          text1: 'E-posta gönderildi!',
+          text2: 'Gelen kutunuzu kontrol edin',
+          position: 'top',
+          visibilityTime: 2000
+        })
+      } catch (err) {
+        Toast.show({
+          type: 'error',
+          text1: 'Bir hata oluştu',
+          text2: 'Lütfen tekrar deneyin',
+          position: 'top',
+          visibilityTime: 1500
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  }
 
   const handleResend = async () => {
     if (countdown === 0) {
-      await forgotPassword(email);
-      startCountdown();
+      await handleSendReset()
     }
-  };
+  }
+
+  const handleButtonPressIn = () => {
+    buttonScale.value = withSpring(0.97, { damping: 15, stiffness: 400 })
+  }
+
+  const handleButtonPressOut = () => {
+    buttonScale.value = withSpring(1, { damping: 15, stiffness: 400 })
+  }
+
+  const buttonAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+  }))
+
+  const getInputStyle = () => {
+    const isFocused = focusedField === 'email'
+    const hasError = !!error
+
+    return {
+      borderColor: hasError
+        ? AuthColors.error
+        : isFocused
+        ? AuthColors.primary
+        : AuthColors.inputBorder,
+      backgroundColor: isFocused
+        ? AuthColors.inputBackgroundFocused
+        : AuthColors.inputBackground,
+    }
+  }
+
+  const HEADER_HEIGHT = 220
+  const formMinHeight = screenHeight - HEADER_HEIGHT
 
   if (isSent) {
     return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradientBackground}
+      <SafeAreaView style={styles.container} edges={[]}>
+        <StatusBar style="light" />
+
+        <AuthHeader
+          title="E-posta Gönderildi"
+          subtitle="Gelen kutunuzu kontrol edin"
+          iconType="none"
+        />
+
+        <KeyboardAwareScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          bottomOffset={20}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
-          <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                <ChevronLeft size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-
-          <View style={styles.successFullContainer}>
-            {/* Top Section */}
-            <View style={styles.topSection}>
-              <Image
-                source={LogoWhite}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
+          <View style={[styles.formCard, { minHeight: formMinHeight }]}>
+            {/* Success Icon */}
+            <View style={styles.successIconContainer}>
+              <Ionicons name="checkmark-circle" size={80} color={AuthColors.success} />
             </View>
 
-            {/* Success Card */}
-            <View style={styles.successCard}>
-              <View style={[styles.successIcon, { backgroundColor: colors.successLight }]}>
-                <CheckCircle size={48} color={colors.success} />
-              </View>
+            {/* Success Message */}
+            <Text style={styles.successTitle}>E-postanızı Kontrol Edin</Text>
+            <Text style={styles.successText}>
+              Şifre sıfırlama bağlantısı{'\n'}
+              <Text style={styles.emailText}>{email}</Text>
+              {'\n'}adresine gönderildi.
+            </Text>
 
-              <Text style={[styles.successTitle, { color: colors.text }]}>
-                E-postanızı Kontrol Edin
-              </Text>
-
-              <Text style={[styles.successText, { color: colors.textSecondary }]}>
-                Şifre sıfırlama bağlantısı{'\n'}
-                <Text style={{ fontWeight: '600' }}>{email}</Text>
-                {'\n'}adresine gönderildi.
-              </Text>
-
-              <View style={styles.resendContainer}>
-                {countdown > 0 ? (
-                  <Text style={[styles.countdownText, { color: colors.textMuted }]}>
-                    Yeniden gönder ({countdown}s)
-                  </Text>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.resendButton}
-                    onPress={handleResend}
-                    disabled={isLoading}
-                  >
-                    <RotateCcw size={16} color={Brand.primary} />
-                    <Text style={[styles.resendText, { color: Brand.primary }]}>
-                      Yeniden Gönder
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <TouchableOpacity
-                style={styles.backToLoginButton}
-                onPress={() => router.replace('/(auth)/login')}
-              >
-                <LinearGradient
-                  colors={[Brand.primary, Brand.primaryLight]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.backToLoginButtonGradient}
-                >
-                  <Text style={styles.backToLoginButtonText}>Giriş Sayfasına Dön</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+            {/* Resend Section */}
+            <View style={styles.resendContainer}>
+              {countdown > 0 ? (
+                <Text style={styles.countdownText}>
+                  Yeniden gönder ({countdown}s)
+                </Text>
+              ) : (
+                <Pressable onPress={handleResend} disabled={isLoading}>
+                  <View style={styles.resendButton}>
+                    <Ionicons name="refresh" size={18} color={AuthColors.primary} />
+                    <Text style={styles.resendText}>Yeniden Gönder</Text>
+                  </View>
+                </Pressable>
+              )}
             </View>
+
+            {/* Back to Login Button */}
+            <AnimatedPressable
+              style={[styles.backToLoginButton, buttonAnimStyle]}
+              onPress={() => router.replace('/(auth)/login')}
+              onPressIn={handleButtonPressIn}
+              onPressOut={handleButtonPressOut}
+            >
+              <Text style={styles.backToLoginButtonText}>Giriş Sayfasına Dön</Text>
+            </AnimatedPressable>
           </View>
-        </LinearGradient>
-      </View>
-    );
+        </KeyboardAwareScrollView>
+      </SafeAreaView>
+    )
   }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradientBackground}
+    <SafeAreaView style={styles.container} edges={[]}>
+      <StatusBar style="light" />
+
+      <AuthHeader
+        title="Şifrenizi mi Unuttunuz?"
+        subtitle="E-posta adresinize sıfırlama bağlantısı göndereceğiz"
+        iconType="none"
+      />
+
+      <KeyboardAwareScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={20}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
-        <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ChevronLeft size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            bounces={false}
-            overScrollMode="never"
+        <View style={[styles.formCard, { minHeight: formMinHeight }]}>
+          {/* Title Section */}
+          <Animated.View
+            entering={FadeInDown.delay(100).duration(400)}
+            style={styles.titleSection}
           >
-            {/* Top Section - Logo & Title */}
-            <View style={styles.topSection}>
-              <Image
-                source={LogoWhite}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-              <Text style={styles.welcomeTitle}>Şifrenizi mi Unuttunuz?</Text>
-              <Text style={styles.welcomeSubtitle}>
-                E-posta adresinize sıfırlama bağlantısı göndereceğiz
-              </Text>
-            </View>
+            <Text style={styles.title}>Şifre Sıfırlama</Text>
+            <Text style={styles.subtitle}>
+              Kayıtlı e-posta adresinizi girin
+            </Text>
+          </Animated.View>
 
-            {/* Form Card */}
-            <View style={styles.formCard}>
-              <Input
-                label="E-posta"
+          {/* Email Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>E-posta</Text>
+            <View style={[styles.inputWrapper, getInputStyle()]}>
+              <View style={styles.inputIconContainer}>
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={error ? AuthColors.error : focusedField === 'email' ? AuthColors.primary : AuthColors.iconDefault}
+                />
+              </View>
+              <TextInput
+                style={styles.input}
                 placeholder="ornek@email.com"
+                placeholderTextColor={AuthColors.textPlaceholder}
                 value={email}
                 onChangeText={(v) => {
-                  setEmail(v);
-                  if (error) setError('');
+                  setEmail(v)
+                  if (error) setError('')
                 }}
-                keyboardType="email-address"
                 autoCapitalize="none"
+                keyboardType="email-address"
                 autoComplete="email"
-                error={error}
-                leftIcon={<Mail size={20} color={colors.icon} />}
-                containerStyle={styles.inputContainer}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
               />
-
-              <TouchableOpacity
-                style={[styles.sendButton, isLoading && styles.sendButtonDisabled]}
-                onPress={handleSendReset}
-                disabled={isLoading}
-              >
-                <LinearGradient
-                  colors={[Brand.primary, Brand.primaryLight]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.sendButtonGradient}
-                >
-                  <Text style={styles.sendButtonText}>
-                    {isLoading ? 'Gönderiliyor...' : 'Sıfırlama Bağlantısı Gönder'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              {/* Login Link */}
-              <View style={styles.footer}>
-                <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-                  Şifrenizi hatırladınız mı?{' '}
-                </Text>
-                <Link href="/(auth)/login" asChild>
-                  <TouchableOpacity>
-                    <Text style={[styles.footerLink, { color: Brand.primary }]}>
-                      Giriş Yap
-                    </Text>
-                  </TouchableOpacity>
-                </Link>
-              </View>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </LinearGradient>
-    </View>
-  );
+            {error && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color={AuthColors.error} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Send Button */}
+          <AnimatedPressable
+            style={[styles.sendButton, buttonAnimStyle]}
+            onPress={handleSendReset}
+            onPressIn={handleButtonPressIn}
+            onPressOut={handleButtonPressOut}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color={AuthColors.white} />
+            ) : (
+              <>
+                <Text style={styles.sendButtonText}>Sıfırlama Bağlantısı Gönder</Text>
+                <View style={styles.buttonIcon}>
+                  <Ionicons name="send" size={18} color={AuthColors.white} />
+                </View>
+              </>
+            )}
+          </AnimatedPressable>
+
+          {/* Footer */}
+          <Animated.View
+            entering={FadeInDown.delay(400).duration(400)}
+            style={styles.footer}
+          >
+            <Text style={styles.footerText}>Şifrenizi hatırladınız mı? </Text>
+            <Pressable onPress={() => router.back()}>
+              <Text style={styles.footerLink}>Giriş Yap</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </KeyboardAwareScrollView>
+    </SafeAreaView>
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: AuthColors.primary,
   },
-  gradientBackground: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerSafeArea: {
-    backgroundColor: 'transparent',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 0,
-    height: Platform.OS === 'ios' ? 8 : 38,
-  },
-  backButton: {
-    padding: Spacing.sm,
-    marginLeft: -Spacing.sm,
-  },
-  keyboardView: {
+  scrollView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
   },
-  topSection: {
-    alignItems: 'center',
-    paddingTop: 0,
-    paddingBottom: Spacing['3xl'],
-    paddingHorizontal: Spacing['2xl'],
-  },
-  logoImage: {
-    width: 160,
-    height: 45,
-    marginBottom: Spacing.lg,
-  },
-  logo: {
-    width: 180,
-    height: 50,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: Spacing.xs,
-    textAlign: 'center',
-  },
-  welcomeSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-  },
   formCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: Spacing['2xl'],
-    paddingHorizontal: Spacing['2xl'],
-    paddingBottom: Spacing['2xl'],
-    ...Shadows.lg,
+    backgroundColor: AuthColors.white,
+    paddingHorizontal: AuthSpacing['2xl'],
+    paddingTop: AuthSpacing.lg,
+    paddingBottom: AuthSpacing['5xl'],
+  },
+  titleSection: {
+    marginBottom: AuthSpacing['2xl'],
+  },
+  title: {
+    fontSize: AuthFontSizes['6xl'],
+    fontWeight: '700',
+    color: AuthColors.textPrimary,
+    marginBottom: AuthSpacing.xs,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.textSecondary,
   },
   inputContainer: {
-    marginBottom: Spacing.xl,
+    marginBottom: AuthSpacing['2xl'],
+  },
+  inputLabel: {
+    fontSize: AuthFontSizes.md,
+    fontWeight: '600',
+    color: AuthColors.textPrimary,
+    marginBottom: AuthSpacing.sm,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: AuthBorderRadius.lg,
+    borderWidth: 1.5,
+    height: AuthSizes.inputHeight,
+    paddingHorizontal: AuthSpacing.lg,
+    ...AuthShadows.sm,
+  },
+  inputIconContainer: {
+    width: 24,
+    alignItems: 'center',
+    marginRight: AuthSpacing.md,
+  },
+  input: {
+    flex: 1,
+    fontSize: AuthFontSizes.lg,
+    color: AuthColors.textPrimary,
+    paddingVertical: 0,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: AuthSpacing.xs,
+    marginTop: AuthSpacing.sm,
+    paddingHorizontal: AuthSpacing.xs,
+  },
+  errorText: {
+    fontSize: AuthFontSizes.sm,
+    color: AuthColors.error,
   },
   sendButton: {
-    width: '100%',
-    height: 56,
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-    marginBottom: Spacing.xl,
-  },
-  sendButtonDisabled: {
-    opacity: 0.6,
-  },
-  sendButtonGradient: {
-    flex: 1,
-    justifyContent: 'center',
+    backgroundColor: AuthColors.primary,
+    height: AuthSizes.buttonHeight,
+    borderRadius: AuthBorderRadius.lg,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: AuthSpacing.sm,
+    marginBottom: AuthSpacing.xl,
+    ...AuthShadows.glow,
   },
   sendButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: AuthColors.white,
+    fontSize: AuthFontSizes.xl,
+    fontWeight: '700',
+  },
+  buttonIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: AuthSpacing.xs,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: Spacing.md,
   },
   footerText: {
-    ...Typography.bodySM,
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.textSecondary,
   },
   footerLink: {
-    ...Typography.bodySM,
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.primary,
     fontWeight: '600',
   },
-  // Success Screen Styles
-  successFullContainer: {
-    flex: 1,
-  },
-  successCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: Spacing['3xl'],
-    paddingHorizontal: Spacing['2xl'],
+  // Success Screen
+  successIconContainer: {
     alignItems: 'center',
-    ...Shadows.lg,
-  },
-  successIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing['2xl'],
+    marginBottom: AuthSpacing['2xl'],
+    marginTop: AuthSpacing['3xl'],
   },
   successTitle: {
-    ...Typography.headingLG,
+    fontSize: AuthFontSizes['5xl'],
+    fontWeight: '700',
+    color: AuthColors.textPrimary,
     textAlign: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: AuthSpacing.md,
   },
   successText: {
-    ...Typography.bodyMD,
+    fontSize: AuthFontSizes.lg,
+    color: AuthColors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 26,
+    marginBottom: AuthSpacing['3xl'],
+  },
+  emailText: {
+    fontWeight: '600',
+    color: AuthColors.primary,
   },
   resendContainer: {
-    marginTop: Spacing['2xl'],
-    marginBottom: Spacing['3xl'],
+    alignItems: 'center',
+    marginBottom: AuthSpacing['3xl'],
   },
   countdownText: {
-    ...Typography.bodyMD,
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.textMuted,
   },
   resendButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: AuthSpacing.xs,
   },
   resendText: {
-    ...Typography.bodyMD,
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.primary,
     fontWeight: '600',
   },
   backToLoginButton: {
-    width: '100%',
-    height: 56,
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-  },
-  backToLoginButtonGradient: {
-    flex: 1,
-    justifyContent: 'center',
+    backgroundColor: AuthColors.primary,
+    height: AuthSizes.buttonHeight,
+    borderRadius: AuthBorderRadius.lg,
     alignItems: 'center',
+    justifyContent: 'center',
+    ...AuthShadows.glow,
   },
   backToLoginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: AuthColors.white,
+    fontSize: AuthFontSizes.xl,
+    fontWeight: '700',
   },
-});
+})

@@ -1,14 +1,19 @@
-import { Stack } from 'expo-router';
+import { Stack } from 'expo-router'
 
 export default function AuthLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      {/* Login is the default/first screen - shown after logout */}
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: 'default'
+      }}
+    >
+      {/* Login varsayılan/ilk ekran - logout sonrası gösterilir */}
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
       <Stack.Screen name="forgot-password" />
-      {/* Setup status is only shown after registration, not as default */}
+      {/* Setup status sadece kayıt sonrası gösterilir, varsayılan değil */}
       <Stack.Screen name="setup-status" />
     </Stack>
-  );
+  )
 }

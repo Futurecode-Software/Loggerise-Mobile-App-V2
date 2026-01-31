@@ -1,508 +1,439 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, RefreshControl, Pressable } from 'react-native'
+import { useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring
+} from 'react-native-reanimated'
+import { PageHeader } from '@/components/navigation'
+import { StatusBadge } from '@/components/contacts/StatusBadge'
+import { Skeleton } from '@/components/ui/skeleton'
+import type { Contact } from '@/types/contact'
+import { getContacts } from '@/services/endpoints/contacts'
+import { getContactTypeLabel } from '@/utils/contacts/labels'
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
-import {
-  Search,
-  Filter,
-  Plus,
-  User,
-  Building2,
-  AlertCircle,
-} from 'lucide-react-native';
-import { StandardListItem, Badge, Input, SkeletonList } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
-import {
-  getContacts,
-  Contact,
-  ContactFilters,
-  Pagination,
-} from '@/services/endpoints/contacts';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows,
+  DashboardAnimations
+} from '@/constants/dashboard-theme'
 
-const FILTER_CHIPS = [
-  { id: 'all', label: 'Tümü' },
-  { id: 'customer', label: 'Müşteri' },
-  { id: 'supplier', label: 'Tedarikçi' },
-  { id: 'company', label: 'Şirket' },
-  { id: 'individual', label: 'Bireysel' },
-];
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+
+function ContactCardSkeleton() {
+  return (
+    <View style={styles.contactCard}>
+      <View style={styles.cardHeader}>
+        <Skeleton width={48} height={48} borderRadius={12} />
+        <View style={{ flex: 1, marginLeft: DashboardSpacing.sm }}>
+          <Skeleton width={180} height={20} />
+          <Skeleton width={80} height={14} style={{ marginTop: 4 }} />
+        </View>
+        <Skeleton width={60} height={24} borderRadius={12} />
+      </View>
+      <Skeleton width={120} height={20} borderRadius={16} style={{ marginTop: 8 }} />
+      <View style={{ marginTop: DashboardSpacing.md, gap: DashboardSpacing.xs }}>
+        <Skeleton width="100%" height={16} />
+        <Skeleton width="80%" height={16} />
+      </View>
+    </View>
+  )
+}
+
+// Contact Card Component
+interface ContactCardProps {
+  item: Contact
+  onPress: () => void
+}
+
+function ContactCard({ item, onPress }: ContactCardProps) {
+  const scale = useSharedValue(1)
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }))
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy)
+  }
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
+
+  return (
+    <View>
+      <AnimatedPressable
+        style={[styles.contactCard, animStyle]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        {/* Üst kısım - Icon, İsim ve Durum */}
+        <View style={styles.cardHeader}>
+          <View style={styles.contactNameContainer}>
+            <View style={styles.contactIcon}>
+              <Ionicons
+                name="person"
+                size={20}
+                color={DashboardColors.primary}
+              />
+            </View>
+            <View style={styles.headerContent}>
+              <Text style={styles.contactName} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={styles.contactCode}>{item.code}</Text>
+            </View>
+          </View>
+
+          <StatusBadge status={item.status} />
+        </View>
+
+        {/* Cari Tipi Badge */}
+        <View style={styles.typeBadge}>
+          <Ionicons
+            name="briefcase-outline"
+            size={12}
+            color={DashboardColors.primary}
+          />
+          <Text style={styles.typeText}>
+            {getContactTypeLabel(item.type)}
+          </Text>
+        </View>
+
+        {/* Bilgi Container */}
+        <View style={styles.infoContainer}>
+          {item.email && (
+            <View style={styles.infoRow}>
+              <Ionicons name="mail-outline" size={14} color={DashboardColors.textSecondary} />
+              <Text style={styles.infoText} numberOfLines={1}>
+                {item.email}
+              </Text>
+            </View>
+          )}
+          {item.phone && (
+            <View style={styles.infoRow}>
+              <Ionicons name="call-outline" size={14} color={DashboardColors.textSecondary} />
+              <Text style={styles.infoText} numberOfLines={1}>
+                {item.phone}
+              </Text>
+            </View>
+          )}
+          {item.tax_number && (
+            <View style={styles.infoRow}>
+              <Ionicons name="document-text-outline" size={14} color={DashboardColors.textSecondary} />
+              <Text style={styles.infoText} numberOfLines={1}>
+                VKN: {item.tax_number}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Sağ ok */}
+        <View style={styles.cardArrow}>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={DashboardColors.textMuted}
+          />
+        </View>
+      </AnimatedPressable>
+    </View>
+  )
+}
+
+function EmptyState({ searchQuery }: { searchQuery: string }) {
+  return (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="people-outline" size={64} color={DashboardColors.textMuted} />
+      </View>
+      <Text style={styles.emptyTitle}>
+        {searchQuery ? 'Cari bulunamadı' : 'Henüz cari yok'}
+      </Text>
+      <Text style={styles.emptyText}>
+        {searchQuery
+          ? 'Arama kriterlerinize uygun cari bulunamadı.'
+          : 'Yeni cari eklemek için sağ üstteki + butonuna tıklayın.'}
+      </Text>
+    </View>
+  )
+}
 
 export default function ContactsScreen() {
-  // Her zaman light mode kullanilir
-  const colors = Colors.light;
+  const router = useRouter()
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [refreshing, setRefreshing] = useState(false);
+  const isMountedRef = useRef(true)
 
-  // API state
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Refs to prevent duplicate calls
-  const isMountedRef = useRef(true);
-  const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const hasInitialFetchRef = useRef(false);
-  const isFirstFocusRef = useRef(true);
-
-  // Core fetch function - doesn't depend on search/filter state
-  const executeFetch = useCallback(
-    async (
-      search: string,
-      filter: string,
-      page: number = 1,
-      append: boolean = false,
-      isRefresh: boolean = false
-    ) => {
-      const currentFetchId = ++fetchIdRef.current;
-
-      try {
-        setError(null);
-
-        // Build filters
-        const filters: ContactFilters = {
-          page,
-          per_page: 20,
-          is_active: true,
-        };
-
-        // Add search filter
-        if (search.trim()) {
-          filters.search = search.trim();
-        }
-
-        // Add legal type filter
-        if (filter === 'company') {
-          filters.legal_type = 'company';
-        } else if (filter === 'individual') {
-          filters.legal_type = 'individual';
-        }
-
-        const response = await getContacts(filters);
-
-        // Only update if this is still the latest request
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          if (append) {
-            setContacts((prev) => [...prev, ...response.contacts]);
-          } else {
-            setContacts(response.contacts);
-          }
-          setPagination(response.pagination);
-          hasInitialFetchRef.current = true;
-        }
-      } catch (err) {
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Contacts fetch error:', err);
-          setError(err instanceof Error ? err.message : 'Cariler yüklenemedi');
-        }
-      } finally {
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          setIsLoading(false);
-          setIsLoadingMore(false);
-          setRefreshing(false);
-        }
+  const fetchContacts = useCallback(async (search?: string) => {
+    try {
+      const response = await getContacts({
+        search,
+        perPage: 50
+      })
+      if (isMountedRef.current) {
+        setContacts(response.contacts)
+        setIsLoading(false)
       }
-    },
-    []
-  );
+    } catch {
+      if (isMountedRef.current) {
+        setContacts([])
+        setIsLoading(false)
+      }
+    }
+  }, [])
 
-  // Initial fetch - only once on mount
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await fetchContacts(searchQuery)
+    setRefreshing(false)
+  }, [fetchContacts, searchQuery])
+
   useEffect(() => {
-    isMountedRef.current = true;
-    executeFetch(searchQuery, activeFilter, 1, false);
+    isMountedRef.current = true
+    fetchContacts()
 
     return () => {
-      isMountedRef.current = false;
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []); // Empty deps - only run on mount
+      isMountedRef.current = false
+    }
+  }, [fetchContacts])
 
-  // Filter change - immediate fetch
   useEffect(() => {
-    if (!hasInitialFetchRef.current) return;
+    const timer = setTimeout(() => {
+      fetchContacts(searchQuery)
+    }, 300)
 
-    setIsLoading(true);
-    executeFetch(searchQuery, activeFilter, 1, false);
-  }, [activeFilter]); // Only activeFilter
+    return () => clearTimeout(timer)
+  }, [searchQuery, fetchContacts])
 
-  // Search with debounce
-  useEffect(() => {
-    if (!hasInitialFetchRef.current) return;
-
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-
-    debounceTimeoutRef.current = setTimeout(() => {
-      setIsLoading(true);
-      executeFetch(searchQuery, activeFilter, 1, false);
-    }, 500);
-
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, [searchQuery]); // Only searchQuery
-
-  // Sayfa odaklandığında listeyi yenile (detay sayfasından dönüşte)
-  useFocusEffect(
-    useCallback(() => {
-      if (isFirstFocusRef.current) {
-        isFirstFocusRef.current = false;
-        return;
-      }
-
-      // Only refresh if we've already fetched once
-      if (hasInitialFetchRef.current) {
-        // Loading göstermeden sessizce yenile
-        executeFetch(searchQuery, activeFilter, 1, false);
-      }
-    }, [searchQuery, activeFilter, executeFetch])
-  );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await executeFetch(searchQuery, activeFilter, 1, false, true);
-  };
-
-  const loadMore = () => {
-    if (
-      !isLoadingMore &&
-      pagination &&
-      pagination.current_page < pagination.last_page
-    ) {
-      setIsLoadingMore(true);
-      executeFetch(searchQuery, activeFilter, pagination.current_page + 1, true);
-    }
-  };
-
-  // Filter contacts client-side for customer/supplier filter
-  const filteredContacts = contacts.filter((contact) => {
-    if (activeFilter === 'customer') {
-      return contact.is_customer;
-    }
-    if (activeFilter === 'supplier') {
-      return contact.is_supplier;
-    }
-    return true;
-  });
-
-  // Get role badge for footer
-  const getRoleBadge = (contact: Contact) => {
-    if (contact.is_customer && contact.is_supplier) {
-      return { label: 'Her İkisi', variant: 'default' as const };
-    }
-    if (contact.is_customer) {
-      return { label: 'Müşteri', variant: 'success' as const };
-    }
-    if (contact.is_supplier) {
-      return { label: 'Tedarikçi', variant: 'info' as const };
-    }
-    return null;
-  };
-
-  // Render contact item using StandardListItem
-  const renderContact = useCallback(
-    ({ item }: { item: Contact }) => {
-      const roleBadge = getRoleBadge(item);
-      const isCompany = item.legal_type === 'company';
-
-      return (
-        <StandardListItem
-          icon={isCompany ? Building2 : User}
-          iconColor={isCompany ? colors.success : colors.info}
-          iconBg={isCompany ? colors.successLight : colors.infoLight}
-          title={item.name}
-          subtitle={
-            isCompany
-              ? `VKN: ${item.tax_number || '-'}`
-              : `TC: ${item.identity_number || '-'}`
-          }
-          meta={item.email || undefined}
-          status={
-            roleBadge
-              ? {
-                  label: roleBadge.label,
-                  variant: roleBadge.variant,
-                }
-              : undefined
-          }
-          onPress={() => router.push(`/contact/${item.id}` as any)}
-          showChevron
-          style={styles.listItem}
-        />
-      );
-    },
-    [colors]
-  );
-
-  // Optimize FlatList with getItemLayout (fixed height items)
-  const getItemLayout = useCallback(
-    (_: any, index: number) => ({
-      length: 88, // Approximate height of StandardListItem with padding
-      offset: 88 * index,
-      index,
-    }),
-    []
-  );
-
-  const renderEmptyState = () => {
-    if (isLoading) {
-      return <SkeletonList count={8} type="listItem" />;
-    }
-
-    if (error) {
-      return (
-        <View style={styles.emptyState}>
-          <View
-            style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}
-          >
-            <AlertCircle size={64} color={colors.danger} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            Bir hata oluştu
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {error}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => {
-              setIsLoading(true);
-              executeFetch(searchQuery, activeFilter, 1, false);
-            }}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.emptyState}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-          <User size={64} color={colors.textMuted} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {searchQuery ? 'Sonuç bulunamadı' : 'Henüz cari eklenmemiş'}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          {searchQuery
-            ? 'Farklı bir arama terimi deneyin'
-            : 'Yeni cari eklemek için + butonuna tıklayın'}
-        </Text>
-      </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={Brand.primary} />
-      </View>
-    );
-  };
+  const handleContactPress = (contact: Contact) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/contacts/${contact.id}`)
+  }
 
   return (
     <View style={styles.container}>
-      {/* Full Screen Header */}
-      <FullScreenHeader
+      <PageHeader
         title="Cariler"
-        subtitle={pagination ? `${pagination.total} kayıt` : undefined}
-        rightIcons={
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => router.push('/contact/new' as any)}
-              activeOpacity={0.7}
-            >
-              <Plus size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Filter size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        }
+        icon="people-outline"
+        subtitle="Cari yönetimi"
+        rightAction={{
+          icon: 'add',
+          onPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+            router.push('/contacts/new')
+          }
+        }}
       />
 
-      {/* Content Area with White Background and Rounded Corners */}
-      <View style={styles.contentArea}>
-        {/* Search */}
+      <View style={styles.content}>
+        {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Input
-            placeholder="İsim, vergi no veya e-posta ile ara..."
+          <Ionicons name="search" size={20} color={DashboardColors.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cari ara..."
+            placeholderTextColor={DashboardColors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            leftIcon={<Search size={20} color={colors.icon} />}
-            containerStyle={styles.searchInput}
           />
-        </View>
-
-        {/* Filter Chips */}
-        <View style={styles.filterContainer}>
-          <FlatList
-            horizontal
-            data={FILTER_CHIPS}
-            keyExtractor={(item) => item.id}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterContent}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.filterChip,
-                  {
-                    backgroundColor:
-                      activeFilter === item.id ? Brand.primary : colors.card,
-                    borderColor:
-                      activeFilter === item.id ? Brand.primary : colors.border,
-                  },
-                ]}
-                onPress={() => setActiveFilter(item.id)}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    {
-                      color:
-                        activeFilter === item.id
-                          ? '#FFFFFF'
-                          : colors.textSecondary,
-                    },
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.selectionAsync()
+                setSearchQuery('')
+              }}
+            >
+              <Ionicons name="close-circle" size={20} color={DashboardColors.textMuted} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Contact List */}
-        <FlatList
-          data={filteredContacts}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderContact}
-          getItemLayout={getItemLayout}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={renderEmptyState}
-          ListFooterComponent={renderFooter}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={Brand.primary}
-            />
-          }
-        />
+        {isLoading ? (
+          <View style={styles.listContent}>
+            <ContactCardSkeleton />
+            <ContactCardSkeleton />
+            <ContactCardSkeleton />
+            <ContactCardSkeleton />
+          </View>
+        ) : (
+          <FlatList
+            data={contacts}
+            renderItem={({ item }) => (
+              <ContactCard
+                item={item}
+                onPress={() => handleContactPress(item)}
+              />
+            )}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={DashboardColors.primary}
+              />
+            }
+            ListEmptyComponent={<EmptyState searchQuery={searchQuery} />}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.primary
   },
-  contentArea: {
+  content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
+    backgroundColor: DashboardColors.background
   },
   searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: DashboardColors.surface,
+    marginHorizontal: DashboardSpacing.lg,
+    marginTop: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.md,
+    paddingHorizontal: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    height: 48,
+    gap: DashboardSpacing.sm
   },
   searchInput: {
-    marginBottom: 0,
-  },
-  filterContainer: {
-    paddingVertical: Spacing.md,
-  },
-  filterContent: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  filterChip: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: 32,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
+    flex: 1,
+    fontSize: DashboardFontSizes.md,
+    color: DashboardColors.text,
+    height: '100%'
   },
   listContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    flexGrow: 1,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.xl
   },
-  listItem: {
-    marginBottom: Spacing.md,
+  contactCard: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.md,
+    position: 'relative',
+    ...DashboardShadows.md
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: DashboardSpacing.md
+  },
+  contactNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    flex: 1,
+    marginRight: DashboardSpacing.md
+  },
+  contactIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerContent: {
+    flex: 1
+  },
+  contactName: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary,
+    letterSpacing: 0.3,
+    marginBottom: 2
+  },
+  contactCode: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textSecondary,
+    fontWeight: '500'
+  },
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: `${DashboardColors.primary}15`,
+    gap: 4,
+    marginBottom: DashboardSpacing.md
+  },
+  typeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600',
+    color: DashboardColors.primary
+  },
+  infoContainer: {
+    gap: DashboardSpacing.xs,
+    paddingTop: DashboardSpacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: DashboardColors.borderLight
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  infoText: {
+    flex: 1,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
+  },
+  cardArrow: {
+    position: 'absolute',
+    right: DashboardSpacing.md,
+    top: '50%',
+    marginTop: -10
   },
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
+    paddingVertical: DashboardSpacing['3xl'],
+    paddingHorizontal: DashboardSpacing.xl
   },
   emptyIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: DashboardColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: DashboardSpacing.xl
   },
   emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: DashboardColors.text,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
+  },
+  emptyText: {
+    fontSize: DashboardFontSizes.md,
+    color: DashboardColors.textMuted,
     textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: 12,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  loadingMore: {
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
-  },
-});
+    lineHeight: 24
+  }
+})

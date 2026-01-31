@@ -1,452 +1,693 @@
 /**
- * Setup Status Screen
+ * Premium Setup Status Screen
  *
- * Shows account setup progress for newly registered users.
- * Polls the backend to check when tenant database is ready.
+ * Elegant progress tracking ile hesap kurulum durumu
+ * Animated indicators ve smooth transitions
  */
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  Animated,
+  Pressable,
+} from 'react-native'
+import { router } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
+import { StatusBar } from 'expo-status-bar'
+import { LinearGradient } from 'expo-linear-gradient'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withRepeat,
+  withSequence,
+  withSpring,
   Easing,
-  TouchableOpacity,
-} from 'react-native';
-import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Building2, Check, Loader2, AlertTriangle, RefreshCw } from 'lucide-react-native';
-import { Colors, Typography, Spacing, Brand } from '@/constants/theme';
-// useColorScheme kaldirildi - her zaman light mode kullanilir
-import { checkSetupStatus, SetupStatusResult } from '@/services/endpoints/auth';
-import { useAuth } from '@/context/auth-context';
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+} from 'react-native-reanimated'
+import { useAuth } from '@/context/auth-context'
+import { checkSetupStatus } from '@/services/endpoints/auth'
+import Toast from 'react-native-toast-message'
+import {
+  AuthColors,
+  AuthSpacing,
+  AuthBorderRadius,
+  AuthFontSizes,
+  AuthSizes,
+  AuthShadows,
+  AuthAnimations,
+} from '@/constants/auth-styles'
 
-const DEFAULT_POLL_INTERVAL = 5000; // 5 seconds default
-const MAX_POLL_ATTEMPTS = 60; // 5 minutes max (60 * 5s)
+const DEFAULT_POLL_INTERVAL = 5000
+const MAX_POLL_ATTEMPTS = 60
 
 interface SetupStep {
-  id: string;
-  label: string;
-  completed: boolean;
+  id: string
+  label: string
+  description: string
+  icon: keyof typeof Ionicons.glyphMap
+  completed: boolean
 }
 
-export default function SetupStatusScreen() {
-  // Her zaman light mode kullanilir
-  const colors = Colors.light;
-  const { logout, isAuthenticated } = useAuth();
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
-  // Use ref to immediately stop polling (state updates are async)
-  const shouldStopPolling = useRef(false);
-  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+export default function SetupStatus() {
+  const { logout, isAuthenticated } = useAuth()
 
-  const [isChecking, setIsChecking] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string>('Hesabınız hazırlanıyor...');
-  const [estimatedTime, setEstimatedTime] = useState<string | null>(null);
-  const [attempts, setAttempts] = useState(0);
-  const [isFailed, setIsFailed] = useState(false);
+  const shouldStopPolling = useRef(false)
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const [error, setError] = useState<string | null>(null)
+  const [statusMessage, setStatusMessage] = useState<string>('Hesabınız hazırlanıyor...')
+  const [estimatedTime, setEstimatedTime] = useState<string | null>(null)
+  const [isFailed, setIsFailed] = useState(false)
+  const [isComplete, setIsComplete] = useState(false)
   const [steps, setSteps] = useState<SetupStep[]>([
-    { id: 'tenant', label: 'Firma hesabı oluşturuluyor', completed: false },
-    { id: 'database', label: 'Veritabanı hazırlanıyor', completed: false },
-    { id: 'settings', label: 'Ayarlar yapılandırılıyor', completed: false },
-    { id: 'ready', label: 'Hesabınız hazır!', completed: false },
-  ]);
+    {
+      id: 'tenant',
+      label: 'Firma Hesabı',
+      description: 'Hesap oluşturuluyor',
+      icon: 'business-outline',
+      completed: false,
+    },
+    {
+      id: 'database',
+      label: 'Veritabanı',
+      description: 'Veriler hazırlanıyor',
+      icon: 'server-outline',
+      completed: false,
+    },
+    {
+      id: 'settings',
+      label: 'Ayarlar',
+      description: 'Yapılandırılıyor',
+      icon: 'settings-outline',
+      completed: false,
+    },
+    {
+      id: 'ready',
+      label: 'Tamamlandı',
+      description: 'Hesabınız hazır!',
+      icon: 'checkmark-circle-outline',
+      completed: false,
+    },
+  ])
 
-  // Spinning animation for loader
-  const spinValue = useRef(new Animated.Value(0)).current;
+  // Animations
+  const pulseAnim = useSharedValue(1)
+  const rotateAnim = useSharedValue(0)
+  const progressAnim = useSharedValue(0)
+  const successScale = useSharedValue(0)
+  const buttonScale = useSharedValue(1)
 
   useEffect(() => {
-    const spin = Animated.loop(
-      Animated.timing(spinValue, {
-        toValue: 1,
-        duration: 1500,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    );
-    spin.start();
-    return () => spin.stop();
-  }, [spinValue]);
+    // Pulse animation
+    pulseAnim.value = withRepeat(
+      withSequence(
+        withTiming(1.05, { duration: 1000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      false
+    )
 
-  const spinInterpolate = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+    // Rotate animation for loading
+    rotateAnim.value = withRepeat(
+      withTiming(360, { duration: 2000, easing: Easing.linear }),
+      -1,
+      false
+    )
+  }, [pulseAnim, rotateAnim])
 
-  // Progress animation for steps
+  useEffect(() => {
+    const completedCount = steps.filter((s) => s.completed).length
+    const progress = completedCount / steps.length
+    progressAnim.value = withTiming(progress, {
+      duration: AuthAnimations.timing.slow,
+      easing: Easing.out(Easing.cubic),
+    })
+  }, [steps, progressAnim])
+
+  useEffect(() => {
+    if (isComplete) {
+      successScale.value = withSpring(1, { damping: 12, stiffness: 200 })
+    }
+  }, [isComplete, successScale])
+
   const progressStep = (stepIndex: number) => {
     setSteps((prev) =>
       prev.map((step, index) => ({
         ...step,
         completed: index <= stepIndex,
       }))
-    );
-  };
+    )
+  }
 
-  // Stop all polling and clear timers
   const stopPolling = useCallback(() => {
-    shouldStopPolling.current = true;
+    shouldStopPolling.current = true
     if (pollTimerRef.current) {
-      clearTimeout(pollTimerRef.current);
-      pollTimerRef.current = null;
+      clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
     }
-  }, []);
+  }, [])
 
-  // Navigate to login immediately
   const goToLogin = useCallback(() => {
-    stopPolling();
-    router.replace('/(auth)/login');
-  }, [stopPolling]);
+    stopPolling()
+    router.replace('/(auth)/login')
+  }, [stopPolling])
 
-  // Handle logout and go back to login
   const handleBackToLogin = useCallback(async () => {
-    // FIRST: Stop polling immediately
-    stopPolling();
+    stopPolling()
 
-    // THEN: Wait for logout to complete (state must be cleared before navigation)
     try {
-      await logout();
+      await logout()
     } catch (err) {
-      console.error('Logout error:', err);
+      console.error('Logout error:', err)
     }
 
-    // FINALLY: Navigate to login after state is cleared
-    router.replace('/(auth)/login');
-  }, [stopPolling, logout]);
+    router.replace('/(auth)/login')
+  }, [stopPolling, logout])
 
-  // If user is not authenticated, go to login immediately
   useEffect(() => {
     if (!isAuthenticated) {
-      goToLogin();
+      goToLogin()
     }
-  }, [isAuthenticated, goToLogin]);
+  }, [isAuthenticated, goToLogin])
 
-  // Poll setup status
   useEffect(() => {
-    let currentAttempts = 0;
-    shouldStopPolling.current = false;
+    let currentAttempts = 0
+    shouldStopPolling.current = false
 
     const checkStatus = async () => {
-      // Check ref immediately (not state)
       if (shouldStopPolling.current) {
-        console.log('Setup status: Polling stopped');
-        return;
+        return
       }
 
       try {
-        setIsChecking(true);
-        const status: SetupStatusResult = await checkSetupStatus();
+        const status = await checkSetupStatus()
 
-        // Check again after API call
-        if (shouldStopPolling.current) return;
+        if (shouldStopPolling.current) return
 
-        // Update message from backend
         if (status.message) {
-          setStatusMessage(status.message);
+          setStatusMessage(status.message)
         }
         if (status.estimated_time) {
-          setEstimatedTime(status.estimated_time);
+          setEstimatedTime(status.estimated_time)
         }
 
-        // Handle different statuses
         if (status.setup_status === 'active') {
-          // Setup complete!
-          progressStep(3);
-          setIsChecking(false);
-          setStatusMessage('Hesabınız hazır!');
+          progressStep(3)
+          setStatusMessage('Hesabınız hazır!')
+          setIsComplete(true)
+          Toast.show({
+            type: 'success',
+            text1: 'Hesabınız hazır!',
+            position: 'top',
+            visibilityTime: 1500
+          })
 
-          // Wait a moment to show completion, then navigate
           setTimeout(() => {
             if (!shouldStopPolling.current) {
-              router.replace('/(tabs)');
+              router.replace('/(tabs)')
             }
-          }, 1500);
-          return;
+          }, 2000)
+          return
         }
 
         if (status.setup_status === 'failed') {
-          // Setup failed
-          setIsFailed(true);
-          setIsChecking(false);
-          setError(status.error || 'Hesap kurulumu başarısız oldu.');
-          return;
+          setIsFailed(true)
+          setError(status.error || 'Hesap kurulumu başarısız oldu.')
+          return
         }
 
-        // Still setting up - update progress based on attempts
-        const currentStep = Math.min(Math.floor(currentAttempts / 4), 2);
-        progressStep(currentStep);
+        const currentStep = Math.min(Math.floor(currentAttempts / 4), 2)
+        progressStep(currentStep)
 
-        // Continue polling
-        currentAttempts++;
-        setAttempts(currentAttempts);
+        currentAttempts++
 
         if (currentAttempts < MAX_POLL_ATTEMPTS && !shouldStopPolling.current) {
-          // Use retry_after from backend or default interval
-          const pollInterval = (status.retry_after || 5) * 1000;
-          pollTimerRef.current = setTimeout(checkStatus, pollInterval);
+          const pollInterval = (status.retry_after || 5) * 1000
+          pollTimerRef.current = setTimeout(checkStatus, pollInterval)
         } else if (currentAttempts >= MAX_POLL_ATTEMPTS) {
-          setError('Kurulum beklenenden uzun sürüyor. Lütfen daha sonra tekrar deneyin.');
-          setIsChecking(false);
+          setError('Kurulum beklenenden uzun sürüyor. Lütfen daha sonra tekrar deneyin.')
         }
-      } catch (err: any) {
-        // Check ref after error
-        if (shouldStopPolling.current) return;
+      } catch (err) {
+        if (shouldStopPolling.current) return
 
-        console.log('Setup status check error:', err);
+        console.log('Setup status check error:', err)
 
-        // Check if it's an authentication error (401)
-        const errorMessage = err?.message || '';
-        const isAuthError = errorMessage.includes('Unauthenticated') ||
-                           errorMessage.includes('Unauthorized') ||
-                           errorMessage.includes('401') ||
-                           err?.response?.status === 401;
+        const error = err as Error & { response?: { status?: number } }
+        const errorMessage = error?.message || ''
+        const isAuthError =
+          errorMessage.includes('Unauthenticated') ||
+          errorMessage.includes('Unauthorized') ||
+          errorMessage.includes('401') ||
+          error?.response?.status === 401
 
         if (isAuthError) {
-          // User logged out, stop polling and navigate to login
-          console.log('Setup status: Auth error, going to login');
-          goToLogin();
-          return;
+          goToLogin()
+          return
         }
 
-        // Continue polling on other errors (tenant might still be setting up)
-        currentAttempts++;
-        setAttempts(currentAttempts);
+        currentAttempts++
 
         if (currentAttempts < MAX_POLL_ATTEMPTS && !shouldStopPolling.current) {
-          pollTimerRef.current = setTimeout(checkStatus, DEFAULT_POLL_INTERVAL);
+          pollTimerRef.current = setTimeout(checkStatus, DEFAULT_POLL_INTERVAL)
         } else if (currentAttempts >= MAX_POLL_ATTEMPTS) {
-          setError('Kurulum durumu kontrol edilemedi. Lütfen tekrar giriş yapın.');
-          setIsChecking(false);
+          setError('Kurulum durumu kontrol edilemedi. Lütfen tekrar giriş yapın.')
         }
       }
-    };
-
-    // Only start polling if authenticated
-    if (isAuthenticated) {
-      checkStatus();
     }
 
-    // Cleanup on unmount
+    if (isAuthenticated) {
+      checkStatus()
+    }
+
     return () => {
-      stopPolling();
-    };
-  }, []); // Empty deps - only run once on mount
+      stopPolling()
+    }
+  }, [isAuthenticated, goToLogin, stopPolling])
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseAnim.value }],
+  }))
+
+  const rotateStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotateAnim.value}deg` }],
+  }))
+
+  const progressBarStyle = useAnimatedStyle(() => ({
+    width: `${progressAnim.value * 100}%`,
+  }))
+
+  const successIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: successScale.value }],
+    opacity: successScale.value,
+  }))
+
+  const handleButtonPressIn = () => {
+    buttonScale.value = withSpring(0.97, { damping: 15, stiffness: 400 })
+  }
+
+  const handleButtonPressOut = () => {
+    buttonScale.value = withSpring(1, { damping: 15, stiffness: 400 })
+  }
+
+  const buttonAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+  }))
 
   const renderStep = (step: SetupStep, index: number) => {
-    const isActive = !step.completed && (index === 0 || steps[index - 1].completed);
+    const isActive = !step.completed && (index === 0 || steps[index - 1].completed)
 
     return (
       <View key={step.id} style={styles.stepRow}>
         <View
           style={[
             styles.stepIndicator,
-            {
-              backgroundColor: step.completed
-                ? Brand.primary
-                : isActive
-                ? colors.surface
-                : colors.card,
-              borderColor: step.completed || isActive ? Brand.primary : colors.border,
-            },
+            step.completed && styles.stepIndicatorCompleted,
+            isActive && styles.stepIndicatorActive,
           ]}
         >
           {step.completed ? (
-            <Check size={16} color="#FFFFFF" />
+            <Ionicons name="checkmark" size={18} color={AuthColors.white} />
           ) : isActive ? (
-            <Animated.View style={{ transform: [{ rotate: spinInterpolate }] }}>
-              <Loader2 size={16} color={Brand.primary} />
+            <Animated.View style={rotateStyle}>
+              <Ionicons name="sync" size={18} color={AuthColors.primary} />
             </Animated.View>
           ) : (
-            <Text style={[styles.stepNumber, { color: colors.textMuted }]}>
-              {index + 1}
-            </Text>
+            <Ionicons name={step.icon} size={18} color={AuthColors.textMuted} />
           )}
         </View>
-        <Text
-          style={[
-            styles.stepLabel,
-            {
-              color: step.completed
-                ? Brand.primary
-                : isActive
-                ? colors.text
-                : colors.textMuted,
-              fontWeight: isActive || step.completed ? '600' : '400',
-            },
-          ]}
-        >
-          {step.label}
-        </Text>
+
+        <View style={styles.stepContent}>
+          <Text
+            style={[
+              styles.stepLabel,
+              step.completed && styles.stepLabelCompleted,
+              isActive && styles.stepLabelActive,
+            ]}
+          >
+            {step.label}
+          </Text>
+          <Text style={styles.stepDescription}>
+            {isActive ? statusMessage : step.description}
+          </Text>
+        </View>
+
+        {step.completed && (
+          <View style={styles.stepCheckmark}>
+            <Ionicons name="checkmark-circle" size={20} color={AuthColors.success} />
+          </View>
+        )}
       </View>
-    );
-  };
+    )
+  }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <StatusBar style="dark" />
+
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#F8FAFC', '#EFF6FF', '#F0FDF4']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
       <View style={styles.content}>
-        {/* Icon */}
-        <View
-          style={[
-            styles.iconContainer,
-            {
-              backgroundColor: isFailed
-                ? colors.danger + '15'
-                : Brand.primary + '15',
-            },
-          ]}
+        {/* Header Icon */}
+        <Animated.View
+          entering={FadeIn.delay(100).duration(400)}
+          style={styles.headerSection}
         >
-          {isFailed ? (
-            <AlertTriangle size={48} color={colors.danger} />
-          ) : (
-            <Building2 size={48} color={Brand.primary} />
+          <Animated.View
+            style={[
+              styles.iconContainer,
+              isFailed && styles.iconContainerError,
+              isComplete && styles.iconContainerSuccess,
+              !isFailed && !isComplete && pulseStyle,
+            ]}
+          >
+            {isComplete ? (
+              <Animated.View style={successIconStyle}>
+                <Ionicons name="checkmark-circle" size={56} color={AuthColors.success} />
+              </Animated.View>
+            ) : isFailed ? (
+              <Ionicons name="alert-circle" size={56} color={AuthColors.error} />
+            ) : (
+              <Ionicons name="rocket-outline" size={48} color={AuthColors.primary} />
+            )}
+          </Animated.View>
+
+          <Animated.Text
+            entering={FadeInDown.delay(200).duration(400)}
+            style={[
+              styles.title,
+              isFailed && styles.titleError,
+              isComplete && styles.titleSuccess,
+            ]}
+          >
+            {isComplete
+              ? 'Tebrikler!'
+              : isFailed
+              ? 'Kurulum Başarısız'
+              : 'Hesabınız Hazırlanıyor'}
+          </Animated.Text>
+
+          <Animated.Text
+            entering={FadeInDown.delay(300).duration(400)}
+            style={styles.subtitle}
+          >
+            {isComplete
+              ? 'Hesabınız başarıyla oluşturuldu'
+              : isFailed
+              ? 'Hesap kurulumu sırasında bir sorun oluştu'
+              : statusMessage}
+          </Animated.Text>
+
+          {estimatedTime && !isFailed && !isComplete && (
+            <Animated.View
+              entering={FadeInDown.delay(400).duration(400)}
+              style={styles.estimatedContainer}
+            >
+              <Ionicons name="time-outline" size={16} color={AuthColors.textMuted} />
+              <Text style={styles.estimatedText}>Tahmini: {estimatedTime}</Text>
+            </Animated.View>
           )}
-        </View>
+        </Animated.View>
 
-        {/* Title */}
-        <Text style={[styles.title, { color: isFailed ? colors.danger : colors.text }]}>
-          {isFailed ? 'Kurulum Başarısız' : 'Hesabınız Hazırlanıyor'}
-        </Text>
-
-        {/* Subtitle */}
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {isFailed
-            ? 'Hesap kurulumu sırasında bir sorun oluştu.'
-            : statusMessage}
-        </Text>
-
-        {/* Estimated Time */}
-        {estimatedTime && !isFailed && (
-          <Text style={[styles.estimatedTime, { color: colors.textMuted }]}>
-            Tahmini süre: {estimatedTime}
-          </Text>
+        {/* Progress Bar */}
+        {!isFailed && (
+          <Animated.View
+            entering={FadeInDown.delay(400).duration(400)}
+            style={styles.progressSection}
+          >
+            <View style={styles.progressBar}>
+              <Animated.View style={[styles.progressFill, progressBarStyle]}>
+                <LinearGradient
+                  colors={[AuthColors.primary, AuthColors.accent]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </Animated.View>
+            </View>
+            <Text style={styles.progressText}>
+              {Math.round(steps.filter((s) => s.completed).length / steps.length * 100)}% tamamlandı
+            </Text>
+          </Animated.View>
         )}
 
         {/* Steps */}
         {!isFailed && (
-          <View style={[styles.stepsContainer, { backgroundColor: colors.surface }]}>
+          <View style={styles.stepsContainer}>
             {steps.map((step, index) => renderStep(step, index))}
           </View>
         )}
 
         {/* Error Message */}
         {error && (
-          <View style={[styles.errorContainer, { backgroundColor: colors.danger + '15' }]}>
-            <AlertTriangle size={20} color={colors.danger} />
-            <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+          <Animated.View
+            entering={FadeInDown.duration(300)}
+            style={styles.errorContainer}
+          >
+            <Ionicons name="warning-outline" size={20} color={AuthColors.error} />
+            <Text style={styles.errorText}>{error}</Text>
+          </Animated.View>
+        )}
+
+        {/* Action Button */}
+        {(isFailed || error) && (
+          <View style={styles.actionSection}>
+            <AnimatedPressable
+              style={[styles.actionButton, buttonAnimStyle]}
+              onPress={handleBackToLogin}
+              onPressIn={handleButtonPressIn}
+              onPressOut={handleButtonPressOut}
+            >
+              <Ionicons name="refresh" size={20} color={AuthColors.white} />
+              <Text style={styles.actionButtonText}>Tekrar Dene</Text>
+            </AnimatedPressable>
           </View>
         )}
 
-        {/* Footer / Action Button */}
-        {isFailed || error ? (
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: Brand.primary }]}
-            onPress={handleBackToLogin}
+        {/* Footer Message */}
+        {!isFailed && !error && !isComplete && (
+          <Animated.View
+            entering={FadeInUp.delay(500).duration(400)}
+            style={styles.footerSection}
           >
-            <RefreshCw size={20} color="#FFFFFF" />
-            <Text style={styles.backButtonText}>Tekrar Giriş Yap</Text>
-          </TouchableOpacity>
-        ) : (
-          <Text style={[styles.footer, { color: colors.textMuted }]}>
-            Lütfen bu sayfadan ayrılmayın...
-          </Text>
+            <View style={styles.footerIcon}>
+              <Ionicons name="information-circle-outline" size={18} color={AuthColors.textMuted} />
+            </View>
+            <Text style={styles.footerText}>
+              Lütfen bu sayfadan ayrılmayın. Kurulum tamamlandığında otomatik olarak yönlendirileceksiniz.
+            </Text>
+          </Animated.View>
         )}
       </View>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: AuthColors.white,
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    paddingHorizontal: AuthSpacing['2xl'],
+    paddingTop: AuthSpacing['4xl'],
+  },
+  // Header
+  headerSection: {
     alignItems: 'center',
-    paddingHorizontal: Spacing['2xl'],
+    marginBottom: AuthSpacing['3xl'],
   },
   iconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: AuthColors.primaryGlow,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: AuthSpacing.xl,
+  },
+  iconContainerError: {
+    backgroundColor: AuthColors.errorLight,
+  },
+  iconContainerSuccess: {
+    backgroundColor: AuthColors.successLight,
   },
   title: {
-    ...Typography.headingLG,
+    fontSize: AuthFontSizes['5xl'],
+    fontWeight: '700',
+    color: AuthColors.textPrimary,
+    marginBottom: AuthSpacing.sm,
     textAlign: 'center',
-    marginBottom: Spacing.md,
+  },
+  titleError: {
+    color: AuthColors.error,
+  },
+  titleSuccess: {
+    color: AuthColors.success,
   },
   subtitle: {
-    ...Typography.bodyMD,
+    fontSize: AuthFontSizes.lg,
+    color: AuthColors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: Spacing.sm,
+    lineHeight: 24,
+    maxWidth: '90%',
   },
-  estimatedTime: {
-    ...Typography.bodySM,
-    textAlign: 'center',
-    marginBottom: Spacing['2xl'],
+  estimatedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: AuthSpacing.xs,
+    marginTop: AuthSpacing.md,
+    paddingHorizontal: AuthSpacing.lg,
+    paddingVertical: AuthSpacing.sm,
+    backgroundColor: AuthColors.inputBackground,
+    borderRadius: AuthBorderRadius.full,
   },
+  estimatedText: {
+    fontSize: AuthFontSizes.sm,
+    color: AuthColors.textMuted,
+  },
+  // Progress
+  progressSection: {
+    marginBottom: AuthSpacing['2xl'],
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: AuthColors.inputBackground,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: AuthSpacing.sm,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressText: {
+    fontSize: AuthFontSizes.sm,
+    color: AuthColors.textMuted,
+    textAlign: 'right',
+  },
+  // Steps
   stepsContainer: {
-    width: '100%',
-    borderRadius: 12,
-    padding: Spacing.lg,
-    gap: Spacing.lg,
+    backgroundColor: AuthColors.white,
+    borderRadius: AuthBorderRadius.xl,
+    padding: AuthSpacing.lg,
+    gap: AuthSpacing.md,
+    ...AuthShadows.lg,
   },
   stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: AuthSpacing.md,
+    paddingVertical: AuthSpacing.sm,
   },
   stepIndicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: AuthColors.inputBackground,
     borderWidth: 2,
+    borderColor: AuthColors.inputBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepNumber: {
-    ...Typography.bodySM,
-    fontWeight: '600',
+  stepIndicatorCompleted: {
+    backgroundColor: AuthColors.success,
+    borderColor: AuthColors.success,
+  },
+  stepIndicatorActive: {
+    backgroundColor: AuthColors.primaryGlow,
+    borderColor: AuthColors.primary,
+  },
+  stepContent: {
+    flex: 1,
   },
   stepLabel: {
-    ...Typography.bodyMD,
-    flex: 1,
+    fontSize: AuthFontSizes.lg,
+    fontWeight: '600',
+    color: AuthColors.textMuted,
+    marginBottom: 2,
   },
+  stepLabelCompleted: {
+    color: AuthColors.success,
+  },
+  stepLabelActive: {
+    color: AuthColors.primary,
+  },
+  stepDescription: {
+    fontSize: AuthFontSizes.sm,
+    color: AuthColors.textMuted,
+  },
+  stepCheckmark: {
+    marginLeft: AuthSpacing.sm,
+  },
+  // Error
   errorContainer: {
-    marginTop: Spacing.xl,
-    padding: Spacing.md,
-    borderRadius: 8,
-    width: '100%',
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
+    alignItems: 'flex-start',
+    gap: AuthSpacing.sm,
+    marginTop: AuthSpacing.xl,
+    padding: AuthSpacing.lg,
+    backgroundColor: AuthColors.errorLight,
+    borderRadius: AuthBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: AuthColors.errorBorder,
   },
   errorText: {
-    ...Typography.bodySM,
     flex: 1,
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.error,
+    lineHeight: 22,
   },
-  footer: {
-    ...Typography.bodySM,
-    marginTop: Spacing['2xl'],
+  // Action
+  actionSection: {
+    marginTop: AuthSpacing['2xl'],
   },
-  backButton: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing['2xl'],
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: 8,
+    gap: AuthSpacing.sm,
+    height: AuthSizes.buttonHeight,
+    backgroundColor: AuthColors.primary,
+    borderRadius: AuthBorderRadius.lg,
+    ...AuthShadows.glow,
   },
-  backButtonText: {
-    ...Typography.bodyMD,
-    color: '#FFFFFF',
-    fontWeight: '600',
+  actionButtonText: {
+    fontSize: AuthFontSizes.xl,
+    fontWeight: '700',
+    color: AuthColors.white,
   },
-});
+  // Footer
+  footerSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: AuthSpacing.sm,
+    marginTop: 'auto',
+    paddingVertical: AuthSpacing.xl,
+    paddingHorizontal: AuthSpacing.md,
+  },
+  footerIcon: {
+    marginTop: 2,
+  },
+  footerText: {
+    flex: 1,
+    fontSize: AuthFontSizes.sm,
+    color: AuthColors.textMuted,
+    lineHeight: 20,
+  },
+})

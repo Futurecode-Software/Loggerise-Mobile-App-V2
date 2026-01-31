@@ -45,7 +45,17 @@
       "Bash(for file in \"cargo-items.tsx\" \"addresses.tsx\" \"pricing.tsx\" \"preview.tsx\")",
       "Bash(do grep -n \"bottomActions:\" \"C:\\\\Users\\\\Ufuk\\\\Documents\\\\GitHub\\\\loggerise_mobile_v2\\\\components\\\\quote\\\\steps$file\")",
       "Bash(for file in *.tsx)",
-      "Bash(do awk '/<View[^>]*>/{view=1} view && /<\\\\/>/{print FILENAME\"\":\"\"NR\"\":\"\"$0; view=0}' \"$file\")"
+      "Bash(do awk '/<View[^>]*>/{view=1} view && /<\\\\/>/{print FILENAME\"\":\"\"NR\"\":\"\"$0; view=0}' \"$file\")",
+      "Bash(npm run lint:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(git mv:*)",
+      "Bash(for path in \"services/endpoints/contacts\" \"services/endpoints/locations\" \"types/contact\")",
+      "Bash(do file=\"C:/LoggeriseMobile/$path.ts\")",
+      "Bash(if [ -f \"$file\" ])",
+      "Bash(then echo \"✓ $path\")",
+      "Bash(else echo \"✗ $path EKSIK\")",
+      "Bash(fi)"
     ]
   },
   "enableAllProjectMcpServers": true,

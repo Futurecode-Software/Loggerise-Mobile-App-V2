@@ -1,29 +1,3 @@
-/**
- * Dashboard Components Index
- *
- * Exports all reusable dashboard components.
- */
-
-// Core components
-export { CorporateCard } from './corporate-card';
-export { MetricCard } from './metric-card';
-export { MetricsGrid } from './metrics-grid';
-export { SummaryCard } from './summary-card';
-export { ListCard } from './list-card';
-export { DashboardQuickActions } from './quick-actions';
-export { QuickActionButton } from './quick-action-button';
-export { SplashScreen } from './splash-screen';
-
-// Tab components
-export {
-  BasicTab,
-  OverviewTab,
-  LogisticsTab,
-  WarehouseTab,
-  DomesticTab,
-  FinanceTab,
-  CRMTab,
-  FleetTab,
-  StockTab,
-  HRTab,
-} from './tabs';
+export { default as DashboardHeader } from "./DashboardHeader"
+export { default as MetricCard } from "./MetricCard"
+export { default as QuickActionButton } from "./QuickActionButton"

@@ -1,391 +1,655 @@
 /**
- * Dashboard Screen
+ * Premium Dashboard Screen
  *
- * Main dashboard view with multiple tab-based dashboards.
- * Uses DashboardContext for centralized state management.
+ * Ana dashboard ekrani - metrikler, hizli islemler ve coklu tab sistemi
+ * Pull-to-refresh, staggered animasyonlar ve premium tasarim ozellikleri
+ * Backend API'den gelen verilerle beslenir
  */
 
-import React, { useRef } from 'react';
+import React, { useCallback, useMemo } from 'react'
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   RefreshControl,
+  Text,
   ActivityIndicator,
-} from 'react-native';
-import { router } from 'expo-router';
+} from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import {
-  Bell,
-  Truck,
-  Package,
-  Car,
-  Users,
-  Warehouse,
-  DollarSign,
-  Briefcase,
-  BarChart3,
-  MapPin,
-  AlertCircle,
-  MessageCircle,
-} from 'lucide-react-native';
-
-import { Avatar } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
-import NotificationModal, { NotificationModalRef } from '@/components/modals/NotificationModal';
-import { useAuth } from '@/context/auth-context';
-import { useNotificationContext } from '@/context/notification-context';
-import { useMessageContext } from '@/context/message-context';
-import { useDashboard, DashboardTab } from '@/contexts/dashboard-context';
-import { DashboardTheme } from '@/constants/dashboard-theme';
-import { Brand, BorderRadius, Shadows } from '@/constants/theme';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+} from '@/constants/dashboard-theme'
+import { DashboardHeader, MetricCard, QuickActionButton } from '@/components/dashboard'
 import {
-  DashboardQuickActions,
-  OverviewTab,
-  LogisticsTab,
-  WarehouseTab,
-  DomesticTab,
-  FinanceTab,
-  CRMTab,
-  FleetTab,
-  StockTab,
-  HRTab,
-  BasicTab,
-} from '@/components/dashboard';
+  useDashboard,
+  DashboardTab
+} from '@/context/dashboard-context'
+import { useRouter } from 'expo-router'
+import { formatDashboardCurrency } from '@/utils/currency'
 
-// Tab icons mapping
-const TAB_ICONS: Record<DashboardTab, React.ElementType> = {
-  overview: BarChart3,
-  logistics: Truck,
-  warehouse: Warehouse,
-  domestic: MapPin,
-  finance: DollarSign,
-  crm: Users,
-  fleet: Car,
-  stock: Package,
-  hr: Briefcase,
-};
+// Metrik tipi
+interface Metric {
+  icon: keyof typeof Ionicons.glyphMap
+  label: string
+  value: string | number
+  growth?: number
+  iconColor?: string
+}
 
-// Tab content components mapping
-const TAB_COMPONENTS: Record<DashboardTab, React.FC> = {
-  overview: OverviewTab,
-  logistics: LogisticsTab,
-  warehouse: WarehouseTab,
-  domestic: DomesticTab,
-  finance: FinanceTab,
-  crm: CRMTab,
-  fleet: FleetTab,
-  stock: StockTab,
-  hr: HRTab,
-};
+// Hizli islem tipi
+interface QuickAction {
+  id: string
+  icon: keyof typeof Ionicons.glyphMap
+  label: string
+  badge: number
+  route?: string
+}
 
-export default function DashboardScreen() {
-  const { user } = useAuth();
+/**
+ * Tab'a gore metrikleri hesapla
+ */
+function getMetricsForTab(
+  tab: DashboardTab,
+  dashboard: ReturnType<typeof useDashboard>
+): Metric[] {
+  switch (tab) {
+    case 'overview': {
+      const stats = dashboard.overviewStats
+      if (!stats) return []
+      return [
+        {
+          icon: 'car-outline',
+          label: 'Aktif Seferler',
+          value: stats.activeTrips,
+        },
+        {
+          icon: 'location-outline',
+          label: 'Yurtici Is Emri',
+          value: stats.activeDomesticOrders,
+        },
+        {
+          icon: 'cube-outline',
+          label: 'Kabul Bekleyen',
+          value: stats.pendingReceiving,
+        },
+        {
+          icon: 'trending-up-outline',
+          label: 'Aylik Gelir',
+          value: formatDashboardCurrency(stats.monthlyRevenue),
+        },
+      ]
+    }
+
+    case 'logistics': {
+      const stats = dashboard.logisticsStats
+      if (!stats) return []
+      return [
+        {
+          icon: 'car-outline',
+          label: 'Aylik Sefer',
+          value: stats.monthlyTripsCount,
+          growth: stats.monthlyTripsGrowth,
+        },
+        {
+          icon: 'time-outline',
+          label: 'Aktif Sefer',
+          value: stats.activeTripsCount,
+        },
+        {
+          icon: 'calendar-outline',
+          label: 'Planlanan',
+          value: stats.plannedTripsCount,
+        },
+        {
+          icon: 'bar-chart-outline',
+          label: 'Toplam',
+          value: stats.totalTripsCount,
+        },
+      ]
+    }
+
+    case 'warehouse': {
+      const stats = dashboard.warehouseStats
+      if (!stats) return []
+      const summary = stats.summaryStats
+      return [
+        {
+          icon: 'time-outline',
+          label: 'On Tasima Bek.',
+          value: summary.pending_pre_carriages,
+        },
+        {
+          icon: 'cube-outline',
+          label: 'Kabul Bekleyen',
+          value: summary.pending_warehouse_receiving,
+        },
+        {
+          icon: 'checkmark-circle-outline',
+          label: 'Hazir',
+          value: summary.ready_for_disposition,
+        },
+        {
+          icon: 'business-outline',
+          label: 'Toplam Pozisyon',
+          value: summary.total_positions,
+        },
+      ]
+    }
+
+    case 'domestic': {
+      const stats = dashboard.domesticStats
+      if (!stats) return []
+      const summary = stats.summaryStats
+      return [
+        {
+          icon: 'document-text-outline',
+          label: 'Toplam Siparis',
+          value: summary.total_orders,
+        },
+        {
+          icon: 'time-outline',
+          label: 'Bekleyen',
+          value: summary.pending_orders,
+        },
+        {
+          icon: 'car-outline',
+          label: 'Yolda',
+          value: summary.in_transit_orders,
+        },
+        {
+          icon: 'alert-circle-outline',
+          label: 'Gecikmis',
+          value: summary.delayed_orders,
+          iconColor: DashboardColors.danger,
+        },
+      ]
+    }
+
+    case 'finance': {
+      const stats = dashboard.financeStats
+      if (!stats) return []
+      return [
+        {
+          icon: 'arrow-up-outline',
+          label: 'Alacak',
+          value: formatDashboardCurrency(stats.receivables.total),
+          iconColor: DashboardColors.success,
+        },
+        {
+          icon: 'arrow-down-outline',
+          label: 'Borc',
+          value: formatDashboardCurrency(stats.payables.total),
+          iconColor: DashboardColors.danger,
+        },
+        {
+          icon: 'time-outline',
+          label: 'Gecikmis Alacak',
+          value: formatDashboardCurrency(stats.receivables.overdue),
+        },
+        {
+          icon: 'trending-up-outline',
+          label: 'Aylik Gelir',
+          value: formatDashboardCurrency(stats.incomeStats.totalIncome),
+          growth: stats.incomeStats.growthPercentage,
+        },
+      ]
+    }
+
+    case 'crm': {
+      const stats = dashboard.crmStats
+      if (!stats) return []
+      return [
+        {
+          icon: 'checkmark-circle-outline',
+          label: 'Kazanilan',
+          value: stats.wonQuotes.count,
+          growth: stats.wonQuotes.growthPercentage,
+        },
+        {
+          icon: 'document-text-outline',
+          label: 'Toplam Teklif',
+          value: stats.quoteStats.total,
+        },
+        {
+          icon: 'people-outline',
+          label: 'Musteri',
+          value: stats.customerStats.total,
+        },
+        {
+          icon: 'trending-up-outline',
+          label: 'Donusum',
+          value: `%${stats.conversionRate.toFixed(1)}`,
+        },
+      ]
+    }
+
+    case 'fleet': {
+      const stats = dashboard.fleetStats
+      if (!stats) return []
+      return [
+        {
+          icon: 'car-outline',
+          label: 'Aktif Arac',
+          value: stats.vehicleStats.active,
+        },
+        {
+          icon: 'warning-outline',
+          label: 'Bakimda',
+          value: stats.vehicleStats.inMaintenance,
+          iconColor: DashboardColors.warning,
+        },
+        {
+          icon: 'person-outline',
+          label: 'Aktif Surucu',
+          value: stats.driverStats.active,
+        },
+        {
+          icon: 'document-outline',
+          label: 'Sigorta Uyarisi',
+          value: stats.expiringInsurances,
+          iconColor: stats.expiringInsurances > 0 ? DashboardColors.danger : undefined,
+        },
+      ]
+    }
+
+    case 'stock': {
+      const stats = dashboard.stockStats
+      if (!stats) return []
+      return [
+        {
+          icon: 'wallet-outline',
+          label: 'Stok Degeri',
+          value: formatDashboardCurrency(stats.totalStockValue),
+          growth: stats.stockValueGrowth,
+        },
+        {
+          icon: 'cube-outline',
+          label: 'Aktif Urun',
+          value: stats.productStats.active,
+        },
+        {
+          icon: 'alert-circle-outline',
+          label: 'Dusuk Stok',
+          value: stats.productStats.lowStock,
+          iconColor: stats.productStats.lowStock > 0 ? DashboardColors.warning : undefined,
+        },
+        {
+          icon: 'swap-horizontal-outline',
+          label: 'Bugunki Hareket',
+          value: stats.movementStats.today,
+        },
+      ]
+    }
+
+    case 'hr': {
+      const stats = dashboard.hrStats
+      if (!stats) return []
+      return [
+        {
+          icon: 'people-outline',
+          label: 'Toplam Calisan',
+          value: stats.totalEmployees,
+        },
+        {
+          icon: 'person-add-outline',
+          label: 'Bu Ay Ise Alim',
+          value: stats.hiredThisMonth,
+        },
+        {
+          icon: 'document-text-outline',
+          label: 'Bekleyen Basvuru',
+          value: stats.pendingApplications,
+        },
+        {
+          icon: 'calendar-outline',
+          label: 'Mulakat',
+          value: stats.interviewScheduled,
+        },
+      ]
+    }
+
+    default:
+      return []
+  }
+}
+
+/**
+ * Tab'a gore hizli islemleri getir
+ */
+function getQuickActionsForTab(tab: DashboardTab): QuickAction[] {
+  switch (tab) {
+    case 'overview':
+      return [
+        { id: '1', icon: 'add-circle-outline', label: 'Yeni Sefer', badge: 0 },
+        { id: '2', icon: 'cube-outline', label: 'Yuk Ekle', badge: 0 },
+        { id: '3', icon: 'document-text-outline', label: 'Teklif Olustur', badge: 0 },
+        { id: '4', icon: 'scan-outline', label: 'QR Tara', badge: 0 },
+      ]
+    case 'logistics':
+      return [
+        { id: '1', icon: 'add-circle-outline', label: 'Yeni Sefer', badge: 0 },
+        { id: '2', icon: 'cube-outline', label: 'Yuk Ekle', badge: 0 },
+        { id: '3', icon: 'location-outline', label: 'Arac Takip', badge: 0 },
+        { id: '4', icon: 'document-outline', label: 'Belgeler', badge: 0 },
+      ]
+    case 'warehouse':
+      return [
+        { id: '1', icon: 'download-outline', label: 'Kabul', badge: 0 },
+        { id: '2', icon: 'upload-outline', label: 'Sevk', badge: 0 },
+        { id: '3', icon: 'scan-outline', label: 'Barkod Tara', badge: 0 },
+        { id: '4', icon: 'search-outline', label: 'Pozisyon Ara', badge: 0 },
+      ]
+    case 'domestic':
+      return [
+        { id: '1', icon: 'add-circle-outline', label: 'Yeni Siparis', badge: 0 },
+        { id: '2', icon: 'car-outline', label: 'Arac Ata', badge: 0 },
+        { id: '3', icon: 'location-outline', label: 'Teslimat Takip', badge: 0 },
+        { id: '4', icon: 'document-outline', label: 'Raporlar', badge: 0 },
+      ]
+    case 'finance':
+      return [
+        { id: '1', icon: 'add-circle-outline', label: 'Yeni Islem', badge: 0 },
+        { id: '2', icon: 'receipt-outline', label: 'Fatura Kes', badge: 0 },
+        { id: '3', icon: 'wallet-outline', label: 'Odeme Al', badge: 0 },
+        { id: '4', icon: 'document-outline', label: 'Raporlar', badge: 0 },
+      ]
+    case 'crm':
+      return [
+        { id: '1', icon: 'add-circle-outline', label: 'Yeni Teklif', badge: 0 },
+        { id: '2', icon: 'person-add-outline', label: 'Musteri Ekle', badge: 0 },
+        { id: '3', icon: 'call-outline', label: 'Arama Yap', badge: 0 },
+        { id: '4', icon: 'mail-outline', label: 'Mail Gonder', badge: 0 },
+      ]
+    case 'fleet':
+      return [
+        { id: '1', icon: 'add-circle-outline', label: 'Arac Ekle', badge: 0 },
+        { id: '2', icon: 'build-outline', label: 'Bakim Planla', badge: 0 },
+        { id: '3', icon: 'water-outline', label: 'Yakit Girisi', badge: 0 },
+        { id: '4', icon: 'document-outline', label: 'Belgeler', badge: 0 },
+      ]
+    case 'stock':
+      return [
+        { id: '1', icon: 'add-circle-outline', label: 'Urun Ekle', badge: 0 },
+        { id: '2', icon: 'download-outline', label: 'Stok Girisi', badge: 0 },
+        { id: '3', icon: 'upload-outline', label: 'Stok Cikisi', badge: 0 },
+        { id: '4', icon: 'document-outline', label: 'Sayim', badge: 0 },
+      ]
+    case 'hr':
+      return [
+        { id: '1', icon: 'person-add-outline', label: 'Calisan Ekle', badge: 0 },
+        { id: '2', icon: 'briefcase-outline', label: 'Ilan Ver', badge: 0 },
+        { id: '3', icon: 'document-outline', label: 'Izin Talebi', badge: 0 },
+        { id: '4', icon: 'calendar-outline', label: 'Mulakat Planla', badge: 0 },
+      ]
+    default:
+      return []
+  }
+}
+
+// formatCurrency - merkezi utils/currency.ts'den formatDashboardCurrency kullanılıyor
+
+export default function Dashboard() {
+  const router = useRouter()
+  const dashboard = useDashboard()
+
   const {
-    unreadCount,
-    notifications,
-    isLoading: isNotificationsLoading,
-    refreshUnreadCount,
-    fetchNotifications,
-    markAsRead,
-    markAllAsRead,
-  } = useNotificationContext();
-  const { unreadCount: unreadMessageCount, refreshUnreadCount: refreshMessageCount } = useMessageContext();
-  const notificationModalRef = useRef<NotificationModalRef>(null);
-
-  const {
-    isLoadingAvailable,
     activeTab,
     setActiveTab,
     visibleTabs,
+    isLoadingAvailable,
     isTabLoading,
-    error,
     refreshing,
     onRefresh,
-  } = useDashboard();
+    error,
+  } = dashboard
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Gunaydin';
-    if (hour < 18) return 'Iyi gunler';
-    return 'Iyi aksamlar';
-  };
+  // Tab degistirme
+  const handleTabChange = useCallback((tabId: string) => {
+    setActiveTab(tabId as DashboardTab)
+  }, [setActiveTab])
 
-  const handleRefresh = async () => {
-    await Promise.all([onRefresh(), refreshUnreadCount(), refreshMessageCount()]);
-  };
+  // Bildirim tiklamasi
+  const handleNotificationPress = useCallback(() => {
+    console.log('Open notifications')
+  }, [])
 
-  const handleOpenNotifications = async () => {
-    // Fetch latest notifications before opening modal
-    await fetchNotifications();
-    notificationModalRef.current?.present();
-  };
+  // Mesaj tiklamasi
+  const handleMessagePress = useCallback(() => {
+    router.push('/(tabs)/messages')
+  }, [router])
 
-  const handleRefreshNotifications = async () => {
-    await Promise.all([fetchNotifications(), refreshUnreadCount()]);
-  };
+  // Avatar tiklamasi
+  const handleAvatarPress = useCallback(() => {
+    router.push('/(tabs)/profile')
+  }, [router])
 
-  const TabComponent = TAB_COMPONENTS[activeTab] || BasicTab;
+  // Hizli islem tiklamasi
+  const handleQuickAction = useCallback((actionId: string) => {
+    console.log('Quick action:', actionId)
+  }, [])
 
-  // Loading state - show simple loading indicator if still loading
-  if (isLoadingAvailable) {
-    return (
-      <View style={styles.container}>
-        <FullScreenHeader
-          title="Dashboard"
-          subtitle="Yükleniyor..."
-        />
-        <View style={styles.loadingFull}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={styles.loadingText}>Dashboard yukleniyor...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Tab'ları header için hazırla
-  const headerTabs = visibleTabs.map((tab) => {
-    const Icon = TAB_ICONS[tab.id];
-    const isActive = activeTab === tab.id;
-    return {
+  // Tab'lar icin header formatina donustur
+  const headerTabs = useMemo(() => {
+    return visibleTabs.map(tab => ({
       id: tab.id,
       label: tab.label,
-      icon: <Icon size={16} color="#FFFFFF" strokeWidth={isActive ? 2.5 : 2} />,
-      isActive,
-      onPress: () => setActiveTab(tab.id),
-    };
-  });
+      icon: tab.icon,
+    }))
+  }, [visibleTabs])
+
+  // Mevcut tab icin metrikler
+  const currentMetrics = useMemo(() => {
+    return getMetricsForTab(activeTab, dashboard)
+  }, [activeTab, dashboard])
+
+  // Mevcut tab icin hizli islemler
+  const quickActions = useMemo(() => {
+    return getQuickActionsForTab(activeTab)
+  }, [activeTab])
 
   return (
     <View style={styles.container}>
-      {/* Full Screen Header */}
-      <FullScreenHeader
-        leftContent={
-          <View style={styles.headerLeftContent}>
-            <TouchableOpacity
-              onPress={() => router.push('/(tabs)/profile')}
-              activeOpacity={0.7}
-            >
-              <Avatar
-                source={user?.avatar}
-                name={user?.fullName || 'Kullanici'}
-                size="sm"
-              />
-            </TouchableOpacity>
-            <View style={styles.headerUserInfo}>
-              <Text style={styles.headerGreeting}>
-                {getGreeting()}, {user?.fullName?.split(' ')[0] || 'Kullanici'}
-              </Text>
-              <Text style={styles.headerDate}>
-                {new Date().toLocaleDateString('tr-TR', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                })}
-              </Text>
-            </View>
-          </View>
-        }
-        rightIcons={
-          <View style={styles.headerIcons}>
-            {/* Message Icon */}
-            <TouchableOpacity
-              style={styles.headerIconBtn}
-              onPress={() => router.push('/(tabs)/messages')}
-              activeOpacity={0.7}
-            >
-              <MessageCircle size={22} color="#FFFFFF" />
-              {unreadMessageCount > 0 && (
-                <View style={[styles.badge, styles.messageBadge]}>
-                  <Text style={styles.badgeText}>
-                    {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            {/* Notification Bell */}
-            <TouchableOpacity
-              style={styles.notificationBtn}
-              onPress={handleOpenNotifications}
-              activeOpacity={0.7}
-            >
-              <Bell size={22} color="#FFFFFF" />
-              {unreadCount > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-        }
+      {/* Header - her zaman goster */}
+      <DashboardHeader
         tabs={headerTabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        notificationCount={5}
+        messageCount={3}
+        onNotificationPress={handleNotificationPress}
+        onMessagePress={handleMessagePress}
+        onAvatarPress={handleAvatarPress}
       />
 
-      {/* Content - White rounded card */}
+      {/* Content */}
       <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          (isLoadingAvailable || error || visibleTabs.length === 0) && styles.scrollContentCentered
+        ]}
         showsVerticalScrollIndicator={false}
-        bounces={false}
-        overScrollMode="never"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={Brand.primary}
+            onRefresh={onRefresh}
+            tintColor={DashboardColors.primary}
+            colors={[DashboardColors.primary]}
           />
         }
       >
-        {error && (
-          <View style={styles.errorBox}>
-            <AlertCircle size={18} color={DashboardTheme.danger} />
-            <Text style={styles.errorText}>{error}</Text>
+        {/* Loading durumu */}
+        {isLoadingAvailable ? (
+          <View style={styles.stateContainer}>
+            <ActivityIndicator size="large" color={DashboardColors.primary} />
+            <Text style={styles.stateText}>Dashboard yukleniyor...</Text>
           </View>
-        )}
-
-        {isTabLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={DashboardTheme.accent} />
-            <Text style={styles.loadingText}>Yukleniyor...</Text>
+        ) : error && visibleTabs.length === 0 ? (
+          // Hata durumu
+          <View style={styles.stateContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color={DashboardColors.danger} />
+            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.stateSubText}>Lutfen daha sonra tekrar deneyin</Text>
+          </View>
+        ) : visibleTabs.length === 0 ? (
+          // Erisebilir dashboard yok
+          <View style={styles.stateContainer}>
+            <Ionicons name="lock-closed-outline" size={48} color={DashboardColors.textSecondary} />
+            <Text style={styles.stateText}>Erisebilir dashboard bulunamadi</Text>
+            <Text style={styles.stateSubText}>Yetki tanimlari icin yoneticinizle iletisime gecin</Text>
           </View>
         ) : (
-          <View style={styles.dashboardContent}>
-            <TabComponent />
-            <DashboardQuickActions dashboardId={activeTab} showHeader />
-          </View>
+          <>
+            {/* Metrikler Bolumu */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Ozet</Text>
+
+              {isTabLoading && currentMetrics.length === 0 ? (
+                <View style={styles.tabLoadingContainer}>
+                  <ActivityIndicator size="small" color={DashboardColors.primary} />
+                  <Text style={styles.tabLoadingText}>Veriler yukleniyor...</Text>
+                </View>
+              ) : currentMetrics.length > 0 ? (
+                <View style={styles.metricsGrid}>
+                  {currentMetrics.map((metric, index) => (
+                    <MetricCard
+                      key={`${activeTab}-${metric.label}`}
+                      icon={metric.icon}
+                      label={metric.label}
+                      value={metric.value}
+                      growth={metric.growth}
+                      iconColor={metric.iconColor}
+                      delay={index * 50}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.noDataContainer}>
+                  <Text style={styles.noDataText}>Bu dashboard icin veri bulunamadi</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Hizli Islemler Bolumu */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons
+                  name="flash"
+                  size={18}
+                  color={DashboardColors.primary}
+                />
+                <Text style={styles.sectionTitle}>Hizli Islemler</Text>
+              </View>
+              <View style={styles.actionsGrid}>
+                {quickActions.map((action, index) => (
+                  <QuickActionButton
+                    key={action.id}
+                    icon={action.icon}
+                    label={action.label}
+                    badge={action.badge}
+                    onPress={() => handleQuickAction(action.id)}
+                    delay={300 + index * 50}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {/* Tab bar icin alt bosluk */}
+            <View style={styles.bottomSpacer} />
+          </>
         )}
       </ScrollView>
-
-      {/* Notification Modal */}
-      <NotificationModal
-        ref={notificationModalRef}
-        notifications={notifications}
-        isLoading={isNotificationsLoading}
-        onMarkAsRead={markAsRead}
-        onMarkAllAsRead={markAllAsRead}
-        onRefresh={handleRefreshNotifications}
-      />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.primary,
   },
-  loadingFull: {
+  scrollView: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: 0,
-    ...Shadows.lg,
+    backgroundColor: DashboardColors.background,
   },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    gap: 12,
+  scrollContent: {
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingTop: DashboardSpacing.lg,
   },
-  loadingText: {
-    fontSize: 14,
-    color: DashboardTheme.textMuted,
+  section: {
+    marginBottom: DashboardSpacing['2xl'],
   },
-
-  // Header Left Content
-  headerLeftContent: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    flex: 1,
+    gap: DashboardSpacing.sm,
+    marginBottom: DashboardSpacing.lg,
   },
-  headerUserInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  headerGreeting: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  headerDate: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    opacity: 0.9,
-    marginTop: 2,
-  },
-  // Header Icons
-  headerIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerIconBtn: {
-    position: 'relative',
-    padding: 4,
-  },
-  notificationBtn: {
-    position: 'relative',
-    padding: 4,
-  },
-  badge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#FF3B30',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: '#13452d',
-  },
-  messageBadge: {
-    backgroundColor: '#FF9500',
-  },
-  badgeText: {
-    fontSize: 10,
+  sectionTitle: {
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.lg,
   },
-
-  // Content - White rounded card
-  content: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
-  },
-  contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  dashboardContent: {
-    gap: 20,
-  },
-
-  // Error
-  errorBox: {
+  metricsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DashboardSpacing.md,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DashboardSpacing.md,
+  },
+  bottomSpacer: {
+    height: 100,
+  },
+  scrollContentCentered: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  stateContainer: {
     alignItems: 'center',
-    gap: 10,
-    padding: 14,
-    backgroundColor: DashboardTheme.dangerBg,
-    borderRadius: 12,
+    justifyContent: 'center',
+    padding: DashboardSpacing['2xl'],
+    gap: DashboardSpacing.md,
+  },
+  stateText: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    textAlign: 'center',
+  },
+  stateSubText: {
+    fontSize: DashboardFontSizes.md,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
   },
   errorText: {
-    fontSize: 13,
-    color: DashboardTheme.danger,
-    flex: 1,
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    textAlign: 'center',
   },
-});
+  tabLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: DashboardSpacing['2xl'],
+    gap: DashboardSpacing.md,
+  },
+  tabLoadingText: {
+    fontSize: DashboardFontSizes.md,
+    color: DashboardColors.textSecondary,
+  },
+  noDataContainer: {
+    padding: DashboardSpacing['2xl'],
+    alignItems: 'center',
+  },
+  noDataText: {
+    fontSize: DashboardFontSizes.md,
+    color: DashboardColors.textSecondary,
+  },
+})

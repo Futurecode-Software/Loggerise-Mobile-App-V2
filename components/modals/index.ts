@@ -1,4 +1,5 @@
-export { default as CustomBottomSheet } from './CustomBottomSheet';
+export { default as CustomBottomSheet } from './CustomBottomSheet'
+export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as ForgotPasswordModal } from './ForgotPasswordModal';
 export type { ForgotPasswordModalRef } from './ForgotPasswordModal';
 export { SearchableSelectModal } from './SearchableSelectModal';

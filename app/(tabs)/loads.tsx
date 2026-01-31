@@ -1,743 +1,949 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+/**
+ * Yükler Listesi Ekranı
+ *
+ * Ana yük listesi - filtreleme, arama ve infinite scroll
+ */
+
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  TextInput,
   RefreshControl,
   ActivityIndicator,
-} from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+  Pressable
+} from 'react-native'
+import { useRouter } from 'expo-router'
+import { useFocusEffect } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring
+} from 'react-native-reanimated'
+import { PageHeader } from '@/components/navigation'
+import { LoadListSkeleton } from '@/components/ui/skeleton'
 import {
-  Search,
-  Filter,
-  Plus,
-  Truck,
-  MapPin,
-  Calendar,
-  Package,
-  Box,
-  ArrowRight,
-  AlertCircle,
-} from 'lucide-react-native';
-import { Card, Badge, Input } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows,
+  DashboardAnimations
+} from '@/constants/dashboard-theme'
 import {
-  getLoads,
-  Load,
-  LoadStatus,
-  LoadFilters,
-  Pagination,
-  getStatusLabel,
-  getDirectionLabel,
-  getDirectionColor,
-} from '@/services/endpoints/loads';
+  LoadStatusColors,
+  LoadStatusBgColors,
+  LoadStatusLabels,
+  LoadDirectionColors,
+  LoadDirectionBgColors,
+  LoadDirectionLabels,
+  STATUS_FILTER_OPTIONS,
+  DIRECTION_FILTER_OPTIONS
+} from '@/constants/load-theme'
+import { getLoads } from '@/services/endpoints/loads'
+import type { Load, LoadStatus, LoadDirection, Pagination } from '@/types/load'
+import { formatCurrency } from '@/utils/currency'
 
-const STATUS_FILTERS = [
-  { id: 'all', label: 'Tümü', color: undefined },
-  { id: 'pending', label: 'Beklemede', color: '#f5a623' },
-  { id: 'confirmed', label: 'Onaylandı', color: '#3b82f6' },
-  { id: 'in_progress', label: 'İşlemde', color: '#3b82f6' },
-  { id: 'in_transit', label: 'Yolda', color: '#227d53' },
-  { id: 'delivered', label: 'Teslim Edildi', color: '#13452d' },
-  { id: 'completed', label: 'Tamamlandı', color: '#13452d' },
-  { id: 'cancelled', label: 'İptal', color: '#d0021b' },
-];
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
-const DIRECTION_FILTERS = [
-  { id: 'all', label: 'Tümü', color: undefined },
-  { id: 'export', label: 'İhracat', color: '#227d53' },
-  { id: 'import', label: 'İthalat', color: '#3b82f6' },
-];
+// Yük kartı bileşeni
+interface LoadCardProps {
+  item: Load
+  onPress: () => void
+}
+
+function LoadCard({ item, onPress }: LoadCardProps) {
+  const scale = useSharedValue(1)
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }))
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy)
+  }
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
+
+  // Rota bilgisi oluştur
+  const routeInfo = () => {
+    const sender = item.sender_company?.name || '-'
+    const receiver = item.receiver_company?.name || '-'
+    return `${sender} → ${receiver}`
+  }
+
+  // Navlun formatla
+  const formatPrice = (amount?: number, currency?: string) => {
+    if (!amount) return '-'
+    return formatCurrency(amount, currency || 'TRY', { decimals: 0, symbolPosition: 'after' })
+  }
+
+  return (
+    <View>
+      <AnimatedPressable
+        style={[styles.loadCard, animStyle]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        {/* Üst kısım - Yük No ve Yön */}
+        <View style={styles.cardHeader}>
+          <View style={styles.loadNumberContainer}>
+            <View style={styles.loadNumberIcon}>
+              <Ionicons
+                name="cube"
+                size={14}
+                color={DashboardColors.primary}
+              />
+            </View>
+            <Text style={styles.loadNumber}>{item.load_number}</Text>
+          </View>
+
+          <View style={styles.badgeRow}>
+            {/* Yön Badge */}
+            {item.direction && (
+              <View
+                style={[
+                  styles.badge,
+                  { backgroundColor: LoadDirectionBgColors[item.direction] }
+                ]}
+              >
+                <Ionicons
+                  name={item.direction === 'export' ? 'arrow-up-circle' : 'arrow-down-circle'}
+                  size={12}
+                  color={LoadDirectionColors[item.direction]}
+                />
+                <Text
+                  style={[
+                    styles.badgeText,
+                    { color: LoadDirectionColors[item.direction] }
+                  ]}
+                >
+                  {LoadDirectionLabels[item.direction]}
+                </Text>
+              </View>
+            )}
+
+            {/* Durum Badge */}
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: LoadStatusBgColors[item.status] }
+              ]}
+            >
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: LoadStatusColors[item.status] }
+                ]}
+              />
+              <Text
+                style={[
+                  styles.badgeText,
+                  { color: LoadStatusColors[item.status] }
+                ]}
+              >
+                {LoadStatusLabels[item.status]}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Kargo Adı */}
+        <Text style={styles.cargoName} numberOfLines={1}>
+          {item.cargo_name || 'Kargo adı belirtilmemiş'}
+        </Text>
+
+        {/* Rota */}
+        <View style={styles.routeContainer}>
+          <Ionicons
+            name="location-outline"
+            size={14}
+            color={DashboardColors.textSecondary}
+          />
+          <Text style={styles.routeText} numberOfLines={1}>
+            {routeInfo()}
+          </Text>
+        </View>
+
+        {/* Alt kısım - Araç, Navlun, Müşteri */}
+        <View style={styles.cardFooter}>
+          <View style={styles.footerLeft}>
+            {item.vehicle_type && (
+              <View style={styles.footerItem}>
+                <Ionicons
+                  name="car-outline"
+                  size={14}
+                  color={DashboardColors.textMuted}
+                />
+                <Text style={styles.footerText}>{item.vehicle_type}</Text>
+              </View>
+            )}
+            {item.freight_fee && (
+              <View style={styles.footerItem}>
+                <Ionicons
+                  name="cash-outline"
+                  size={14}
+                  color={DashboardColors.accent}
+                />
+                <Text style={[styles.footerText, styles.priceText]}>
+                  {formatPrice(item.freight_fee, item.freight_fee_currency)}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {item.customer && (
+            <View style={styles.customerBadge}>
+              <Ionicons
+                name="business-outline"
+                size={12}
+                color={DashboardColors.textSecondary}
+              />
+              <Text style={styles.customerText} numberOfLines={1}>
+                {item.customer.name}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Sağ ok */}
+        <View style={styles.cardArrow}>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={DashboardColors.textMuted}
+          />
+        </View>
+      </AnimatedPressable>
+    </View>
+  )
+}
+
+// Filtre çipi bileşeni
+interface FilterChipProps {
+  label: string
+  isActive: boolean
+  color?: string
+  onPress: () => void
+}
+
+function FilterChip({ label, isActive, color, onPress }: FilterChipProps) {
+  const scale = useSharedValue(1)
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }))
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.95, DashboardAnimations.springBouncy)
+  }
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    onPress()
+  }
+
+  const activeColor = color || DashboardColors.primary
+
+  return (
+    <AnimatedPressable
+      style={[
+        styles.filterChip,
+        isActive && { backgroundColor: activeColor, borderColor: activeColor },
+        animStyle
+      ]}
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          isActive && styles.filterChipTextActive
+        ]}
+      >
+        {label}
+      </Text>
+    </AnimatedPressable>
+  )
+}
 
 export default function LoadsScreen() {
-  const colors = Colors.light;
+  const router = useRouter()
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeStatusFilter, setActiveStatusFilter] = useState('all');
-  const [activeDirectionFilter, setActiveDirectionFilter] = useState('all');
-  const [refreshing, setRefreshing] = useState(false);
+  // State
+  const [loads, setLoads] = useState<Load[]>([])
+  const [pagination, setPagination] = useState<Pagination | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeStatusFilter, setActiveStatusFilter] = useState('all')
+  const [activeDirectionFilter, setActiveDirectionFilter] = useState('all')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // API state
-  const [loads, setLoads] = useState<Load[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Refs
+  const isMountedRef = useRef(true)
+  const fetchIdRef = useRef(0)
+  const debounceTimeoutRef = useRef<number | undefined>(undefined)
+  const hasInitialFetchRef = useRef(false)
 
-  // Refs to prevent duplicate calls
-  const isMountedRef = useRef(true);
-  const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const hasInitialFetchRef = useRef(false);
-
-  // Core fetch function - no dependencies on state
+  // Veri çekme fonksiyonu
   const executeFetch = useCallback(
     async (
       search: string,
-      statusFilter: string,
-      directionFilter: string,
-      page: number = 1,
-      append: boolean = false
+      status: string,
+      direction: string,
+      page: number,
+      append: boolean
     ) => {
-      const currentFetchId = ++fetchIdRef.current;
+      const currentFetchId = ++fetchIdRef.current
 
       try {
-        setError(null);
-
-        // Build filters
-        const filters: LoadFilters = {
+        const filters: Record<string, unknown> = {
           page,
-          per_page: 20,
-          is_active: true,
-        };
-
-        // Add search filter
-        if (search.trim()) {
-          filters.search = search.trim();
+          per_page: 15
         }
 
-        // Add status filter
-        if (statusFilter !== 'all') {
-          filters.status = statusFilter as LoadStatus;
+        if (search.trim()) filters.search = search.trim()
+        if (status !== 'all') filters.status = status
+        if (direction !== 'all') filters.direction = direction
+
+        const result = await getLoads(filters as Parameters<typeof getLoads>[0])
+
+        if (!isMountedRef.current || currentFetchId !== fetchIdRef.current) {
+          return
         }
 
-        // Add direction filter
-        if (directionFilter !== 'all') {
-          filters.direction = directionFilter as 'import' | 'export';
+        // Güvenli erişim - API yanıtını kontrol et
+        if (!result) {
+          throw new Error('API yanıtı alınamadı')
         }
 
-        const response = await getLoads(filters);
-
-        // Only update if this is still the latest request
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          if (append) {
-            setLoads((prev) => [...prev, ...response.loads]);
-          } else {
-            setLoads(response.loads);
-          }
-          setPagination(response.pagination);
-          hasInitialFetchRef.current = true;
+        const loadsList = result.loads || []
+        const paginationData = result.pagination || {
+          current_page: 1,
+          per_page: 15,
+          total: 0,
+          last_page: 1,
+          from: null,
+          to: null
         }
+
+        if (append) {
+          setLoads(prev => [...prev, ...loadsList])
+        } else {
+          setLoads(loadsList)
+        }
+
+        setPagination(paginationData)
+        setError(null)
+        hasInitialFetchRef.current = true
       } catch (err) {
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Loads fetch error:', err);
-          setError(err instanceof Error ? err.message : 'Yükler yüklenemedi');
+        if (isMountedRef.current && currentFetchId === fetchIdRef.current) {
+          setError(err instanceof Error ? err.message : 'Yükler yüklenemedi')
         }
       } finally {
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          setIsLoading(false);
-          setIsLoadingMore(false);
-          setRefreshing(false);
+        if (isMountedRef.current && currentFetchId === fetchIdRef.current) {
+          setIsLoading(false)
+          setIsLoadingMore(false)
+          setRefreshing(false)
         }
       }
     },
     []
-  );
+  )
 
-  // Initial fetch - only once on mount
+  // İlk yükleme
   useEffect(() => {
-    isMountedRef.current = true;
-    executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
+    isMountedRef.current = true
+    executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false)
 
     return () => {
-      isMountedRef.current = false;
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
+      isMountedRef.current = false
+      if (debounceTimeoutRef.current !== undefined) {
+        clearTimeout(debounceTimeoutRef.current)
       }
-    };
-  }, []); // Empty deps - only run on mount
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Filter change - immediate fetch
+  // Filtre değişikliğinde yeniden yükle
   useEffect(() => {
-    if (!hasInitialFetchRef.current) return;
+    if (!hasInitialFetchRef.current) return
 
-    setIsLoading(true);
-    executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
-  }, [activeStatusFilter, activeDirectionFilter]); // Only filters
+    setIsLoading(true)
+    executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStatusFilter, activeDirectionFilter])
 
-  // Search with debounce
+  // Arama debounce
   useEffect(() => {
-    if (!hasInitialFetchRef.current) return;
+    if (!hasInitialFetchRef.current) return
 
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
+    if (debounceTimeoutRef.current !== undefined) {
+      clearTimeout(debounceTimeoutRef.current)
     }
 
     debounceTimeoutRef.current = setTimeout(() => {
-      setIsLoading(true);
-      executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
-    }, 500);
+      setIsLoading(true)
+      executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false)
+    }, 500) as unknown as number
 
     return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
+      if (debounceTimeoutRef.current !== undefined) {
+        clearTimeout(debounceTimeoutRef.current)
       }
-    };
-  }, [searchQuery]); // Only searchQuery
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery])
 
-  // Refresh on screen focus
+  // Sayfa odaklandığında yenile
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
+        executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false)
       }
     }, [searchQuery, activeStatusFilter, activeDirectionFilter, executeFetch])
-  );
+  )
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
-  };
+  // Yenile (pull-to-refresh)
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false)
+  }, [searchQuery, activeStatusFilter, activeDirectionFilter, executeFetch])
 
-  const loadMore = () => {
+  // Daha fazla yükle
+  const loadMore = useCallback(() => {
     if (
       !isLoadingMore &&
       pagination &&
       pagination.current_page < pagination.last_page
     ) {
-      setIsLoadingMore(true);
-      executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, pagination.current_page + 1, true);
+      setIsLoadingMore(true)
+      executeFetch(
+        searchQuery,
+        activeStatusFilter,
+        activeDirectionFilter,
+        pagination.current_page + 1,
+        true
+      )
     }
-  };
+  }, [
+    isLoadingMore,
+    pagination,
+    searchQuery,
+    activeStatusFilter,
+    activeDirectionFilter,
+    executeFetch
+  ])
 
-  // Format date for display
-  const formatDate = (dateString?: string): string => {
-    if (!dateString) return '-';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('tr-TR', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
-    } catch {
-      return dateString;
-    }
-  };
+  // Yük detayına git
+  const handleLoadPress = (load: Load) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/load/${load.id}`)
+  }
 
-  // Format weight/volume
-  const formatNumber = (value?: number, unit?: string): string => {
-    if (value === undefined || value === null) return '-';
-    const formatted = value.toLocaleString('tr-TR');
-    return unit ? `${formatted} ${unit}` : formatted;
-  };
+  // Yeni yük oluştur
+  const handleCreateLoad = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    router.push('/load/new')
+  }
 
-  // Format price
-  const formatPrice = (amount?: number, currency?: string): string => {
-    if (amount === undefined || amount === null) return '-';
-    const formatted = amount.toLocaleString('tr-TR', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    });
-    return `${formatted} ${currency || 'TL'}`;
-  };
+  // Liste alt kısmı render
+  const renderFooter = () => {
+    if (!isLoadingMore) return null
 
-  const getStatusBadge = (status: LoadStatus | string) => {
-    const label = getStatusLabel(status);
-    const variantMap: Record<string, 'warning' | 'info' | 'success' | 'danger' | 'default'> = {
-      // Temel status'lar
-      pending: 'warning',
-      confirmed: 'info',
-      in_transit: 'success',
-      delivered: 'success',
-      cancelled: 'danger',
-      // Ek status'lar
-      completed: 'success',
-      in_progress: 'info',
-      loading: 'warning',
-      assigned: 'info',
-      loaded: 'success',
-      at_customs: 'warning',
-      // Türkçe status'lar
-      'Beklemede': 'warning',
-      'Hazırlanıyor': 'warning',
-      'Hazır': 'info',
-      'Yükleniyor': 'warning',
-      'Yüklendi': 'success',
-      'Yolda': 'success',
-      'Gümrükte': 'warning',
-      'Boşaltılıyor': 'info',
-      'Teslim Edildi': 'success',
-      'Tamamlandı': 'success',
-      'İptal Edildi': 'danger',
-      'Beklemede (Sorun)': 'danger',
-    };
-    return <Badge label={label} variant={variantMap[status] || 'default'} size="sm" />;
-  };
-
-  // Get origin/destination from addresses or sender/receiver companies
-  const getOrigin = (item: Load): string => {
-    return item.sender_company?.name || '-';
-  };
-
-  const getDestination = (item: Load): string => {
-    return item.receiver_company?.name || '-';
-  };
-
-  const renderLoad = ({ item }: { item: Load }) => (
-    <Card
-      style={styles.loadCard}
-      onPress={() => router.push(`/load/${item.id}` as any)}
-    >
-      {/* Header */}
-      <View style={styles.loadHeader}>
-        <View style={styles.loadHeaderLeft}>
-          <Text style={[styles.loadNumber, { color: colors.text }]}>{item.load_number}</Text>
-          {item.direction && (
-            <Badge
-              label={getDirectionLabel(item.direction)}
-              variant="outline"
-              size="sm"
-              style={{
-                borderColor: getDirectionColor(item.direction),
-                backgroundColor: getDirectionColor(item.direction) + '15',
-              }}
-              textStyle={{ color: getDirectionColor(item.direction) }}
-            />
-          )}
-        </View>
-        {getStatusBadge(item.status)}
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={DashboardColors.primary} />
+        <Text style={styles.footerLoaderText}>Yükleniyor...</Text>
       </View>
+    )
+  }
 
-      {/* Cargo Name */}
-      {item.cargo_name && (
-        <Text style={[styles.cargoName, { color: colors.textSecondary }]} numberOfLines={1}>
-          {item.cargo_name}
-        </Text>
-      )}
-
-      {/* Route */}
-      <View style={styles.routeContainer}>
-        <View style={styles.routePoint}>
-          <MapPin size={16} color={colors.success} />
-          <Text style={[styles.routeText, { color: colors.textSecondary }]} numberOfLines={1}>
-            {getOrigin(item)}
-          </Text>
-        </View>
-        <ArrowRight size={16} color={colors.icon} style={styles.routeArrow} />
-        <View style={styles.routePoint}>
-          <MapPin size={16} color={colors.danger} />
-          <Text style={[styles.routeText, { color: colors.textSecondary }]} numberOfLines={1}>
-            {getDestination(item)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Details */}
-      <View style={styles.detailsContainer}>
-        <View style={styles.detailItem}>
-          <Package size={14} color={colors.icon} />
-          <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-            {item.vehicle_type || '-'}
-          </Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={[styles.priceText, { color: colors.success }]}>
-            {formatPrice(item.freight_fee, item.freight_fee_currency)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Customer */}
-      {item.customer && (
-        <View style={[styles.customerContainer, { borderTopColor: colors.border }]}>
-          <Truck size={14} color={colors.icon} />
-          <Text style={[styles.customerText, { color: colors.textMuted }]} numberOfLines={1}>
-            {item.customer.name}
-          </Text>
-        </View>
-      )}
-    </Card>
-  );
-
+  // Boş durum render
   const renderEmptyState = () => {
     if (isLoading) {
-      return (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Yükler yükleniyor...
-          </Text>
-        </View>
-      );
+      return <LoadListSkeleton count={6} />
     }
 
     if (error) {
       return (
         <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
+          <View style={styles.errorIcon}>
+            <Ionicons
+              name="alert-circle"
+              size={48}
+              color={DashboardColors.danger}
+            />
           </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            Bir hata oluştu
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {error}
-          </Text>
+          <Text style={styles.emptyStateTitle}>Bir hata oluştu</Text>
+          <Text style={styles.emptyStateText}>{error}</Text>
           <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+            style={styles.retryButton}
             onPress={() => {
-              setIsLoading(true);
-              executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false);
+              setIsLoading(true)
+              setError(null)
+              executeFetch(
+                searchQuery,
+                activeStatusFilter,
+                activeDirectionFilter,
+                1,
+                false
+              )
             }}
           >
+            <Ionicons name="refresh" size={18} color="#fff" />
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
-      );
+      )
     }
 
     return (
       <View style={styles.emptyState}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-          <Truck size={64} color={colors.textMuted} />
+        <View style={styles.emptyIcon}>
+          <Ionicons
+            name="cube-outline"
+            size={48}
+            color={DashboardColors.textMuted}
+          />
         </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {searchQuery ? 'Sonuç bulunamadı' : 'Henüz yük eklenmemiş'}
+        <Text style={styles.emptyStateTitle}>Yük bulunamadı</Text>
+        <Text style={styles.emptyStateText}>
+          {searchQuery || activeStatusFilter !== 'all' || activeDirectionFilter !== 'all'
+            ? 'Arama kriterlerinize uygun yük bulunamadı.'
+            : 'Henüz kayıtlı yük bulunmuyor.'}
         </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          {searchQuery
-            ? 'Farklı bir arama terimi deneyin'
-            : 'Yeni yük eklemek için + butonuna tıklayın'}
-        </Text>
+        {!searchQuery && activeStatusFilter === 'all' && activeDirectionFilter === 'all' && (
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={handleCreateLoad}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={styles.createButtonText}>Yeni Yük Oluştur</Text>
+          </TouchableOpacity>
+        )}
       </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={Brand.primary} />
-      </View>
-    );
-  };
+    )
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      {/* Full Screen Header */}
-      <FullScreenHeader
+    <View style={styles.container}>
+      {/* Header */}
+      <PageHeader
         title="Yükler"
-        subtitle={pagination ? `${pagination.total} kayıt` : undefined}
-        rightIcons={
-          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-            <TouchableOpacity
-              onPress={() => router.push('/load/new' as any)}
-              activeOpacity={0.7}
-            >
-              <Plus size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Filter size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+        icon="cube-outline"
+        subtitle={
+          pagination?.total
+            ? `${pagination.total} yük listeleniyor`
+            : 'Yük takibi ve yönetimi'
         }
+        rightAction={{
+          icon: 'add',
+          onPress: handleCreateLoad
+        }}
       />
 
-      {/* Content Area with White Background and Rounded Corners */}
-      <View style={styles.contentArea}>
-        {/* Search */}
+      {/* İçerik */}
+      <View style={styles.content}>
+        {/* Arama Kutusu */}
         <View style={styles.searchContainer}>
-        <Input
-          placeholder="Yük no, kargo adı veya müşteri ile ara..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          leftIcon={<Search size={20} color={colors.icon} />}
-          containerStyle={styles.searchInput}
-        />
-      </View>
-
-      {/* Direction Filters */}
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          data={DIRECTION_FILTERS}
-          keyExtractor={(item) => `direction-${item.id}`}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor:
-                    activeDirectionFilter === item.id
-                      ? item.color || Brand.primary
-                      : colors.card,
-                  borderColor:
-                    activeDirectionFilter === item.id
-                      ? item.color || Brand.primary
-                      : colors.border,
-                },
-              ]}
-              onPress={() => setActiveDirectionFilter(item.id)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  {
-                    color: activeDirectionFilter === item.id ? '#FFFFFF' : colors.textSecondary,
-                  },
-                ]}
+          <View style={styles.searchInputWrapper}>
+            <Ionicons
+              name="search"
+              size={20}
+              color={DashboardColors.textMuted}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Yük no, kargo adı veya müşteri ara..."
+              placeholderTextColor={DashboardColors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                style={styles.clearButton}
               >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={DashboardColors.textMuted}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
 
-      {/* Status Filters */}
-      <View style={styles.filterContainer}>
+        {/* Filtreler */}
+        <View style={styles.filtersContainer}>
+          {/* Yön Filtreleri */}
+          <View style={styles.filterSection}>
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={DIRECTION_FILTER_OPTIONS}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.filterList}
+              renderItem={({ item }) => (
+                <FilterChip
+                  label={item.label}
+                  isActive={activeDirectionFilter === item.id}
+                  color={
+                    item.id !== 'all'
+                      ? LoadDirectionColors[item.id as LoadDirection]
+                      : undefined
+                  }
+                  onPress={() => setActiveDirectionFilter(item.id)}
+                />
+              )}
+            />
+          </View>
+
+          {/* Durum Filtreleri */}
+          <View style={styles.filterSection}>
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={STATUS_FILTER_OPTIONS}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.filterList}
+              renderItem={({ item }) => (
+                <FilterChip
+                  label={item.label}
+                  isActive={activeStatusFilter === item.id}
+                  color={
+                    item.id !== 'all'
+                      ? LoadStatusColors[item.id as LoadStatus]
+                      : undefined
+                  }
+                  onPress={() => setActiveStatusFilter(item.id)}
+                />
+              )}
+            />
+          </View>
+        </View>
+
+        {/* Yük Listesi */}
         <FlatList
-          horizontal
-          data={STATUS_FILTERS}
-          keyExtractor={(item) => `status-${item.id}`}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
+          data={loads}
+          keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor:
-                    activeStatusFilter === item.id
-                      ? item.color || Brand.primary
-                      : colors.card,
-                  borderColor:
-                    activeStatusFilter === item.id
-                      ? item.color || Brand.primary
-                      : colors.border,
-                },
-              ]}
-              onPress={() => setActiveStatusFilter(item.id)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  {
-                    color: activeStatusFilter === item.id ? '#FFFFFF' : colors.textSecondary,
-                  },
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
+            <LoadCard
+              item={item}
+              onPress={() => handleLoadPress(item)}
+            />
           )}
+          contentContainerStyle={[
+            styles.listContent,
+            loads.length === 0 && styles.listContentEmpty
+          ]}
+          showsVerticalScrollIndicator={false}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={renderFooter}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={DashboardColors.primary}
+              colors={[DashboardColors.primary]}
+            />
+          }
         />
-      </View>
-
-      {/* Load List */}
-      <FlatList
-        data={loads}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderLoad}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Brand.primary}
-          />
-        }
-      />
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary
   },
-  contentArea: {
+  content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    backgroundColor: DashboardColors.background
   },
-  // Header styles removed - using FullScreenHeader component
-  headerActions: {
+
+  // Arama
+  searchContainer: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing.sm
+  },
+  searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.lg,
+    paddingHorizontal: DashboardSpacing.md,
+    ...DashboardShadows.sm
   },
-  headerButton: {
-    padding: Spacing.sm,
-  },
-  countText: {
-    ...Typography.bodySM,
-  },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+  searchIcon: {
+    marginRight: DashboardSpacing.sm
   },
   searchInput: {
-    marginBottom: 0,
+    flex: 1,
+    height: 48,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
   },
-  filterContainer: {
-    paddingVertical: Spacing.sm,
+  clearButton: {
+    padding: DashboardSpacing.xs
   },
-  filterContent: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.sm,
+
+  // Filtreler
+  filtersContainer: {
+    paddingBottom: DashboardSpacing.sm
+  },
+  filterSection: {
+    marginBottom: DashboardSpacing.xs
+  },
+  filterList: {
+    paddingHorizontal: DashboardSpacing.lg,
+    gap: DashboardSpacing.sm
   },
   filterChip: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: DashboardColors.surface,
     borderWidth: 1,
+    borderColor: DashboardColors.border
   },
   filterChipText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
+    color: DashboardColors.textSecondary
   },
+  filterChipTextActive: {
+    color: '#fff'
+  },
+
+  // Liste
   listContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    flexGrow: 1,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
   },
+  listContentEmpty: {
+    flex: 1
+  },
+
+  // Yük Kartı
   loadCard: {
-    marginBottom: 0,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.md
   },
-  loadHeader: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
+    alignItems: 'flex-start',
+    marginBottom: DashboardSpacing.sm
   },
-  loadHeaderLeft: {
+  loadNumberContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    flex: 1,
+    gap: DashboardSpacing.sm
+  },
+  loadNumberIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   loadNumber: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '700',
+    color: DashboardColors.textPrimary,
+    letterSpacing: 0.3
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: DashboardSpacing.xs
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.full,
+    gap: 4
+  },
+  badgeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600'
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3
   },
   cargoName: {
-    ...Typography.bodySM,
-    marginBottom: Spacing.sm,
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm
   },
   routeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  routePoint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    flex: 1,
+    gap: DashboardSpacing.xs,
+    marginBottom: DashboardSpacing.md,
+    paddingRight: DashboardSpacing['2xl']
   },
   routeText: {
-    ...Typography.bodySM,
     flex: 1,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
-  routeArrow: {
-    marginHorizontal: Spacing.sm,
-  },
-  datesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  dateItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  dateText: {
-    ...Typography.bodySM,
-  },
-  dateSeparator: {
-    marginHorizontal: Spacing.sm,
-  },
-  detailsContainer: {
+  cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+    alignItems: 'center',
+    paddingTop: DashboardSpacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: DashboardColors.borderLight
   },
-  detailItem: {
+  footerLeft: {
+    flexDirection: 'row',
+    gap: DashboardSpacing.lg
+  },
+  footerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: 4
   },
-  detailText: {
-    ...Typography.bodySM,
+  footerText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
   priceText: {
-    ...Typography.bodyMD,
     fontWeight: '600',
+    color: DashboardColors.accent
   },
-  customerContainer: {
+  customerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    gap: Spacing.sm,
+    gap: 4,
+    maxWidth: 140,
+    backgroundColor: DashboardColors.background,
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.sm
   },
   customerText: {
-    ...Typography.bodySM,
-    flex: 1,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textSecondary
   },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
+  cardArrow: {
+    position: 'absolute',
+    right: DashboardSpacing.md,
+    top: '50%',
+    marginTop: -10
   },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
+
+  // Boş durum
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
+    paddingHorizontal: DashboardSpacing['2xl']
   },
   emptyIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: DashboardSpacing.xl,
+    ...DashboardShadows.sm
   },
-  emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
   },
-  emptySubtitle: {
-    ...Typography.bodyMD,
+  emptyStateTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
+  },
+  emptyStateText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
     textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
   },
   retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
   },
   retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: '#fff'
   },
-  loadingMore: {
-    paddingVertical: Spacing.lg,
+  createButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.primary,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
   },
-});
+  createButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  },
+
+  // Alt yükleme
+  footerLoader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.sm,
+    paddingVertical: DashboardSpacing.xl
+  },
+  footerLoaderText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
+  }
+})

@@ -1,33 +1,46 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-} from 'react-native';
-import { router } from 'expo-router';
-import { Save } from 'lucide-react-native';
-import { Input, Button, Card } from '@/components/ui';
-import { GooglePlacesAutocomplete } from '@/components/ui/GooglePlacesAutocomplete';
-import { CountrySelect, StateSelect, CitySelect } from '@/components/ui/LocationSelects';
-import { TaxOfficeSelect } from '@/components/ui/TaxOfficeSelect';
-import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+  ActivityIndicator
+} from 'react-native'
+import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import { Input, Button, Card } from '@/components/ui'
+import { GooglePlacesAutocomplete } from '@/components/ui/GooglePlacesAutocomplete'
+import { CountrySelect, StateSelect, CitySelect } from '@/components/ui/LocationSelects'
+import { TaxOfficeSelect } from '@/components/ui/TaxOfficeSelect'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardBorderRadius,
+  DashboardFontSizes
+} from '@/constants/dashboard-theme'
 import {
   createContact,
   ContactFormData,
   ContactType,
-  LegalType,
   ContactStatus,
-  BusinessType,
-} from '@/services/endpoints/contacts';
-import { PlaceDetails, lookupLocation } from '@/services/endpoints/locations';
-import { useToast } from '@/hooks/use-toast';
-import api from '@/services/api';
+  BusinessType
+} from '@/services/endpoints/contacts'
+import { PlaceDetails, lookupLocation } from '@/services/endpoints/locations'
+import api from '@/services/api'
 
 // Yabanci firma varsayilan vergi numarasi
 const FOREIGN_DEFAULT_TAX_NUMBER = '22222222222';
@@ -39,18 +52,17 @@ function ToggleButton({
   active,
   onClick,
   children,
-  color = 'blue',
+  color = 'blue'
 }: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  color?: 'blue' | 'orange';
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+  color?: 'blue' | 'orange'
 }) {
-  const colors = Colors.light;
   const activeColors = {
-    blue: Brand.primary,
-    orange: '#FF9800',
-  };
+    blue: DashboardColors.primary,
+    orange: '#FF9800'
+  }
 
   return (
     <TouchableOpacity
@@ -58,36 +70,94 @@ function ToggleButton({
       style={[
         styles.toggleButton,
         {
-          backgroundColor: active ? activeColors[color] : colors.surface,
-          borderColor: active ? activeColors[color] : colors.border,
-        },
+          backgroundColor: active ? activeColors[color] : DashboardColors.inputBackground,
+          borderColor: active ? activeColors[color] : DashboardColors.border
+        }
       ]}
       activeOpacity={0.7}
     >
       <Text
         style={[
           styles.toggleButtonText,
-          { color: active ? '#FFFFFF' : colors.text },
+          { color: active ? '#FFFFFF' : DashboardColors.text }
         ]}
       >
         {children}
       </Text>
     </TouchableOpacity>
-  );
+  )
 }
 
 export default function NewContactScreen() {
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const insets = useSafeAreaInsets()
+  const scrollViewRef = useRef<ScrollView>(null)
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isTurkish, setIsTurkish] = useState(true);
-  const [queryingEfatura, setQueryingEfatura] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isTurkish, setIsTurkish] = useState(true)
+  const [queryingEfatura, setQueryingEfatura] = useState(false)
   const [efaturaInfo, setEfaturaInfo] = useState<{
-    unvan?: string;
-    efatura_kayitli?: boolean;
-    earsiv_kayitli?: boolean;
-  } | null>(null);
+    unvan?: string
+    efatura_kayitli?: boolean
+    earsiv_kayitli?: boolean
+  } | null>(null)
+
+  // Animasyonlu dekoratif daireler
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
+
+  useEffect(() => {
+    // Orb 1 - Yukarı aşağı hareket + pulse
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, {
+        duration: 4000,
+        easing: Easing.inOut(Easing.ease)
+      }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, {
+        duration: 3000,
+        easing: Easing.inOut(Easing.ease)
+      }),
+      -1,
+      true
+    )
+
+    // Orb 2 - Sağa sola hareket + pulse
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, {
+        duration: 5000,
+        easing: Easing.inOut(Easing.ease)
+      }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, {
+        duration: 4000,
+        easing: Easing.inOut(Easing.ease)
+      }),
+      -1,
+      true
+    )
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
 
   const [formData, setFormData] = useState<ContactFormData>({
     // Required fields
@@ -283,21 +353,42 @@ export default function NewContactScreen() {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      showError('Hata', 'Lütfen formu eksiksiz doldurunuz');
-      return;
+      Toast.show({
+        type: 'error',
+        text1: 'Lütfen formu eksiksiz doldurunuz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      const contact = await createContact(formData);
-      success('Başarılı', 'Cari başarıyla oluşturuldu');
-      setTimeout(() => router.replace(`/contact/${contact.id}` as any), 1000);
+      const contact = await createContact(formData)
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+
+      Toast.show({
+        type: 'success',
+        text1: 'Cari başarıyla oluşturuldu',
+        position: 'top',
+        visibilityTime: 1500
+      })
+
+      setTimeout(() => router.replace(`/contacts/${contact.id}` as any), 300)
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Cari oluşturulamadı');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Cari oluşturulamadı',
+        position: 'top',
+        visibilityTime: 1500
+      })
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const contactTypes: { value: ContactType; label: string }[] = [
     { value: 'customer', label: 'Müşteri' },
@@ -318,10 +409,10 @@ export default function NewContactScreen() {
   ];
 
   const statusTypes: { value: ContactStatus; label: string; color: string }[] = [
-    { value: 'active', label: 'Aktif', color: colors.success },
-    { value: 'passive', label: 'Pasif', color: colors.textMuted },
-    { value: 'blacklist', label: 'Kara Liste', color: colors.danger },
-  ];
+    { value: 'active', label: 'Aktif', color: '#10b981' },
+    { value: 'passive', label: 'Pasif', color: DashboardColors.textSecondary },
+    { value: 'blacklist', label: 'Kara Liste', color: '#ef4444' }
+  ]
 
   const currencyTypes = [
     { value: 'TRY', label: 'TRY' },
@@ -339,49 +430,76 @@ export default function NewContactScreen() {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Full Screen Header */}
-      <FullScreenHeader
-        title="Yeni Cari"
-        showBackButton
-        rightIcons={
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-            activeOpacity={0.7}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Save size={20} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
-        }
-      />
+    <View style={styles.container}>
+      {/* HEADER */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                router.back()
+              }}
+              style={styles.backButton}
+            >
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Yeni Cari</Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={[
+                styles.saveButton,
+                isSubmitting && styles.saveButtonDisabled
+              ]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* CONTENT */}
+      <KeyboardAwareScrollView
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={20}
       >
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
           {/* E-Fatura/E-Arsiv Logo Gosterimi */}
           {efaturaInfo && (efaturaInfo.efatura_kayitli || efaturaInfo.earsiv_kayitli) && (
             <Card style={styles.efaturaCard}>
               {efaturaInfo.efatura_kayitli && (
                 <View style={styles.efaturaItem}>
-                  <Text style={[styles.efaturaText, { color: colors.success }]}>
+                  <Text style={[styles.efaturaText, { color: '#10b981' }]}>
                     ✓ e-Fatura Kayıtlı
                   </Text>
                 </View>
               )}
               {efaturaInfo.earsiv_kayitli && (
                 <View style={styles.efaturaItem}>
-                  <Text style={[styles.efaturaText, { color: colors.success }]}>
+                  <Text style={[styles.efaturaText, { color: '#10b981' }]}>
                     ✓ e-Arşiv Kayıtlı
                   </Text>
                 </View>
@@ -391,12 +509,12 @@ export default function NewContactScreen() {
 
           {/* Cari Tipi ve Faaliyet Alanı */}
           <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Cari Tipi ve Faaliyet Alanı</Text>
+            <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Cari Tipi ve Faaliyet Alanı</Text>
 
             {/* Cari Tipi */}
             <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                Cari Tipi <Text style={{ color: colors.danger }}>*</Text>
+              <Text style={[styles.label, { color: DashboardColors.textSecondary }]}>
+                Cari Tipi <Text style={{ color: '#ef4444' }}>*</Text>
               </Text>
               <View style={styles.chipGroup}>
                 {contactTypes.map((type) => (
@@ -406,7 +524,7 @@ export default function NewContactScreen() {
                       styles.chip,
                       formData.type === type.value && [
                         styles.chipActive,
-                        { backgroundColor: Brand.primary + '15', borderColor: Brand.primary },
+                        { backgroundColor: DashboardColors.primary + '15', borderColor: DashboardColors.primary },
                       ],
                     ]}
                     onPress={() => setFormData({ ...formData, type: type.value })}
@@ -414,7 +532,7 @@ export default function NewContactScreen() {
                     <Text
                       style={[
                         styles.chipText,
-                        { color: formData.type === type.value ? Brand.primary : colors.text },
+                        { color: formData.type === type.value ? DashboardColors.primary : DashboardColors.text },
                       ]}
                     >
                       {type.label}
@@ -422,12 +540,12 @@ export default function NewContactScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-              {errors.type && <Text style={[styles.errorText, { color: colors.danger }]}>{errors.type}</Text>}
+              {errors.type && <Text style={[styles.errorText, { color: '#ef4444' }]}>{errors.type}</Text>}
             </View>
 
             {/* Faaliyet Alanı */}
             <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Faaliyet Alanı</Text>
+              <Text style={[styles.label, { color: DashboardColors.textSecondary }]}>Faaliyet Alanı</Text>
               <View style={styles.chipGroup}>
                 {businessTypes.filter(b => b.value !== '').map((type) => (
                   <TouchableOpacity
@@ -436,7 +554,7 @@ export default function NewContactScreen() {
                       styles.chip,
                       formData.business_type === type.value && [
                         styles.chipActive,
-                        { backgroundColor: Brand.primary + '15', borderColor: Brand.primary },
+                        { backgroundColor: DashboardColors.primary + '15', borderColor: DashboardColors.primary },
                       ],
                     ]}
                     onPress={() => setFormData({ ...formData, business_type: (type.value as BusinessType) || null })}
@@ -444,7 +562,7 @@ export default function NewContactScreen() {
                     <Text
                       style={[
                         styles.chipText,
-                        { color: formData.business_type === type.value ? Brand.primary : colors.text },
+                        { color: formData.business_type === type.value ? DashboardColors.primary : DashboardColors.text },
                       ]}
                     >
                       {type.label}
@@ -457,7 +575,7 @@ export default function NewContactScreen() {
 
           {/* Temel Bilgiler */}
           <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
+            <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Temel Bilgiler</Text>
 
             <Input
               label="Firma/Kişi Adı"
@@ -471,7 +589,7 @@ export default function NewContactScreen() {
             {/* Legal Type ve Yurtici/Yurtdisi Toggle */}
             <View style={styles.toggleRow}>
               <View style={styles.toggleColumn}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Yasal Tip</Text>
+                <Text style={[styles.label, { color: DashboardColors.textSecondary }]}>Yasal Tip</Text>
                 <View style={styles.toggleGroup}>
                   <ToggleButton
                     active={formData.legal_type === 'company'}
@@ -491,7 +609,7 @@ export default function NewContactScreen() {
               </View>
 
               <View style={styles.toggleColumn}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Konum</Text>
+                <Text style={[styles.label, { color: DashboardColors.textSecondary }]}>Konum</Text>
                 <View style={styles.toggleGroup}>
                   <ToggleButton
                     active={isTurkish}
@@ -537,7 +655,7 @@ export default function NewContactScreen() {
                 maxLength={11}
               />
               {!isTurkish && formData.tax_number === FOREIGN_DEFAULT_TAX_NUMBER && (
-                <Text style={[styles.noteText, { color: colors.warning }]}>
+                <Text style={[styles.noteText, { color: '#f59e0b' }]}>
                   * Yabancı firma varsayılan vergi numarası
                 </Text>
               )}
@@ -585,7 +703,7 @@ export default function NewContactScreen() {
 
           {/* Adres Bilgileri */}
           <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Adres Bilgileri</Text>
+            <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Adres Bilgileri</Text>
 
             {/* Google Places Autocomplete */}
             <GooglePlacesAutocomplete
@@ -610,10 +728,10 @@ export default function NewContactScreen() {
             {/* Koordinat Bilgisi */}
             {formData.main_latitude && formData.main_longitude && (
               <View style={styles.coordinatesContainer}>
-                <Text style={[styles.coordinatesLabel, { color: colors.textMuted }]}>
-                  📍 Koordinatlar (Google Maps'ten otomatik)
+                <Text style={[styles.coordinatesLabel, { color: DashboardColors.textSecondary }]}>
+                  📍 Koordinatlar (Google Maps&apos;ten otomatik)
                 </Text>
-                <Text style={[styles.coordinatesText, { color: colors.textSecondary }]}>
+                <Text style={[styles.coordinatesText, { color: DashboardColors.textSecondary }]}>
                   Enlem: {formData.main_latitude.toFixed(6)} • Boylam: {formData.main_longitude.toFixed(6)}
                 </Text>
               </View>
@@ -621,11 +739,11 @@ export default function NewContactScreen() {
 
             {/* Manuel Konum Seçimi */}
             <View style={styles.divider}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.textMuted }]}>
+              <View style={[styles.dividerLine, { backgroundColor: DashboardColors.border }]} />
+              <Text style={[styles.dividerText, { color: DashboardColors.textMuted }]}>
                 veya Manuel Girdi
               </Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <View style={[styles.dividerLine, { backgroundColor: DashboardColors.border }]} />
             </View>
 
             {/* İl */}
@@ -652,11 +770,11 @@ export default function NewContactScreen() {
 
           {/* Finansal Ayarlar */}
           <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Finansal Ayarlar</Text>
+            <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Finansal Ayarlar</Text>
 
             <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                Para Birimi <Text style={{ color: colors.danger }}>*</Text>
+              <Text style={[styles.label, { color: DashboardColors.textSecondary }]}>
+                Para Birimi <Text style={{ color: '#ef4444' }}>*</Text>
               </Text>
               <View style={styles.chipGroup}>
                 {currencyTypes.map((currency) => (
@@ -666,7 +784,7 @@ export default function NewContactScreen() {
                       styles.chip,
                       formData.currency_type === currency.value && [
                         styles.chipActive,
-                        { backgroundColor: Brand.primary + '15', borderColor: Brand.primary },
+                        { backgroundColor: DashboardColors.primary + '15', borderColor: DashboardColors.primary },
                       ],
                     ]}
                     onPress={() => setFormData({ ...formData, currency_type: currency.value })}
@@ -674,7 +792,7 @@ export default function NewContactScreen() {
                     <Text
                       style={[
                         styles.chipText,
-                        { color: formData.currency_type === currency.value ? Brand.primary : colors.text },
+                        { color: formData.currency_type === currency.value ? DashboardColors.primary : DashboardColors.text },
                       ]}
                     >
                       {currency.value}
@@ -693,7 +811,7 @@ export default function NewContactScreen() {
               }
               keyboardType="numeric"
             />
-            <Text style={[styles.noteText, { color: colors.textMuted }]}>
+            <Text style={[styles.noteText, { color: DashboardColors.textMuted }]}>
               * Boş bırakılırsa limitsiz kredi
             </Text>
           </Card>
@@ -701,10 +819,10 @@ export default function NewContactScreen() {
           {/* Müşteri Segmentasyonu - Sadece customer/both/potential için */}
           {(formData.type === 'customer' || formData.type === 'both' || formData.type === 'potential') && (
             <Card style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Müşteri Segmentasyonu</Text>
+              <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Müşteri Segmentasyonu</Text>
 
               <View style={styles.formGroup}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Müşteri Segmenti</Text>
+                <Text style={[styles.label, { color: DashboardColors.textSecondary }]}>Müşteri Segmenti</Text>
                 <View style={styles.chipGroup}>
                   {customerSegments.filter(s => s.value !== '').map((segment) => (
                     <TouchableOpacity
@@ -713,7 +831,7 @@ export default function NewContactScreen() {
                         styles.chip,
                         formData.customer_segment === segment.value && [
                           styles.chipActive,
-                          { backgroundColor: Brand.primary + '15', borderColor: Brand.primary },
+                          { backgroundColor: DashboardColors.primary + '15', borderColor: DashboardColors.primary },
                         ],
                       ]}
                       onPress={() => setFormData({ ...formData, customer_segment: segment.value as any || null })}
@@ -721,7 +839,7 @@ export default function NewContactScreen() {
                       <Text
                         style={[
                           styles.chipText,
-                          { color: formData.customer_segment === segment.value ? Brand.primary : colors.text },
+                          { color: formData.customer_segment === segment.value ? DashboardColors.primary : DashboardColors.text },
                         ]}
                       >
                         {segment.label}
@@ -754,7 +872,7 @@ export default function NewContactScreen() {
                 }}
                 keyboardType="numeric"
               />
-              <Text style={[styles.noteText, { color: colors.textMuted }]}>
+              <Text style={[styles.noteText, { color: DashboardColors.textMuted }]}>
                 * Varsayılan fatura vade günü
               </Text>
             </Card>
@@ -762,11 +880,11 @@ export default function NewContactScreen() {
 
           {/* Durum ve Kategori */}
           <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Durum ve Kategori</Text>
+            <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Durum ve Kategori</Text>
 
             <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                Durum <Text style={{ color: colors.danger }}>*</Text>
+              <Text style={[styles.label, { color: DashboardColors.textSecondary }]}>
+                Durum <Text style={{ color: '#ef4444' }}>*</Text>
               </Text>
               <View style={styles.statusButtons}>
                 {statusTypes.map((status) => (
@@ -784,7 +902,7 @@ export default function NewContactScreen() {
                     <Text
                       style={[
                         styles.statusButtonText,
-                        { color: formData.status === status.value ? status.color : colors.text },
+                        { color: formData.status === status.value ? status.color : DashboardColors.text },
                       ]}
                     >
                       {status.label}
@@ -810,159 +928,224 @@ export default function NewContactScreen() {
             variant="primary"
             style={styles.submitButton}
           />
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
-  headerButton: {
-    padding: Spacing.sm,
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
   },
-  keyboardView: {
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  headerTitleContainer: {
     flex: 1,
+    alignItems: 'center'
   },
-  content: {
-    flex: 1,
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff'
   },
-  contentContainer: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    paddingBottom: Spacing['4xl'],
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  saveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  saveButtonDisabled: {
+    opacity: 0.5
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+  scrollView: {
+    flex: 1
+  },
+  scrollContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing['4xl']
   },
   efaturaCard: {
-    padding: Spacing.md,
+    padding: DashboardSpacing.md,
     backgroundColor: '#f0fdf4',
     borderWidth: 1,
-    borderColor: '#bbf7d0',
+    borderColor: '#bbf7d0'
   },
   efaturaItem: {
-    marginBottom: Spacing.xs,
+    marginBottom: DashboardSpacing.xs
   },
   efaturaText: {
-    ...Typography.bodySM,
-    fontWeight: '600',
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600'
   },
   section: {
-    padding: Spacing.lg,
+    padding: DashboardSpacing.lg
   },
   sectionTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.lg,
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    marginBottom: DashboardSpacing.lg
   },
   formGroup: {
-    marginBottom: Spacing.lg,
+    marginBottom: DashboardSpacing.lg
   },
   label: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
-    marginBottom: Spacing.sm,
+    marginBottom: DashboardSpacing.sm
   },
   chipGroup: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm
   },
   chip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.full,
     borderWidth: 1,
-    borderColor: Colors.light.border,
+    borderColor: DashboardColors.border
   },
   chipActive: {
-    borderWidth: 2,
+    borderWidth: 2
   },
   chipText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500'
   },
   toggleRow: {
     flexDirection: 'row',
-    gap: Spacing.md,
-    marginBottom: Spacing.lg,
+    gap: DashboardSpacing.md,
+    marginBottom: DashboardSpacing.lg
   },
   toggleColumn: {
-    flex: 1,
+    flex: 1
   },
   toggleGroup: {
     flexDirection: 'row',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
   toggleButton: {
     flex: 1,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.md,
+    paddingVertical: DashboardSpacing.sm,
+    paddingHorizontal: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.md,
     borderWidth: 2,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   toggleButtonText: {
-    ...Typography.bodySM,
-    fontWeight: '600',
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600'
   },
   statusButtons: {
     flexDirection: 'row',
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
   statusButton: {
     flex: 1,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+    padding: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.md,
     borderWidth: 1,
-    borderColor: Colors.light.border,
-    alignItems: 'center',
+    borderColor: DashboardColors.border,
+    alignItems: 'center'
   },
   statusButtonActive: {
-    borderWidth: 2,
+    borderWidth: 2
   },
   statusButtonText: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
+    fontSize: DashboardFontSizes.md,
+    fontWeight: '600'
   },
   noteText: {
-    ...Typography.bodyXS,
+    fontSize: DashboardFontSizes.xs,
     fontStyle: 'italic',
-    marginTop: Spacing.xs,
+    marginTop: DashboardSpacing.xs
   },
   errorText: {
-    ...Typography.bodyXS,
-    marginTop: Spacing.xs,
+    fontSize: DashboardFontSizes.xs,
+    marginTop: DashboardSpacing.xs
   },
   coordinatesContainer: {
-    padding: Spacing.md,
+    padding: DashboardSpacing.md,
     backgroundColor: '#f3f4f6',
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
+    borderRadius: DashboardBorderRadius.md,
+    marginBottom: DashboardSpacing.md
   },
   coordinatesLabel: {
-    ...Typography.bodyXS,
-    marginBottom: 4,
+    fontSize: DashboardFontSizes.xs,
+    marginBottom: 4
   },
   coordinatesText: {
-    ...Typography.bodySM,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: DashboardFontSizes.sm,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace'
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: Spacing.lg,
+    marginVertical: DashboardSpacing.lg
   },
   dividerLine: {
     flex: 1,
-    height: 1,
+    height: 1
   },
   dividerText: {
-    ...Typography.bodyXS,
-    marginHorizontal: Spacing.md,
-    textTransform: 'uppercase',
+    fontSize: DashboardFontSizes.xs,
+    marginHorizontal: DashboardSpacing.md,
+    textTransform: 'uppercase'
   },
   submitButton: {
-    marginTop: Spacing.lg,
-  },
-});
+    marginTop: DashboardSpacing.lg
+  }
+})

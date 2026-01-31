@@ -1,496 +1,602 @@
-import React, { useState, useEffect, useRef } from 'react';
+/**
+ * Premium Login Screen
+ *
+ * Modern, zarif ve kullanıcı dostu giriş deneyimi
+ * Glassmorphism, subtle animations ve refined typography
+ */
+
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
-  Text,
   StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
+  TextInput,
+  Pressable,
+  Text,
   Platform,
-  TouchableOpacity,
-  Image,
-  Dimensions,
-} from 'react-native';
-import { Link, router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mail, Lock, CheckSquare, Square, AlertCircle } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path, G } from 'react-native-svg';
-import { Button, Input, Divider } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-// useColorScheme kaldirildi - her zaman light mode kullanilir
-import { useGoogleAuth } from '@/hooks/use-google-auth';
-import { useAuth } from '@/context/auth-context';
-import ForgotPasswordModal, { ForgotPasswordModalRef } from '@/components/modals/ForgotPasswordModal';
+  ActivityIndicator,
+  useWindowDimensions,
+} from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useRouter } from 'expo-router'
+import { Ionicons, FontAwesome } from '@expo/vector-icons'
+import { StatusBar } from 'expo-status-bar'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  FadeInDown,
+  FadeInUp,
+} from 'react-native-reanimated'
+import { useAuth } from '@/context/auth-context'
+import Toast from 'react-native-toast-message'
+import {
+  AuthColors,
+  AuthSpacing,
+  AuthBorderRadius,
+  AuthFontSizes,
+  AuthSizes,
+  AuthShadows,
+} from '@/constants/auth-styles'
+import AuthHeader from '@/components/auth/AuthHeader'
+import { ForgotPasswordModal, ForgotPasswordModalRef } from '@/components/modals'
 
-// Google Logo Component
-const GoogleLogo = ({ size = 24 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <G>
-      <Path
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-        fill="#4285F4"
-      />
-      <Path
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-        fill="#34A853"
-      />
-      <Path
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-        fill="#FBBC05"
-      />
-      <Path
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-        fill="#EA4335"
-      />
-    </G>
-  </Svg>
-);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
-const { height } = Dimensions.get('window');
+export default function Login() {
+  const router = useRouter()
+  const { login, isLoading, isInitializing, isAuthenticated } = useAuth()
 
-// Logo images
-const LogoDark = require('@/assets/images/logo-dark.png');
-const LogoWhite = require('@/assets/images/logo-white.png');
+  // Form state
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [focusedField, setFocusedField] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
 
-export default function LoginScreen() {
-  // Her zaman light mode kullanilir
-  const colors = Colors.light;
-  const { login, isLoading, isInitializing, error, clearError, isAuthenticated, isSetupComplete } = useAuth();
-  const {
-    signIn: googleSignIn,
-    isLoading: isGoogleLoading,
-    error: googleError,
-    clearError: clearGoogleError,
-  } = useGoogleAuth();
+  const forgotPasswordModalRef = useRef<ForgotPasswordModalRef>(null)
 
-  const forgotPasswordModalRef = useRef<ForgotPasswordModalRef>(null);
+  // Animation values
+  const buttonScale = useSharedValue(1)
+  const checkboxScale = useSharedValue(1)
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-
-  // Clear auth error when component mounts or when user types
-  useEffect(() => {
-    return () => {
-      clearError();
-      clearGoogleError();
-    };
-  }, []);
-
-  // Navigate when authenticated (for Google sign-in)
-  // Redirect immediately when authenticated - don't show login page at all
   useEffect(() => {
     if (isAuthenticated) {
-      // Navigate based on setup status
-      if (isSetupComplete) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/(auth)/setup-status');
-      }
+      router.replace('/(tabs)')
     }
-  }, [isAuthenticated, isSetupComplete]);
+  }, [isAuthenticated, router])
 
-  const handleInputChange = (field: 'email' | 'password', value: string) => {
-    if (field === 'email') {
-      setEmail(value);
-    } else {
-      setPassword(value);
-    }
-    // Clear errors when user types
+  // Form handlers
+  const updateField = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
+      setErrors((prev) => ({ ...prev, [field]: '' }))
     }
-    if (error) {
-      clearError();
-    }
-  };
-
-  const validate = () => {
-    const newErrors: { email?: string; password?: string } = {};
-
-    if (!email) {
-      newErrors.email = 'E-posta adresi gerekli';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Geçerli bir e-posta adresi girin';
-    }
-
-    if (!password) {
-      newErrors.password = 'Şifre gerekli';
-    } else if (password.length < 6) {
-      newErrors.password = 'Şifre en az 6 karakter olmalı';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleLogin = async () => {
-    if (validate()) {
-      try {
-        const result = await login(email, password, rememberMe);
-        // Navigate based on setup status
-        if (result.isSetupComplete) {
-          router.replace('/(tabs)');
-        } else {
-          router.replace('/(auth)/setup-status');
-        }
-      } catch (err) {
-        // Error is already handled by auth context
-        console.log('Login error:', err);
-      }
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      await googleSignIn();
-      // Navigation is handled by the isAuthenticated effect
-    } catch (err) {
-      // Error is already handled by the hook
-      console.log('Google login error:', err);
-    }
-  };
-
-  // Don't show login page while checking auth state or if already authenticated
-  if (isInitializing || isAuthenticated) {
-    return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.loadingContainer}
-        >
-          <Image
-            source={LogoWhite}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </LinearGradient>
-      </View>
-    );
   }
 
+  const validate = useCallback(() => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'E-posta adresi gerekli'
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Geçerli bir e-posta adresi girin'
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Şifre gerekli'
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Şifre en az 6 karakter olmalı'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [formData])
+
+  const handleLogin = useCallback(async () => {
+    if (!validate()) {
+      return
+    }
+
+    try {
+      const result = await login(formData.email.trim().toLowerCase(), formData.password, rememberMe)
+
+      if (!result.isSetupComplete) {
+        Toast.show({
+          type: 'info',
+          text1: 'Hesabınız hala hazırlanıyor',
+          text2: 'Lütfen bekleyip tekrar deneyin',
+          position: 'top',
+          visibilityTime: 1500
+        })
+      } else {
+        router.replace('/(tabs)')
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Giriş sırasında bir hata oluştu.'
+      Toast.show({
+        type: 'error',
+        text1: errorMessage,
+        position: 'top',
+        visibilityTime: 1500
+      })
+    }
+  }, [formData, rememberMe, login, router, validate])
+
+  const handleForgotPassword = useCallback(() => {
+    forgotPasswordModalRef.current?.present()
+  }, [])
+
+  const handleButtonPressIn = () => {
+    buttonScale.value = withSpring(0.97, { damping: 15, stiffness: 400 })
+  }
+
+  const handleButtonPressOut = () => {
+    buttonScale.value = withSpring(1, { damping: 15, stiffness: 400 })
+  }
+
+  const handleCheckboxPress = () => {
+    checkboxScale.value = withSpring(0.8, { damping: 10, stiffness: 400 })
+    setTimeout(() => {
+      checkboxScale.value = withSpring(1, { damping: 10, stiffness: 400 })
+    }, 100)
+    setRememberMe(!rememberMe)
+  }
+
+  // Input style helper
+  const getInputStyle = (fieldName: string) => {
+    const isFocused = focusedField === fieldName
+    const hasError = !!errors[fieldName]
+
+    return {
+      borderColor: hasError
+        ? AuthColors.error
+        : isFocused
+        ? AuthColors.primary
+        : AuthColors.inputBorder,
+      backgroundColor: isFocused
+        ? AuthColors.inputBackgroundFocused
+        : AuthColors.inputBackground,
+    }
+  }
+
+  const getIconColor = (fieldName: string) => {
+    const isFocused = focusedField === fieldName
+    const hasError = !!errors[fieldName]
+
+    return hasError
+      ? AuthColors.error
+      : isFocused
+      ? AuthColors.primary
+      : AuthColors.iconDefault
+  }
+
+  const buttonAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+  }))
+
+  const checkboxAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkboxScale.value }],
+  }))
+
+  const { height: screenHeight } = useWindowDimensions()
+  const HEADER_HEIGHT = 220
+  const formMinHeight = screenHeight - HEADER_HEIGHT
+
   return (
-    <LinearGradient
-      colors={[Brand.primary, Brand.primaryLight, Brand.secondary]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.gradientBackground}
-    >
-        {/* Header Space - invisible header to match register/forgot-password pages */}
-        <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
-          <View style={styles.header} />
-        </SafeAreaView>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <StatusBar style="light" />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            bounces={false}
-            overScrollMode="never"
+      <AuthHeader
+        title="Hoş Geldiniz"
+        subtitle="Görevleriniz ve projeleriniz için giriş yapın"
+        iconType="login"
+      />
+
+      <KeyboardAwareScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={20}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+      >
+        <View style={[styles.formCard, { minHeight: formMinHeight }]}>
+          {/* Title Section */}
+          <Animated.View
+            entering={FadeInDown.delay(100).duration(400)}
+            style={styles.titleSection}
           >
-            {/* Top Section - Logo & Welcome */}
-            <View style={styles.topSection}>
-              <Image
-                source={LogoWhite}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-              <Text style={styles.welcomeTitle}>Hoş Geldiniz</Text>
-              <Text style={styles.welcomeSubtitle}>Devam etmek için bilgilerinizi girin</Text>
-            </View>
+            <Text style={styles.title}>Giriş Yap</Text>
+            <Text style={styles.subtitle}>
+              Hesabınıza erişmek için bilgilerinizi girin
+            </Text>
+          </Animated.View>
 
-            {/* Bottom Section - White Card with Form */}
-            <View style={styles.formCard}>
-              {/* API Error Message */}
-              {(error || googleError) && (
-                <View style={[styles.errorContainer, { backgroundColor: colors.danger + '15' }]}>
-                  <AlertCircle size={20} color={colors.danger} />
-                  <Text style={[styles.errorText, { color: colors.danger }]}>
-                    {error || googleError}
-                  </Text>
-                </View>
-              )}
-
-              {/* Email Input */}
-              <Input
-                label="E-posta Adresi"
+          {/* Email Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>E-posta</Text>
+            <View style={[styles.inputWrapper, getInputStyle('email')]}>
+              <View style={styles.inputIconContainer}>
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={getIconColor('email')}
+                />
+              </View>
+              <TextInput
+                style={styles.input}
                 placeholder="ornek@email.com"
-                value={email}
-                onChangeText={(value) => handleInputChange('email', value)}
-                keyboardType="email-address"
+                placeholderTextColor={AuthColors.textPlaceholder}
+                value={formData.email}
+                onChangeText={(v) => updateField('email', v)}
                 autoCapitalize="none"
+                keyboardType="email-address"
                 autoComplete="email"
-                error={errors.email}
-                leftIcon={<Mail size={20} color={colors.icon} />}
-                containerStyle={styles.inputContainer}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
               />
-
-              {/* Password Input */}
-              <Input
-                label="Şifre"
-                placeholder="••••••••"
-                value={password}
-                onChangeText={(value) => handleInputChange('password', value)}
-                isPassword
-                autoComplete="password"
-                error={errors.password}
-                leftIcon={<Lock size={20} color={colors.icon} />}
-                containerStyle={styles.inputContainer}
-              />
-
-              {/* Remember Me & Forgot Password */}
-              <View style={styles.optionsRow}>
-                <TouchableOpacity
-                  style={styles.rememberMe}
-                  onPress={() => setRememberMe(!rememberMe)}
-                >
-                  {rememberMe ? (
-                    <CheckSquare size={18} color={Brand.primary} />
-                  ) : (
-                    <Square size={18} color={colors.icon} />
-                  )}
-                  <Text style={[styles.rememberText, { color: colors.textSecondary }]}>
-                    Beni hatırla
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={() => forgotPasswordModalRef.current?.present()}>
-                  <Text style={[styles.forgotText, { color: Brand.primary }]}>
-                    Şifremi unuttum?
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Login Button */}
-              <TouchableOpacity
-                style={[
-                  styles.signInButton,
-                  (isLoading || isGoogleLoading) && styles.signInButtonDisabled,
-                ]}
-                onPress={handleLogin}
-                disabled={isLoading || isGoogleLoading}
-              >
-                <LinearGradient
-                  colors={[Brand.primary, Brand.primaryLight]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.signInButtonGradient}
-                >
-                  <Text style={styles.signInButtonText}>
-                    {isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              {/* Divider */}
-              <View style={styles.dividerContainer}>
-                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                <Text style={[styles.dividerText, { color: colors.textMuted }]}>veya</Text>
-                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              </View>
-
-              {/* Google Login Button */}
-              <TouchableOpacity
-                style={[
-                  styles.googleButton,
-                  { borderColor: colors.border, backgroundColor: '#FFFFFF' },
-                  (isLoading || isGoogleLoading) && styles.googleButtonDisabled,
-                ]}
-                onPress={handleGoogleLogin}
-                disabled={isLoading || isGoogleLoading}
-              >
-                {!isGoogleLoading && <GoogleLogo size={22} />}
-                <Text style={[styles.googleButtonText, { color: colors.text }]}>
-                  {isGoogleLoading ? 'Giriş yapılıyor...' : 'Google ile Giriş Yap'}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Register Link */}
-              <View style={styles.footer}>
-                <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-                  Hesabınız yok mu?{' '}
-                </Text>
-                <Link href="/(auth)/register" asChild>
-                  <TouchableOpacity>
-                    <Text style={[styles.footerLink, { color: Brand.primary }]}>
-                      Kayıt Ol
-                    </Text>
-                  </TouchableOpacity>
-                </Link>
-              </View>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+            {errors.email && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color={AuthColors.error} />
+                <Text style={styles.errorText}>{errors.email}</Text>
+              </View>
+            )}
+          </View>
 
-        {/* Forgot Password Modal */}
-        <ForgotPasswordModal ref={forgotPasswordModalRef} />
-      </LinearGradient>
-  );
+          {/* Password Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Şifre</Text>
+            <View style={[styles.inputWrapper, getInputStyle('password')]}>
+              <View style={styles.inputIconContainer}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={getIconColor('password')}
+                />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Şifrenizi girin"
+                placeholderTextColor={AuthColors.textPlaceholder}
+                value={formData.password}
+                onChangeText={(v) => updateField('password', v)}
+                secureTextEntry={!showPassword}
+                autoComplete="current-password"
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
+              />
+              <Pressable
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={AuthColors.iconDefault}
+                />
+              </Pressable>
+            </View>
+            {errors.password && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color={AuthColors.error} />
+                <Text style={styles.errorText}>{errors.password}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Options Row */}
+          <Animated.View
+            entering={FadeInDown.delay(400).duration(400)}
+            style={styles.optionsRow}
+          >
+            <Pressable style={styles.rememberMe} onPress={handleCheckboxPress}>
+              <Animated.View
+                style={[
+                  styles.checkbox,
+                  rememberMe && styles.checkboxActive,
+                  checkboxAnimStyle,
+                ]}
+              >
+                {rememberMe && (
+                  <Ionicons name="checkmark" size={14} color={AuthColors.white} />
+                )}
+              </Animated.View>
+              <Text style={styles.rememberText}>Beni Hatırla</Text>
+            </Pressable>
+            <Pressable onPress={handleForgotPassword}>
+              <Text style={styles.forgotText}>Şifremi Unuttum?</Text>
+            </Pressable>
+          </Animated.View>
+
+          {/* Login Button */}
+          <AnimatedPressable
+            style={[styles.loginButton, buttonAnimStyle]}
+            onPress={handleLogin}
+            onPressIn={handleButtonPressIn}
+            onPressOut={handleButtonPressOut}
+            disabled={isLoading || isInitializing}
+          >
+            {(isLoading || isInitializing) ? (
+              <ActivityIndicator size="small" color={AuthColors.white} />
+            ) : (
+              <>
+                <Text style={styles.loginButtonText}>Giriş Yap</Text>
+                <View style={styles.buttonIcon}>
+                  <Ionicons name="arrow-forward" size={18} color={AuthColors.white} />
+                </View>
+              </>
+            )}
+          </AnimatedPressable>
+
+          {/* Divider */}
+          <Animated.View
+            entering={FadeInDown.delay(600).duration(400)}
+            style={styles.divider}
+          >
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>veya</Text>
+            <View style={styles.dividerLine} />
+          </Animated.View>
+
+          {/* Social Buttons */}
+          <View style={styles.socialSection}>
+            {Platform.OS === 'ios' ? (
+              <View style={styles.socialButtons}>
+                <Pressable style={styles.appleButton}>
+                  <FontAwesome name="apple" size={20} color={AuthColors.white} />
+                  <Text style={styles.appleButtonText}>Apple</Text>
+                </Pressable>
+                <Pressable style={styles.googleButton}>
+                  <FontAwesome name="google" size={18} color={AuthColors.textPrimary} />
+                  <Text style={styles.googleButtonText}>Google</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable style={styles.googleButtonFull}>
+                <FontAwesome name="google" size={18} color={AuthColors.textPrimary} />
+                <Text style={styles.googleButtonText}>Google ile Devam Et</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Footer */}
+          <Animated.View
+            entering={FadeInUp.delay(800).duration(400)}
+            style={styles.footer}
+          >
+            <Text style={styles.footerText}>Hesabınız yok mu? </Text>
+            <Pressable onPress={() => router.push('/(auth)/register')}>
+              <Text style={styles.footerLink}>Kayıt Ol</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </KeyboardAwareScrollView>
+
+      <ForgotPasswordModal ref={forgotPasswordModalRef} />
+    </SafeAreaView>
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: AuthColors.primary,
   },
-  gradientBackground: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerSafeArea: {
-    backgroundColor: 'transparent',
-  },
-  header: {
-    height: Platform.OS === 'ios' ? 8 : 38,
-  },
-  keyboardView: {
+  scrollView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
   },
-  topSection: {
-    alignItems: 'center',
-    paddingTop: 0,
-    paddingBottom: Spacing['3xl'],
-    paddingHorizontal: Spacing['2xl'],
-  },
-  logoImage: {
-    width: 160,
-    height: 45,
-    marginBottom: Spacing.lg,
-  },
-  logo: {
-    width: 180,
-    height: 50,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: Spacing.xs,
-    textAlign: 'center',
-  },
-  welcomeSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-  },
   formCard: {
+    backgroundColor: AuthColors.white,
+    paddingHorizontal: AuthSpacing['2xl'],
+    paddingTop: AuthSpacing.lg,
+    paddingBottom: AuthSpacing['5xl'],
+  },
+  titleSection: {
+    marginBottom: AuthSpacing['2xl'],
+  },
+  title: {
+    fontSize: AuthFontSizes['6xl'],
+    fontWeight: '700',
+    color: AuthColors.textPrimary,
+    marginBottom: AuthSpacing.xs,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.textSecondary,
+  },
+  inputContainer: {
+    marginBottom: AuthSpacing.lg,
+  },
+  inputLabel: {
+    fontSize: AuthFontSizes.md,
+    fontWeight: '600',
+    color: AuthColors.textPrimary,
+    marginBottom: AuthSpacing.sm,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: AuthBorderRadius.lg,
+    borderWidth: 1.5,
+    height: AuthSizes.inputHeight,
+    paddingHorizontal: AuthSpacing.lg,
+    ...AuthShadows.sm,
+  },
+  inputIconContainer: {
+    width: 24,
+    alignItems: 'center',
+    marginRight: AuthSpacing.md,
+  },
+  input: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: Spacing['2xl'],
-    paddingHorizontal: Spacing['2xl'],
-    paddingBottom: Spacing['4xl'],
-    ...Shadows.lg,
+    fontSize: AuthFontSizes.lg,
+    color: AuthColors.textPrimary,
+    paddingVertical: 0,
+  },
+  eyeButton: {
+    padding: AuthSpacing.xs,
+    marginLeft: AuthSpacing.sm,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.lg,
+    gap: AuthSpacing.xs,
+    marginTop: AuthSpacing.sm,
+    paddingHorizontal: AuthSpacing.xs,
   },
   errorText: {
-    ...Typography.bodySM,
-    flex: 1,
-  },
-  inputContainer: {
-    marginBottom: Spacing.md,
+    fontSize: AuthFontSizes.sm,
+    color: AuthColors.error,
   },
   optionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing['2xl'],
+    marginBottom: AuthSpacing.xl,
+    marginTop: AuthSpacing.sm,
   },
   rememberMe: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: AuthSpacing.sm,
+  },
+  checkbox: {
+    width: AuthSizes.checkboxSize,
+    height: AuthSizes.checkboxSize,
+    borderRadius: AuthBorderRadius.sm,
+    borderWidth: 2,
+    borderColor: AuthColors.inputBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: AuthColors.white,
+  },
+  checkboxActive: {
+    backgroundColor: AuthColors.primary,
+    borderColor: AuthColors.primary,
   },
   rememberText: {
-    ...Typography.bodySM,
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.textSecondary,
   },
   forgotText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
-  },
-  signInButton: {
-    width: '100%',
-    height: 56,
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-    marginBottom: Spacing['2xl'],
-  },
-  signInButtonDisabled: {
-    opacity: 0.6,
-  },
-  signInButtonGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  signInButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.primary,
     fontWeight: '600',
   },
-  dividerContainer: {
+  loginButton: {
+    backgroundColor: AuthColors.primary,
+    height: AuthSizes.buttonHeight,
+    borderRadius: AuthBorderRadius.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing['2xl'],
+    justifyContent: 'center',
+    gap: AuthSpacing.sm,
+    marginBottom: AuthSpacing.xl,
+    ...AuthShadows.glow,
+  },
+  loginButtonText: {
+    color: AuthColors.white,
+    fontSize: AuthFontSizes.xl,
+    fontWeight: '700',
+  },
+  buttonIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: AuthSpacing.xs,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: AuthSpacing.xl,
   },
   dividerLine: {
     flex: 1,
     height: 1,
+    backgroundColor: AuthColors.divider,
   },
   dividerText: {
-    ...Typography.bodySM,
-    marginHorizontal: Spacing.lg,
+    fontSize: AuthFontSizes.sm,
+    color: AuthColors.textMuted,
+    paddingHorizontal: AuthSpacing.lg,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  googleButton: {
+  socialSection: {
+    marginBottom: AuthSpacing['2xl'],
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    gap: AuthSpacing.md,
+  },
+  appleButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.md,
-    paddingVertical: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1.5,
-    marginBottom: Spacing['2xl'],
-    ...Shadows.sm,
+    backgroundColor: AuthColors.black,
+    height: AuthSizes.socialButtonHeight,
+    borderRadius: AuthBorderRadius.lg,
+    gap: AuthSpacing.sm,
+    ...AuthShadows.md,
   },
-  googleButtonDisabled: {
-    opacity: 0.6,
+  appleButtonText: {
+    color: AuthColors.white,
+    fontSize: AuthFontSizes.lg,
+    fontWeight: '600',
+  },
+  googleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: AuthColors.white,
+    height: AuthSizes.socialButtonHeight,
+    borderRadius: AuthBorderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: AuthColors.inputBorder,
+    gap: AuthSpacing.sm,
+  },
+  googleButtonFull: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: AuthColors.white,
+    height: AuthSizes.socialButtonHeight,
+    borderRadius: AuthBorderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: AuthColors.inputBorder,
+    gap: AuthSpacing.sm,
   },
   googleButtonText: {
-    ...Typography.bodyMD,
+    color: AuthColors.textPrimary,
+    fontSize: AuthFontSizes.lg,
     fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: Spacing.md,
   },
   footerText: {
-    ...Typography.bodySM,
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.textSecondary,
   },
   footerLink: {
-    ...Typography.bodySM,
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.primary,
     fontWeight: '600',
   },
-});
+})
