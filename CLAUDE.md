@@ -4,80 +4,145 @@ Bu dosya Claude Code'a rehberlik sağlar.
 
 ---
 
-## 🚨 KRİTİK: PROJE ÖNCELİĞİ
+## 🚨 KRİTİK: BACKEND SADAKAT KURALI
 
-**EN ÖNEMLİ GÖREV:** Bu uygulamanın tasarımsal güncellemesi!
+**EN ÖNEMLİ KURAL:** Backend'e %100 sadakat!
 
-### Zorunlu Kural
-- ✅ **Her sayfa güncellemesinde referans uygulamayı (`C:\LoggeriseMobileV3`) MUTLAKA kontrol et**
-- ✅ **Tasarımı pixel-perfect olarak kopyala**
-- ✅ **Tüm style değerlerini (renk, spacing, typography) birebir al**
-- ❌ **Asla tahmin etme, asla kendi yorumunu katma**
-- 📖 **Detaylı kurallar:** [docs/design-reference.md](docs/design-reference.md)
+### Zorunlu Kurallar
+- ✅ **Backend**: `C:\Users\Ufuk\Documents\GitHub\FlsV2` (Laravel 12)
+- ✅ **API kontrolü için `mobile-api.php` dosyasını MUTLAKA incele**
+- ✅ **Veritabanı alanları için migration dosyalarını kontrol et**
+- ✅ **Web panel frontend kodlarını incele (formlar, inputlar, enum değerler)**
+- ❌ **Asla tahmin etme, backend'de ne varsa onu kullan**
 
 ---
 
 ## Proje Özeti
 
-**LoggeriseMobileV3** - Expo ve React Native ile geliştirilmiş cross-platform mobil uygulama.
+**LoggeriseMobile** - Expo ve React Native ile geliştirilmiş cross-platform mobil uygulama.
 
 ### Temel Bilgiler
-- **Tasarım Referansı Uygulama**: `C:\LoggeriseMobileV3` (sayfa sayfa migrasyon yapılıyor)
-- **Backend**: Laravel 12 - `C:\Users\ufuk\Documents\GitHub\FlsV2`
+- **Backend**: Laravel 12 - `C:\Users\Ufuk\Documents\GitHub\FlsV2`
 - **Dil**: Tüm UI, yorum ve dokümantasyon **Türkçe**
 - **Dokümantasyon**: Context7 kullanarak güncel Expo/React Native bilgileri al
 
-### ⭐ EN ÖNEMLİ GÖREV: UI/UX Tasarım Güncellemesi
+---
 
-**Proje Önceliği:** Bu uygulamanın en kritik görevi, referans uygulama (`C:\LoggeriseMobileV3`) ile **sayfa sayfa tasarımsal güncellemeler** yapmaktır.
+## 🔗 Backend Sadakat Kuralları
 
-#### Tasarım Referansı Kullanım Kuralları
+### 1. API Endpoint Kontrolü (ZORUNLU)
 
-1. **Her Sayfa Güncellemesinde ZORUNLU Kontrol:**
-   - ✅ Referans uygulamada karşılık gelen sayfayı MUTLAKA incele
-   - ✅ Layout yapısını birebir kopyala (container, content, spacing)
-   - ✅ Renk paletini birebir uygula
-   - ✅ Komponent hiyerarşisini aynı şekilde kur
-   - ✅ Typography (font boyutları, weight'ler) aynı olmalı
-   - ✅ Icon kullanımı ve konumlandırma aynı olmalı
-   - ✅ Shadow, border-radius gibi görsel detaylar aynı olmalı
-   - ✅ Boşluklar (padding, margin, gap) pixel-perfect olmalı
+Bir özellik kodlanmadan önce **MUTLAKA** şunları kontrol et:
 
-2. **Tasarım Tutarlılığı:**
-   - ❌ Kendi yorumunu katma, yaratıcı olmaya çalışma
-   - ❌ "Daha iyi olur" diye değişiklik yapma
-   - ✅ Referans uygulamadaki tasarımı olduğu gibi kopyala
-   - ✅ Belirsizlik varsa kullanıcıya sor
+```bash
+# API controller'ları kontrol et
+C:\Users\Ufuk\Documents\GitHub\FlsV2\routes\mobile-api.php
 
-3. **Migrasyon Workflow:**
-   ```
-   1. Referans sayfayı aç ve incele (C:\LoggeriseMobileV3)
-   2. Screenshot'ları karşılaştır
-   3. Komponent yapısını çıkar
-   4. Style değerlerini (renk, boyut, spacing) not et
-   5. Mevcut sayfayı referansa göre güncelle
-   6. Yan yana karşılaştırma yap
-   7. Pixel-perfect eşleşmeyi doğrula
-   ```
+# İlgili controller dosyasını bul ve oku
+C:\Users\Ufuk\Documents\GitHub\FlsV2\app\Http\Controllers\Api\Mobile\
+```
 
-4. **Her Commit Öncesi Checklist:**
-   - [ ] Referans sayfa ile yan yana karşılaştırıldı mı?
-   - [ ] Tüm spacing değerleri eşleşiyor mu?
-   - [ ] Renk paleti tamamen aynı mı?
-   - [ ] Icon'lar aynı boyut ve konumda mı?
-   - [ ] Typography (font, size, weight) birebir mi?
-   - [ ] Shadow/elevation değerleri aynı mı?
-   - [ ] Border-radius değerleri eşleşiyor mu?
-   - [ ] Animasyon davranışları aynı mı?
+**Kontrol Edilecekler:**
+- ✅ Endpoint URL'leri
+- ✅ HTTP metotları (GET, POST, PUT, DELETE)
+- ✅ Request parametreleri
+- ✅ Response yapısı
+- ✅ Validation kuralları
 
-### Mimari
+### 2. Veritabanı Alanları (ZORUNLU)
+
+Migration dosyalarını kontrol ederek doğru alanları kullan:
+
+```bash
+# Migration dosyaları
+C:\Users\Ufuk\Documents\GitHub\FlsV2\database\migrations\
+```
+
+**Kontrol Edilecekler:**
+- ✅ Tablo adları
+- ✅ Alan isimleri (column names)
+- ✅ Alan tipleri (string, integer, decimal, enum, vb.)
+- ✅ Nullable alanlar
+- ✅ Default değerler
+- ✅ Foreign key ilişkileri
+
+### 3. Web Panel Frontend Kodları (ZORUNLU)
+
+Bir form sayfası kodlanırken **MUTLAKA** web paneldeki karşılığını incele:
+
+```bash
+# Web panel frontend (Blade/Vue/React dosyaları)
+C:\Users\Ufuk\Documents\GitHub\FlsV2\resources\views\
+C:\Users\Ufuk\Documents\GitHub\FlsV2\resources\js\
+```
+
+**Web'den Alınacaklar:**
+- ✅ **Tüm input alanları** - Web'de hangi inputlar varsa mobilde de AYNI olmalı
+- ✅ **Enum değerleri** - Dropdown/select alanlarındaki seçenekler
+- ✅ **Validation kuralları** - Zorunlu alanlar, min/max değerler
+- ✅ **Input davranışları** - Mask, format, placeholder
+- ✅ **Alan sıralaması** - Form alanlarının sırası
+- ✅ **Bağımlı alanlar** - Bir alan değişince diğerinin değişmesi
+
+### 4. Özellik Geliştirme Workflow
+
+Yeni bir özellik kodlanırken şu sırayı takip et:
+
+```
+1. mobile-api.php dosyasında ilgili endpoint'i bul
+2. Controller dosyasını oku (request/response yapısı)
+3. Migration dosyasından tablo yapısını öğren
+4. Web panel frontend'inden form yapısını al
+5. Enum değerlerini ve validation kurallarını not et
+6. Mobil sayfayı backend'e %100 uyumlu şekilde kodla
+7. API çağrılarını test et
+```
+
+### 5. Enum ve Sabit Değerler
+
+Backend'deki enum değerlerini kullan:
+
+```bash
+# Model dosyalarındaki enum tanımları
+C:\Users\Ufuk\Documents\GitHub\FlsV2\app\Models\
+
+# Veya config dosyaları
+C:\Users\Ufuk\Documents\GitHub\FlsV2\config\
+```
+
+**Örnek Kontrol:**
+```typescript
+// Backend'de status enum'u varsa:
+// 'pending', 'approved', 'rejected'
+
+// Mobilde AYNI değerler kullanılmalı:
+const STATUS_OPTIONS = [
+  { value: 'pending', label: 'Beklemede' },
+  { value: 'approved', label: 'Onaylandı' },
+  { value: 'rejected', label: 'Reddedildi' }
+]
+```
+
+### 6. Her Commit Öncesi Checklist
+
+- [ ] mobile-api.php endpoint'i kontrol edildi mi?
+- [ ] Migration'daki alan isimleri doğru kullanıldı mı?
+- [ ] Web paneldeki tüm inputlar mobilde var mı?
+- [ ] Enum değerleri backend ile uyumlu mu?
+- [ ] Validation kuralları aynı mı?
+- [ ] API request/response yapısı doğru mu?
+
+---
+
+## Mimari
+
 - New Architecture aktif (`newArchEnabled: true`)
 - React Compiler aktif
 - Expo Router v6 - File-based routing
 - Typed Routes
 
 ## Temel Komutlar
-   
+
 ```bash
 # Geliştirme
 npx expo start           # Dev server
@@ -93,9 +158,6 @@ npx expo lint
 
 Aşağıdaki dosyalarda detaylı kurallar ve pattern'ler bulunur:
 
-### ⭐ Tasarım Referansı
-- **[design-reference.md](docs/design-reference.md)** - UI/UX tasarım güncellemesi kuralları, referans uygulama kullanımı
-
 ### Kurallar (`docs/rules/`)
 - **[currency.md](docs/rules/currency.md)** - Para formatı kuralları ve `utils/currency.ts` kullanımı
 - **[notifications.md](docs/rules/notifications.md)** - Toast ve ConfirmDialog kuralları (Alert YASAK)
@@ -106,135 +168,6 @@ Aşağıdaki dosyalarda detaylı kurallar ve pattern'ler bulunur:
 - **[forms.md](docs/patterns/forms.md)** - Form sayfaları, multi-step wizard, state yönetimi
 - **[components.md](docs/patterns/components.md)** - Yeniden kullanılabilir component pattern'leri
   - ⭐ **Standart Liste Card Yapısı** - Tüm card componentleri için zorunlu pattern
-
----
-
-## 🎨 Tasarım Güncellemesi: Detaylı Süreç
-
-### Bir Sayfa Güncellenirken Adım Adım
-
-#### 1. Referans Analizi
-```bash
-# Referans uygulamadaki karşılık gelen dosyayı bul
-# Örnek: app/products/index.tsx güncellenecekse
-# Referans: C:\LoggeriseMobileV3\app\products\index.tsx
-
-# Dosyayı Read tool ile oku
-# Style tanımlarını, komponent yapısını, renkleri not et
-```
-
-#### 2. Görsel Karşılaştırma
-- Referans uygulamayı çalıştır ve sayfanın screenshot'ını al
-- Mevcut uygulamayı çalıştır ve karşılaştır
-- Farkları listele:
-  - Layout yapısı farkları
-  - Renk farkları
-  - Spacing/boşluk farkları
-  - Typography farkları
-  - Icon/grafik farkları
-
-#### 3. Komponent Mapping
-```typescript
-// Referans uygulamadaki komponent yapısını çıkar
-// Örnek:
-<View style={styles.container}>
-  <PageHeader title="..." rightAction={...} />
-  <View style={styles.content}>
-    <FlatList
-      data={data}
-      renderItem={({ item }) => <ProductCard item={item} />}
-    />
-  </View>
-</View>
-
-// Aynı yapıyı mevcut uygulamaya kopyala
-// Style değerlerini referanstan al
-```
-
-#### 4. Style Migration
-```typescript
-// REFERANSTAN AL - Renk, boyut, spacing değerleri
-// Örnek style kopyalama:
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: DashboardColors.primary  // Referanstaki renk
-  },
-  content: {
-    flex: 1,
-    backgroundColor: DashboardColors.background,
-    borderTopLeftRadius: 24,    // Referanstaki değer
-    borderTopRightRadius: 24,   // Referanstaki değer
-    paddingTop: 16              // Referanstaki değer
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,                // Referanstaki değer
-    marginHorizontal: 16,       // Referanstaki değer
-    marginBottom: 12,           // Referanstaki değer
-    borderRadius: 12            // Referanstaki değer
-  }
-})
-```
-
-#### 5. Claude Code İçin Talimatlar
-Bir sayfa güncellemesi yapılırken Claude'a şu şekilde talimat ver:
-```
-"app/products/index.tsx sayfasını, referans uygulamadaki (C:\LoggeriseMobileV3\app\products\index.tsx)
-ile birebir aynı tasarıma getir. Önce referans dosyayı oku, sonra mevcut dosyayı güncelle."
-```
-
-#### 6. Doğrulama
-- [ ] Referans dosya okundu
-- [ ] Komponent yapısı aynı
-- [ ] Style değerleri birebir kopyalandı
-- [ ] Renk paleti eşleşti
-- [ ] Boşluklar (spacing) aynı
-- [ ] Typography değerleri aynı
-- [ ] Lint kontrolü geçti
-
-### Sık Kontrol Edilmesi Gereken Noktalar
-
-#### Layout & Spacing
-```typescript
-// Referansta container/content yapısı varsa AYNI OLMALI
-container: { flex: 1, backgroundColor: DashboardColors.primary }
-content: {
-  flex: 1,
-  backgroundColor: DashboardColors.background,
-  borderTopLeftRadius: 24,  // Referanstaki değer
-  borderTopRightRadius: 24   // Referanstaki değer
-}
-```
-
-#### Card Components
-```typescript
-// Card padding, margin, borderRadius değerleri AYNI OLMALI
-card: {
-  padding: 16,           // Referanstaki değer
-  marginHorizontal: 16,  // Referanstaki değer
-  marginBottom: 12,      // Referanstaki değer
-  borderRadius: 12       // Referanstaki değer
-}
-```
-
-#### Typography
-```typescript
-// Font size ve weight değerleri BİREBİR AYNI
-title: {
-  fontSize: DashboardFontSizes.lg,  // Referanstaki değer
-  fontWeight: '700',                 // Referanstaki değer
-  color: DashboardColors.text
-}
-```
-
-#### Colors
-```typescript
-// Tüm renk değerleri DashboardColors'tan gelmeli
-// Referansta kullanılan renkler birebir kopyalanmalı
-backgroundColor: DashboardColors.background  // Referanstaki renk
-color: DashboardColors.text                  // Referanstaki renk
-```
 
 ---
 
@@ -481,7 +414,6 @@ bottomCurve: {
 - ✅ `overflow: 'hidden'` headerContainer'da **MUTLAKA** olmalı
 - ✅ Animasyon süreleri ve easing değerleri **değiştirilmemeli**
 - ✅ LinearGradient renkleri **sabit**: `['#022920', '#044134', '#065f4a']`
-- 📖 Referans: `app/contacts/new.tsx`, `app/contacts/[id]/edit.tsx`
 
 ---
 
@@ -561,13 +493,13 @@ import {
 
 ## Checklist: Yeni Sayfa
 
-### 🎨 Tasarım Referansı (HER SAYFA İÇİN ZORUNLU)
-- [ ] **Referans uygulamada karşılık gelen sayfa bulundu ve okundu**
-- [ ] **Layout yapısı referansla birebir aynı**
-- [ ] **Style değerleri (renk, spacing, typography) referanstan kopyalandı**
-- [ ] **Komponent hiyerarşisi referansla eşleşiyor**
-- [ ] **Görsel detaylar (shadow, border-radius) referansla aynı**
-- [ ] **Referans ile yan yana karşılaştırma yapıldı**
+### 🔗 Backend Uyumu (HER SAYFA İÇİN ZORUNLU)
+- [ ] **mobile-api.php endpoint'i kontrol edildi**
+- [ ] **Controller dosyası okundu (request/response)**
+- [ ] **Migration'dan alan isimleri alındı**
+- [ ] **Web panel formu incelendi**
+- [ ] **Tüm inputlar ve enum değerler backend ile uyumlu**
+- [ ] **Validation kuralları aynı**
 
 ### Liste Sayfası
 - [ ] Container: `DashboardColors.primary`
@@ -579,7 +511,8 @@ import {
 - [ ] Empty/Error state
 
 ### Form Sayfası
-- [ ] **Referans uygulamadaki form sayfası ile karşılaştırıldı**
+- [ ] **Web paneldeki form ile karşılaştırıldı**
+- [ ] **Tüm inputlar web ile aynı**
 - [ ] Container: `DashboardColors.background` (primary DEĞİL!)
 - [ ] **Header: Standart form header yapısı (LinearGradient + animasyonlu daireler + tutarlı butonlar) - ZORUNLU**
 - [ ] Hareketli dekoratif daireler (glowOrb1, glowOrb2) eklendi
@@ -588,8 +521,6 @@ import {
 - [ ] `rightAction.isLoading` desteği (ActivityIndicator)
 - [ ] Klavye yapısı (aşağıdaki pattern)
 - [ ] Toast bildirimleri
-- [ ] **Input stilleri referansla birebir aynı**
-- [ ] **Button stilleri ve konumlandırma referansla aynı**
 
 #### Klavye Kullanım Standardı (Form Sayfaları)
 ```typescript
@@ -618,12 +549,10 @@ contentContainer: { padding: DashboardSpacing.lg, paddingBottom: DashboardSpacin
 import { KeyboardProvider } from 'react-native-keyboard-controller'
 // GestureHandlerRootView içinde wrap et
 ```
-📖 Referans: `app/cash-register/new.tsx`
-📖 Kaynak: [react-native-keyboard-controller](https://kirillzyusko.github.io/react-native-keyboard-controller/)
 
 ### Detay Sayfası
-- [ ] **Referans uygulamadaki detay sayfası ile karşılaştırıldı**
-- [ ] LinearGradient header (referanstaki stil ile)
+- [ ] **Backend API response yapısına uygun**
+- [ ] LinearGradient header
 - [ ] Skeleton loading
 - [ ] ConfirmDialog ile silme
 - [ ] `isMountedRef` ile memory leak önleme
