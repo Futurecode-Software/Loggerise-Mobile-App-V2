@@ -8,7 +8,7 @@ import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Plus, ChevronDown } from 'lucide-react-native';
 import { Card, Checkbox, SearchableSelect } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { SearchableSelectModal, SearchableSelectModalRef, SelectOption } from '@/components/modals/SearchableSelectModal';
 import type { LoadFormData } from '@/services/endpoints/loads';
 import api from '@/services/api';
@@ -174,16 +174,18 @@ export default function Step1BasicInfo({
           disabled={disabled}
           activeOpacity={0.7}
         >
-          <Text
-            style={[
-              styles.selectButtonText,
-              { color: selectedLabel ? colors.text : colors.placeholder },
-            ]}
-            numberOfLines={1}
-          >
-            {selectedLabel || 'Seçiniz'}
-          </Text>
-          <ChevronDown size={20} color={colors.icon} />
+          <View style={styles.selectButtonContent}>
+            <Text
+              style={[
+                styles.selectButtonText,
+                { color: selectedLabel ? colors.text : colors.placeholder },
+              ]}
+              numberOfLines={1}
+            >
+              {selectedLabel || 'Seçiniz'}
+            </Text>
+            <ChevronDown size={20} color={colors.icon} />
+          </View>
         </TouchableOpacity>
         {disabled && isDirectionLocked && (
           <Text style={[styles.infoText, { color: colors.textMuted }]}>
@@ -588,14 +590,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   selectButton: {
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    height: 48,
+  },
+  selectButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    minHeight: 44,
   },
   selectButtonDisabled: {
     opacity: 0.5,
@@ -603,6 +607,8 @@ const styles = StyleSheet.create({
   selectButtonText: {
     fontSize: 14,
     flex: 1,
+    textAlignVertical: 'center',
+    includeFontPadding: false
   },
   selectWithAddButton: {
     flexDirection: 'row',
@@ -613,8 +619,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   addButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     alignItems: 'center',

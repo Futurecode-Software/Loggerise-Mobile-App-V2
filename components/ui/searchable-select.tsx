@@ -465,8 +465,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    minHeight: 48,
+    height: 48,
+    justifyContent: 'center',
   },
   selectContent: {
     flexDirection: 'row',
@@ -479,6 +479,8 @@ const styles = StyleSheet.create({
   },
   selectedLabel: {
     ...Typography.bodyMD,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   selectedSubtitle: {
     ...Typography.bodySM,
@@ -487,6 +489,8 @@ const styles = StyleSheet.create({
   placeholder: {
     ...Typography.bodyMD,
     flex: 1,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   clearButton: {
     padding: Spacing.xs,

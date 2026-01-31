@@ -872,6 +872,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: DashboardSpacing.lg,
+    paddingTop:0,
     paddingBottom: DashboardSpacing['3xl']
   },
   formContent: {
