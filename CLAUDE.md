@@ -77,7 +77,7 @@ Bu dosya Claude Code'a rehberlik sağlar.
 - Typed Routes
 
 ## Temel Komutlar
- 
+  
 ```bash
 # Geliştirme
 npx expo start           # Dev server
@@ -325,6 +325,164 @@ container: { flex: 1, backgroundColor: DashboardColors.background }
 ```
 📖 Detay: [docs/patterns/components.md](docs/patterns/components.md#standart-liste-card-yapısı-)
 
+### 7. Form Sayfaları Header Standardı
+```typescript
+// ZORUNLU - Tüm form sayfalarında (new.tsx, edit.tsx) bu header yapısı kullanılmalı
+
+// 1. Import'lar
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+
+// 2. Animasyon setup (component içinde)
+const orb1TranslateY = useSharedValue(0)
+const orb2TranslateX = useSharedValue(0)
+const orb1Scale = useSharedValue(1)
+const orb2Scale = useSharedValue(1)
+
+useEffect(() => {
+  orb1TranslateY.value = withRepeat(
+    withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+    -1, true
+  )
+  orb1Scale.value = withRepeat(
+    withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+    -1, true
+  )
+  orb2TranslateX.value = withRepeat(
+    withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+    -1, true
+  )
+  orb2Scale.value = withRepeat(
+    withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+    -1, true
+  )
+}, [])
+
+const orb1AnimatedStyle = useAnimatedStyle(() => ({
+  transform: [
+    { translateY: orb1TranslateY.value },
+    { scale: orb1Scale.value }
+  ]
+}))
+
+const orb2AnimatedStyle = useAnimatedStyle(() => ({
+  transform: [
+    { translateX: orb2TranslateX.value },
+    { scale: orb2Scale.value }
+  ]
+}))
+
+// 3. Header JSX
+<View style={styles.headerContainer}>
+  <LinearGradient
+    colors={['#022920', '#044134', '#065f4a']}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={StyleSheet.absoluteFill}
+  />
+
+  {/* Dekoratif ışık efektleri - Animasyonlu */}
+  <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+  <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+  <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+    <View style={styles.headerBar}>
+      {/* Sol: Geri Butonu */}
+      <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+        <Ionicons name="chevron-back" size={24} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Orta: Başlık */}
+      <View style={styles.headerTitleContainer}>
+        <Text style={styles.headerTitle}>Başlık</Text>
+      </View>
+
+      {/* Sağ: Kaydet/Aksiyon Butonu */}
+      <TouchableOpacity
+        onPress={handleSubmit}
+        disabled={isSubmitting}
+        style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
+      >
+        {isSubmitting ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Ionicons name="checkmark" size={24} color="#fff" />
+        )}
+      </TouchableOpacity>
+    </View>
+  </View>
+
+  <View style={styles.bottomCurve} />
+</View>
+
+// 4. Styles
+headerContainer: {
+  position: 'relative',
+  paddingBottom: 24,
+  overflow: 'hidden'  // ZORUNLU - Dairelerin taşmasını önler
+},
+glowOrb1: {
+  position: 'absolute',
+  top: -40,
+  right: -20,
+  width: 140,
+  height: 140,
+  borderRadius: 70,
+  backgroundColor: 'rgba(16, 185, 129, 0.12)'
+},
+glowOrb2: {
+  position: 'absolute',
+  bottom: 30,
+  left: -50,
+  width: 100,
+  height: 100,
+  borderRadius: 50,
+  backgroundColor: 'rgba(255, 255, 255, 0.04)'
+},
+backButton: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  alignItems: 'center',
+  justifyContent: 'center'
+},
+saveButton: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  alignItems: 'center',
+  justifyContent: 'center'
+},
+saveButtonDisabled: {
+  opacity: 0.5
+},
+bottomCurve: {
+  position: 'absolute',
+  bottom: -1,
+  left: 0,
+  right: 0,
+  height: 24,
+  backgroundColor: DashboardColors.background,
+  borderTopLeftRadius: DashboardBorderRadius['2xl'],
+  borderTopRightRadius: DashboardBorderRadius['2xl']
+}
+```
+
+**Önemli Noktalar:**
+- ✅ Her iki buton (geri/kaydet) **aynı style** kullanmalı (40x40, yuvarlak, yarı saydam)
+- ✅ **Hareketli dekoratif daireler** (glowOrb1, glowOrb2) **ZORUNLU**
+- ✅ `overflow: 'hidden'` headerContainer'da **MUTLAKA** olmalı
+- ✅ Animasyon süreleri ve easing değerleri **değiştirilmemeli**
+- ✅ LinearGradient renkleri **sabit**: `['#022920', '#044134', '#065f4a']`
+- 📖 Referans: `app/contacts/new.tsx`, `app/contacts/[id]/edit.tsx`
+
 ---
 
 ## Routing
@@ -423,8 +581,11 @@ import {
 ### Form Sayfası
 - [ ] **Referans uygulamadaki form sayfası ile karşılaştırıldı**
 - [ ] Container: `DashboardColors.background` (primary DEĞİL!)
-- [ ] Header: LinearGradient ile yeşil arka plan VEYA `PageHeader` + `variant="compact"`
-- [ ] `rightAction.isLoading` desteği
+- [ ] **Header: Standart form header yapısı (LinearGradient + animasyonlu daireler + tutarlı butonlar) - ZORUNLU**
+- [ ] Hareketli dekoratif daireler (glowOrb1, glowOrb2) eklendi
+- [ ] Geri ve kaydet butonları aynı stil (40x40, yuvarlak, yarı saydam)
+- [ ] `overflow: 'hidden'` headerContainer'da var
+- [ ] `rightAction.isLoading` desteği (ActivityIndicator)
 - [ ] Klavye yapısı (aşağıdaki pattern)
 - [ ] Toast bildirimleri
 - [ ] **Input stilleri referansla birebir aynı**

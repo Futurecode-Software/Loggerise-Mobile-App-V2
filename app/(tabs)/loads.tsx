@@ -25,6 +25,12 @@ import Animated, {
   useAnimatedStyle,
   withSpring
 } from 'react-native-reanimated'
+import {
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetBackdropProps,
+  BottomSheetView
+} from '@gorhom/bottom-sheet'
 import { PageHeader } from '@/components/navigation'
 import { LoadListSkeleton } from '@/components/ui/skeleton'
 import {
@@ -299,6 +305,7 @@ export default function LoadsScreen() {
   const fetchIdRef = useRef(0)
   const debounceTimeoutRef = useRef<number | undefined>(undefined)
   const hasInitialFetchRef = useRef(false)
+  const filterBottomSheetRef = useRef<BottomSheetModal>(null)
 
   // Veri çekme fonksiyonu
   const executeFetch = useCallback(
@@ -462,6 +469,43 @@ export default function LoadsScreen() {
     router.push('/load/new')
   }
 
+  // Filtre modalını aç/kapat
+  const handleFilterPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    filterBottomSheetRef.current?.present()
+  }, [])
+
+  const closeFilterModal = useCallback(() => {
+    filterBottomSheetRef.current?.dismiss()
+  }, [])
+
+  // Backdrop render
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    []
+  )
+
+  // Filtreleri temizle
+  const clearFilters = () => {
+    setActiveStatusFilter('all')
+    setActiveDirectionFilter('all')
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+  }
+
+  // Aktif filtre sayısı
+  const activeFilterCount = [
+    activeStatusFilter !== 'all',
+    activeDirectionFilter !== 'all'
+  ].filter(Boolean).length
+
   // Liste alt kısmı render
   const renderFooter = () => {
     if (!isLoadingMore) return null
@@ -542,24 +586,29 @@ export default function LoadsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <PageHeader
-        title="Yükler"
-        icon="cube-outline"
-        subtitle={
-          pagination?.total
-            ? `${pagination.total} yük listeleniyor`
-            : 'Yük takibi ve yönetimi'
-        }
-        rightAction={{
-          icon: 'add',
-          onPress: handleCreateLoad
-        }}
-      />
+    <>
+      <View style={styles.container}>
+        {/* Header */}
+        <PageHeader
+          title="Yükler"
+          icon="cube-outline"
+          subtitle={
+            pagination?.total
+              ? `${pagination.total} yük listeleniyor`
+              : 'Yük takibi ve yönetimi'
+          }
+          leftAction={{
+            icon: 'funnel-outline',
+            onPress: handleFilterPress
+          }}
+          rightAction={{
+            icon: 'add',
+            onPress: handleCreateLoad
+          }}
+        />
 
-      {/* İçerik */}
-      <View style={styles.content}>
+        {/* İçerik */}
+        <View style={styles.content}>
         {/* Arama Kutusu */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputWrapper}>
@@ -592,54 +641,6 @@ export default function LoadsScreen() {
           </View>
         </View>
 
-        {/* Filtreler */}
-        <View style={styles.filtersContainer}>
-          {/* Yön Filtreleri */}
-          <View style={styles.filterSection}>
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={DIRECTION_FILTER_OPTIONS}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.filterList}
-              renderItem={({ item }) => (
-                <FilterChip
-                  label={item.label}
-                  isActive={activeDirectionFilter === item.id}
-                  color={
-                    item.id !== 'all'
-                      ? LoadDirectionColors[item.id as LoadDirection]
-                      : undefined
-                  }
-                  onPress={() => setActiveDirectionFilter(item.id)}
-                />
-              )}
-            />
-          </View>
-
-          {/* Durum Filtreleri */}
-          <View style={styles.filterSection}>
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={STATUS_FILTER_OPTIONS}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.filterList}
-              renderItem={({ item }) => (
-                <FilterChip
-                  label={item.label}
-                  isActive={activeStatusFilter === item.id}
-                  color={
-                    item.id !== 'all'
-                      ? LoadStatusColors[item.id as LoadStatus]
-                      : undefined
-                  }
-                  onPress={() => setActiveStatusFilter(item.id)}
-                />
-              )}
-            />
-          </View>
-        </View>
 
         {/* Yük Listesi */}
         <FlatList
@@ -671,6 +672,117 @@ export default function LoadsScreen() {
         />
       </View>
     </View>
+
+    {/* Filtre Bottom Sheet Modal */}
+    <BottomSheetModal
+      ref={filterBottomSheetRef}
+      index={0}
+      snapPoints={['75%']}
+      enablePanDownToClose={true}
+      enableContentPanningGesture={true}
+      enableDynamicSizing={false}
+      animateOnMount={true}
+      backdropComponent={renderBackdrop}
+      backgroundStyle={styles.bottomSheetBackground}
+      handleIndicatorStyle={styles.bottomSheetHandle}
+    >
+      <BottomSheetView style={styles.bottomSheetContent}>
+        {/* Modal Header */}
+        <View style={styles.modalHeader}>
+          <View style={styles.modalHeaderLeft}>
+            <View style={styles.modalIconContainer}>
+              <Ionicons
+                name="funnel"
+                size={20}
+                color={DashboardColors.primary}
+              />
+            </View>
+            <Text style={styles.modalTitle}>Filtreler</Text>
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={closeFilterModal}
+          >
+            <Ionicons
+              name="close"
+              size={24}
+              color={DashboardColors.textSecondary}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Filtre İçeriği */}
+        <View style={styles.modalBody}>
+          {/* Yön Filtreleri */}
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterGroupTitle}>Yön</Text>
+            <View style={styles.filterOptionsGrid}>
+              {DIRECTION_FILTER_OPTIONS.map((item) => (
+                <FilterChip
+                  key={item.id}
+                  label={item.label}
+                  isActive={activeDirectionFilter === item.id}
+                  color={
+                    item.id !== 'all'
+                      ? LoadDirectionColors[item.id as LoadDirection]
+                      : undefined
+                  }
+                  onPress={() => setActiveDirectionFilter(item.id)}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Durum Filtreleri */}
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterGroupTitle}>Durum</Text>
+            <View style={styles.filterOptionsGrid}>
+              {STATUS_FILTER_OPTIONS.map((item) => (
+                <FilterChip
+                  key={item.id}
+                  label={item.label}
+                  isActive={activeStatusFilter === item.id}
+                  color={
+                    item.id !== 'all'
+                      ? LoadStatusColors[item.id as LoadStatus]
+                      : undefined
+                  }
+                  onPress={() => setActiveStatusFilter(item.id)}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {/* Modal Footer */}
+        <View style={styles.modalFooter}>
+          <TouchableOpacity
+            style={styles.modalClearButton}
+            onPress={clearFilters}
+          >
+            <Ionicons
+              name="refresh-outline"
+              size={18}
+              color={DashboardColors.textSecondary}
+            />
+            <Text style={styles.clearButtonText}>Temizle</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.applyButton}
+            onPress={closeFilterModal}
+          >
+            <Text style={styles.applyButtonText}>Uygula</Text>
+            <Ionicons name="checkmark" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </BottomSheetView>
+    </BottomSheetModal>
+  </>
   )
 }
 
@@ -712,16 +824,6 @@ const styles = StyleSheet.create({
   },
 
   // Filtreler
-  filtersContainer: {
-    paddingBottom: DashboardSpacing.sm
-  },
-  filterSection: {
-    marginBottom: DashboardSpacing.xs
-  },
-  filterList: {
-    paddingHorizontal: DashboardSpacing.lg,
-    gap: DashboardSpacing.sm
-  },
   filterChip: {
     paddingHorizontal: DashboardSpacing.md,
     paddingVertical: DashboardSpacing.sm,
@@ -945,5 +1047,132 @@ const styles = StyleSheet.create({
   footerLoaderText: {
     fontSize: DashboardFontSizes.sm,
     color: DashboardColors.textSecondary
+  },
+
+  // Bottom Sheet Modal
+  bottomSheetBackground: {
+    backgroundColor: DashboardColors.surface,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+  bottomSheetHandle: {
+    backgroundColor: DashboardColors.border,
+    width: 40,
+    height: 4
+  },
+  bottomSheetContent: {
+    flex: 1,
+    paddingBottom: DashboardSpacing.lg
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  modalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  modalIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  modalTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary
+  },
+  filterBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: DashboardColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  filterBadgeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '700',
+    color: '#fff'
+  },
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: DashboardColors.background,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  modalBody: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.lg,
+    maxHeight: 400
+  },
+  filterGroup: {
+    marginBottom: DashboardSpacing.xl
+  },
+  filterGroupTitle: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.md,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5
+  },
+  filterOptionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DashboardSpacing.sm
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: DashboardSpacing.md,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: DashboardColors.borderLight
+  },
+  modalClearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.xs,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.background,
+    borderWidth: 1,
+    borderColor: DashboardColors.border
+  },
+  clearButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textSecondary
+  },
+  applyButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.xs,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary
+  },
+  applyButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
   }
 })
