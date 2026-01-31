@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message'
 import type { Contact } from '@/types/contact'
 import { getContact, deleteContact } from '@/services/endpoints/contacts'
 import { StatusBadge } from '@/components/contacts/StatusBadge'
+import { ContactDetailSkeleton } from '@/components/contacts/ContactDetailSkeleton'
 import { Skeleton } from '@/components/ui/skeleton'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import { getContactTypeLabel, getLegalTypeLabel, getSegmentLabel, getCreditRatingLabel } from '@/utils/contacts/labels'
@@ -225,7 +226,6 @@ export default function ContactDetailScreen() {
         <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
           <View style={styles.headerBar}>
             <TouchableOpacity
-              style={styles.headerButton}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                 router.back()
@@ -237,22 +237,20 @@ export default function ContactDetailScreen() {
             {!isLoading && contact && (
               <View style={styles.headerActions}>
                 <TouchableOpacity
-                  style={styles.headerButton}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                     router.push(`/contacts/${id}/edit`)
                   }}
                 >
-                  <Ionicons name="create-outline" size={20} color="#fff" />
+                  <Ionicons name="create-outline" size={24} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.headerButton}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
                     deleteDialogRef.current?.present()
                   }}
                 >
-                  <Ionicons name="trash-outline" size={20} color="#fff" />
+                  <Ionicons name="trash-outline" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
             )}
@@ -276,20 +274,7 @@ export default function ContactDetailScreen() {
           />
         }
       >
-        {isLoading && (
-          <View style={styles.skeletonContainer}>
-            <View style={styles.skeletonCard}>
-              <Skeleton width={120} height={16} style={styles.skeletonTitle} />
-              <Skeleton width="100%" height={16} style={styles.skeletonRow} />
-              <Skeleton width="80%" height={16} />
-            </View>
-            <View style={styles.skeletonCard}>
-              <Skeleton width={120} height={16} style={styles.skeletonTitle} />
-              <Skeleton width="100%" height={16} style={styles.skeletonRow} />
-              <Skeleton width="90%" height={16} />
-            </View>
-          </View>
-        )}
+        {isLoading && <ContactDetailSkeleton />}
 
         {!isLoading && (error || !contact) && (
           <ErrorState error={error || 'Cari bulunamadı'} onRetry={fetchContact} />
@@ -463,14 +448,6 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     gap: DashboardSpacing.md
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: DashboardBorderRadius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center'
   },
   contactInfo: {
     gap: DashboardSpacing.sm
@@ -656,20 +633,5 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.md,
     fontWeight: '600',
     color: '#fff'
-  },
-  skeletonContainer: {
-    padding: DashboardSpacing.lg,
-    gap: DashboardSpacing.md
-  },
-  skeletonCard: {
-    backgroundColor: DashboardColors.surface,
-    borderRadius: DashboardBorderRadius.xl,
-    padding: DashboardSpacing.lg
-  },
-  skeletonTitle: {
-    marginBottom: DashboardSpacing.sm
-  },
-  skeletonRow: {
-    marginBottom: DashboardSpacing.xs
   }
 })

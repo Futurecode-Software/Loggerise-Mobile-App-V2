@@ -1,10 +1,10 @@
 /**
- * Load Detail Screen
+ * Yük Detay Sayfası
  *
- * Shows load details with items, addresses, companies, and documents.
+ * Yük bilgilerini detaylı görüntüleme - loads.tsx tasarımı ile uyumlu
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -12,981 +12,1066 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+  ActivityIndicator
+} from 'react-native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useFocusEffect } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Edit,
-  Trash2,
-  Package,
-  Truck,
-  Building2,
-  MapPin,
-  Calendar,
-  AlertCircle,
-  FileText,
-  DollarSign,
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp,
-  Box,
-  Scale,
-  Ruler,
-} from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
 import {
-  getLoad,
-  deleteLoad,
-  LoadDetail,
-  LoadItem,
-  LoadAddress,
-  getStatusLabel,
-  getStatusColor,
-  getDirectionLabel,
-  getDirectionColor,
-  getLoadTypeLabel,
-  getDocumentStatusLabel,
-} from '@/services/endpoints/loads';
+  LoadStatusColors,
+  LoadStatusBgColors,
+  LoadStatusLabels,
+  LoadDirectionColors,
+  LoadDirectionBgColors,
+  LoadDirectionLabels
+} from '@/constants/load-theme'
+import { getLoad, deleteLoad } from '@/services/endpoints/loads'
+import type { LoadDetail, LoadItem } from '@/types/load'
+import { formatCurrency } from '@/utils/currency'
+
+// Tarih formatlama
+const formatDate = (dateString?: string): string => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
+  } catch {
+    return dateString
+  }
+}
+
+// Sayı formatlama
+const formatNumber = (value?: number, unit?: string): string => {
+  if (value === undefined || value === null) return '-'
+  const formatted = value.toLocaleString('tr-TR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  })
+  return unit ? `${formatted} ${unit}` : formatted
+}
+
+// Fiyat formatlama
+const formatPrice = (amount?: number, currency?: string): string => {
+  if (amount === undefined || amount === null) return '-'
+  return formatCurrency(amount, currency || 'TRY', { symbolPosition: 'after' })
+}
+
+// Bölüm başlığı
+interface SectionHeaderProps {
+  title: string
+  icon: keyof typeof Ionicons.glyphMap
+  count?: number
+  isExpanded?: boolean
+  onToggle?: () => void
+}
+
+function SectionHeader({ title, icon, count, isExpanded, onToggle }: SectionHeaderProps) {
+  return (
+    <TouchableOpacity
+      style={styles.sectionHeader}
+      onPress={onToggle}
+      disabled={!onToggle}
+      activeOpacity={onToggle ? 0.7 : 1}
+    >
+      <View style={styles.sectionHeaderLeft}>
+        <View style={styles.sectionIcon}>
+          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
+        </View>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {count !== undefined && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{count}</Text>
+          </View>
+        )}
+      </View>
+      {onToggle && (
+        <Ionicons
+          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={DashboardColors.textMuted}
+        />
+      )}
+    </TouchableOpacity>
+  )
+}
+
+// Bilgi satırı
+interface InfoRowProps {
+  label: string
+  value: string
+  icon?: keyof typeof Ionicons.glyphMap
+  highlight?: boolean
+}
+
+function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={styles.infoLabel}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={14}
+            color={DashboardColors.textMuted}
+            style={styles.infoIcon}
+          />
+        )}
+        <Text style={styles.infoLabelText}>{label}</Text>
+      </View>
+      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
+        {value}
+      </Text>
+    </View>
+  )
+}
 
 export default function LoadDetailScreen() {
-  const { id: rawId } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const loadId = id ? parseInt(id, 10) : null
 
-  // Parse ID safely - handle string, array, or undefined
-  const loadId = React.useMemo(() => {
-    const idStr = Array.isArray(rawId) ? rawId[0] : rawId;
-    if (!idStr) return null;
-    const parsed = parseInt(idStr, 10);
-    return isNaN(parsed) ? null : parsed;
-  }, [rawId]);
+  // State
+  const [load, setLoad] = useState<LoadDetail | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [expandedItems, setExpandedItems] = useState(false)
+  const [expandedAddresses, setExpandedAddresses] = useState(false)
 
-  const [load, setLoad] = useState<LoadDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [expandedItems, setExpandedItems] = useState(false);
-  const [expandedAddresses, setExpandedAddresses] = useState(false);
+  // Refs
+  const isMountedRef = useRef(true)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
 
-  // Fetch load data
-  const fetchLoad = useCallback(async () => {
+  // Veri çekme
+  const fetchLoad = useCallback(async (showLoading = true) => {
     if (!loadId) {
-      setError('Geçersiz yük ID');
-      setIsLoading(false);
-      return;
+      setError('Geçersiz yük ID')
+      setIsLoading(false)
+      return
     }
 
     try {
-      setError(null);
-      const data = await getLoad(loadId);
-      setLoad(data);
+      if (showLoading) {
+        setIsLoading(true)
+        setError(null)
+      }
+
+      const data = await getLoad(loadId)
+
+      if (isMountedRef.current) {
+        setLoad(data)
+        setError(null)
+      }
     } catch (err) {
-      console.error('Load fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Yük bilgileri yüklenemedi');
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Yük yüklenemedi')
+      }
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
     }
-  }, [loadId]);
+  }, [loadId])
 
   useEffect(() => {
-    fetchLoad();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadId]);
+    isMountedRef.current = true
+    fetchLoad()
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchLoad();
-  };
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [fetchLoad])
 
-  // Delete load
+  // Edit sayfasından dönüşte yenile
+  useFocusEffect(
+    useCallback(() => {
+      fetchLoad(false)
+    }, [fetchLoad])
+  )
+
+  // Yenileme
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    fetchLoad(false)
+  }, [fetchLoad])
+
+  // Düzenleme
+  const handleEdit = () => {
+    if (!loadId) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/load/${loadId}/edit`)
+  }
+
+  // Silme dialogunu aç
   const handleDelete = () => {
-    setShowDeleteConfirm(true);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    deleteDialogRef.current?.present()
+  }
 
-  const handleConfirmDelete = async () => {
-    if (!loadId) return;
-    setIsDeleting(true);
+  // Silme işlemini gerçekleştir
+  const confirmDelete = async () => {
+    if (!loadId) return
+
+    setIsDeleting(true)
     try {
-      await deleteLoad(loadId);
-      success('Başarılı', 'Yük silindi.');
-      router.back();
+      await deleteLoad(loadId)
+      deleteDialogRef.current?.dismiss()
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      Toast.show({
+        type: 'success',
+        text1: 'Yük başarıyla silindi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+
+      setTimeout(() => {
+        router.back()
+      }, 300)
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Yük silinemedi.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Yük silinemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
     } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
+      setIsDeleting(false)
     }
-  };
+  }
 
-  // Format date
-  const formatDate = (dateString?: string): string => {
-    if (!dateString) return '-';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('tr-TR', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
-    } catch {
-      return dateString;
+  // Geri
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
+
+  // Yük kalemleri özeti
+  const getItemsSummary = (items: LoadItem[]) => {
+    let totalWeight = 0
+    let totalVolume = 0
+    let totalLDM = 0
+
+    items.forEach(item => {
+      if (item.gross_weight) totalWeight += item.gross_weight
+      if (item.volume) totalVolume += item.volume
+      if (item.lademetre) totalLDM += item.lademetre
+    })
+
+    return { totalWeight, totalVolume, totalLDM }
+  }
+
+  const itemsSummary = load ? getItemsSummary(load.items || []) : { totalWeight: 0, totalVolume: 0, totalLDM: 0 }
+  const pickupAddress = load?.addresses?.find(a => a.type === 'pickup')
+  const deliveryAddress = load?.addresses?.find(a => a.type === 'delivery')
+
+  // Header içeriği
+  const renderHeaderContent = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.loadInfo}>
+          <Skeleton width={160} height={24} style={{ marginBottom: DashboardSpacing.sm }} />
+          <View style={styles.badgeRow}>
+            <Skeleton width={80} height={24} borderRadius={12} />
+            <Skeleton width={80} height={24} borderRadius={12} />
+          </View>
+        </View>
+      )
     }
-  };
 
-  // Format number with unit
-  const formatNumber = (value?: number, unit?: string): string => {
-    if (value === undefined || value === null) return '-';
-    const formatted = value.toLocaleString('tr-TR', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    });
-    return unit ? `${formatted} ${unit}` : formatted;
-  };
-
-  // Format price
-  const formatPrice = (amount?: number, currency?: string): string => {
-    if (amount === undefined || amount === null) return '-';
-    const formatted = amount.toLocaleString('tr-TR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return `${formatted} ${currency || 'TL'}`;
-  };
-
-  // Render info row
-  const renderInfoRow = (
-    label: string,
-    value?: string | number | boolean | null,
-    IconComponent?: any
-  ) => {
-    if (value === undefined || value === null || value === '') return null;
-    const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayir') : String(value);
+    if (!load) return null
 
     return (
-      <View style={styles.infoRow}>
-        <View style={styles.infoRowLeft}>
-          {IconComponent && <IconComponent size={16} color={colors.textMuted} />}
-          <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}:</Text>
+      <View style={styles.loadInfo}>
+        <View style={styles.loadNumberRow}>
+          <View style={styles.loadNumberIcon}>
+            <Ionicons name="cube" size={16} color="#fff" />
+          </View>
+          <Text style={styles.loadNumber}>{load.load_number}</Text>
         </View>
-        <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={2}>
-          {displayValue}
+
+        <Text style={styles.cargoName} numberOfLines={1}>
+          {load.cargo_name || 'Kargo adı belirtilmemiş'}
         </Text>
-      </View>
-    );
-  };
 
-  // Get pickup address
-  const getPickupAddress = (): LoadAddress | undefined => {
-    return load?.addresses?.find((addr) => addr.type === 'pickup');
-  };
-
-  // Get delivery address
-  const getDeliveryAddress = (): LoadAddress | undefined => {
-    return load?.addresses?.find((addr) => addr.type === 'delivery');
-  };
-
-  // Get loading location name
-  const getLoadingLocationName = (address?: LoadAddress): string => {
-    if (!address) return '-';
-    if (address.loadingLocation?.title) return address.loadingLocation.title;
-    if (address.loadingCompany?.name) return address.loadingCompany.name;
-    return '-';
-  };
-
-  // Get unloading location name
-  const getUnloadingLocationName = (address?: LoadAddress): string => {
-    if (!address) return '-';
-    if (address.unloadingLocation?.title) return address.unloadingLocation.title;
-    if (address.unloadingCompany?.name) return address.unloadingCompany.name;
-    if (address.destinationCountry?.name) return address.destinationCountry.name;
-    return '-';
-  };
-
-  // Render load item
-  const renderLoadItem = (item: LoadItem, index: number) => (
-    <View
-      key={item.id}
-      style={[
-        styles.itemCard,
-        { backgroundColor: colors.surface, borderColor: colors.border },
-        index > 0 && { marginTop: Spacing.sm },
-      ]}
-    >
-      <View style={styles.itemHeader}>
-        <View style={styles.itemHeaderLeft}>
-          <Box size={16} color={colors.icon} />
-          <Text style={[styles.itemTitle, { color: colors.text }]}>
-            {item.cargo_name || item.package_type || `Kalem ${index + 1}`}
-          </Text>
-        </View>
-        {item.is_hazardous && (
-          <View style={[styles.hazardBadge, { backgroundColor: colors.danger + '15' }]}>
-            <AlertTriangle size={12} color={colors.danger} />
-            <Text style={[styles.hazardText, { color: colors.danger }]}>ADR</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.itemDetails}>
-        <View style={styles.itemDetailRow}>
-          <Text style={[styles.itemDetailLabel, { color: colors.textMuted }]}>Paket:</Text>
-          <Text style={[styles.itemDetailValue, { color: colors.textSecondary }]}>
-            {item.package_count || '-'} {item.package_type || ''}
-          </Text>
-        </View>
-        <View style={styles.itemDetailRow}>
-          <Text style={[styles.itemDetailLabel, { color: colors.textMuted }]}>Adet:</Text>
-          <Text style={[styles.itemDetailValue, { color: colors.textSecondary }]}>
-            {item.piece_count ?? '-'}
-          </Text>
-        </View>
-        <View style={styles.itemDetailRow}>
-          <Text style={[styles.itemDetailLabel, { color: colors.textMuted }]}>Brüt:</Text>
-          <Text style={[styles.itemDetailValue, { color: colors.textSecondary }]}>
-            {formatNumber(item.gross_weight, 'kg')}
-          </Text>
-        </View>
-        <View style={styles.itemDetailRow}>
-          <Text style={[styles.itemDetailLabel, { color: colors.textMuted }]}>Hacim:</Text>
-          <Text style={[styles.itemDetailValue, { color: colors.textSecondary }]}>
-            {formatNumber(item.volume, 'm³')}
-          </Text>
-        </View>
-        {item.lademetre && (
-          <View style={styles.itemDetailRow}>
-            <Text style={[styles.itemDetailLabel, { color: colors.textMuted }]}>LDM:</Text>
-            <Text style={[styles.itemDetailValue, { color: colors.textSecondary }]}>
-              {formatNumber(item.lademetre)}
-            </Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <FullScreenHeader
-          title="Yük Detayı"
-          showBackButton
-          onBackPress={() => router.back()}
-        />
-        <View style={styles.content}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Brand.primary} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Yük bilgileri yükleniyor...
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
-  // Error state
-  if (error || !load) {
-    return (
-      <View style={styles.container}>
-        <FullScreenHeader
-          title="Yük Detayı"
-          showBackButton
-          onBackPress={() => router.back()}
-        />
-        <View style={styles.content}>
-          <View style={styles.errorContainer}>
-            <AlertCircle size={64} color={colors.danger} />
-            <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-            <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-              {error || 'Yük bulunamadı'}
-            </Text>
-            <TouchableOpacity
-              style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-              onPress={fetchLoad}
+        <View style={styles.badgeRow}>
+          {load.direction && (
+            <View
+              style={[
+                styles.headerBadge,
+                { backgroundColor: LoadDirectionBgColors[load.direction] }
+              ]}
             >
-              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-            </TouchableOpacity>
+              <Ionicons
+                name={load.direction === 'export' ? 'arrow-up-circle' : 'arrow-down-circle'}
+                size={14}
+                color={LoadDirectionColors[load.direction]}
+              />
+              <Text style={[styles.headerBadgeText, { color: LoadDirectionColors[load.direction] }]}>
+                {LoadDirectionLabels[load.direction]}
+              </Text>
+            </View>
+          )}
+
+          <View
+            style={[
+              styles.headerBadge,
+              { backgroundColor: LoadStatusBgColors[load.status] }
+            ]}
+          >
+            <View
+              style={[styles.statusDot, { backgroundColor: LoadStatusColors[load.status] }]}
+            />
+            <Text style={[styles.headerBadgeText, { color: LoadStatusColors[load.status] }]}>
+              {LoadStatusLabels[load.status]}
+            </Text>
           </View>
         </View>
       </View>
-    );
+    )
   }
-
-  const pickupAddress = getPickupAddress();
-  const deliveryAddress = getDeliveryAddress();
-  const hasDocuments =
-    load.declaration_no ||
-    load.cargo_invoice_no ||
-    load.invoice_document ||
-    load.atr_document ||
-    load.packing_list_document;
 
   return (
     <View style={styles.container}>
-      <FullScreenHeader
-        title={load.load_number}
-        showBackButton
-        onBackPress={() => router.back()}
-        rightIcons={
-          <>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => router.push(`/load/${load.id}/edit` as any)}
-            >
-              <Edit size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Trash2 size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </>
-        }
-      />
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
 
-      {/* Content Area */}
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {!isLoading && load && (
+              <View style={styles.headerActions}>
+                <TouchableOpacity style={styles.headerButton} onPress={handleEdit}>
+                  <Ionicons name="create-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.headerButton, styles.deleteButton]}
+                  onPress={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={22} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {renderHeaderContent()}
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* İçerik */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
-        bounces={false}
-        overScrollMode="never"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={DashboardColors.primary}
+          />
         }
       >
-        {/* Status Card */}
-        <View style={[styles.statusCard, { backgroundColor: Brand.primary }]}>
-          <View style={styles.statusCardHeader}>
-            <Package size={32} color="#FFFFFF" />
-            <View style={styles.statusCardInfo}>
-              <Text style={styles.statusCardNumber}>{load.load_number}</Text>
-              {load.cargo_name && (
-                <Text style={styles.statusCardCargo} numberOfLines={1}>
-                  {load.cargo_name}
-                </Text>
-              )}
+        {/* Loading */}
+        {isLoading && (
+          <View style={styles.skeletonContainer}>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={styles.card}>
+                <View style={styles.sectionHeader}>
+                  <Skeleton width={140} height={20} />
+                </View>
+                <View style={styles.cardContent}>
+                  <Skeleton width="100%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="80%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="60%" height={16} />
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Hata */}
+        {!isLoading && (error || !load) && (
+          <View style={styles.errorState}>
+            <View style={styles.errorIcon}>
+              <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
             </View>
-          </View>
-          <View style={styles.statusCardFooter}>
-            <Badge
-              label={getStatusLabel(load.status)}
-              variant="default"
-              size="sm"
-              style={{ backgroundColor: getStatusColor(load.status) }}
-              textStyle={{ color: '#FFFFFF' }}
-            />
-            {load.direction && (
-              <Badge
-                label={getDirectionLabel(load.direction)}
-                variant="outline"
-                size="sm"
-                style={{
-                  borderColor: '#FFFFFF',
-                  backgroundColor: getDirectionColor(load.direction) + '40',
-                }}
-                textStyle={{ color: '#FFFFFF' }}
-              />
-            )}
-          </View>
-        </View>
-
-        {/* Details */}
-        {/* Temel Bilgiler */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
-          {renderInfoRow('Araç Tipi', load.vehicle_type, Truck)}
-          {renderInfoRow('Yükleme Tipi', load.loading_type, Package)}
-          {renderInfoRow('Taşıma Hızı', load.transport_speed, Truck)}
-          {renderInfoRow('Kargo Sınıfı', load.cargo_class, Box)}
-          {renderInfoRow('Yük Tipi', getLoadTypeLabel(load.load_type), Package)}
-          {renderInfoRow('Teslim Şekli', load.delivery_terms, FileText)}
-          {load.gtip_hs_code && renderInfoRow('GTIP/HS Kodu', load.gtip_hs_code, FileText)}
-        </Card>
-
-        {/* Firmalar */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Firmalar</Text>
-          {renderInfoRow('Müşteri', load.customer?.name, Building2)}
-          {renderInfoRow('Gönderici', load.sender_company?.name, Building2)}
-          {renderInfoRow('Üretici', load.manufacturer_company?.name, Building2)}
-          {renderInfoRow('Alıcı', load.receiver_company?.name, Building2)}
-        </Card>
-
-        {/* Yük Kalemleri */}
-        {load.items && load.items.length > 0 && (
-          <Card style={styles.sectionCard}>
-            <TouchableOpacity
-              style={styles.sectionHeader}
-              onPress={() => setExpandedItems(!expandedItems)}
-            >
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Yük Kalemleri ({load.items.length})
-              </Text>
-              {expandedItems ? (
-                <ChevronUp size={20} color={colors.icon} />
-              ) : (
-                <ChevronDown size={20} color={colors.icon} />
-              )}
+            <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+            <Text style={styles.errorText}>{error || 'Yük bulunamadı'}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => fetchLoad()}>
+              <Ionicons name="refresh" size={18} color="#fff" />
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
             </TouchableOpacity>
-            {expandedItems && (
-              <View style={styles.itemsContainer}>
-                {load.items.map((item, index) => renderLoadItem(item, index))}
-              </View>
-            )}
-            {!expandedItems && (
-              <View style={styles.collapsedSummary}>
-                <View style={styles.summaryItem}>
-                  <Scale size={14} color={colors.icon} />
-                  <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
-                    {formatNumber(
-                      load.items.reduce((sum, item) => sum + (item.gross_weight || 0), 0),
-                      'kg'
-                    )}
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Box size={14} color={colors.icon} />
-                  <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
-                    {formatNumber(
-                      load.items.reduce((sum, item) => sum + (item.volume || 0), 0),
-                      'm³'
-                    )}
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Ruler size={14} color={colors.icon} />
-                  <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
-                    {formatNumber(load.items.reduce((sum, item) => sum + (item.lademetre || 0), 0))}{' '}
-                    LDM
-                  </Text>
-                </View>
-              </View>
-            )}
-          </Card>
+          </View>
         )}
 
-        {/* Adresler */}
-        <Card style={styles.sectionCard}>
-          <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => setExpandedAddresses(!expandedAddresses)}
-          >
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Adresler</Text>
-            {expandedAddresses ? (
-              <ChevronUp size={20} color={colors.icon} />
-            ) : (
-              <ChevronDown size={20} color={colors.icon} />
-            )}
-          </TouchableOpacity>
-
-          {/* Collapsed view - simplified */}
-          {!expandedAddresses && (
-            <View style={styles.addressSummary}>
-              <View style={styles.addressPoint}>
-                <MapPin size={16} color={colors.success} />
-                <View style={styles.addressPointInfo}>
-                  <Text
-                    style={[styles.addressPointLabel, { color: colors.textMuted }]}
-                    numberOfLines={1}
-                  >
-                    Yükleme
-                  </Text>
-                  <Text style={[styles.addressPointValue, { color: colors.text }]} numberOfLines={1}>
-                    {getLoadingLocationName(pickupAddress)}
-                  </Text>
-                  {pickupAddress?.expected_loading_entry_date && (
-                    <Text style={[styles.addressDate, { color: colors.textSecondary }]}>
-                      {formatDate(pickupAddress.expected_loading_entry_date)}
-                    </Text>
-                  )}
-                </View>
-              </View>
-
-              <View style={[styles.addressDivider, { backgroundColor: colors.border }]} />
-
-              <View style={styles.addressPoint}>
-                <MapPin size={16} color={colors.danger} />
-                <View style={styles.addressPointInfo}>
-                  <Text
-                    style={[styles.addressPointLabel, { color: colors.textMuted }]}
-                    numberOfLines={1}
-                  >
-                    Bosaltma
-                  </Text>
-                  <Text style={[styles.addressPointValue, { color: colors.text }]} numberOfLines={1}>
-                    {getUnloadingLocationName(deliveryAddress)}
-                  </Text>
-                  {deliveryAddress?.expected_unloading_entry_date && (
-                    <Text style={[styles.addressDate, { color: colors.textSecondary }]}>
-                      {formatDate(deliveryAddress.expected_unloading_entry_date)}
-                    </Text>
-                  )}
-                </View>
+        {/* Normal içerik */}
+        {!isLoading && load && (
+          <>
+            {/* Temel Bilgiler */}
+            <View style={styles.card}>
+              <SectionHeader title="Temel Bilgiler" icon="information-circle-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow label="Araç Tipi" value={load.vehicle_type || '-'} icon="car-outline" />
+                <InfoRow label="Yükleme Tipi" value={load.loading_type || '-'} icon="layers-outline" />
+                <InfoRow label="Taşıma Hızı" value={load.transport_speed || '-'} icon="speedometer-outline" />
+                <InfoRow label="Kargo Sınıfı" value={load.cargo_class || '-'} icon="pricetag-outline" />
+                <InfoRow
+                  label="Yük Tipi"
+                  value={load.load_type === 'full' ? 'Komple' : load.load_type === 'partial' ? 'Parsiyel' : '-'}
+                  icon="cube-outline"
+                />
               </View>
             </View>
-          )}
 
-          {/* Expanded view - detailed */}
-          {expandedAddresses && (
-            <View style={styles.addressesExpanded}>
-              {pickupAddress && (
-                <View
-                  style={[
-                    styles.addressCard,
-                    { backgroundColor: colors.surface, borderColor: colors.border },
-                  ]}
-                >
-                  <View style={styles.addressCardHeader}>
-                    <MapPin size={16} color={colors.success} />
-                    <Text style={[styles.addressCardTitle, { color: colors.success }]}>
-                      Yükleme Noktasi
-                    </Text>
-                  </View>
-                  {renderInfoRow('Firma', pickupAddress.loadingCompany?.name)}
-                  {renderInfoRow('Lokasyon', pickupAddress.loadingLocation?.title)}
-                  {renderInfoRow(
-                    'Beklenen Tarih',
-                    formatDate(pickupAddress.expected_loading_entry_date),
-                    Calendar
-                  )}
-                  {renderInfoRow(
-                    'Giriş Tarihi',
-                    formatDate(pickupAddress.loading_entry_date),
-                    Calendar
-                  )}
-                  {renderInfoRow(
-                    'Çıkış Tarihi',
-                    formatDate(pickupAddress.loading_exit_date),
-                    Calendar
-                  )}
-                </View>
-              )}
-
-              {deliveryAddress && (
-                <View
-                  style={[
-                    styles.addressCard,
-                    { backgroundColor: colors.surface, borderColor: colors.border, marginTop: Spacing.sm },
-                  ]}
-                >
-                  <View style={styles.addressCardHeader}>
-                    <MapPin size={16} color={colors.danger} />
-                    <Text style={[styles.addressCardTitle, { color: colors.danger }]}>
-                      Boşaltma Noktası
-                    </Text>
-                  </View>
-                  {renderInfoRow('Firma', deliveryAddress.unloadingCompany?.name)}
-                  {renderInfoRow('Lokasyon', deliveryAddress.unloadingLocation?.title)}
-                  {renderInfoRow('Varış Ülkesi', deliveryAddress.destinationCountry?.name)}
-                  {renderInfoRow(
-                    'Beklenen Tarih',
-                    formatDate(deliveryAddress.expected_unloading_entry_date),
-                    Calendar
-                  )}
-                  {renderInfoRow(
-                    'Varış Tarihi',
-                    formatDate(deliveryAddress.unloading_arrival_date),
-                    Calendar
-                  )}
-                  {renderInfoRow(
-                    'Giriş Tarihi',
-                    formatDate(deliveryAddress.unloading_entry_date),
-                    Calendar
-                  )}
-                  {renderInfoRow(
-                    'Çıkış Tarihi',
-                    formatDate(deliveryAddress.unloading_exit_date),
-                    Calendar
-                  )}
-                </View>
-              )}
+            {/* Firmalar */}
+            <View style={styles.card}>
+              <SectionHeader title="Firmalar" icon="business-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Müşteri"
+                  value={load.customer?.name || '-'}
+                  icon="person-outline"
+                  highlight
+                />
+                <InfoRow
+                  label="Gönderici"
+                  value={load.sender_company?.name || '-'}
+                  icon="arrow-up-outline"
+                />
+                <InfoRow
+                  label="Üretici"
+                  value={load.manufacturer_company?.name || '-'}
+                  icon="construct-outline"
+                />
+                <InfoRow
+                  label="Alıcı"
+                  value={load.receiver_company?.name || '-'}
+                  icon="arrow-down-outline"
+                />
+              </View>
             </View>
-          )}
-        </Card>
 
-        {/* Finansal Bilgiler */}
-        {(load.freight_fee || load.estimated_cargo_value) && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Finansal Bilgiler</Text>
-            {load.freight_fee !== undefined && load.freight_fee !== null && (
-              <View style={styles.priceRow}>
-                <View style={styles.priceRowLeft}>
-                  <DollarSign size={16} color={colors.success} />
-                  <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>
-                    Navlun Ücreti:
-                  </Text>
-                </View>
-                <Text style={[styles.priceValue, { color: colors.success }]}>
-                  {formatPrice(load.freight_fee, load.freight_fee_currency)}
-                </Text>
-              </View>
-            )}
-            {load.estimated_cargo_value !== undefined && load.estimated_cargo_value !== null && (
-              <View style={styles.priceRow}>
-                <View style={styles.priceRowLeft}>
-                  <DollarSign size={16} color={colors.textMuted} />
-                  <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>
-                    Mal Bedeli:
-                  </Text>
-                </View>
-                <Text style={[styles.priceValue, { color: colors.text }]}>
-                  {formatPrice(load.estimated_cargo_value, load.estimated_value_currency)}
-                </Text>
-              </View>
-            )}
-          </Card>
-        )}
+            {/* Yük Kalemleri */}
+            {load.items && load.items.length > 0 && (
+              <View style={styles.card}>
+                <SectionHeader
+                  title="Yük Kalemleri"
+                  icon="list-outline"
+                  count={load.items.length}
+                  isExpanded={expandedItems}
+                  onToggle={() => {
+                    Haptics.selectionAsync()
+                    setExpandedItems(!expandedItems)
+                  }}
+                />
 
-        {/* Belgeler */}
-        {hasDocuments && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Belgeler</Text>
-            {load.declaration_no && (
-              <>
-                {renderInfoRow('Beyanname No', load.declaration_no, FileText)}
-                {renderInfoRow(
-                  'Beyanname Teslim',
-                  formatDate(load.declaration_submission_date),
-                  Calendar
+                {!expandedItems && (
+                  <View style={styles.summaryRow}>
+                    <View style={styles.summaryItem}>
+                      <Ionicons name="scale-outline" size={16} color={DashboardColors.textMuted} />
+                      <Text style={styles.summaryValue}>
+                        {formatNumber(itemsSummary.totalWeight, 'kg')}
+                      </Text>
+                    </View>
+                    <View style={styles.summaryItem}>
+                      <Ionicons name="cube-outline" size={16} color={DashboardColors.textMuted} />
+                      <Text style={styles.summaryValue}>
+                        {formatNumber(itemsSummary.totalVolume, 'm³')}
+                      </Text>
+                    </View>
+                    <View style={styles.summaryItem}>
+                      <Ionicons name="resize-outline" size={16} color={DashboardColors.textMuted} />
+                      <Text style={styles.summaryValue}>
+                        {formatNumber(itemsSummary.totalLDM, 'LDM')}
+                      </Text>
+                    </View>
+                  </View>
                 )}
-                {renderInfoRow(
-                  'Beyanname Hazır',
-                  formatDate(load.declaration_ready_date),
-                  Calendar
-                )}
-              </>
-            )}
-            {load.cargo_invoice_no && (
-              <>
-                {renderInfoRow('Fatura No', load.cargo_invoice_no, FileText)}
-                {renderInfoRow('Fatura Tarihi', formatDate(load.cargo_invoice_date), Calendar)}
-              </>
-            )}
-            {load.atr_no && renderInfoRow('ATR No', load.atr_no, FileText)}
-            {load.regime_no && renderInfoRow('Rejim No', load.regime_no, FileText)}
 
-            {/* Document statuses */}
-            {(load.invoice_document ||
-              load.atr_document ||
-              load.packing_list_document ||
-              load.origin_certificate_document ||
-              load.health_certificate_document ||
-              load.eur1_document ||
-              load.t1_t2_document) && (
-              <View style={[styles.documentStatuses, { borderTopColor: colors.border }]}>
-                <Text style={[styles.documentStatusTitle, { color: colors.textMuted }]}>
-                  Belge Durumları
-                </Text>
-                {load.invoice_document &&
-                  renderInfoRow('Fatura', getDocumentStatusLabel(load.invoice_document))}
-                {load.atr_document &&
-                  renderInfoRow('ATR', getDocumentStatusLabel(load.atr_document))}
-                {load.packing_list_document &&
-                  renderInfoRow('Çeki Listesi', getDocumentStatusLabel(load.packing_list_document))}
-                {load.origin_certificate_document &&
-                  renderInfoRow(
-                    'Menşei Belgesi',
-                    getDocumentStatusLabel(load.origin_certificate_document)
-                  )}
-                {load.health_certificate_document &&
-                  renderInfoRow(
-                    'Sağlık Sertifikası',
-                    getDocumentStatusLabel(load.health_certificate_document)
-                  )}
-                {load.eur1_document &&
-                  renderInfoRow('EUR.1', getDocumentStatusLabel(load.eur1_document))}
-                {load.t1_t2_document &&
-                  renderInfoRow('T1/T2', getDocumentStatusLabel(load.t1_t2_document))}
+                {expandedItems && (
+                  <View style={styles.cardContent}>
+                    {load.items.map((item, index) => (
+                      <View key={item.id || index} style={styles.itemCard}>
+                        <View style={styles.itemHeader}>
+                          <Text style={styles.itemName}>
+                            {item.cargo_name || `Kalem #${index + 1}`}
+                          </Text>
+                          {item.is_hazardous && (
+                            <View style={styles.hazardBadge}>
+                              <Ionicons name="warning" size={12} color={DashboardColors.danger} />
+                              <Text style={styles.hazardText}>ADR</Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={styles.itemDetails}>
+                          {item.package_type && (
+                            <Text style={styles.itemDetail}>
+                              {item.package_count || 0} {item.package_type}
+                            </Text>
+                          )}
+                          {item.gross_weight && (
+                            <Text style={styles.itemDetail}>
+                              {formatNumber(item.gross_weight, 'kg')}
+                            </Text>
+                          )}
+                          {item.volume && (
+                            <Text style={styles.itemDetail}>
+                              {formatNumber(item.volume, 'm³')}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             )}
-          </Card>
+
+            {/* Adresler */}
+            {(pickupAddress || deliveryAddress) && (
+              <View style={styles.card}>
+                <SectionHeader
+                  title="Adresler"
+                  icon="location-outline"
+                  count={load.addresses?.length}
+                  isExpanded={expandedAddresses}
+                  onToggle={() => {
+                    Haptics.selectionAsync()
+                    setExpandedAddresses(!expandedAddresses)
+                  }}
+                />
+
+                {!expandedAddresses && (
+                  <View style={styles.addressSummary}>
+                    {pickupAddress?.loadingCompany && (
+                      <View style={styles.addressSummaryItem}>
+                        <Ionicons name="arrow-up-circle" size={16} color={DashboardColors.success} />
+                        <Text style={styles.addressSummaryText} numberOfLines={1}>
+                          {pickupAddress.loadingCompany.name}
+                        </Text>
+                      </View>
+                    )}
+                    <Ionicons name="arrow-forward" size={16} color={DashboardColors.textMuted} />
+                    {deliveryAddress?.unloadingCompany && (
+                      <View style={styles.addressSummaryItem}>
+                        <Ionicons name="arrow-down-circle" size={16} color={DashboardColors.info} />
+                        <Text style={styles.addressSummaryText} numberOfLines={1}>
+                          {deliveryAddress.unloadingCompany.name}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {expandedAddresses && (
+                  <View style={styles.cardContent}>
+                    {pickupAddress && (
+                      <View style={styles.addressCard}>
+                        <View style={styles.addressHeader}>
+                          <View style={[styles.addressIcon, { backgroundColor: DashboardColors.successBg }]}>
+                            <Ionicons name="arrow-up" size={16} color={DashboardColors.success} />
+                          </View>
+                          <Text style={styles.addressTitle}>Yükleme Noktası</Text>
+                        </View>
+                        {pickupAddress.loadingCompany && (
+                          <InfoRow label="Firma" value={pickupAddress.loadingCompany.name} />
+                        )}
+                        {pickupAddress.loadingLocation && (
+                          <InfoRow label="Lokasyon" value={pickupAddress.loadingLocation.title} />
+                        )}
+                        {pickupAddress.expected_loading_entry_date && (
+                          <InfoRow label="Beklenen Tarih" value={formatDate(pickupAddress.expected_loading_entry_date)} />
+                        )}
+                      </View>
+                    )}
+
+                    {deliveryAddress && (
+                      <View style={[styles.addressCard, { marginTop: DashboardSpacing.sm }]}>
+                        <View style={styles.addressHeader}>
+                          <View style={[styles.addressIcon, { backgroundColor: DashboardColors.infoBg }]}>
+                            <Ionicons name="arrow-down" size={16} color={DashboardColors.info} />
+                          </View>
+                          <Text style={styles.addressTitle}>Boşaltma Noktası</Text>
+                        </View>
+                        {deliveryAddress.unloadingCompany && (
+                          <InfoRow label="Firma" value={deliveryAddress.unloadingCompany.name} />
+                        )}
+                        {deliveryAddress.unloadingLocation && (
+                          <InfoRow label="Lokasyon" value={deliveryAddress.unloadingLocation.title} />
+                        )}
+                        {deliveryAddress.expected_unloading_entry_date && (
+                          <InfoRow label="Beklenen Tarih" value={formatDate(deliveryAddress.expected_unloading_entry_date)} />
+                        )}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Finansal Bilgiler */}
+            <View style={styles.card}>
+              <SectionHeader title="Finansal Bilgiler" icon="cash-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Navlun Ücreti"
+                  value={formatPrice(load.freight_fee, load.freight_fee_currency)}
+                  icon="cash-outline"
+                  highlight
+                />
+                <InfoRow
+                  label="Mal Bedeli"
+                  value={formatPrice(load.estimated_cargo_value, load.estimated_value_currency)}
+                  icon="pricetag-outline"
+                />
+                {load.delivery_terms && (
+                  <InfoRow
+                    label="Teslim Şartı"
+                    value={load.delivery_terms}
+                    icon="document-text-outline"
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* Sistem Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Sistem Bilgileri" icon="time-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Oluşturulma"
+                  value={formatDate(load.created_at)}
+                  icon="add-circle-outline"
+                />
+                <InfoRow
+                  label="Son Güncelleme"
+                  value={formatDate(load.updated_at)}
+                  icon="refresh-outline"
+                />
+                <InfoRow
+                  label="Durum"
+                  value={load.is_active ? 'Aktif' : 'Pasif'}
+                  icon={load.is_active ? 'checkmark-circle-outline' : 'close-circle-outline'}
+                />
+              </View>
+            </View>
+
+            {/* Alt boşluk */}
+            <View style={{ height: insets.bottom + DashboardSpacing['3xl'] }} />
+          </>
         )}
       </ScrollView>
 
-      {/* Delete Confirm Dialog */}
+      {/* Silme Onay Dialogu */}
       <ConfirmDialog
-        visible={showDeleteConfirm}
+        ref={deleteDialogRef}
         title="Yükü Sil"
         message="Bu yükü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        type="danger"
         confirmText="Sil"
         cancelText="İptal"
-        isDangerous
+        onConfirm={confirmDelete}
         isLoading={isDeleting}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.primary
   },
-  content: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+
+  // Header
+  headerContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingBottom: 24
   },
-  contentContainer: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing['2xl'],
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: DashboardSpacing.lg
   },
   headerButton: {
-    padding: Spacing.sm,
-  },
-  loadingContainer: {
-    flex: 1,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
+    justifyContent: 'center'
   },
-  loadingText: {
-    ...Typography.bodyMD,
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing['2xl'],
-    gap: Spacing.md,
-  },
-  errorTitle: {
-    ...Typography.headingMD,
-  },
-  errorText: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  statusCard: {
-    marginBottom: Spacing.lg,
-    padding: Spacing.xl,
-    borderRadius: BorderRadius.xl,
-    gap: Spacing.lg,
-  },
-  statusCardHeader: {
+  headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: DashboardSpacing.sm
   },
-  statusCardInfo: {
-    flex: 1,
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)'
   },
-  statusCardNumber: {
-    ...Typography.headingLG,
-    color: '#FFFFFF',
+  loadInfo: {
+    gap: DashboardSpacing.sm
+  },
+  loadNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  loadNumberIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  loadNumber: {
+    fontSize: DashboardFontSizes.xl,
     fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.5
   },
-  statusCardCargo: {
-    ...Typography.bodyMD,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: Spacing.xs,
+  cargoName: {
+    fontSize: DashboardFontSizes.base,
+    color: 'rgba(255, 255, 255, 0.8)'
   },
-  statusCardFooter: {
+  badgeRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-    flexWrap: 'wrap',
+    gap: DashboardSpacing.sm
   },
-  sectionCard: {
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
+  headerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 6,
+    borderRadius: DashboardBorderRadius.full,
+    gap: 4
   },
+  headerBadgeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600'
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+
+  // İçerik
+  content: {
+    flex: 1,
+    backgroundColor: DashboardColors.background
+  },
+  contentContainer: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md
+  },
+
+  // Kartlar
+  card: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.sm
+  },
+  cardContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+
+  // Bölüm Başlığı
   sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingSM,
-    marginBottom: Spacing.md,
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
+  countBadge: {
+    backgroundColor: DashboardColors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10
+  },
+  countText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600',
+    color: '#fff'
+  },
+
+  // Bilgi Satırı
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
-    gap: Spacing.sm,
-  },
-  infoRowLeft: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    flex: 1,
+    paddingVertical: DashboardSpacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
   },
   infoLabel: {
-    ...Typography.bodySM,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  infoIcon: {
+    marginRight: DashboardSpacing.sm
+  },
+  infoLabelText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
   infoValue: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
-    textAlign: 'right',
-    flex: 1,
+    color: DashboardColors.textPrimary,
+    maxWidth: '50%',
+    textAlign: 'right'
   },
-  // Items
-  itemsContainer: {
-    marginTop: Spacing.sm,
+  infoValueHighlight: {
+    color: DashboardColors.primary,
+    fontWeight: '600'
   },
+
+  // Özet
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: DashboardSpacing.lg,
+    paddingHorizontal: DashboardSpacing.lg
+  },
+  summaryItem: {
+    alignItems: 'center',
+    gap: DashboardSpacing.xs
+  },
+  summaryValue: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
+  },
+
+  // Yük Kalemi
   itemCard: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg,
+    padding: DashboardSpacing.md,
+    marginTop: DashboardSpacing.sm
   },
   itemHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
-  },
-  itemHeaderLeft: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    flex: 1,
+    marginBottom: DashboardSpacing.xs
   },
-  itemTitle: {
-    ...Typography.bodySM,
+  itemName: {
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    flex: 1
   },
   hazardBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
+    gap: 4,
+    backgroundColor: DashboardColors.dangerBg,
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 2,
+    borderRadius: DashboardBorderRadius.sm
   },
   hazardText: {
-    ...Typography.bodyXS,
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '600',
+    color: DashboardColors.danger
   },
   itemDetails: {
-    gap: Spacing.xs,
-  },
-  itemDetailRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: DashboardSpacing.md
   },
-  itemDetailLabel: {
-    ...Typography.bodyXS,
+  itemDetail: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
-  itemDetailValue: {
-    ...Typography.bodyXS,
-    fontWeight: '500',
-  },
-  collapsedSummary: {
-    flexDirection: 'row',
-    gap: Spacing.xl,
-    marginTop: -Spacing.sm,
-  },
-  summaryItem: {
+
+  // Adres
+  addressSummary: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    justifyContent: 'center',
+    gap: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.lg,
+    paddingHorizontal: DashboardSpacing.lg
   },
-  summaryText: {
-    ...Typography.bodySM,
-  },
-  // Addresses
-  addressSummary: {
-    marginTop: -Spacing.sm,
-  },
-  addressPoint: {
+  addressSummaryItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+    gap: DashboardSpacing.xs,
+    maxWidth: 140
   },
-  addressPointInfo: {
-    flex: 1,
-  },
-  addressPointLabel: {
-    ...Typography.bodyXS,
-  },
-  addressPointValue: {
-    ...Typography.bodySM,
-    fontWeight: '500',
-  },
-  addressDate: {
-    ...Typography.bodyXS,
-    marginTop: Spacing.xs,
-  },
-  addressDivider: {
-    height: 1,
-    marginVertical: Spacing.xs,
-  },
-  addressesExpanded: {
-    marginTop: Spacing.sm,
+  addressSummaryText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textPrimary
   },
   addressCard: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg,
+    padding: DashboardSpacing.md
   },
-  addressCardHeader: {
+  addressHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
+    gap: DashboardSpacing.sm,
+    marginBottom: DashboardSpacing.sm
   },
-  addressCardTitle: {
-    ...Typography.bodySM,
+  addressIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  addressTitle: {
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
-  // Price
-  priceRow: {
+
+  // Skeleton
+  skeletonContainer: {
+    gap: DashboardSpacing.md
+  },
+
+  // Hata durumu
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
+  },
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  errorTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.sm,
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
   },
-  priceRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  priceLabel: {
-    ...Typography.bodySM,
-  },
-  priceValue: {
-    ...Typography.bodyMD,
-    fontWeight: '700',
-  },
-  // Documents
-  documentStatuses: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-  },
-  documentStatusTitle: {
-    ...Typography.bodyXS,
-    marginBottom: Spacing.sm,
-  },
-});
+  retryButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  }
+})

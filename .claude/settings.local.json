@@ -55,7 +55,8 @@
       "Bash(if [ -f \"$file\" ])",
       "Bash(then echo \"✓ $path\")",
       "Bash(else echo \"✗ $path EKSIK\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(npx eslint:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

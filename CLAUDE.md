@@ -77,7 +77,7 @@ Bu dosya Claude Code'a rehberlik sağlar.
 - Typed Routes
 
 ## Temel Komutlar
-  
+   
 ```bash
 # Geliştirme
 npx expo start           # Dev server

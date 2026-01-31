@@ -31,6 +31,7 @@ import {
   BottomSheetBackdropProps,
   BottomSheetView
 } from '@gorhom/bottom-sheet'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PageHeader } from '@/components/navigation'
 import { LoadListSkeleton } from '@/components/ui/skeleton'
 import {
@@ -288,6 +289,7 @@ function FilterChip({ label, isActive, color, onPress }: FilterChipProps) {
 
 export default function LoadsScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
 
   // State
   const [loads, setLoads] = useState<Load[]>([])
@@ -676,18 +678,15 @@ export default function LoadsScreen() {
     {/* Filtre Bottom Sheet Modal */}
     <BottomSheetModal
       ref={filterBottomSheetRef}
-      index={0}
-      snapPoints={['75%']}
       enablePanDownToClose={true}
-      enableContentPanningGesture={true}
-      enableDynamicSizing={false}
+      enableDynamicSizing={true}
       animateOnMount={true}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.bottomSheetBackground}
       handleIndicatorStyle={styles.bottomSheetHandle}
     >
-      <BottomSheetView style={styles.bottomSheetContent}>
-        {/* Modal Header */}
+      <BottomSheetView>
+        {/* Modal Header - Sabit */}
         <View style={styles.modalHeader}>
           <View style={styles.modalHeaderLeft}>
             <View style={styles.modalIconContainer}>
@@ -760,7 +759,7 @@ export default function LoadsScreen() {
         </View>
 
         {/* Modal Footer */}
-        <View style={styles.modalFooter}>
+        <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, DashboardSpacing.lg) }]}>
           <TouchableOpacity
             style={styles.modalClearButton}
             onPress={clearFilters}
@@ -1060,10 +1059,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4
   },
-  bottomSheetContent: {
-    flex: 1,
-    paddingBottom: DashboardSpacing.lg
-  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1115,8 +1110,7 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingVertical: DashboardSpacing.lg,
-    maxHeight: 400
+    paddingVertical: DashboardSpacing.lg
   },
   filterGroup: {
     marginBottom: DashboardSpacing.xl
@@ -1140,7 +1134,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: DashboardSpacing.md,
     paddingHorizontal: DashboardSpacing.lg,
-    paddingVertical: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.lg,
     borderTopWidth: 1,
     borderTopColor: DashboardColors.borderLight
   },

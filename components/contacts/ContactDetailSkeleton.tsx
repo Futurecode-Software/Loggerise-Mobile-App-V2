@@ -1,5 +1,5 @@
 import { View, StyleSheet } from 'react-native'
-import { Skeleton } from '@/components/ui/Skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 import { DashboardSpacing } from '@/constants/dashboard-theme'
 
 export function ContactDetailSkeleton() {
