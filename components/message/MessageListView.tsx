@@ -1,11 +1,11 @@
 /**
  * MessageListView Component
  *
- * Reusable message list component with loading, error, and empty states.
- * Used by both direct message and group conversation screens.
+ * Modern mesaj listesi - CLAUDE.md tasarım standartlarına uygun
+ * Loading, error ve empty state'ler Dashboard theme ile uyumlu
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react'
 import {
   View,
   Text,
@@ -13,23 +13,29 @@ import {
   FlatList,
   TouchableOpacity,
   Platform,
-  ActivityIndicator,
-} from 'react-native';
-import Animated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
-import { MessageCircle, AlertCircle } from 'lucide-react-native';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
-import { MessageBubble } from './MessageBubble';
-import { Message } from '@/services/endpoints/messaging';
+  ActivityIndicator
+} from 'react-native'
+import Animated, { useAnimatedStyle, SharedValue, FadeIn } from 'react-native-reanimated'
+import { Ionicons } from '@expo/vector-icons'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
+import { MessageBubble } from './MessageBubble'
+import { Message } from '@/services/endpoints/messaging'
 
 interface MessageListViewProps {
-  messages: Message[];
-  isGroupConversation: boolean;
-  isLoading: boolean;
-  error: string | null;
-  typingUsers: Record<number, { name: string; userId: number }>;
-  keyboardHeight: SharedValue<number>;
-  flatListRef: React.RefObject<FlatList<any> | null>;
-  onRetry: () => void;
+  messages: Message[]
+  isGroupConversation: boolean
+  isLoading: boolean
+  error: string | null
+  typingUsers: Record<number, { name: string; userId: number }>
+  keyboardHeight: SharedValue<number>
+  flatListRef: React.RefObject<FlatList<any> | null>
+  onRetry: () => void
 }
 
 export function MessageListView({
@@ -40,51 +46,58 @@ export function MessageListView({
   typingUsers,
   keyboardHeight,
   flatListRef,
-  onRetry,
+  onRetry
 }: MessageListViewProps) {
-  const colors = Colors.light;
-
   // Inverted messages for FlatList (newest first)
-  const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
+  const invertedMessages = useMemo(() => [...messages].reverse(), [messages])
 
   // Animated style for keyboard
   const animatedListStyle = useAnimatedStyle(() => ({
-    paddingBottom: -keyboardHeight.value,
-  }));
+    paddingBottom: -keyboardHeight.value
+  }))
 
   // Typing indicator component
   const renderTypingIndicator = useCallback(() => {
-    const typingUserNames = Object.values(typingUsers);
-    if (typingUserNames.length === 0) return null;
+    const typingUserNames = Object.values(typingUsers)
+    if (typingUserNames.length === 0) return null
 
     return (
       <View style={styles.typingContainer}>
         <View style={styles.typingBubble}>
           <View style={styles.typingDots}>
-            <View style={styles.typingDot} />
-            <View style={[styles.typingDot, styles.typingDotMiddle]} />
-            <View style={styles.typingDot} />
+            <Animated.View
+              entering={FadeIn.delay(0).duration(300)}
+              style={styles.typingDot}
+            />
+            <Animated.View
+              entering={FadeIn.delay(150).duration(300)}
+              style={[styles.typingDot, styles.typingDotMiddle]}
+            />
+            <Animated.View
+              entering={FadeIn.delay(300).duration(300)}
+              style={styles.typingDot}
+            />
           </View>
         </View>
       </View>
-    );
-  }, [typingUsers]);
+    )
+  }, [typingUsers])
 
   // Render message item
   const renderMessage = useCallback(
     ({ item, index }: { item: Message; index: number }) => {
-      const nextMessage = invertedMessages[index + 1];
-      const prevMessage = invertedMessages[index - 1];
+      const nextMessage = invertedMessages[index + 1]
+      const prevMessage = invertedMessages[index - 1]
 
       const showDate =
         !nextMessage ||
-        (nextMessage.formatted_date !== item.formatted_date && item.formatted_date);
+        (nextMessage.formatted_date !== item.formatted_date && item.formatted_date)
 
-      const isLastInGroup = !prevMessage || prevMessage.user_id !== item.user_id;
+      const isLastInGroup = !prevMessage || prevMessage.user_id !== item.user_id
       const isFirstInGroup =
         !nextMessage ||
         nextMessage.user_id !== item.user_id ||
-        nextMessage.formatted_date !== item.formatted_date;
+        nextMessage.formatted_date !== item.formatted_date
 
       return (
         <>
@@ -102,54 +115,57 @@ export function MessageListView({
             isGroupConversation={isGroupConversation}
           />
         </>
-      );
+      )
     },
     [invertedMessages, isGroupConversation]
-  );
+  )
 
   // Key extractor
-  const keyExtractor = useCallback((item: Message) => String(item.id), []);
+  const keyExtractor = useCallback((item: Message) => String(item.id), [])
 
-  // Loading state
+  // Loading state - CLAUDE.md standardına uygun
   if (isLoading) {
     return (
       <View style={[styles.messagesContainer, styles.centerContainer]}>
-        <ActivityIndicator size="large" color={Brand.primary} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-          Mesajlar yükleniyor...
-        </Text>
+        <View style={styles.loadingIconContainer}>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+        </View>
+        <Text style={styles.loadingTitle}>Mesajlar Yükleniyor</Text>
+        <Text style={styles.loadingText}>Lütfen bekleyin...</Text>
       </View>
-    );
+    )
   }
 
-  // Error state
+  // Error state - CLAUDE.md error state standardı
   if (error) {
     return (
       <View style={[styles.messagesContainer, styles.centerContainer]}>
-        <AlertCircle size={64} color={colors.danger} />
-        <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-        <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
-        <TouchableOpacity
-          style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-          onPress={onRetry}
-        >
+        <View style={styles.errorIcon}>
+          <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+        </View>
+        <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+          <Ionicons name="refresh" size={18} color="#fff" />
           <Text style={styles.retryButtonText}>Tekrar Dene</Text>
         </TouchableOpacity>
       </View>
-    );
+    )
   }
 
   // Empty state
   if (invertedMessages.length === 0) {
     return (
       <View style={[styles.messagesContainer, styles.centerContainer]}>
-        <MessageCircle size={64} color={colors.textMuted} />
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>Henüz mesaj yok</Text>
-        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-          İlk mesajı siz gönderin!
+        <View style={styles.emptyIconContainer}>
+          <Ionicons name="chatbubbles-outline" size={56} color={DashboardColors.primary} />
+        </View>
+        <Text style={styles.emptyTitle}>Henüz mesaj yok</Text>
+        <Text style={styles.emptyText}>
+          Sohbeti başlatmak için ilk mesajı gönderin
         </Text>
       </View>
-    );
+    )
   }
 
   // Message list
@@ -172,111 +188,159 @@ export function MessageListView({
         initialNumToRender={20}
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
-          autoscrollToTopThreshold: 100,
+          autoscrollToTopThreshold: 100
         }}
         style={styles.flatList}
       />
     </Animated.View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   messagesContainer: {
     flex: 1,
-    backgroundColor: '#F0F2F5',
+    backgroundColor: DashboardColors.background
   },
   flatList: {
-    flex: 1,
+    flex: 1
   },
   messagesList: {
-    paddingHorizontal: 4,
-    paddingTop: 8,
-    paddingBottom: Spacing.md,
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingTop: DashboardSpacing.sm,
+    paddingBottom: DashboardSpacing.md
   },
   dateContainer: {
     alignItems: 'center',
-    marginVertical: Spacing.md,
+    marginVertical: DashboardSpacing.md
   },
   dateBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: Spacing.md,
+    backgroundColor: DashboardColors.surface,
+    paddingHorizontal: DashboardSpacing.md,
     paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    borderRadius: DashboardBorderRadius.lg,
+    ...DashboardShadows.sm
   },
   dateText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#667781',
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600',
+    color: DashboardColors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5
   },
   typingContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     marginTop: 4,
     marginLeft: 42,
-    marginBottom: 8,
+    marginBottom: 8
   },
   typingBubble: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 18,
+    backgroundColor: DashboardColors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: DashboardBorderRadius.xl,
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
+    ...DashboardShadows.sm
   },
   typingDots: {
     flexDirection: 'row',
-    gap: 4,
-    alignItems: 'center',
+    gap: 5,
+    alignItems: 'center'
   },
   typingDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: '#8696A0',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: DashboardColors.primary
   },
   typingDotMiddle: {
-    opacity: 0.6,
+    opacity: 0.6
   },
   centerContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
+    paddingHorizontal: DashboardSpacing['2xl']
+  },
+
+  // Loading state
+  loadingIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  loadingTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm
   },
   loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary
+  },
+
+  // Error state - CLAUDE.md standardı
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
   },
   errorTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.lg,
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
   },
   errorText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
     textAlign: 'center',
-    marginTop: Spacing.sm,
+    marginBottom: DashboardSpacing.xl
   },
   retryButton: {
-    marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
   },
   retryButtonText: {
-    ...Typography.bodySM,
-    color: '#FFFFFF',
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: '#fff'
+  },
+
+  // Empty state
+  emptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
   },
   emptyTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.lg,
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm
   },
   emptyText: {
-    ...Typography.bodySM,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
-  },
-});
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center'
+  }
+})
