@@ -1,44 +1,93 @@
 /**
  * Warehouse Edit Screen
  *
- * Edit existing warehouse information.
- * Matches backend MobileUpdateWarehouseRequest validation.
+ * Depo düzenleme ekranı.
+ * Backend MobileUpdateWarehouseRequest validation kurallarına uyumlu.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Save } from 'lucide-react-native';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Input, Checkbox } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  ActivityIndicator
+} from 'react-native'
+import { router, useLocalSearchParams } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import Toast from 'react-native-toast-message'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
+import { Input } from '@/components/ui'
 import {
   getWarehouse,
   updateWarehouse,
-  WarehouseFormData,
-} from '@/services/endpoints/warehouses';
-import { getErrorMessage, getValidationErrors } from '@/services/api';
+  WarehouseFormData
+} from '@/services/endpoints/warehouses'
+import { getErrorMessage, getValidationErrors } from '@/services/api'
 
 export default function WarehouseEditScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const insets = useSafeAreaInsets()
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // Animasyonlu orb'lar için shared values
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
 
-  // Form data
+  useEffect(() => {
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
+
+  // Form state - backend validation kurallarına uygun
   const [formData, setFormData] = useState<WarehouseFormData>({
     code: '',
     name: '',
@@ -48,367 +97,524 @@ export default function WarehouseEditScreen() {
     email: '',
     manager: '',
     notes: '',
-    is_active: true,
-  });
+    is_active: true
+  })
 
-  // Load warehouse data
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Depo verilerini yükle
   useEffect(() => {
     const loadWarehouse = async () => {
-      if (!id) return;
+      if (!id) return
+
       try {
-        const warehouseData = await getWarehouse(parseInt(id, 10));
+        const data = await getWarehouse(parseInt(id, 10))
 
-        // Populate form with existing data
         setFormData({
-          code: warehouseData.code || '',
-          name: warehouseData.name || '',
-          address: warehouseData.address || '',
-          postal_code: warehouseData.postal_code || '',
-          phone: warehouseData.phone || '',
-          email: warehouseData.email || '',
-          manager: warehouseData.manager || '',
-          notes: warehouseData.notes || '',
-          is_active: warehouseData.is_active !== false,
-        });
+          code: data.code || '',
+          name: data.name || '',
+          address: data.address || '',
+          postal_code: data.postal_code || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          manager: data.manager || '',
+          notes: data.notes || '',
+          is_active: data.is_active !== false
+        })
       } catch {
-        showError('Hata', 'Depo bilgileri yüklenemedi');
+        Toast.show({
+          type: 'error',
+          text1: 'Depo bilgileri yüklenemedi',
+          position: 'top',
+          visibilityTime: 1500
+        })
         setTimeout(() => {
-          router.back();
-        }, 1500);
+          router.back()
+        }, 1500)
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
-
-    loadWarehouse();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  const handleInputChange = useCallback((key: keyof WarehouseFormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-    if (errors[key]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[key];
-        return newErrors;
-      });
     }
-  }, [errors]);
 
+    loadWarehouse()
+  }, [id])
+
+  // Input değişiklik handler'ı
+  const handleInputChange = useCallback((field: keyof WarehouseFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+
+    // Bu alan için hatayı temizle
+    if (errors[field]) {
+      setErrors(prevErrors => {
+        const newErrors = { ...prevErrors }
+        delete newErrors[field]
+        return newErrors
+      })
+    }
+  }, [errors])
+
+  // Backend validation kurallarına uygun doğrulama
   const validateForm = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {}
 
-    // Required fields
+    // Zorunlu alanlar
     if (!formData.code?.trim()) {
-      newErrors.code = 'Depo kodu zorunludur.';
+      newErrors.code = 'Depo kodu zorunludur.'
     }
     if (!formData.name?.trim()) {
-      newErrors.name = 'Depo adı zorunludur.';
+      newErrors.name = 'Depo adı zorunludur.'
     }
 
-    // Email validation
+    // Email doğrulama
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Geçerli bir e-posta adresi giriniz.';
+      newErrors.email = 'Geçerli bir e-posta adresi giriniz.'
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [formData])
 
+  // Geri butonu
+  const handleBack = useCallback(() => {
+    router.back()
+  }, [])
+
+  // Form gönderimi
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
-      return;
+      Toast.show({
+        type: 'error',
+        text1: 'Lütfen zorunlu alanları doldurunuz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
     }
 
-    if (!id) return;
+    if (!id) return
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await updateWarehouse(parseInt(id, 10), formData);
+      await updateWarehouse(parseInt(id, 10), formData)
 
-      success('Başarılı', 'Depo başarıyla güncellendi.');
-      router.back();
-    } catch (error) {
-      const validationErrors = getValidationErrors(error);
+      Toast.show({
+        type: 'success',
+        text1: 'Depo başarıyla güncellendi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      router.back()
+    } catch (error: any) {
+      const validationErrors = getValidationErrors(error)
       if (validationErrors) {
-        const flatErrors: Record<string, string> = {};
+        // Laravel hatalarını düz objeye çevir
+        const flatErrors: Record<string, string> = {}
         Object.entries(validationErrors).forEach(([field, messages]) => {
           if (Array.isArray(messages) && messages.length > 0) {
-            flatErrors[field] = messages[0];
+            flatErrors[field] = messages[0]
           }
-        });
-        setErrors(flatErrors);
+        })
+        setErrors(flatErrors)
       } else {
-        showError('Hata', getErrorMessage(error));
+        Toast.show({
+          type: 'error',
+          text1: getErrorMessage(error),
+          position: 'top',
+          visibilityTime: 1500
+        })
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  }, [id, formData, validateForm, success, showError]);
+  }, [id, formData, validateForm])
 
+  // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader
-          title="Depo Düzenle"
-          showBackButton
-          onBackPress={() => router.back()}
-        />
-        <View style={styles.contentArea}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Brand.primary} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Depo bilgileri yükleniyor...
-            </Text>
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Depo Düzenle</Text>
+              </View>
+              <View style={styles.saveButton} />
+            </View>
           </View>
+          <View style={styles.bottomCurve} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Depo bilgileri yükleniyor...</Text>
         </View>
       </View>
-    );
+    )
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-        title="Depo Düzenle"
-        showBackButton
-        onBackPress={() => router.back()}
-      />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-      >
+    <View style={styles.container}>
+      {/* Header with gradient and animated orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
 
-        {/* Form Content */}
-        <View style={styles.contentArea}>
-          <ScrollView
-          style={styles.formContainer}
-          contentContainerStyle={styles.formContent}
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled={true}
-        >
-          {/* Temel Bilgiler */}
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
 
-          <Input
-            label="Depo Kodu *"
-            placeholder="Örn: DEP001"
-            value={formData.code}
-            onChangeText={(text) => handleInputChange('code', text.toUpperCase())}
-            error={errors.code}
-            autoCapitalize="characters"
-          />
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
 
-          <Input
-            label="Depo Adı *"
-            placeholder="Örn: Merkez Depo"
-            value={formData.name}
-            onChangeText={(text) => handleInputChange('name', text)}
-            error={errors.name}
-          />
-
-          <Input
-            label="Adres"
-            placeholder="Opsiyonel"
-            value={formData.address}
-            onChangeText={(text) => handleInputChange('address', text)}
-            error={errors.address}
-            multiline
-            numberOfLines={3}
-          />
-
-          <Input
-            label="Posta Kodu"
-            placeholder="Opsiyonel"
-            value={formData.postal_code}
-            onChangeText={(text) => handleInputChange('postal_code', text)}
-            error={errors.postal_code}
-          />
-
-          {/* İletişim Bilgileri */}
-          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: Spacing.lg }]}>
-            İletişim Bilgileri
-          </Text>
-
-          <Input
-            label="Telefon"
-            placeholder="Opsiyonel"
-            value={formData.phone}
-            onChangeText={(text) => handleInputChange('phone', text)}
-            error={errors.phone}
-            keyboardType="phone-pad"
-          />
-
-          <Input
-            label="E-posta"
-            placeholder="Opsiyonel"
-            value={formData.email}
-            onChangeText={(text) => handleInputChange('email', text)}
-            error={errors.email}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-
-          <Input
-            label="Depo Sorumlusu"
-            placeholder="Opsiyonel"
-            value={formData.manager}
-            onChangeText={(text) => handleInputChange('manager', text)}
-            error={errors.manager}
-          />
-
-          {/* Notlar */}
-          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: Spacing.lg }]}>
-            Diğer Bilgiler
-          </Text>
-
-          <Input
-            label="Notlar"
-            placeholder="Opsiyonel"
-            value={formData.notes}
-            onChangeText={(text) => handleInputChange('notes', text)}
-            error={errors.notes}
-            multiline
-            numberOfLines={4}
-          />
-
-          {/* Aktif/Pasif */}
-          <View style={[styles.switchRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={styles.switchContent}>
-              <Text style={[styles.switchLabel, { color: colors.text }]}>
-                Aktif Depo
-              </Text>
-              <Text style={[styles.switchDescription, { color: colors.textSecondary }]}>
-                Bu depo kullanıma açık olacak
-              </Text>
+            {/* Orta: Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Depo Düzenle</Text>
             </View>
-            <Checkbox
-              value={formData.is_active ?? true}
-              onValueChange={(val) => handleInputChange('is_active', val)}
+
+            {/* Sağ: Kaydet Butonu */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* Form Content */}
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        bottomOffset={20}
+      >
+        {/* Temel Bilgiler Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="business-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
+          </View>
+
+          <View style={styles.sectionContent}>
+            <Input
+              label="Depo Kodu *"
+              placeholder="Örn: DEP001"
+              value={formData.code}
+              onChangeText={(text) => handleInputChange('code', text.toUpperCase())}
+              error={errors.code}
+              autoCapitalize="characters"
+              maxLength={50}
+            />
+
+            <Input
+              label="Depo Adı *"
+              placeholder="Örn: Merkez Depo"
+              value={formData.name}
+              onChangeText={(text) => handleInputChange('name', text)}
+              error={errors.name}
+              maxLength={255}
+            />
+
+            <Input
+              label="Adres"
+              placeholder="Opsiyonel"
+              value={formData.address}
+              onChangeText={(text) => handleInputChange('address', text)}
+              error={errors.address}
+              multiline
+              numberOfLines={3}
+            />
+
+            <Input
+              label="Posta Kodu"
+              placeholder="Opsiyonel"
+              value={formData.postal_code}
+              onChangeText={(text) => handleInputChange('postal_code', text)}
+              error={errors.postal_code}
             />
           </View>
-        </ScrollView>
         </View>
 
-        {/* Action Buttons */}
-        <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-          <TouchableOpacity
-            style={[styles.cancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-            onPress={() => router.back()}
-            disabled={isSubmitting}
-          >
-            <Text style={[styles.cancelButtonText, { color: colors.text }]}>İptal</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              { backgroundColor: isSubmitting ? colors.textMuted : Brand.primary },
-            ]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Save size={20} color="#FFFFFF" />
-                <Text style={styles.submitButtonText}>Kaydet</Text>
-              </>
-            )}
-          </TouchableOpacity>
+        {/* İletişim Bilgileri Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="call-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>İletişim Bilgileri</Text>
+          </View>
+
+          <View style={styles.sectionContent}>
+            <Input
+              label="Telefon"
+              placeholder="Opsiyonel"
+              value={formData.phone}
+              onChangeText={(text) => handleInputChange('phone', text)}
+              error={errors.phone}
+              keyboardType="phone-pad"
+            />
+
+            <Input
+              label="E-posta"
+              placeholder="Opsiyonel"
+              value={formData.email}
+              onChangeText={(text) => handleInputChange('email', text)}
+              error={errors.email}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <Input
+              label="Depo Sorumlusu"
+              placeholder="Opsiyonel"
+              value={formData.manager}
+              onChangeText={(text) => handleInputChange('manager', text)}
+              error={errors.manager}
+            />
+          </View>
         </View>
-      </KeyboardAvoidingView>
+
+        {/* Diğer Bilgiler Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="document-text-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Diğer Bilgiler</Text>
+          </View>
+
+          <View style={styles.sectionContent}>
+            <Input
+              label="Notlar"
+              placeholder="Opsiyonel"
+              value={formData.notes}
+              onChangeText={(text) => handleInputChange('notes', text)}
+              error={errors.notes}
+              multiline
+              numberOfLines={4}
+            />
+
+            {/* Aktif/Pasif Toggle */}
+            <TouchableOpacity
+              style={styles.toggleRow}
+              onPress={() => handleInputChange('is_active', !formData.is_active)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.toggleContent}>
+                <Text style={styles.toggleLabel}>Aktif Depo</Text>
+                <Text style={styles.toggleDescription}>Bu depo kullanıma açık olacak</Text>
+              </View>
+              <View style={[
+                styles.toggleSwitch,
+                formData.is_active && styles.toggleSwitchActive
+              ]}>
+                <View style={[
+                  styles.toggleKnob,
+                  formData.is_active && styles.toggleKnobActive
+                ]} />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAwareScrollView>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
-  keyboardAvoidingView: {
-    flex: 1,
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
   },
-  contentArea: {
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: DashboardSpacing.lg
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.md
+  },
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
+  },
+  saveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  saveButtonDisabled: {
+    opacity: 0.5
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
   loadingText: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary
   },
-  formContainer: {
-    flex: 1,
+  content: {
+    flex: 1
   },
-  formContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    paddingBottom: Spacing['2xl'],
+  contentContainer: {
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
+  },
+  section: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.lg,
+    overflow: 'hidden'
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
-  switchRow: {
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
+  },
+  toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    marginVertical: Spacing.xs,
+    paddingVertical: DashboardSpacing.md,
+    paddingHorizontal: DashboardSpacing.lg,
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg
   },
-  switchContent: {
+  toggleContent: {
     flex: 1,
-    marginRight: Spacing.md,
+    marginRight: DashboardSpacing.md
   },
-  switchLabel: {
-    ...Typography.bodyMD,
+  toggleLabel: {
+    fontSize: DashboardFontSizes.base,
     fontWeight: '500',
+    color: DashboardColors.textPrimary
   },
-  switchDescription: {
-    ...Typography.bodySM,
-    marginTop: Spacing.xs,
+  toggleDescription: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    marginTop: 2
   },
-  footer: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    padding: Spacing.lg,
-    borderTopWidth: 1,
+  toggleSwitch: {
+    width: 52,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: DashboardColors.borderLight,
+    padding: 2,
+    justifyContent: 'center'
   },
-  cancelButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
+  toggleSwitchActive: {
+    backgroundColor: DashboardColors.primary
   },
-  cancelButtonText: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
+  toggleKnob: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#fff'
   },
-  submitButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-});
+  toggleKnobActive: {
+    alignSelf: 'flex-end'
+  }
+})
