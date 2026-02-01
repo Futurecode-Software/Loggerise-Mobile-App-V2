@@ -123,6 +123,36 @@ const STATUS_OPTIONS = [
 ]
 ```
 
+#### Sistemde Kullanılan Döviz Kodları
+```typescript
+// Desteklenen para birimleri
+const SUPPORTED_CURRENCIES = [
+  'TRY',  // Türk Lirası
+  'USD',  // Amerikan Doları
+  'EUR',  // Euro
+  'GBP',  // İngiliz Sterlini
+  'AUD',  // Avustralya Doları
+  'DKK',  // Danimarka Kronu
+  'CHF',  // İsviçre Frangı
+  'SEK',  // İsveç Kronu
+  'CAD',  // Kanada Doları
+  'KWD',  // Kuveyt Dinarı
+  'NOK',  // Norveç Kronu
+  'SAR',  // Suudi Arabistan Riyali
+  'JPY',  // Japon Yeni
+  'BGN',  // Bulgar Levası
+  'RON',  // Rumen Leyi
+  'RUB',  // Rus Rublesi
+  'CNY',  // Çin Yuanı
+  'PKR',  // Pakistan Rupisi
+  'QAR',  // Katar Riyali
+  'KRW',  // Güney Kore Wonu
+  'AZN',  // Azerbaycan Manatı
+  'AED',  // BAE Dirhemi
+  'XDR'   // IMF Özel Çekme Hakkı
+]
+```
+
 ### 6. Her Commit Öncesi Checklist
 
 - [ ] mobile-api.php endpoint'i kontrol edildi mi?
@@ -739,6 +769,329 @@ retryButtonText: {
   fontWeight: '600',
   color: '#fff'
 }
+```
+
+### 11. Liste Sayfası Header Standardı (PageHeader)
+```typescript
+// ZORUNLU - Tüm liste sayfalarında (index.tsx) bu yapı kullanılmalı
+// Referans: app/(tabs)/contacts.tsx, app/cash-register/index.tsx
+
+// 1. Import'lar
+import { PageHeader } from '@/components/navigation'
+import { Skeleton } from '@/components/ui/skeleton'
+import * as Haptics from 'expo-haptics'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring
+} from 'react-native-reanimated'
+
+// 2. Container Yapısı
+container: { flex: 1, backgroundColor: DashboardColors.primary }
+content: { flex: 1, backgroundColor: DashboardColors.background }
+
+// 3. PageHeader Kullanımı
+<PageHeader
+  title="Modül Adı"
+  icon="wallet-outline"           // Ionicons ismi
+  subtitle={`${count} kayıt`}     // Opsiyonel
+  rightAction={{
+    icon: 'add',
+    onPress: handleNewPress
+  }}
+  // Birden fazla aksiyon için:
+  rightActions={[
+    { icon: 'add', onPress: handleNew },
+    { icon: 'filter-outline', onPress: handleFilter }
+  ]}
+/>
+
+// 4. Filter Chips (Content içinde, header'dan AYRI)
+<ScrollView
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  contentContainerStyle={styles.filterContainer}
+>
+  {FILTERS.map((filter) => (
+    <TouchableOpacity
+      key={filter.id}
+      style={[styles.filterChip, isActive && styles.filterChipActive]}
+      onPress={() => handleFilterPress(filter.id)}
+    >
+      <Ionicons name={filter.icon} size={16} color={...} />
+      <Text style={styles.filterLabel}>{filter.label}</Text>
+    </TouchableOpacity>
+  ))}
+</ScrollView>
+
+// 5. Özel Card Component (Animasyonlu)
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+
+function ItemCard({ item, onPress }: Props) {
+  const scale = useSharedValue(1)
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }))
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy)
+  }
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
+
+  return (
+    <AnimatedPressable
+      style={[styles.card, animStyle]}
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      {/* Card içeriği */}
+    </AnimatedPressable>
+  )
+}
+
+// 6. Skeleton Component
+function ItemCardSkeleton() {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Skeleton width={48} height={48} borderRadius={12} />
+        <View style={{ flex: 1, marginLeft: DashboardSpacing.sm }}>
+          <Skeleton width={160} height={18} />
+          <Skeleton width={80} height={14} style={{ marginTop: 4 }} />
+        </View>
+      </View>
+    </View>
+  )
+}
+
+// 7. FlatList ile Liste
+{isLoading ? (
+  <View style={styles.listContent}>
+    <ItemCardSkeleton />
+    <ItemCardSkeleton />
+    <ItemCardSkeleton />
+  </View>
+) : (
+  <FlatList
+    data={items}
+    keyExtractor={(item) => String(item.id)}
+    renderItem={({ item }) => (
+      <ItemCard item={item} onPress={() => handlePress(item)} />
+    )}
+    contentContainerStyle={styles.listContent}
+    ListEmptyComponent={<EmptyState />}
+    refreshControl={
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        tintColor={DashboardColors.primary}
+      />
+    }
+    onEndReached={loadMore}
+    onEndReachedThreshold={0.5}
+    showsVerticalScrollIndicator={false}
+  />
+)}
+
+// 8. Styles
+filterContainer: {
+  paddingHorizontal: DashboardSpacing.lg,
+  paddingVertical: DashboardSpacing.md,
+  gap: DashboardSpacing.sm
+},
+filterChip: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: DashboardSpacing.lg,
+  paddingVertical: DashboardSpacing.sm,
+  borderRadius: DashboardBorderRadius.full,
+  backgroundColor: DashboardColors.surface,
+  borderWidth: 1,
+  borderColor: DashboardColors.borderLight,
+  gap: DashboardSpacing.xs,
+  marginRight: DashboardSpacing.sm
+},
+filterChipActive: {
+  backgroundColor: DashboardColors.primary,
+  borderColor: DashboardColors.primary
+},
+listContent: {
+  paddingHorizontal: DashboardSpacing.lg,
+  paddingBottom: DashboardSpacing.xl
+},
+card: {
+  backgroundColor: DashboardColors.surface,
+  borderRadius: DashboardBorderRadius.xl,
+  padding: DashboardSpacing.lg,
+  marginBottom: DashboardSpacing.md,
+  ...DashboardShadows.md
+}
+```
+
+**PageHeader vs FullScreenHeader Karşılaştırması:**
+| Özellik | PageHeader (STANDART) | FullScreenHeader |
+|---------|----------------------|------------------|
+| Kullanım | Liste sayfaları | Tab sayfaları (opsiyonel) |
+| Animasyonlu orb'lar | ✅ Var | ❌ Yok |
+| Başlık konumu | Ortalanmış | Sol hizalı |
+| İkon desteği | ✅ Başlık yanında | ❌ Yok |
+| Tabs desteği | ❌ Yok (content'te filter chip) | ✅ Header içinde |
+| Bottom curve | ✅ Var | ❌ Yok |
+
+**Önemli Kurallar:**
+- ✅ Liste sayfalarında **PageHeader** kullan
+- ✅ Filtreler **content içinde** ayrı filter chip olarak
+- ✅ Kendi **Card component**'i oluştur (animasyonlu)
+- ✅ **Skeleton** component oluştur
+- ✅ **Haptics** kullan (selectionAsync, impactAsync)
+- ❌ FullScreenHeader'daki tabs özelliğini KULLANMA
+
+### 12. BottomSheetModal Kullanımı (iOS Tarzı Modal)
+```typescript
+// ZORUNLU - Filtre, seçim ve aksiyonlar için iOS tarzı bottom sheet modal
+// Referans: app/cash-register/index.tsx, app/(tabs)/loads.tsx
+
+// 1. Import'lar
+import { useRef, useMemo } from 'react'
+import {
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetBackdropProps,
+  BottomSheetView
+} from '@gorhom/bottom-sheet'
+
+// 2. Ref ve SnapPoints
+const bottomSheetRef = useRef<BottomSheetModal>(null)
+const snapPoints = useMemo(() => ['92%'], [])  // iOS tarzı: ekranın %92'si
+
+// 3. Backdrop Component (component dışında tanımla)
+const renderBackdrop = (props: BottomSheetBackdropProps) => (
+  <BottomSheetBackdrop
+    {...props}
+    disappearsOnIndex={-1}
+    appearsOnIndex={0}
+    opacity={0.5}
+  />
+)
+
+// 4. Modal Açma/Kapama
+const handleOpenModal = () => {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+  bottomSheetRef.current?.present()
+}
+
+const handleCloseModal = () => {
+  bottomSheetRef.current?.dismiss()
+}
+
+// 5. BottomSheetModal JSX
+<BottomSheetModal
+  ref={bottomSheetRef}
+  snapPoints={snapPoints}
+  backdropComponent={renderBackdrop}
+  handleIndicatorStyle={styles.bottomSheetIndicator}
+  backgroundStyle={styles.bottomSheetBackground}
+  enablePanDownToClose={true}           // Handle'dan aşağı çekerek kapanır
+  enableContentPanningGesture={false}   // İçerik scroll'u modal'ı etkilemez
+  enableDynamicSizing={false}           // Sabit yükseklik
+>
+  <BottomSheetView style={styles.bottomSheetContent}>
+    {/* Header */}
+    <View style={styles.bottomSheetHeader}>
+      <View style={styles.bottomSheetHeaderIcon}>
+        <Ionicons name="funnel" size={20} color={DashboardColors.primary} />
+      </View>
+      <Text style={styles.bottomSheetTitle}>Modal Başlığı</Text>
+      <TouchableOpacity
+        onPress={handleCloseModal}
+        style={styles.bottomSheetCloseButton}
+      >
+        <Ionicons name="close" size={24} color={DashboardColors.textSecondary} />
+      </TouchableOpacity>
+    </View>
+
+    {/* Body */}
+    <View style={styles.bottomSheetBody}>
+      {/* Modal içeriği */}
+    </View>
+  </BottomSheetView>
+</BottomSheetModal>
+
+// 6. Styles
+bottomSheetIndicator: {
+  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  width: 36,
+  height: 5,
+  borderRadius: 3
+},
+bottomSheetBackground: {
+  backgroundColor: DashboardColors.surface,
+  borderTopLeftRadius: 12,
+  borderTopRightRadius: 12
+},
+bottomSheetContent: {
+  flex: 1,
+  paddingBottom: DashboardSpacing['3xl']
+},
+bottomSheetHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  padding: DashboardSpacing.lg,
+  borderBottomWidth: 1,
+  borderBottomColor: DashboardColors.borderLight
+},
+bottomSheetHeaderIcon: {
+  width: 40,
+  height: 40,
+  borderRadius: DashboardBorderRadius.lg,
+  backgroundColor: DashboardColors.primaryGlow,
+  alignItems: 'center',
+  justifyContent: 'center'
+},
+bottomSheetTitle: {
+  flex: 1,
+  fontSize: DashboardFontSizes.xl,
+  fontWeight: '700',
+  color: DashboardColors.textPrimary,
+  marginLeft: DashboardSpacing.md
+},
+bottomSheetCloseButton: {
+  padding: DashboardSpacing.xs
+},
+bottomSheetBody: {
+  padding: DashboardSpacing.lg,
+  gap: DashboardSpacing.sm
+}
+```
+
+**Önemli Prop'lar:**
+| Prop | Değer | Açıklama |
+|------|-------|----------|
+| `snapPoints` | `['92%']` | iOS tarzı tam ekran modal |
+| `enablePanDownToClose` | `true` | Handle'dan aşağı çekerek kapanır |
+| `enableContentPanningGesture` | `false` | İçerik scroll'u modal'ı etkilemez |
+| `enableDynamicSizing` | `false` | Sabit yükseklik, dinamik boyut kapalı |
+
+**Kullanım Senaryoları:**
+- ✅ Filtre seçimi (döviz, tarih, durum vb.)
+- ✅ Aksiyon menüsü (düzenle, sil, paylaş vb.)
+- ✅ Detaylı seçim listeleri
+- ✅ Form içi yardımcı modallar
+
+**React Native Modal KULLANMA:**
+```typescript
+// ❌ YASAK - React Native Modal
+import { Modal } from 'react-native'
+<Modal visible={visible} animationType="slide">
+
+// ✅ ZORUNLU - BottomSheetModal
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+<BottomSheetModal ref={ref} snapPoints={snapPoints}>
 ```
 
 ---
