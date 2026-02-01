@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react'
 import {
   View,
   Text,
@@ -10,46 +10,165 @@ import {
   RefreshControl,
   ActivityIndicator,
   Pressable,
-  Keyboard,
-} from 'react-native';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import { router } from 'expo-router';
+  Keyboard
+} from 'react-native'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring
+} from 'react-native-reanimated'
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller'
+import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import {
-  Plus,
-  Sparkles,
-  Trash2,
-  Search,
-  Bot,
-  MessageSquare,
-  AlertCircle,
-  KeyRound,
-  Settings,
-} from 'lucide-react-native';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { formatConversationTime, AiConversation, deleteConversation } from '@/services/endpoints/loggy';
-import { useLoggyConversations } from '@/hooks/use-logy-conversations';
-import { useLoggyMessages } from '@/hooks/use-logy-messages';
-import { useLoggySearch } from '@/hooks/use-logy-search';
-import { ViewMode } from '@/components/loggy/constants';
-import { TypingIndicator } from '@/components/loggy/TypingIndicator';
-import { QuickSuggestions } from '@/components/loggy/QuickSuggestions';
-import { MessageBubble } from '@/components/loggy/MessageBubble';
-import { LoggyInput } from '@/components/loggy/LoggyInput';
-import { FullScreenHeader } from '@/components/header';
-import { ConfirmDialog } from '@/components/ui';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardBorderRadius,
+  DashboardFontSizes,
+  DashboardShadows,
+  DashboardAnimations
+} from '@/constants/dashboard-theme'
+import { formatConversationTime, AiConversation, deleteConversation } from '@/services/endpoints/loggy'
+import { useLoggyConversations } from '@/hooks/use-logy-conversations'
+import { useLoggyMessages } from '@/hooks/use-logy-messages'
+import { useLoggySearch } from '@/hooks/use-logy-search'
+import { ViewMode } from '@/components/loggy/constants'
+import { TypingIndicator } from '@/components/loggy/TypingIndicator'
+import { QuickSuggestions } from '@/components/loggy/QuickSuggestions'
+import { MessageBubble } from '@/components/loggy/MessageBubble'
+import { LoggyInput } from '@/components/loggy/LoggyInput'
+import { PageHeader } from '@/components/navigation'
+import { ConfirmDialog } from '@/components/ui'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+
+// Skeleton Component
+function ConversationCardSkeleton() {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Skeleton width={44} height={44} borderRadius={22} />
+        <View style={{ flex: 1, marginLeft: DashboardSpacing.sm }}>
+          <Skeleton width={180} height={18} />
+          <Skeleton width={100} height={14} style={{ marginTop: 4 }} />
+        </View>
+        <Skeleton width={32} height={32} borderRadius={16} />
+      </View>
+    </View>
+  )
+}
+
+// Card Component
+interface ConversationCardProps {
+  item: AiConversation
+  isActive: boolean
+  onPress: () => void
+  onDelete: () => void
+}
+
+function ConversationCard({ item, isActive, onPress, onDelete }: ConversationCardProps) {
+  const scale = useSharedValue(1)
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }))
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy)
+  }
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
+
+  return (
+    <AnimatedPressable
+      style={[
+        styles.card,
+        animStyle,
+        isActive && styles.cardActive
+      ]}
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      {/* Header */}
+      <View style={styles.cardHeader}>
+        <View style={styles.cardIcon}>
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color={DashboardColors.primary} />
+        </View>
+        <View style={styles.cardHeaderContent}>
+          <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.cardTime}>{formatConversationTime(item.created_at)}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="trash-outline" size={18} color={DashboardColors.danger} />
+        </TouchableOpacity>
+      </View>
+    </AnimatedPressable>
+  )
+}
+
+// Empty State
+function EmptyState({ onCreateNew }: { onCreateNew: () => void }) {
+  return (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="sparkles" size={64} color={DashboardColors.primary} />
+      </View>
+      <Text style={styles.emptyTitle}>Henüz konuşma yok</Text>
+      <Text style={styles.emptyText}>
+        Loggy AI ile yük oluşturma, cari arama gibi işlemler için bana yazabilirsiniz.
+      </Text>
+      <TouchableOpacity
+        style={styles.startButton}
+        onPress={onCreateNew}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="sparkles" size={18} color="#FFFFFF" />
+        <Text style={styles.startButtonText}>Yeni Konuşma Başlat</Text>
+      </TouchableOpacity>
+    </View>
+  )
+}
+
+// Error State
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <View style={styles.errorState}>
+      <View style={styles.errorIcon}>
+        <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+      </View>
+      <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+      <Text style={styles.errorText}>{message}</Text>
+      <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+        <Ionicons name="refresh" size={18} color="#fff" />
+        <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+      </TouchableOpacity>
+    </View>
+  )
+}
 
 export default function LoggyScreen() {
-  const colors = Colors.light;
-  const flatListRef = useRef<FlatList>(null);
-  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
+  const flatListRef = useRef<FlatList>(null)
+  const { height: keyboardHeight } = useReanimatedKeyboardAnimation()
 
   // View mode
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [inputValue, setInputValue] = useState('');
-  const [isAiConfigured] = useState(true); // TODO: Get from API
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [conversationToDelete, setConversationToDelete] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [inputValue, setInputValue] = useState('')
+  const [isAiConfigured] = useState(true) // TODO: Get from API
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [conversationToDelete, setConversationToDelete] = useState<number | null>(null)
 
   // Custom hooks
   const {
@@ -60,9 +179,8 @@ export default function LoggyScreen() {
     error: conversationsError,
     createNewConversation,
     selectConversation,
-    handleDelete,
-    refresh,
-  } = useLoggyConversations();
+    refresh
+  } = useLoggyConversations()
 
   const {
     messages,
@@ -70,250 +188,176 @@ export default function LoggyScreen() {
     isSending,
     error: messagesError,
     sendMessage,
-    clearError,
-  } = useLoggyMessages({ conversation: currentConversation });
+    clearError
+  } = useLoggyMessages({ conversation: currentConversation })
 
   const {
     searchQuery,
     searchResults,
     isSearching,
     setSearchQuery,
-    clearSearch,
-  } = useLoggySearch();
+    clearSearch
+  } = useLoggySearch()
 
   // Inverted messages for FlatList (newest first)
-  const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
+  const invertedMessages = useMemo(() => [...messages].reverse(), [messages])
 
   // Animated style for keyboard
   const animatedListStyle = useAnimatedStyle(() => ({
-    paddingBottom: -keyboardHeight.value,
-  }));
+    paddingBottom: -keyboardHeight.value
+  }))
 
   // Create new conversation handler
   const handleCreateNewConversation = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     try {
-      const newConversation = await createNewConversation();
-      setViewMode('chat');
-    } catch (err) {
+      await createNewConversation()
+      setViewMode('chat')
+    } catch {
       // Error already handled in hook
     }
-  };
+  }
 
   // Select conversation handler
   const handleSelectConversation = async (conversation: AiConversation) => {
-    selectConversation(conversation);
-    setViewMode('chat');
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    selectConversation(conversation)
+    setViewMode('chat')
+  }
 
   // Send message handler
   const handleSend = async () => {
-    if (!inputValue.trim() || !currentConversation || isSending) return;
-    const messageContent = inputValue;
-    setInputValue('');
-    await sendMessage(messageContent);
-  };
+    if (!inputValue.trim() || !currentConversation || isSending) return
+    const messageContent = inputValue
+    setInputValue('')
+    await sendMessage(messageContent)
+  }
 
   // Handle suggestion click
   const handleSuggestionClick = async (prompt: string) => {
-    if (isLoadingMessages || !isAiConfigured) return;
+    if (isLoadingMessages || !isAiConfigured) return
 
     try {
-      const newConversation = await createNewConversation();
-      setViewMode('chat');
-      setInputValue(prompt);
-      
+      await createNewConversation()
+      setViewMode('chat')
+      setInputValue(prompt)
+
       // Send the prompt after a short delay
       setTimeout(async () => {
-        setInputValue('');
-        await sendMessage(prompt);
-      }, 100);
-    } catch (err) {
+        setInputValue('')
+        await sendMessage(prompt)
+      }, 100)
+    } catch {
       // Error already handled in hook
     }
-  };
+  }
 
   // Go back to list
   const goBackToList = () => {
-    setViewMode('list');
-    clearError();
-    clearSearch();
-    refresh();
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    setViewMode('list')
+    clearError()
+    clearSearch()
+    refresh()
+  }
 
   // Handle delete click - show dialog
   const handleDeleteClick = (conversationId: number) => {
-    setConversationToDelete(conversationId);
-    setShowDeleteDialog(true);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    setConversationToDelete(conversationId)
+    setShowDeleteDialog(true)
+  }
 
   // Confirm delete
   const confirmDelete = async () => {
     if (conversationToDelete) {
       try {
-        await deleteConversation(conversationToDelete);
+        await deleteConversation(conversationToDelete)
         // If deleted conversation was current, go back to list
         if (currentConversation?.id === conversationToDelete) {
-          setViewMode('list');
+          setViewMode('list')
         }
         // Refresh the list to reflect the deletion
-        refresh();
+        refresh()
       } catch (err) {
-        console.error('Delete conversation error:', err);
+        console.error('Delete conversation error:', err)
       } finally {
-        setShowDeleteDialog(false);
-        setConversationToDelete(null);
+        setShowDeleteDialog(false)
+        setConversationToDelete(null)
       }
     }
-  };
+  }
 
-  // Render conversation list item
-  const renderConversationItem = ({ item }: { item: AiConversation }) => (
-    <View
-      style={[
-        styles.conversationItem,
-        {
-          backgroundColor: colors.card,
-          borderBottomColor: colors.border,
-        },
-        currentConversation?.id === item.id && {
-          backgroundColor: Brand.primary + '15',
-        },
-      ]}
-    >
-      <TouchableOpacity
-        style={styles.conversationTouchable}
-        onPress={() => handleSelectConversation(item)}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.conversationIcon, { backgroundColor: Brand.primary + '15' }]}>
-          <MessageSquare size={20} color={Brand.primary} />
-        </View>
-        <View style={styles.conversationContent}>
-          <Text style={[styles.conversationTitle, { color: colors.text }]} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={[styles.conversationTime, { color: colors.textMuted }]}>
-            {formatConversationTime(item.created_at)}
-          </Text>
-        </View>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => handleDeleteClick(item.id)}
-        activeOpacity={0.7}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <Trash2 size={18} color={colors.danger} />
-      </TouchableOpacity>
-    </View>
-  );
-
-  // Render list empty state
-  const renderListEmpty = () => {
-    if (isLoadingConversations) {
-      return (
-        <View style={styles.centerState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-            Konuşmalar yükleniyor...
-          </Text>
-        </View>
-      );
-    }
-
-    if (conversationsError) {
-      return (
-        <View style={styles.centerState}>
-          <View style={[styles.stateIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={48} color={colors.danger} />
-          </View>
-          <Text style={[styles.stateTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-            {conversationsError}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => refresh()}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.centerState}>
-        <View style={[styles.stateIcon, { backgroundColor: Brand.primary + '15' }]}>
-          <Sparkles size={48} color={Brand.primary} />
-        </View>
-        <Text style={[styles.stateTitle, { color: colors.text }]}>Henüz konuşma yok</Text>
-        <Text style={[styles.stateText, { color: colors.textSecondary }]}>
-          Loggy AI ile yük oluşturma, cari arama gibi işlemler için bana yazabilirsiniz.
-        </Text>
-        <TouchableOpacity
-          style={[styles.startButton, { backgroundColor: Brand.primary }]}
-          onPress={handleCreateNewConversation}
-        >
-          <Sparkles size={18} color="#FFFFFF" />
-          <Text style={styles.startButtonText} numberOfLines={1}>
-            Yeni Konuşma Başlat
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const handleBackPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
 
   // ============ LIST VIEW ============
   if (viewMode === 'list') {
-    const displayConversations = searchQuery.length >= 2 ? searchResults : conversations;
+    const displayConversations = searchQuery.length >= 2 ? searchResults : conversations
 
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        {/* Full Screen Header */}
-        <FullScreenHeader
+      <View style={styles.container}>
+        <PageHeader
           title="Loggy"
+          icon="sparkles-outline"
           subtitle="AI Asistan"
           showBackButton
-          leftIcon={<Sparkles size={20} color="#FFFFFF" />}
-          rightIcons={
-            <TouchableOpacity onPress={handleCreateNewConversation} activeOpacity={0.7}>
-              <Plus size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          }
+          onBackPress={handleBackPress}
+          rightAction={{
+            icon: 'add',
+            onPress: handleCreateNewConversation
+          }}
         />
 
-        {/* Content Area */}
-        <View style={styles.contentArea}>
+        <View style={styles.content}>
           {/* Search */}
-          <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Search size={18} color={colors.textMuted} />
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={18} color={DashboardColors.textMuted} />
             <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
+              style={styles.searchInput}
               placeholder="Sohbetlerde ara..."
-              placeholderTextColor={colors.placeholder}
+              placeholderTextColor={DashboardColors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-            {isSearching && <ActivityIndicator size="small" color={Brand.primary} />}
+            {isSearching && <ActivityIndicator size="small" color={DashboardColors.primary} />}
           </View>
 
           {/* Conversations List */}
-          <FlatList
-            data={displayConversations}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderConversationItem}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={renderListEmpty}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={refresh}
-                tintColor={Brand.primary}
-              />
-            }
-          />
-
+          {isLoadingConversations ? (
+            <View style={styles.listContent}>
+              <ConversationCardSkeleton />
+              <ConversationCardSkeleton />
+              <ConversationCardSkeleton />
+            </View>
+          ) : conversationsError ? (
+            <ErrorState message={conversationsError} onRetry={refresh} />
+          ) : (
+            <FlatList
+              data={displayConversations}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={({ item }) => (
+                <ConversationCard
+                  item={item}
+                  isActive={currentConversation?.id === item.id}
+                  onPress={() => handleSelectConversation(item)}
+                  onDelete={() => handleDeleteClick(item.id)}
+                />
+              )}
+              contentContainerStyle={styles.listContent}
+              ListEmptyComponent={<EmptyState onCreateNew={handleCreateNewConversation} />}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={refresh}
+                  tintColor={DashboardColors.primary}
+                />
+              }
+            />
+          )}
         </View>
 
         {/* Delete Confirmation Dialog */}
@@ -326,20 +370,20 @@ export default function LoggyScreen() {
           isDangerous
           onConfirm={confirmDelete}
           onCancel={() => {
-            setShowDeleteDialog(false);
-            setConversationToDelete(null);
+            setShowDeleteDialog(false)
+            setConversationToDelete(null)
           }}
         />
       </View>
-    );
+    )
   }
 
   // ============ CHAT VIEW ============
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      {/* Full Screen Header */}
-      <FullScreenHeader
+    <View style={styles.container}>
+      <PageHeader
         title={currentConversation?.title || 'Yeni Konuşma'}
+        icon="chatbubble-ellipses-outline"
         subtitle={
           currentConversation
             ? formatConversationTime(currentConversation.created_at)
@@ -347,40 +391,34 @@ export default function LoggyScreen() {
         }
         showBackButton
         onBackPress={goBackToList}
-        leftIcon={<Bot size={20} color="#FFFFFF" />}
-        rightIcons={
-          currentConversation ? (
-            <TouchableOpacity
-              onPress={() => handleDeleteClick(currentConversation.id)}
-              activeOpacity={0.7}
-            >
-              <Trash2 size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          ) : null
+        rightAction={
+          currentConversation
+            ? {
+                icon: 'trash-outline',
+                onPress: () => handleDeleteClick(currentConversation.id)
+              }
+            : undefined
         }
       />
 
-      {/* Content Area */}
-      <View style={styles.contentArea}>
+      <View style={styles.content}>
         {/* API Not Configured Overlay */}
         {!isAiConfigured && (
           <View style={styles.overlay}>
-            <View style={[styles.overlayContent, { backgroundColor: colors.card }]}>
-              <View style={[styles.overlayIcon, { backgroundColor: '#fbbf24' + '15' }]}>
-                <KeyRound size={32} color="#f59e0b" />
+            <View style={styles.overlayContent}>
+              <View style={styles.overlayIcon}>
+                <Ionicons name="key" size={32} color="#f59e0b" />
               </View>
-              <Text style={[styles.overlayTitle, { color: colors.text }]}>
-                API Anahtarı Gerekli
-              </Text>
-              <Text style={[styles.overlayText, { color: colors.textSecondary }]}>
+              <Text style={styles.overlayTitle}>API Anahtarı Gerekli</Text>
+              <Text style={styles.overlayText}>
                 Loggy AI asistanını kullanabilmek için önce API ayarlarınızı yapılandırmanız
                 gerekiyor. Sistem ayarlarından API anahtarınızı ve model bilgilerinizi girin.
               </Text>
               <TouchableOpacity
-                style={[styles.overlayButton, { backgroundColor: Brand.primary }]}
+                style={styles.overlayButton}
                 onPress={() => router.push('/settings' as any)}
               >
-                <Settings size={18} color="#FFFFFF" />
+                <Ionicons name="settings" size={18} color="#FFFFFF" />
                 <Text style={styles.overlayButtonText}>Sistem Ayarlarına Git</Text>
               </TouchableOpacity>
             </View>
@@ -396,25 +434,25 @@ export default function LoggyScreen() {
           {/* Messages */}
           {isLoadingMessages && messages.length === 0 ? (
             <View style={[styles.messagesContainer, styles.centerContainer]}>
-              <ActivityIndicator size="large" color={Brand.primary} />
-              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-                Mesajlar yükleniyor...
-              </Text>
+              <ActivityIndicator size="large" color={DashboardColors.primary} />
+              <Text style={styles.loadingText}>Mesajlar yükleniyor...</Text>
             </View>
           ) : messagesError ? (
             <View style={[styles.messagesContainer, styles.centerContainer]}>
-              <AlertCircle size={64} color={colors.danger} />
-              <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-              <Text style={[styles.errorText, { color: colors.textSecondary }]}>{messagesError}</Text>
+              <View style={styles.errorIconLarge}>
+                <Ionicons name="alert-circle" size={64} color={DashboardColors.danger} />
+              </View>
+              <Text style={styles.chatErrorTitle}>Bir hata oluştu</Text>
+              <Text style={styles.chatErrorText}>{messagesError}</Text>
             </View>
           ) : invertedMessages.length === 0 && !isSending ? (
             <View style={[styles.messagesContainer, styles.emptyStateContainer]}>
               <View style={styles.emptyStateContent}>
-                <View style={[styles.emptyStateIcon, { backgroundColor: Brand.primary + '15' }]}>
-                  <Sparkles size={48} color={Brand.primary} />
+                <View style={styles.chatEmptyIcon}>
+                  <Ionicons name="sparkles" size={48} color={DashboardColors.primary} />
                 </View>
-                <Text style={[styles.emptyTitle, { color: colors.text }]}>Henüz mesaj yok</Text>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]} numberOfLines={0}>
+                <Text style={styles.chatEmptyTitle}>Henüz mesaj yok</Text>
+                <Text style={styles.chatEmptyText}>
                   Merhaba! Ben Loggy, sizin AI asistanınızım.{'\n'}
                   Yük oluşturma, cari arama gibi işlemlerde size yardımcı olabilirim.
                 </Text>
@@ -445,16 +483,16 @@ export default function LoggyScreen() {
                 initialNumToRender={20}
                 maintainVisibleContentPosition={{
                   minIndexForVisible: 0,
-                  autoscrollToTopThreshold: 100,
+                  autoscrollToTopThreshold: 100
                 }}
                 style={styles.flatList}
                 ListHeaderComponent={
                   isSending ? (
                     <TypingIndicator />
                   ) : messagesError ? (
-                    <View style={[styles.errorBanner, { backgroundColor: colors.danger + '15' }]}>
-                      <AlertCircle size={16} color={colors.danger} />
-                      <Text style={[styles.errorText, { color: colors.danger }]}>{messagesError}</Text>
+                    <View style={styles.errorBanner}>
+                      <Ionicons name="alert-circle" size={16} color={DashboardColors.danger} />
+                      <Text style={styles.errorBannerText}>{messagesError}</Text>
                     </View>
                   ) : null
                 }
@@ -483,259 +521,338 @@ export default function LoggyScreen() {
         isDangerous
         onConfirm={confirmDelete}
         onCancel={() => {
-          setShowDeleteDialog(false);
-          setConversationToDelete(null);
+          setShowDeleteDialog(false)
+          setConversationToDelete(null)
         }}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary
   },
-  contentArea: {
+  content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
-    overflow: 'hidden',
+    backgroundColor: DashboardColors.background
   },
-  deleteButton: {
-    padding: Spacing.sm,
-  },
+
+  // Search
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    gap: Spacing.sm,
-    borderWidth: 1,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.md,
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.surface,
     borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
   },
   searchInput: {
     flex: 1,
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
   },
+
+  // List
   listContent: {
-    flexGrow: 1,
-    paddingBottom: 100,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing.xl
   },
-  conversationItem: {
+
+  // Card
+  card: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.md
+  },
+  cardActive: {
+    backgroundColor: DashboardColors.primaryGlow,
+    borderWidth: 1,
+    borderColor: DashboardColors.primary
+  },
+  cardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    paddingLeft: Spacing.lg,
-    paddingRight: Spacing.sm,
-    borderBottomWidth: 1,
+    alignItems: 'center'
   },
-  conversationTouchable: {
+  cardIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  cardHeaderContent: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginLeft: DashboardSpacing.sm,
+    marginRight: DashboardSpacing.md
   },
-  conversationIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  conversationContent: {
-    flex: 1,
-    marginRight: Spacing.sm,
-  },
-  conversationTitle: {
-    ...Typography.bodyMD,
-    fontWeight: '500',
-  },
-  conversationTime: {
-    ...Typography.bodyXS,
-    marginTop: 2,
-  },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing['4xl'],
-  },
-  stateIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xl,
-  },
-  stateTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
-  },
-  stateText: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
-  },
-  retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
+  cardTitle: {
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: 2
+  },
+  cardTime: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted
+  },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+
+  // Empty State
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing['3xl']
+  },
+  emptyIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  emptyTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
+  },
+  emptyText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24
   },
   startButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing['5xl'],
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    minWidth: 320,
-    ...(Platform.OS === 'android' && {
-      flexShrink: 0,
-    }),
+    gap: DashboardSpacing.sm,
+    marginTop: DashboardSpacing.xl,
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary,
+    minWidth: 220
   },
   startButtonText: {
     color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-    flexShrink: 0,
-    ...(Platform.OS === 'android' && {
-      includeFontPadding: false,
-      textAlignVertical: 'center',
-    }),
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600'
   },
-  chatContainer: {
+
+  // Error State
+  errorState: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
+  },
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  errorTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
+  },
+  retryButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  },
+
+  // Chat View
+  chatContainer: {
+    flex: 1
   },
   messagesContainer: {
-    flex: 1,
+    flex: 1
   },
   flatList: {
-    flex: 1,
+    flex: 1
   },
   messagesList: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.md,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingTop: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing.md
   },
   centerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: DashboardSpacing.xl
   },
   loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.md
   },
-  errorTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.lg,
+  errorIconLarge: {
+    marginBottom: DashboardSpacing.md
+  },
+  chatErrorTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginTop: DashboardSpacing.lg
+  },
+  chatErrorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
+    marginTop: DashboardSpacing.sm
   },
   emptyStateContainer: {
     flex: 1,
-    paddingTop: Spacing['3xl'],
-    paddingBottom: Spacing.xl,
+    paddingTop: DashboardSpacing['3xl'],
+    paddingBottom: DashboardSpacing.xl
   },
   emptyStateContent: {
     alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-    marginBottom: Spacing.xl,
+    paddingHorizontal: DashboardSpacing.xl,
+    marginBottom: DashboardSpacing.xl
   },
-  emptyStateIcon: {
+  chatEmptyIcon: {
     width: 80,
     height: 80,
     borderRadius: 40,
+    backgroundColor: DashboardColors.primaryGlow,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: DashboardSpacing.lg
   },
-  emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
+  chatEmptyTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
   },
-  emptyText: {
-    ...Typography.bodyMD,
+  chatEmptyText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: DashboardSpacing.md
   },
   quickSuggestionsWrapper: {
     flex: 1,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: DashboardSpacing.lg
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
+    gap: DashboardSpacing.sm,
+    padding: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.md,
+    backgroundColor: DashboardColors.dangerBg,
+    marginBottom: DashboardSpacing.md
   },
-  errorText: {
-    ...Typography.bodySM,
-    flex: 1,
+  errorBannerText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.danger,
+    flex: 1
   },
+
+  // Overlay
   overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: Spacing.xl,
+    padding: DashboardSpacing.xl
   },
   overlayContent: {
     maxWidth: 400,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing['2xl'],
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing['2xl'],
     alignItems: 'center',
-    ...Shadows.lg,
+    backgroundColor: DashboardColors.surface,
+    ...DashboardShadows.lg
   },
   overlayIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: DashboardSpacing.lg
   },
   overlayTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
   },
   overlayText: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
     textAlign: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: DashboardSpacing.xl,
+    lineHeight: 22
   },
   overlayButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    gap: DashboardSpacing.sm,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary
   },
   overlayButtonText: {
     color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-});
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600'
+  }
+})

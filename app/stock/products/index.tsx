@@ -224,7 +224,7 @@ export default function ProductsScreen() {
 
   // BottomSheet ref
   const filterBottomSheetRef = useRef<BottomSheetModal>(null)
-  const snapPoints = useMemo(() => ['50%'], [])
+  const snapPoints = useMemo(() => ['92%'], [])
 
   // API state
   const [products, setProducts] = useState<Product[]>([])
@@ -480,7 +480,7 @@ export default function ProductsScreen() {
         )}
       </View>
 
-      {/* Filter BottomSheet */}
+      {/* Filter BottomSheet - iOS Modal Style */}
       <BottomSheetModal
         ref={filterBottomSheetRef}
         snapPoints={snapPoints}
@@ -497,7 +497,7 @@ export default function ProductsScreen() {
             <View style={styles.bottomSheetHeaderIcon}>
               <Ionicons name="funnel" size={20} color={DashboardColors.primary} />
             </View>
-            <Text style={styles.bottomSheetTitle}>Durum Filtresi</Text>
+            <Text style={styles.bottomSheetTitle}>Ürün Durumu</Text>
             <TouchableOpacity
               onPress={() => filterBottomSheetRef.current?.dismiss()}
               style={styles.bottomSheetCloseButton}

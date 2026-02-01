@@ -176,11 +176,12 @@ export default function MoreScreen() {
         { icon: 'swap-horizontal', label: 'Mali Hareketler', route: '/transactions', color: '#6366f1' },
         { icon: 'people', label: 'Cariler', route: '/contacts', color: '#f59e0b' },
         { icon: 'document', label: 'Faturalar', route: '/finance/invoices', color: '#ef4444' },
-        { icon: 'cube', label: 'Ürünler', route: '/products', color: '#10b981' },
+        { icon: 'cube', label: 'Ürünler', route: '/stock/products', color: '#10b981' },
         { icon: 'pricetag', label: 'Markalar', route: '/stock/brands', color: '#8b5cf6' },
         { icon: 'layers', label: 'Modeller', route: '/stock/models', color: '#06b6d4' },
         { icon: 'file-tray-full', label: 'Kategoriler', route: '/stock/categories', color: '#10b981' },
-        { icon: 'home', label: 'Depolar', route: '/warehouse', color: '#3b82f6' }
+        { icon: 'home', label: 'Depolar', route: '/warehouse', color: '#3b82f6' },
+        { icon: 'swap-horizontal', label: 'Stok Hareketleri', route: '/stock/movements', color: '#ec4899' }
       ]
     },
     {
