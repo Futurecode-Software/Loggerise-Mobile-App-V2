@@ -56,7 +56,8 @@
       "Bash(then echo \"✓ $path\")",
       "Bash(else echo \"✗ $path EKSIK\")",
       "Bash(fi)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(Remove-Item \"C:\\\\LoggeriseMobile\\\\app\\\\finance\\\\invoices\\\\[id].tsx\" -Force)"
     ]
   },
   "enableAllProjectMcpServers": true,

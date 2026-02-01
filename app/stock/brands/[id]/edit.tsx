@@ -1,7 +1,7 @@
 /**
- * Yeni Marka Ekleme Sayfasi
+ * Marka Duzenleme Sayfasi
  *
- * Yeni marka olusturma ekrani.
+ * Marka duzenleme ekrani.
  * CLAUDE.md tasarim ilkelerine uyumlu.
  */
 
@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   ActivityIndicator
 } from 'react-native'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -33,10 +33,15 @@ import {
   DashboardBorderRadius
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui'
-import { createProductBrand, BrandFormData } from '@/services/endpoints/products'
+import {
+  getProductBrand,
+  updateProductBrand,
+  BrandFormData
+} from '@/services/endpoints/products'
 import { getErrorMessage, getValidationErrors } from '@/services/api'
 
-export default function NewBrandScreen() {
+export default function BrandEditScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>()
   const insets = useSafeAreaInsets()
 
   // Animasyonlu orb'lar icin shared values
@@ -90,7 +95,39 @@ export default function NewBrandScreen() {
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Marka verilerini yukle
+  useEffect(() => {
+    const loadBrand = async () => {
+      if (!id) return
+
+      try {
+        const data = await getProductBrand(parseInt(id, 10))
+
+        setFormData({
+          name: data.name || '',
+          description: data.description || '',
+          is_active: data.is_active !== false
+        })
+      } catch {
+        Toast.show({
+          type: 'error',
+          text1: 'Marka bilgileri yuklenemedi',
+          position: 'top',
+          visibilityTime: 1500
+        })
+        setTimeout(() => {
+          router.back()
+        }, 1500)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadBrand()
+  }, [id])
 
   // Input degisiklik handler'i
   const handleInputChange = useCallback((field: keyof BrandFormData, value: any) => {
@@ -135,13 +172,15 @@ export default function NewBrandScreen() {
       return
     }
 
+    if (!id) return
+
     setIsSubmitting(true)
     try {
-      await createProductBrand(formData)
+      await updateProductBrand(parseInt(id, 10), formData)
 
       Toast.show({
         type: 'success',
-        text1: 'Marka basariyla olusturuldu',
+        text1: 'Marka basariyla guncellendi',
         position: 'top',
         visibilityTime: 1500
       })
@@ -167,7 +206,39 @@ export default function NewBrandScreen() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, validateForm])
+  }, [id, formData, validateForm])
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Marka Duzenle</Text>
+              </View>
+              <View style={styles.saveButton} />
+            </View>
+          </View>
+          <View style={styles.bottomCurve} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Marka bilgileri yukleniyor...</Text>
+        </View>
+      </View>
+    )
+  }
 
   return (
     <View style={styles.container}>
@@ -193,7 +264,7 @@ export default function NewBrandScreen() {
 
             {/* Orta: Baslik */}
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Yeni Marka</Text>
+              <Text style={styles.headerTitle}>Marka Duzenle</Text>
             </View>
 
             {/* Sag: Kaydet Butonu */}
@@ -352,6 +423,16 @@ const styles = StyleSheet.create({
     backgroundColor: DashboardColors.background,
     borderTopLeftRadius: DashboardBorderRadius['2xl'],
     borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.md
+  },
+  loadingText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary
   },
   content: {
     flex: 1

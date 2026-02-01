@@ -1,8 +1,8 @@
 /**
- * New Invoice Screen
+ * Edit Invoice Screen
  *
- * Yeni fatura oluşturma ekranı.
- * Backend MobileInvoiceRequest validation kurallarına uyumlu.
+ * Fatura düzenleme ekranı.
+ * Backend MobileUpdateInvoiceRequest validation kurallarına uyumlu.
  * Modern tasarım - CLAUDE.md form sayfası standardına uygun.
  */
 
@@ -15,7 +15,7 @@ import {
   TextInput,
   ActivityIndicator
 } from 'react-native'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -36,13 +36,15 @@ import {
   DashboardShadows
 } from '@/constants/dashboard-theme'
 import {
-  createInvoice,
+  getInvoice,
+  updateInvoice,
   InvoiceFormData,
   InvoiceType,
   InvoiceStatus,
   PaymentStatus,
   CurrencyType,
-  InvoiceItem
+  InvoiceItem,
+  Invoice
 } from '@/services/endpoints/invoices'
 import { Contact, getContacts, ContactAddress, getContactAddresses } from '@/services/endpoints/contacts'
 import { Warehouse, getWarehouses } from '@/services/endpoints/warehouses'
@@ -54,6 +56,7 @@ import {
   SelectOption
 } from '@/components/modals'
 import { formatCurrency } from '@/utils/currency'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // Type picker options
 const INVOICE_TYPES: Array<{ value: InvoiceType; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
@@ -101,8 +104,10 @@ const CURRENCY_OPTIONS: Array<{ value: CurrencyType; label: string }> = [
   { value: 'XDR', label: 'Özel Çekme Hakkı (XDR)' }
 ]
 
-export default function NewInvoiceScreen() {
+export default function EditInvoiceScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>()
   const insets = useSafeAreaInsets()
+  const invoiceId = id ? parseInt(id, 10) : null
 
   // Animasyonlu orb'lar için shared values
   const orb1TranslateY = useSharedValue(0)
@@ -154,6 +159,18 @@ export default function NewInvoiceScreen() {
   const warehouseModalRef = useRef<SearchableSelectModalRef>(null)
   const productModalRef = useRef<SearchableSelectModalRef>(null)
 
+  // Loading states
+  const [isLoadingInvoice, setIsLoadingInvoice] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false)
+  const [isLoadingContactAddresses, setIsLoadingContactAddresses] = useState(false)
+  const [isLoadingWarehouses, setIsLoadingWarehouses] = useState(false)
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  // Original invoice data
+  const [originalInvoice, setOriginalInvoice] = useState<Invoice | null>(null)
+
   // Form state
   const [type, setType] = useState<InvoiceType>('sale')
   const [status, setStatus] = useState<InvoiceStatus>('draft')
@@ -173,25 +190,95 @@ export default function NewInvoiceScreen() {
   const [items, setItems] = useState<InvoiceItem[]>([])
   const [currentItemIndex, setCurrentItemIndex] = useState<number | null>(null)
 
-  // Loading states
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoadingContacts, setIsLoadingContacts] = useState(false)
-  const [isLoadingContactAddresses, setIsLoadingContactAddresses] = useState(false)
-  const [isLoadingWarehouses, setIsLoadingWarehouses] = useState(false)
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
-
   // Data for modals
   const [contacts, setContacts] = useState<Contact[]>([])
   const [contactAddresses, setContactAddresses] = useState<ContactAddress[]>([])
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [products, setProducts] = useState<Product[]>([])
 
+  // Load invoice data
+  const loadInvoiceData = useCallback(async () => {
+    if (!invoiceId) {
+      setLoadError('Geçersiz fatura ID')
+      setIsLoadingInvoice(false)
+      return
+    }
+
+    try {
+      setIsLoadingInvoice(true)
+      setLoadError(null)
+
+      const invoice = await getInvoice(invoiceId)
+      setOriginalInvoice(invoice)
+
+      // Form alanlarını doldur
+      setType(invoice.type)
+      setStatus(invoice.status)
+      setPaymentStatus(invoice.payment_status)
+      setCurrencyType(invoice.currency_type)
+      setCurrencyRate(String(invoice.currency_rate))
+      setInvoiceDate(invoice.invoice_date)
+      setDueDate(invoice.due_date || '')
+      setNotes(invoice.notes || '')
+
+      // Contact bilgisi
+      if (invoice.contact) {
+        setSelectedContact({
+          id: invoice.contact.id,
+          name: invoice.contact.name,
+          code: invoice.contact.code
+        } as Contact)
+
+        // Adresleri yükle
+        if (invoice.contact_id) {
+          await loadContactAddresses(invoice.contact_id, invoice.contact_address_id)
+        }
+      }
+
+      // Warehouse bilgisi
+      if (invoice.warehouse) {
+        setSelectedWarehouse({
+          id: invoice.warehouse.id,
+          name: invoice.warehouse.name,
+          code: invoice.warehouse.code
+        } as Warehouse)
+      }
+
+      // Fatura kalemleri
+      if (invoice.items && invoice.items.length > 0) {
+        setItems(invoice.items.map(item => ({
+          id: item.id,
+          product_id: item.product_id,
+          description: item.description || item.product?.name || '',
+          quantity: item.quantity,
+          unit: item.unit,
+          unit_price: item.unit_price,
+          vat_rate: item.vat_rate,
+          vat_amount: item.vat_amount,
+          sub_total: item.sub_total,
+          total: item.total
+        })))
+      }
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Fatura bilgileri yüklenemedi')
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Fatura yüklenemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsLoadingInvoice(false)
+    }
+  }, [invoiceId])
+
   // Load data on mount
   useEffect(() => {
+    loadInvoiceData()
     loadContacts()
     loadWarehouses()
     loadProducts()
-  }, [])
+  }, [loadInvoiceData])
 
   const loadContacts = async () => {
     try {
@@ -216,10 +303,6 @@ export default function NewInvoiceScreen() {
       setIsLoadingWarehouses(true)
       const response = await getWarehouses({ is_active: true, per_page: 100 })
       setWarehouses(response.warehouses)
-      // Auto-select first warehouse if available
-      if (response.warehouses.length > 0 && !selectedWarehouse) {
-        setSelectedWarehouse(response.warehouses[0])
-      }
     } catch (err) {
       console.error('Warehouses fetch error:', err)
       Toast.show({
@@ -251,7 +334,7 @@ export default function NewInvoiceScreen() {
     }
   }
 
-  const loadContactAddresses = async (contactId: number) => {
+  const loadContactAddresses = async (contactId: number, selectedAddressId?: number) => {
     try {
       setIsLoadingContactAddresses(true)
       const response = await getContactAddresses(contactId)
@@ -268,6 +351,15 @@ export default function NewInvoiceScreen() {
         })
         setSelectedContactAddress(null)
         return
+      }
+
+      // Eğer mevcut bir adres ID'si varsa onu seç
+      if (selectedAddressId) {
+        const existingAddress = response.addresses.find(addr => addr.id === selectedAddressId)
+        if (existingAddress) {
+          setSelectedContactAddress(existingAddress)
+          return
+        }
       }
 
       // Otomatik adres seçimi
@@ -293,8 +385,15 @@ export default function NewInvoiceScreen() {
     }
   }
 
-  // Fetch exchange rate when currency changes
+  // Fetch exchange rate when currency changes (only if user changes it manually)
+  const [initialCurrencyLoaded, setInitialCurrencyLoaded] = useState(false)
+
   useEffect(() => {
+    if (!initialCurrencyLoaded) {
+      setInitialCurrencyLoaded(true)
+      return
+    }
+
     const fetchRate = async () => {
       if (currencyType === 'TRY') {
         setCurrencyRate('1')
@@ -323,7 +422,7 @@ export default function NewInvoiceScreen() {
     }
 
     fetchRate()
-  }, [currencyType])
+  }, [currencyType, initialCurrencyLoaded])
 
   // Transform data for modals
   const currencyOptions: SelectOption[] = CURRENCY_OPTIONS.map((option) => ({
@@ -484,6 +583,8 @@ export default function NewInvoiceScreen() {
   }, [])
 
   const handleSubmit = async () => {
+    if (!invoiceId) return
+
     const validationError = validateForm()
     if (validationError) {
       Toast.show({
@@ -526,21 +627,21 @@ export default function NewInvoiceScreen() {
         }))
       }
 
-      await createInvoice(formData)
+      await updateInvoice(invoiceId, formData)
 
       Toast.show({
         type: 'success',
-        text1: 'Fatura başarıyla oluşturuldu',
+        text1: 'Fatura başarıyla güncellendi',
         position: 'top',
         visibilityTime: 1500
       })
 
       router.back()
     } catch (err) {
-      console.error('Invoice creation error:', err)
+      console.error('Invoice update error:', err)
       Toast.show({
         type: 'error',
-        text1: err instanceof Error ? err.message : 'Fatura oluşturulamadı',
+        text1: err instanceof Error ? err.message : 'Fatura güncellenemedi',
         position: 'top',
         visibilityTime: 1500
       })
@@ -558,6 +659,96 @@ export default function NewInvoiceScreen() {
       <Text style={styles.sectionTitle}>{title}</Text>
     </View>
   )
+
+  // Loading state
+  if (isLoadingInvoice) {
+    return (
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Skeleton width={120} height={22} />
+              </View>
+              <View style={styles.headerButton}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            </View>
+          </View>
+          <View style={styles.bottomCurve} />
+        </View>
+
+        {/* Loading content */}
+        <View style={styles.loadingContent}>
+          {[1, 2, 3, 4].map(i => (
+            <View key={i} style={styles.skeletonCard}>
+              <Skeleton width="40%" height={20} style={{ marginBottom: 12 }} />
+              <Skeleton width="100%" height={48} style={{ marginBottom: 8 }} />
+              <Skeleton width="70%" height={48} />
+            </View>
+          ))}
+        </View>
+      </View>
+    )
+  }
+
+  // Error state
+  if (loadError || !originalInvoice) {
+    return (
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Fatura Düzenle</Text>
+              </View>
+              <View style={{ width: 40 }} />
+            </View>
+          </View>
+          <View style={styles.bottomCurve} />
+        </View>
+
+        {/* Error content */}
+        <View style={styles.errorState}>
+          <View style={styles.errorIcon}>
+            <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+          </View>
+          <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+          <Text style={styles.errorText}>{loadError || 'Fatura bulunamadı'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadInvoiceData}>
+            <Ionicons name="refresh" size={18} color="#fff" />
+            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )
+  }
 
   return (
     <View style={styles.container}>
@@ -583,7 +774,7 @@ export default function NewInvoiceScreen() {
 
             {/* Orta: Başlık */}
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Yeni Fatura</Text>
+              <Text style={styles.headerTitle}>Fatura Düzenle</Text>
             </View>
 
             {/* Sağ: Kaydet Butonu */}
@@ -1114,7 +1305,7 @@ export default function NewInvoiceScreen() {
           ) : (
             <>
               <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
-              <Text style={styles.submitButtonText}>Fatura Oluştur</Text>
+              <Text style={styles.submitButtonText}>Değişiklikleri Kaydet</Text>
             </>
           )}
         </TouchableOpacity>
@@ -1257,6 +1448,17 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: DashboardSpacing.lg,
     paddingBottom: DashboardSpacing['3xl']
+  },
+  loadingContent: {
+    flex: 1,
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
+  },
+  skeletonCard: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    ...DashboardShadows.sm
   },
   section: {
     backgroundColor: DashboardColors.surface,
@@ -1645,6 +1847,51 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: DashboardFontSizes.lg,
     fontWeight: '700',
+    color: '#fff'
+  },
+
+  // Error state
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
+  },
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  errorTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
+  },
+  retryButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
     color: '#fff'
   }
 })

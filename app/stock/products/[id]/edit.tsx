@@ -1,7 +1,7 @@
 /**
- * New Product Screen
+ * Product Edit Screen
  *
- * Yeni ürün oluşturma ekranı - CLAUDE.md tasarım ilkeleri ile uyumlu
+ * Ürün düzenleme ekranı - CLAUDE.md tasarım ilkeleri ile uyumlu
  */
 
 import React, { useState, useCallback, useEffect } from 'react'
@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator
 } from 'react-native'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -34,7 +34,8 @@ import {
 import { Input } from '@/components/ui'
 import { SelectInput } from '@/components/ui/select-input'
 import {
-  createProduct,
+  getProduct,
+  updateProduct,
   getProductBrands,
   getProductCategories,
   getProductModels,
@@ -68,7 +69,8 @@ const UNIT_OPTIONS = [
   { label: 'Saat (HUR)', value: 'HUR' }
 ]
 
-export default function NewProductScreen() {
+export default function ProductEditScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>()
   const insets = useSafeAreaInsets()
 
   // Animasyonlu orb'lar için shared values
@@ -140,6 +142,7 @@ export default function NewProductScreen() {
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Seçenekleri yükle
@@ -163,6 +166,49 @@ export default function NewProductScreen() {
     }
     fetchOptions()
   }, [])
+
+  // Ürün verilerini yükle
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (!id) return
+
+      try {
+        const data = await getProduct(parseInt(id, 10))
+
+        setFormData({
+          name: data.name || '',
+          code: data.code || '',
+          description: data.description || '',
+          product_type: data.product_type || 'goods',
+          unit: data.unit || 'NIU',
+          product_brand_id: data.product_brand_id,
+          product_model_id: data.product_model_id,
+          product_category_id: data.product_category_id,
+          purchase_price: data.purchase_price,
+          sale_price: data.sale_price,
+          vat_rate: data.vat_rate,
+          min_stock_level: data.min_stock_level,
+          max_stock_level: data.max_stock_level,
+          barcode: data.barcode || '',
+          is_active: data.is_active !== false
+        })
+      } catch {
+        Toast.show({
+          type: 'error',
+          text1: 'Ürün bilgileri yüklenemedi',
+          position: 'top',
+          visibilityTime: 1500
+        })
+        setTimeout(() => {
+          router.back()
+        }, 1500)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadProduct()
+  }, [id])
 
   // Input değişiklik handler'ı
   const handleInputChange = useCallback((field: keyof ProductFormData, value: any) => {
@@ -206,13 +252,15 @@ export default function NewProductScreen() {
       return
     }
 
+    if (!id) return
+
     setIsSubmitting(true)
     try {
-      await createProduct(formData)
+      await updateProduct(parseInt(id, 10), formData)
 
       Toast.show({
         type: 'success',
-        text1: 'Ürün başarıyla oluşturuldu',
+        text1: 'Ürün başarıyla güncellendi',
         position: 'top',
         visibilityTime: 1500
       })
@@ -238,7 +286,7 @@ export default function NewProductScreen() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, validateForm])
+  }, [id, formData, validateForm])
 
   // Select options
   const brandOptions = [
@@ -265,6 +313,38 @@ export default function NewProductScreen() {
     }))
   ]
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Ürün Düzenle</Text>
+              </View>
+              <View style={styles.saveButton} />
+            </View>
+          </View>
+          <View style={styles.bottomCurve} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Ürün bilgileri yükleniyor...</Text>
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View style={styles.container}>
       {/* Header with gradient and animated orbs */}
@@ -289,7 +369,7 @@ export default function NewProductScreen() {
 
             {/* Orta: Başlık */}
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Yeni Ürün</Text>
+              <Text style={styles.headerTitle}>Ürün Düzenle</Text>
             </View>
 
             {/* Sağ: Kaydet Butonu */}
@@ -619,6 +699,16 @@ const styles = StyleSheet.create({
     backgroundColor: DashboardColors.background,
     borderTopLeftRadius: DashboardBorderRadius['2xl'],
     borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.md
+  },
+  loadingText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary
   },
   content: {
     flex: 1

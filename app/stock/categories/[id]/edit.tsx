@@ -1,11 +1,11 @@
 /**
- * Yeni Marka Ekleme Sayfasi
+ * Kategori Düzenleme Sayfası
  *
- * Yeni marka olusturma ekrani.
- * CLAUDE.md tasarim ilkelerine uyumlu.
+ * Mevcut kategoriyi düzenleme ekranı.
+ * CLAUDE.md tasarım ilkelerine uygun - animasyonlu header orb'ları.
  */
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   ActivityIndicator
 } from 'react-native'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -26,6 +26,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import Toast from 'react-native-toast-message'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -33,13 +34,22 @@ import {
   DashboardBorderRadius
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui'
-import { createProductBrand, BrandFormData } from '@/services/endpoints/products'
+import { SelectInput } from '@/components/ui/select-input'
+import {
+  getProductCategory,
+  updateProductCategory,
+  getProductCategories,
+  CategoryFormData,
+  ProductCategory
+} from '@/services/endpoints/products'
 import { getErrorMessage, getValidationErrors } from '@/services/api'
 
-export default function NewBrandScreen() {
+export default function EditCategoryScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>()
   const insets = useSafeAreaInsets()
+  const categoryId = id ? parseInt(id, 10) : null
 
-  // Animasyonlu orb'lar icin shared values
+  // Animasyonlu orb'lar için shared values
   const orb1TranslateY = useSharedValue(0)
   const orb2TranslateX = useSharedValue(0)
   const orb1Scale = useSharedValue(1)
@@ -82,21 +92,74 @@ export default function NewBrandScreen() {
     ]
   }))
 
+  // State
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [parentCategories, setParentCategories] = useState<ProductCategory[]>([])
+  const [isLoadingParents, setIsLoadingParents] = useState(true)
+
   // Form state
-  const [formData, setFormData] = useState<BrandFormData>({
+  const [formData, setFormData] = useState<CategoryFormData>({
     name: '',
     description: '',
+    parent_id: null,
     is_active: true
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Input degisiklik handler'i
-  const handleInputChange = useCallback((field: keyof BrandFormData, value: any) => {
+  // Kategori verilerini çek
+  useEffect(() => {
+    const fetchCategoryData = async () => {
+      if (!categoryId) {
+        setIsLoadingData(false)
+        return
+      }
+
+      try {
+        const data = await getProductCategory(categoryId)
+        setFormData({
+          name: data.name,
+          description: data.description || '',
+          parent_id: data.parent_id || null,
+          is_active: data.is_active
+        })
+      } catch (err) {
+        Toast.show({
+          type: 'error',
+          text1: err instanceof Error ? err.message : 'Kategori yüklenemedi',
+          position: 'top',
+          visibilityTime: 1500
+        })
+        router.back()
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+    fetchCategoryData()
+  }, [categoryId])
+
+  // Parent kategorileri çek
+  useEffect(() => {
+    const fetchParentCategories = async () => {
+      try {
+        const response = await getProductCategories({ is_active: true, per_page: 100 })
+        // Kendisini filtreleme - döngüyü önlemek için
+        setParentCategories(response.categories.filter(cat => cat.id !== categoryId))
+      } catch (err) {
+        console.error('Failed to fetch parent categories:', err)
+      } finally {
+        setIsLoadingParents(false)
+      }
+    }
+    fetchParentCategories()
+  }, [categoryId])
+
+  // Input değişiklik handler'ı
+  const handleInputChange = useCallback((field: keyof CategoryFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
 
-    // Bu alan icin hatayi temizle
+    // Bu alan için hatayı temizle
     if (errors[field]) {
       setErrors(prevErrors => {
         const newErrors = { ...prevErrors }
@@ -106,12 +169,12 @@ export default function NewBrandScreen() {
     }
   }, [errors])
 
-  // Dogrulama
+  // Validation
   const validateForm = useCallback((): boolean => {
     const newErrors: Record<string, string> = {}
 
     if (!formData.name?.trim()) {
-      newErrors.name = 'Marka adi zorunludur.'
+      newErrors.name = 'Kategori adı zorunludur.'
     }
 
     setErrors(newErrors)
@@ -123,12 +186,14 @@ export default function NewBrandScreen() {
     router.back()
   }, [])
 
-  // Form gonderimi
+  // Form gönderimi
   const handleSubmit = useCallback(async () => {
+    if (!categoryId) return
+
     if (!validateForm()) {
       Toast.show({
         type: 'error',
-        text1: 'Lutfen zorunlu alanlari doldurunuz',
+        text1: 'Lütfen zorunlu alanları doldurunuz',
         position: 'top',
         visibilityTime: 1500
       })
@@ -137,11 +202,11 @@ export default function NewBrandScreen() {
 
     setIsSubmitting(true)
     try {
-      await createProductBrand(formData)
+      await updateProductCategory(categoryId, formData)
 
       Toast.show({
         type: 'success',
-        text1: 'Marka basariyla olusturuldu',
+        text1: 'Kategori başarıyla güncellendi',
         position: 'top',
         visibilityTime: 1500
       })
@@ -167,7 +232,16 @@ export default function NewBrandScreen() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, validateForm])
+  }, [categoryId, formData, validateForm])
+
+  // Parent category options for select
+  const parentOptions = [
+    { label: 'Üst kategori yok', value: '' },
+    ...parentCategories.map((cat) => ({
+      label: cat.name,
+      value: String(cat.id)
+    }))
+  ]
 
   return (
     <View style={styles.container}>
@@ -180,7 +254,7 @@ export default function NewBrandScreen() {
           style={StyleSheet.absoluteFill}
         />
 
-        {/* Dekoratif isik efektleri - Animasyonlu */}
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
         <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
         <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
 
@@ -191,16 +265,16 @@ export default function NewBrandScreen() {
               <Ionicons name="chevron-back" size={24} color="#fff" />
             </TouchableOpacity>
 
-            {/* Orta: Baslik */}
+            {/* Orta: Başlık */}
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Yeni Marka</Text>
+              <Text style={styles.headerTitle}>Kategori Düzenle</Text>
             </View>
 
-            {/* Sag: Kaydet Butonu */}
+            {/* Sağ: Kaydet Butonu */}
             <TouchableOpacity
               onPress={handleSubmit}
-              disabled={isSubmitting}
-              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
+              disabled={isSubmitting || isLoadingData}
+              style={[styles.saveButton, (isSubmitting || isLoadingData) && styles.saveButtonDisabled]}
             >
               {isSubmitting ? (
                 <ActivityIndicator size="small" color="#fff" />
@@ -220,56 +294,104 @@ export default function NewBrandScreen() {
         contentContainerStyle={styles.contentContainer}
         bottomOffset={20}
       >
-        {/* Marka Bilgileri Bolumu */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <Ionicons name="pricetag-outline" size={18} color={DashboardColors.primary} />
+        {isLoadingData ? (
+          // Loading skeleton
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Skeleton width={36} height={36} borderRadius={12} />
+              <Skeleton width={150} height={20} />
             </View>
-            <Text style={styles.sectionTitle}>Marka Bilgileri</Text>
-          </View>
-
-          <View style={styles.sectionContent}>
-            <Input
-              label="Marka Adi *"
-              placeholder="Orn: Apple"
-              value={formData.name}
-              onChangeText={(text) => handleInputChange('name', text)}
-              error={errors.name}
-            />
-
-            <Input
-              label="Aciklama"
-              placeholder="Opsiyonel"
-              value={formData.description}
-              onChangeText={(text) => handleInputChange('description', text)}
-              error={errors.description}
-              multiline
-              numberOfLines={3}
-            />
-
-            {/* Aktif/Pasif Toggle */}
-            <TouchableOpacity
-              style={styles.toggleRow}
-              onPress={() => handleInputChange('is_active', !formData.is_active)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.toggleContent}>
-                <Text style={styles.toggleLabel}>Aktif Marka</Text>
-                <Text style={styles.toggleDescription}>Bu marka kullanima acik olacak</Text>
+            <View style={styles.sectionContent}>
+              <View style={styles.skeletonInput}>
+                <Skeleton width={100} height={14} style={{ marginBottom: 8 }} />
+                <Skeleton width="100%" height={48} borderRadius={12} />
               </View>
-              <View style={[
-                styles.toggleSwitch,
-                formData.is_active && styles.toggleSwitchActive
-              ]}>
+              <View style={styles.skeletonInput}>
+                <Skeleton width={80} height={14} style={{ marginBottom: 8 }} />
+                <Skeleton width="100%" height={80} borderRadius={12} />
+              </View>
+              <View style={styles.skeletonInput}>
+                <Skeleton width={90} height={14} style={{ marginBottom: 8 }} />
+                <Skeleton width="100%" height={48} borderRadius={12} />
+              </View>
+            </View>
+          </View>
+        ) : (
+          // Form content
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="folder-outline" size={18} color={DashboardColors.primary} />
+              </View>
+              <Text style={styles.sectionTitle}>Kategori Bilgileri</Text>
+            </View>
+
+            <View style={styles.sectionContent}>
+              <Input
+                label="Kategori Adı *"
+                placeholder="Örn: Elektronik"
+                value={formData.name}
+                onChangeText={(text) => handleInputChange('name', text)}
+                error={errors.name}
+                maxLength={255}
+              />
+
+              <Input
+                label="Açıklama"
+                placeholder="Opsiyonel"
+                value={formData.description}
+                onChangeText={(text) => handleInputChange('description', text)}
+                error={errors.description}
+                multiline
+                numberOfLines={3}
+              />
+
+              {/* Üst Kategori Seçimi */}
+              <View style={styles.selectWrapper}>
+                <Text style={styles.selectLabel}>Üst Kategori</Text>
+                {isLoadingParents ? (
+                  <View style={styles.loadingParent}>
+                    <ActivityIndicator size="small" color={DashboardColors.primary} />
+                    <Text style={styles.loadingText}>Kategoriler yükleniyor...</Text>
+                  </View>
+                ) : (
+                  <SelectInput
+                    options={parentOptions}
+                    selectedValue={formData.parent_id ? String(formData.parent_id) : ''}
+                    onValueChange={(value) =>
+                      handleInputChange('parent_id', value ? Number(value) : null)
+                    }
+                    placeholder="Üst kategori seçin (opsiyonel)"
+                  />
+                )}
+                <Text style={styles.selectHint}>
+                  Boş bırakırsanız ana kategori olarak kalır
+                </Text>
+              </View>
+
+              {/* Aktif/Pasif Toggle */}
+              <TouchableOpacity
+                style={styles.toggleRow}
+                onPress={() => handleInputChange('is_active', !formData.is_active)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.toggleContent}>
+                  <Text style={styles.toggleLabel}>Aktif Kategori</Text>
+                  <Text style={styles.toggleDescription}>Bu kategori kullanıma açık olacak</Text>
+                </View>
                 <View style={[
-                  styles.toggleKnob,
-                  formData.is_active && styles.toggleKnobActive
-                ]} />
-              </View>
-            </TouchableOpacity>
+                  styles.toggleSwitch,
+                  formData.is_active && styles.toggleSwitchActive
+                ]}>
+                  <View style={[
+                    styles.toggleKnob,
+                    formData.is_active && styles.toggleKnobActive
+                  ]} />
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
       </KeyboardAwareScrollView>
     </View>
   )
@@ -390,6 +512,33 @@ const styles = StyleSheet.create({
   sectionContent: {
     padding: DashboardSpacing.lg,
     gap: DashboardSpacing.md
+  },
+  skeletonInput: {
+    marginBottom: DashboardSpacing.md
+  },
+  selectWrapper: {
+    gap: DashboardSpacing.xs
+  },
+  selectLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.xs
+  },
+  selectHint: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted,
+    marginTop: DashboardSpacing.xs
+  },
+  loadingParent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    paddingVertical: DashboardSpacing.md
+  },
+  loadingText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
   toggleRow: {
     flexDirection: 'row',
