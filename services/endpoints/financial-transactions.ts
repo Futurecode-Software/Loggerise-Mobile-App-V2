@@ -148,10 +148,21 @@ export async function getFinancialTransactions(
     const response = await api.get<TransactionsListResponse>('/financial-transactions', {
       params: filters,
     });
+
+    // Güvenli response kontrolü
+    const data = response.data?.data;
+    if (!data) {
+      return {
+        transactions: [],
+        summary: { total_debit: 0, total_credit: 0, total_transactions: 0, net_balance: 0 },
+        pagination: { current_page: 1, per_page: 20, total: 0, last_page: 1, from: null, to: null }
+      };
+    }
+
     return {
-      transactions: response.data.data.financial_transactions,
-      summary: response.data.data.summary,
-      pagination: response.data.data.pagination,
+      transactions: data.financial_transactions || [],
+      summary: data.summary || { total_debit: 0, total_credit: 0, total_transactions: 0, net_balance: 0 },
+      pagination: data.pagination || { current_page: 1, per_page: 20, total: 0, last_page: 1, from: null, to: null },
     };
   } catch (error) {
     const message = getErrorMessage(error);
@@ -165,7 +176,13 @@ export async function getFinancialTransactions(
 export async function getFinancialTransaction(id: number): Promise<FinancialTransaction> {
   try {
     const response = await api.get<TransactionResponse>(`/financial-transactions/${id}`);
-    return response.data.data.financial_transaction;
+
+    const transaction = response.data?.data?.financial_transaction;
+    if (!transaction) {
+      throw new Error('İşlem bulunamadı');
+    }
+
+    return transaction;
   } catch (error) {
     const message = getErrorMessage(error);
     throw new Error(message);
