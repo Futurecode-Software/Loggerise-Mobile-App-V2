@@ -1,10 +1,11 @@
 /**
- * Bank Account Detail Screen
+ * Banka Hesabı Detay Sayfası
  *
- * Shows bank account details with balance information.
+ * Modern tasarım - CLAUDE.md ilkelerine uygun
+ * Referans: cash-register/[id].tsx
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -12,399 +13,798 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+  ActivityIndicator
+} from 'react-native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useFocusEffect } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Edit,
-  Trash2,
-  Landmark,
-  Building2,
-  Hash,
-  CreditCard,
-  Wallet,
-  FileText,
-  AlertCircle,
-  Copy,
-  Check,
-} from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
 import {
   getBank,
   deleteBank,
   Bank,
   formatBalance,
-  getCurrencyLabel,
-} from '@/services/endpoints/banks';
+  getCurrencyLabel
+} from '@/services/endpoints/banks'
 
-export default function BankAccountDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+// Tarih formatlama
+const formatDate = (dateString?: string): string => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
+  } catch {
+    return dateString
+  }
+}
 
-  const [bank, setBank] = useState<Bank | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+// Bölüm başlığı
+interface SectionHeaderProps {
+  title: string
+  icon: keyof typeof Ionicons.glyphMap
+  count?: number
+  isExpanded?: boolean
+  onToggle?: () => void
+}
 
-  // Fetch bank data
-  const fetchBank = useCallback(async () => {
-    if (!id) return;
+function SectionHeader({ title, icon, count, isExpanded, onToggle }: SectionHeaderProps) {
+  return (
+    <TouchableOpacity
+      style={styles.sectionHeader}
+      onPress={onToggle}
+      disabled={!onToggle}
+      activeOpacity={onToggle ? 0.7 : 1}
+    >
+      <View style={styles.sectionHeaderLeft}>
+        <View style={styles.sectionIcon}>
+          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
+        </View>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {count !== undefined && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{count}</Text>
+          </View>
+        )}
+      </View>
+      {onToggle && (
+        <Ionicons
+          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={DashboardColors.textMuted}
+        />
+      )}
+    </TouchableOpacity>
+  )
+}
+
+// Bilgi satırı
+interface InfoRowProps {
+  label: string
+  value: string
+  icon?: keyof typeof Ionicons.glyphMap
+  highlight?: boolean
+}
+
+function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={styles.infoLabel}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={14}
+            color={DashboardColors.textMuted}
+            style={styles.infoIcon}
+          />
+        )}
+        <Text style={styles.infoLabelText}>{label}</Text>
+      </View>
+      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
+        {value}
+      </Text>
+    </View>
+  )
+}
+
+export default function BankDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const bankId = id ? parseInt(id, 10) : null
+
+  // State
+  const [bank, setBank] = useState<Bank | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Refs
+  const isMountedRef = useRef(true)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
+
+  // Veri çekme
+  const fetchBank = useCallback(async (showLoading = true) => {
+    if (!bankId) {
+      setError('Geçersiz banka hesabı ID')
+      setIsLoading(false)
+      return
+    }
 
     try {
-      setError(null);
-      const data = await getBank(parseInt(id, 10));
-      setBank(data);
+      if (showLoading) {
+        setIsLoading(true)
+        setError(null)
+      }
+
+      const data = await getBank(bankId)
+
+      if (isMountedRef.current) {
+        setBank(data)
+        setError(null)
+      }
     } catch (err) {
-      console.error('Bank fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Banka hesabı bilgileri yüklenemedi');
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Banka hesabı bilgileri yüklenemedi')
+      }
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
     }
-  }, [id]);
+  }, [bankId])
 
   useEffect(() => {
-    fetchBank();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    isMountedRef.current = true
+    fetchBank()
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchBank();
-  };
-
-  // Delete bank
-  const handleDelete = () => {
-    setShowDeleteConfirm(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!id) return;
-    setIsDeleting(true);
-    try {
-      await deleteBank(parseInt(id, 10));
-      success('Başarılı', 'Banka hesabı silindi.');
-      router.back();
-    } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Banka hesabı silinemedi.');
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
+    return () => {
+      isMountedRef.current = false
     }
-  };
+  }, [fetchBank])
 
-  // Copy to clipboard
-  const handleCopy = (field: string, value: string) => {
-    // In a real app, use Clipboard.setString(value)
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(null), 2000);
-  };
+  // Edit sayfasından dönüşte yenile
+  useFocusEffect(
+    useCallback(() => {
+      fetchBank(false)
+    }, [fetchBank])
+  )
 
-  // Render info row
-  const renderInfoRow = (
-    label: string,
-    value?: string | number | boolean,
-    icon?: any,
-    copyable?: boolean,
-    copyKey?: string
-  ) => {
-    if (value === undefined || value === null || value === '') return null;
-    const Icon = icon;
-    const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayır') : String(value);
+  // Yenileme
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    fetchBank(false)
+  }, [fetchBank])
 
-    return (
-      <View style={styles.infoRow}>
-        <View style={styles.infoRowLeft}>
-          {Icon && <Icon size={16} color={colors.textMuted} />}
-          <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}:</Text>
-        </View>
-        <View style={styles.infoRowRight}>
-          <Text style={[styles.infoValue, { color: colors.text }]}>{displayValue}</Text>
-          {copyable && copyKey && (
-            <TouchableOpacity onPress={() => handleCopy(copyKey, displayValue)}>
-              {copiedField === copyKey ? (
-                <Check size={16} color={colors.success} />
-              ) : (
-                <Copy size={16} color={colors.icon} />
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Banka Hesabı Detayı" showBackButton />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Banka hesabı bilgileri yükleniyor...
-          </Text>
-        </View>
-      </View>
-    );
+  // Düzenleme
+  const handleEdit = () => {
+    if (!bankId) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/bank/${bankId}/edit`)
   }
 
-  // Error state
-  if (error || !bank) {
-    return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Banka Hesabı Detayı" showBackButton />
-        <View style={styles.errorContainer}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            {error || 'Banka hesabı bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchBank}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
+  // Silme dialogunu aç
+  const handleDelete = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    deleteDialogRef.current?.present()
+  }
+
+  // Silme işlemini gerçekleştir
+  const confirmDelete = async () => {
+    if (!bankId) return
+
+    setIsDeleting(true)
+    try {
+      await deleteBank(bankId)
+      deleteDialogRef.current?.dismiss()
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      Toast.show({
+        type: 'success',
+        text1: 'Banka hesabı başarıyla silindi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+
+      setTimeout(() => {
+        router.back()
+      }, 300)
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Banka hesabı silinemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Geri
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-        title={bank.name}
-        showBackButton
-        rightIcons={
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => router.push(`/bank/${bank.id}/edit` as any)}
-            >
-              <Edit size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Trash2 size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </View>
-        }
-      />
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
 
-      {/* Balance Card */}
-      <View style={[styles.balanceCard, { backgroundColor: Brand.primary }]}>
-        <Text style={styles.balanceLabel}>Güncel Bakiye</Text>
-        <Text
-          style={[
-            styles.balanceAmount,
-            bank.balance < 0 && { color: 'rgba(255, 255, 255, 0.8)' },
-          ]}
-        >
-          {formatBalance(bank.balance, bank.currency_type)}
-        </Text>
-        <View style={styles.balanceFooter}>
-          <Badge
-            label={getCurrencyLabel(bank.currency_type)}
-            variant="outline"
-            size="sm"
-            style={{ borderColor: '#FFFFFF', backgroundColor: 'rgba(255,255,255,0.2)' }}
-            textStyle={{ color: '#FFFFFF' }}
-          />
-          <Badge
-            label={bank.is_active ? 'Aktif' : 'Pasif'}
-            variant={bank.is_active ? 'success' : 'default'}
-            size="sm"
-          />
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          {/* Üst Bar: Geri + Başlık + Aksiyonlar */}
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Başlık - Orta */}
+            {isLoading ? (
+              <View style={styles.headerTitleSection}>
+                <Skeleton width={140} height={22} />
+              </View>
+            ) : bank ? (
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerName} numberOfLines={1}>
+                  {bank.name}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.headerTitleSection} />
+            )}
+
+            {/* Aksiyonlar - Sağ */}
+            {!isLoading && bank ? (
+              <View style={styles.headerActions}>
+                <TouchableOpacity style={styles.headerButton} onPress={handleEdit}>
+                  <Ionicons name="create-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.headerButton, styles.deleteButton]}
+                  onPress={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={22} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.headerActionsPlaceholder} />
+            )}
+          </View>
+
+          {/* Bakiye Özeti + Status */}
+          {isLoading ? (
+            <View style={styles.balanceRow}>
+              <View style={styles.balanceSummary}>
+                <Skeleton width={100} height={14} style={{ marginBottom: DashboardSpacing.xs }} />
+                <Skeleton width={160} height={32} />
+              </View>
+              <Skeleton width={70} height={32} borderRadius={16} />
+            </View>
+          ) : bank ? (
+            <View style={styles.balanceRow}>
+              <View style={styles.balanceSummary}>
+                <Text style={styles.balanceLabel}>Güncel Bakiye</Text>
+                <Text
+                  style={[
+                    styles.balanceAmount,
+                    bank.balance < 0 && styles.balanceNegative
+                  ]}
+                >
+                  {formatBalance(bank.balance, bank.currency_type)}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: bank.is_active
+                    ? 'rgba(16, 185, 129, 0.2)'
+                    : 'rgba(239, 68, 68, 0.2)'
+                  }
+                ]}
+              >
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: bank.is_active
+                      ? DashboardColors.success
+                      : DashboardColors.danger
+                    }
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    { color: bank.is_active
+                      ? DashboardColors.success
+                      : DashboardColors.danger
+                    }
+                  ]}
+                >
+                  {bank.is_active ? 'Aktif' : 'Pasif'}
+                </Text>
+              </View>
+            </View>
+          ) : null}
         </View>
+
+        <View style={styles.bottomCurve} />
       </View>
 
-      {/* Details */}
+      {/* İçerik */}
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={DashboardColors.primary}
+          />
         }
       >
-        {/* Banka Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Banka Bilgileri</Text>
-          {renderInfoRow('Banka Adı', bank.name, Landmark)}
-          {bank.bank_code && renderInfoRow('Banka Kodu', bank.bank_code, Hash)}
-          {renderInfoRow('Şube', bank.branch, Building2)}
-          {bank.branch_code && renderInfoRow('Şube Kodu', bank.branch_code, Hash)}
-        </Card>
+        {/* Loading */}
+        {isLoading && (
+          <View style={styles.skeletonContainer}>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={styles.card}>
+                <View style={styles.sectionHeader}>
+                  <Skeleton width={140} height={20} />
+                </View>
+                <View style={styles.cardContent}>
+                  <Skeleton width="100%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="80%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="60%" height={16} />
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
-        {/* Hesap Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Hesap Bilgileri</Text>
-          {bank.account_number && renderInfoRow(
-            'Hesap No',
-            bank.account_number,
-            CreditCard,
-            true,
-            'account_number'
-          )}
-          {bank.iban && renderInfoRow('IBAN', bank.iban, CreditCard, true, 'iban')}
-          {renderInfoRow('Açılış Bakiyesi', formatBalance(bank.opening_balance, bank.currency_type), Wallet)}
-        </Card>
+        {/* Hata */}
+        {!isLoading && (error || !bank) && (
+          <View style={styles.errorState}>
+            <View style={styles.errorIcon}>
+              <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+            </View>
+            <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+            <Text style={styles.errorText}>{error || 'Banka hesabı bulunamadı'}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => fetchBank()}>
+              <Ionicons name="refresh" size={18} color="#fff" />
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-        {/* Açıklama */}
-        {bank.description && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Açıklama</Text>
-            <Text style={[styles.descriptionText, { color: colors.textSecondary }]}>
-              {bank.description}
-            </Text>
-          </Card>
+        {/* Normal içerik */}
+        {!isLoading && bank && (
+          <>
+            {/* Banka Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Banka Bilgileri" icon="business-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Banka Adı"
+                  value={bank.name}
+                  icon="text-outline"
+                  highlight
+                />
+                {bank.bank_code && (
+                  <InfoRow
+                    label="Banka Kodu"
+                    value={bank.bank_code}
+                    icon="barcode-outline"
+                  />
+                )}
+                {bank.branch && (
+                  <InfoRow
+                    label="Şube"
+                    value={bank.branch}
+                    icon="git-branch-outline"
+                  />
+                )}
+                {bank.branch_code && (
+                  <InfoRow
+                    label="Şube Kodu"
+                    value={bank.branch_code}
+                    icon="keypad-outline"
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* Hesap Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Hesap Bilgileri" icon="card-outline" />
+              <View style={styles.cardContent}>
+                {bank.account_number && (
+                  <InfoRow
+                    label="Hesap Numarası"
+                    value={bank.account_number}
+                    icon="keypad-outline"
+                  />
+                )}
+                {bank.iban && (
+                  <InfoRow
+                    label="IBAN"
+                    value={bank.iban}
+                    icon="card-outline"
+                  />
+                )}
+                <InfoRow
+                  label="Para Birimi"
+                  value={getCurrencyLabel(bank.currency_type)}
+                  icon="globe-outline"
+                />
+                <InfoRow
+                  label="Açılış Bakiyesi"
+                  value={formatBalance(bank.opening_balance, bank.currency_type)}
+                  icon="log-in-outline"
+                />
+                <InfoRow
+                  label="Güncel Bakiye"
+                  value={formatBalance(bank.balance, bank.currency_type)}
+                  icon="wallet-outline"
+                  highlight
+                />
+              </View>
+            </View>
+
+            {/* Açıklama */}
+            {bank.description && (
+              <View style={styles.card}>
+                <SectionHeader title="Açıklama" icon="document-text-outline" />
+                <View style={styles.cardContent}>
+                  <Text style={styles.descriptionText}>{bank.description}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Sistem Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Sistem Bilgileri" icon="time-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Oluşturulma"
+                  value={formatDate(bank.created_at)}
+                  icon="add-circle-outline"
+                />
+                <InfoRow
+                  label="Son Güncelleme"
+                  value={formatDate(bank.updated_at)}
+                  icon="refresh-outline"
+                />
+                <InfoRow
+                  label="Durum"
+                  value={bank.is_active ? 'Aktif' : 'Pasif'}
+                  icon={bank.is_active ? 'checkmark-circle-outline' : 'close-circle-outline'}
+                />
+              </View>
+            </View>
+
+            {/* Alt boşluk */}
+            <View style={{ height: insets.bottom + DashboardSpacing['3xl'] }} />
+          </>
         )}
       </ScrollView>
 
-      {/* Delete Confirm Dialog */}
+      {/* Silme Onay Dialogu */}
       <ConfirmDialog
-        visible={showDeleteConfirm}
+        ref={deleteDialogRef}
         title="Banka Hesabını Sil"
         message="Bu banka hesabını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        type="danger"
         confirmText="Sil"
         cancelText="İptal"
-        isDangerous
+        onConfirm={confirmDelete}
         isLoading={isDeleting}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.primary
+  },
+
+  // Header
+  headerContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingBottom: 24
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: DashboardSpacing.md
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    marginHorizontal: DashboardSpacing.md
   },
   headerActions: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  headerButton: {
-    padding: Spacing.sm,
-  },
-  loadingContainer: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
+    gap: DashboardSpacing.sm
   },
-  loadingText: {
-    ...Typography.bodyMD,
+  headerActionsPlaceholder: {
+    width: 96 // 44 + 8 + 44 (iki buton + gap)
   },
-  errorContainer: {
-    flex: 1,
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)'
+  },
+  headerName: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3,
+    flex: 1
+  },
+  balanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: DashboardSpacing.md
+  },
+  balanceSummary: {
+    flex: 1
+  },
+  statusBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing['2xl'],
-    gap: Spacing.md,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.full,
+    gap: 6
   },
-  errorTitle: {
-    ...Typography.headingMD,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
   },
-  errorText: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  balanceCard: {
-    margin: Spacing.lg,
-    padding: Spacing.xl,
-    borderRadius: BorderRadius.xl,
-    gap: Spacing.md,
+  statusBadgeText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600'
   },
   balanceLabel: {
-    ...Typography.bodyMD,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: DashboardFontSizes.sm,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: DashboardSpacing.xs
   },
   balanceAmount: {
-    ...Typography.headingXL,
-    color: '#FFFFFF',
-    fontWeight: '700',
+    fontSize: DashboardFontSizes['4xl'],
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.5
   },
-  balanceFooter: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
+  balanceNegative: {
+    color: 'rgba(239, 68, 68, 0.9)'
   },
-  scrollView: {
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+
+  // İçerik
+  content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    backgroundColor: DashboardColors.background
   },
-  scrollContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    paddingBottom: Spacing['2xl'],
+  contentContainer: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md
   },
-  sectionCard: {
-    padding: Spacing.md,
+
+  // Kartlar
+  card: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.sm
+  },
+  cardContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+
+  // Bölüm Başlığı
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingSM,
-    marginBottom: Spacing.md,
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
+  countBadge: {
+    backgroundColor: DashboardColors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10
+  },
+  countText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600',
+    color: '#fff'
+  },
+
+  // Bilgi Satırı
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
-    gap: Spacing.sm,
-  },
-  infoRowLeft: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    flex: 1,
-  },
-  infoRowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
+    paddingVertical: DashboardSpacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
   },
   infoLabel: {
-    ...Typography.bodySM,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  infoIcon: {
+    marginRight: DashboardSpacing.sm
+  },
+  infoLabelText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
   infoValue: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
-    textAlign: 'right',
+    color: DashboardColors.textPrimary,
+    maxWidth: '50%',
+    textAlign: 'right'
   },
+  infoValueHighlight: {
+    color: DashboardColors.primary,
+    fontWeight: '600'
+  },
+
+  // Açıklama
   descriptionText: {
-    ...Typography.bodyMD,
-    lineHeight: 20,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    lineHeight: 22
   },
-});
+
+  // Skeleton
+  skeletonContainer: {
+    gap: DashboardSpacing.md
+  },
+
+  // Hata durumu
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
+  },
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  errorTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
+  },
+  retryButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  }
+})
