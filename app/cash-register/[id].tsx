@@ -302,62 +302,17 @@ export default function CashRegisterDetailScreen() {
             )}
           </View>
 
-          {/* Alt Bilgiler: Kod + Badge'ler + Bakiye */}
+          {/* Bakiye Özeti + Status */}
           {isLoading ? (
-            <View style={styles.headerInfo}>
-              <Skeleton width={80} height={16} style={{ marginBottom: DashboardSpacing.sm }} />
-              <View style={styles.badgeRow}>
-                <Skeleton width={90} height={28} borderRadius={14} />
-                <Skeleton width={70} height={28} borderRadius={14} />
+            <View style={styles.balanceRow}>
+              <View style={styles.balanceSummary}>
+                <Skeleton width={100} height={14} style={{ marginBottom: DashboardSpacing.xs }} />
+                <Skeleton width={160} height={32} />
               </View>
+              <Skeleton width={70} height={32} borderRadius={16} />
             </View>
           ) : cashRegister ? (
-            <View style={styles.headerInfo}>
-              {cashRegister.code && (
-                <Text style={styles.headerCode}>#{cashRegister.code}</Text>
-              )}
-
-              <View style={styles.badgeRow}>
-                <View style={styles.currencyBadge}>
-                  <Ionicons name="cash-outline" size={14} color="rgba(255, 255, 255, 0.9)" />
-                  <Text style={styles.currencyBadgeText}>
-                    {getCurrencyLabel(cashRegister.currency_type)}
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: cashRegister.is_active
-                      ? 'rgba(16, 185, 129, 0.2)'
-                      : 'rgba(239, 68, 68, 0.2)'
-                    }
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.statusDot,
-                      { backgroundColor: cashRegister.is_active
-                        ? DashboardColors.success
-                        : DashboardColors.danger
-                      }
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.statusBadgeText,
-                      { color: cashRegister.is_active
-                        ? DashboardColors.success
-                        : DashboardColors.danger
-                      }
-                    ]}
-                  >
-                    {cashRegister.is_active ? 'Aktif' : 'Pasif'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Bakiye Özeti */}
+            <View style={styles.balanceRow}>
               <View style={styles.balanceSummary}>
                 <Text style={styles.balanceLabel}>Güncel Bakiye</Text>
                 <Text
@@ -367,6 +322,36 @@ export default function CashRegisterDetailScreen() {
                   ]}
                 >
                   {formatBalance(cashRegister.balance, cashRegister.currency_type)}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: cashRegister.is_active
+                    ? 'rgba(16, 185, 129, 0.2)'
+                    : 'rgba(239, 68, 68, 0.2)'
+                  }
+                ]}
+              >
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: cashRegister.is_active
+                      ? DashboardColors.success
+                      : DashboardColors.danger
+                    }
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    { color: cashRegister.is_active
+                      ? DashboardColors.success
+                      : DashboardColors.danger
+                    }
+                  ]}
+                >
+                  {cashRegister.is_active ? 'Aktif' : 'Pasif'}
                 </Text>
               </View>
             </View>
@@ -600,10 +585,6 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: 'rgba(239, 68, 68, 0.2)'
   },
-  headerInfo: {
-    gap: DashboardSpacing.sm,
-    marginTop: DashboardSpacing.xs
-  },
   headerName: {
     fontSize: DashboardFontSizes.lg,
     fontWeight: '700',
@@ -611,51 +592,31 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     flex: 1
   },
-  headerCode: {
-    fontSize: DashboardFontSizes.sm,
-    color: 'rgba(255, 255, 255, 0.7)'
-  },
-  badgeRow: {
+  balanceRow: {
     flexDirection: 'row',
-    gap: DashboardSpacing.sm,
-    marginTop: DashboardSpacing.xs
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: DashboardSpacing.md
   },
-  currencyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: DashboardSpacing.sm,
-    paddingVertical: 6,
-    borderRadius: DashboardBorderRadius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    gap: 4
-  },
-  currencyBadgeText: {
-    fontSize: DashboardFontSizes.xs,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.9)'
+  balanceSummary: {
+    flex: 1
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: DashboardSpacing.sm,
-    paddingVertical: 6,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
     borderRadius: DashboardBorderRadius.full,
-    gap: 4
-  },
-  statusBadgeText: {
-    fontSize: DashboardFontSizes.xs,
-    fontWeight: '600'
+    gap: 6
   },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4
   },
-  balanceSummary: {
-    marginTop: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)'
+  statusBadgeText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600'
   },
   balanceLabel: {
     fontSize: DashboardFontSizes.sm,
