@@ -1,10 +1,11 @@
 /**
- * Check Detail Screen
+ * Çek Detay Sayfası
  *
- * Shows check details with all information.
+ * CLAUDE.md tasarım ilkelerine uygun modern tasarım
+ * Referans: cash-register/[id].tsx
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -12,420 +13,845 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+  ActivityIndicator
+} from 'react-native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useFocusEffect } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Edit,
-  Trash2,
-  FileText,
-  Building2,
-  User,
-  Calendar,
-  DollarSign,
-  AlertCircle,
-  Copy,
-  Check as CheckIcon,
-} from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
 import {
   getCheck,
   deleteCheck,
   Check,
   getCheckTypeLabel,
   getCheckStatusLabel,
-  getCheckStatusColor,
   formatCheckAmount,
-  getCurrencyLabel,
-} from '@/services/endpoints/checks';
-import { formatDate } from '@/utils/formatters';
+  getCurrencyLabel
+} from '@/services/endpoints/checks'
+import { formatDate } from '@/utils/formatters'
+
+// Durum renkleri
+const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
+  pending: { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' },
+  transferred: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' },
+  cleared: { primary: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' },
+  bounced: { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' },
+  cancelled: { primary: '#6B7280', bg: 'rgba(107, 114, 128, 0.12)' }
+}
+
+// Tip renkleri
+const TYPE_COLORS: Record<string, { primary: string; bg: string }> = {
+  received: { primary: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' },
+  issued: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' }
+}
+
+// Bölüm başlığı
+interface SectionHeaderProps {
+  title: string
+  icon: keyof typeof Ionicons.glyphMap
+}
+
+function SectionHeader({ title, icon }: SectionHeaderProps) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionHeaderLeft}>
+        <View style={styles.sectionIcon}>
+          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
+        </View>
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+    </View>
+  )
+}
+
+// Bilgi satırı
+interface InfoRowProps {
+  label: string
+  value: string
+  icon?: keyof typeof Ionicons.glyphMap
+  highlight?: boolean
+}
+
+function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={styles.infoLabel}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={14}
+            color={DashboardColors.textMuted}
+            style={styles.infoIcon}
+          />
+        )}
+        <Text style={styles.infoLabelText}>{label}</Text>
+      </View>
+      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
+        {value}
+      </Text>
+    </View>
+  )
+}
 
 export default function CheckDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const checkId = id ? parseInt(id, 10) : null
 
-  const [check, setCheck] = useState<Check | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+  // State
+  const [check, setCheck] = useState<Check | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  // Fetch check data
-  const fetchCheck = useCallback(async () => {
-    if (!id) return;
+  // Refs
+  const isMountedRef = useRef(true)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
+
+  // Veri çekme
+  const fetchCheck = useCallback(async (showLoading = true) => {
+    if (!checkId) {
+      setError('Geçersiz çek ID')
+      setIsLoading(false)
+      return
+    }
 
     try {
-      setError(null);
-      const data = await getCheck(parseInt(id, 10));
-      setCheck(data);
+      if (showLoading) {
+        setIsLoading(true)
+        setError(null)
+      }
+
+      const data = await getCheck(checkId)
+
+      if (isMountedRef.current) {
+        setCheck(data)
+        setError(null)
+      }
     } catch (err) {
-      console.error('Check fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Çek bilgileri yüklenemedi');
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Çek bilgileri yüklenemedi')
+      }
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
     }
-  }, [id]);
+  }, [checkId])
 
   useEffect(() => {
-    fetchCheck();
-  }, [id]);
+    isMountedRef.current = true
+    fetchCheck()
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchCheck();
-  };
-
-  // Delete check
-  const handleDelete = () => {
-    setShowDeleteConfirm(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!id) return;
-    setIsDeleting(true);
-    try {
-      await deleteCheck(parseInt(id, 10));
-      success('Başarılı', 'Çek silindi.');
-      router.back();
-    } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Çek silinemedi.');
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
+    return () => {
+      isMountedRef.current = false
     }
-  };
+  }, [fetchCheck])
 
-  // Copy to clipboard
-  const handleCopy = (field: string, value: string) => {
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(null), 2000);
-  };
+  // Edit sayfasından dönüşte yenile
+  useFocusEffect(
+    useCallback(() => {
+      fetchCheck(false)
+    }, [fetchCheck])
+  )
 
-  // Render info row
-  const renderInfoRow = (
-    label: string,
-    value?: string | number | boolean,
-    icon?: any,
-    copyable?: boolean,
-    copyKey?: string
-  ) => {
-    if (value === undefined || value === null || value === '') return null;
-    const Icon = icon;
-    const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayır') : String(value);
+  // Yenileme
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    fetchCheck(false)
+  }, [fetchCheck])
 
-    return (
-      <View style={styles.infoRow}>
-        <View style={styles.infoRowLeft}>
-          {Icon && <Icon size={16} color={colors.textMuted} />}
-          <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}:</Text>
-        </View>
-        <View style={styles.infoRowRight}>
-          <Text style={[styles.infoValue, { color: colors.text }]}>{displayValue}</Text>
-          {copyable && copyKey && (
-            <TouchableOpacity onPress={() => handleCopy(copyKey, displayValue)}>
-              {copiedField === copyKey ? (
-                <CheckIcon size={16} color={colors.success} />
-              ) : (
-                <Copy size={16} color={colors.icon} />
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Çek Detayı" showBackButton />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Çek bilgileri yükleniyor...
-          </Text>
-        </View>
-      </View>
-    );
+  // Düzenleme
+  const handleEdit = () => {
+    if (!checkId) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/check/${checkId}/edit`)
   }
 
-  // Error state
-  if (error || !check) {
-    return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Çek Detayı" showBackButton />
-        <View style={styles.errorContainer}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            {error || 'Çek bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchCheck}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
+  // Silme dialogunu aç
+  const handleDelete = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    deleteDialogRef.current?.present()
   }
+
+  // Silme işlemini gerçekleştir
+  const confirmDelete = async () => {
+    if (!checkId) return
+
+    setIsDeleting(true)
+    try {
+      await deleteCheck(checkId)
+      deleteDialogRef.current?.dismiss()
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      Toast.show({
+        type: 'success',
+        text1: 'Çek başarıyla silindi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+
+      setTimeout(() => {
+        router.back()
+      }, 300)
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Çek silinemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Geri
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
+
+  // Status ve type renkleri
+  const statusColors = check ? STATUS_COLORS[check.status] || STATUS_COLORS.pending : null
+  const typeColors = check ? TYPE_COLORS[check.type] || TYPE_COLORS.received : null
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-        title={check.check_number}
-        showBackButton
-        rightIcons={
-          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-            <TouchableOpacity
-              onPress={() => router.push(`/check/${check.id}/edit` as any)}
-              activeOpacity={0.7}
-            >
-              <Edit size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleDelete}
-              activeOpacity={0.7}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Trash2 size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </View>
-        }
-      />
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
 
-      <View style={styles.content}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {/* Summary Card */}
-        <Card variant="elevated" style={styles.summaryCard}>
-          <View style={styles.summaryContent}>
-            <View style={styles.summaryTop}>
-              <Badge
-                label={getCheckTypeLabel(check.type)}
-                variant={check.type === 'received' ? 'success' : 'info'}
-                size="md"
-              />
-              <Badge
-                label={getCheckStatusLabel(check.status)}
-                variant={getCheckStatusColor(check.status)}
-                size="md"
-              />
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          {/* Üst Bar: Geri + Başlık + Aksiyonlar */}
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Başlık - Orta */}
+            {isLoading ? (
+              <View style={styles.headerTitleSection}>
+                <Skeleton width={140} height={22} />
+              </View>
+            ) : check ? (
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerName} numberOfLines={1}>
+                  {check.check_number}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.headerTitleSection} />
+            )}
+
+            {/* Aksiyonlar - Sağ */}
+            {!isLoading && check ? (
+              <View style={styles.headerActions}>
+                <TouchableOpacity style={styles.headerButton} onPress={handleEdit}>
+                  <Ionicons name="create-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.headerButton, styles.deleteButton]}
+                  onPress={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={22} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.headerActionsPlaceholder} />
+            )}
+          </View>
+
+          {/* Tutar ve Durum Özeti */}
+          {isLoading ? (
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryContent}>
+                <Skeleton width={100} height={14} style={{ marginBottom: DashboardSpacing.xs }} />
+                <Skeleton width={180} height={36} />
+              </View>
+              <Skeleton width={90} height={32} borderRadius={16} />
             </View>
-            <Text style={[styles.amountText, { color: colors.primary }]}>
-              {formatCheckAmount(check.amount, check.currency_type)}
-            </Text>
-            <Text style={[styles.currencyText, { color: colors.textSecondary }]}>
-              {getCurrencyLabel(check.currency_type)}
-            </Text>
-          </View>
-        </Card>
+          ) : check ? (
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryContent}>
+                <Text style={styles.summaryLabel}>Çek Tutarı</Text>
+                <Text style={styles.summaryAmount}>
+                  {formatCheckAmount(check.amount, check.currency_type)}
+                </Text>
+              </View>
+              <View style={styles.badgesContainer}>
+                <View style={[styles.typeBadge, { backgroundColor: typeColors?.bg }]}>
+                  <Text style={[styles.typeBadgeText, { color: typeColors?.primary }]}>
+                    {getCheckTypeLabel(check.type)}
+                  </Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: statusColors?.bg }]}>
+                  <View style={[styles.statusDot, { backgroundColor: statusColors?.primary }]} />
+                  <Text style={[styles.statusBadgeText, { color: statusColors?.primary }]}>
+                    {getCheckStatusLabel(check.status)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : null}
+        </View>
 
-        {/* Cari Information */}
-        <Card variant="outlined" style={styles.card}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Cari Bilgileri</Text>
-          {renderInfoRow('Cari Adı', check.contact?.name, User)}
-          {renderInfoRow('Cari Kodu', check.contact?.code, FileText)}
-        </Card>
-
-        {/* Check Information */}
-        <Card variant="outlined" style={styles.card}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Çek Bilgileri</Text>
-          {renderInfoRow('Çek Numarası', check.check_number, FileText, true, 'check_number')}
-          {renderInfoRow('Portföy No', check.portfolio_number, FileText)}
-          {renderInfoRow('Düzenleme Tarihi', formatDate(check.issue_date, 'dd.MM.yyyy'), Calendar)}
-          {renderInfoRow('Vade Tarihi', formatDate(check.due_date, 'dd.MM.yyyy'), Calendar)}
-        </Card>
-
-        {/* Bank Information */}
-        <Card variant="outlined" style={styles.card}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Banka Bilgileri</Text>
-          {renderInfoRow('Banka', check.bank_name, Building2)}
-          {renderInfoRow('Şube', check.branch_name, Building2)}
-          {renderInfoRow('Hesap No', check.account_number, FileText, true, 'account_number')}
-          {renderInfoRow('Keşideci', check.drawer_name, User)}
-          {renderInfoRow('Ciranta', check.endorser_name, User)}
-        </Card>
-
-        {/* Status Dates */}
-        {(check.transferred_date || check.cleared_date || check.bounced_date || check.cancelled_date) && (
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Tarih Bilgileri</Text>
-            {renderInfoRow('Transfer Tarihi', check.transferred_date ? formatDate(check.transferred_date, 'dd.MM.yyyy') : undefined, Calendar)}
-            {renderInfoRow('Tahsil Tarihi', check.cleared_date ? formatDate(check.cleared_date, 'dd.MM.yyyy') : undefined, Calendar)}
-            {renderInfoRow('Karşılıksız Tarihi', check.bounced_date ? formatDate(check.bounced_date, 'dd.MM.yyyy') : undefined, Calendar)}
-            {renderInfoRow('İptal Tarihi', check.cancelled_date ? formatDate(check.cancelled_date, 'dd.MM.yyyy') : undefined, Calendar)}
-          </Card>
-        )}
-
-        {/* Transfer Information */}
-        {check.transferred_to && (
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Transfer Bilgileri</Text>
-            {renderInfoRow('Transfer Edildiği Yer', check.transferred_to.name, Building2)}
-          </Card>
-        )}
-
-        {/* Additional Information */}
-        {check.description && (
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Açıklama</Text>
-            <Text style={[styles.descriptionText, { color: colors.textSecondary }]}>
-              {check.description}
-            </Text>
-          </Card>
-        )}
-
-        {/* Metadata */}
-        <Card variant="outlined" style={styles.card}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Sistem Bilgileri</Text>
-          {renderInfoRow('Oluşturulma', formatDate(check.created_at, 'dd.MM.yyyy HH:mm'), Calendar)}
-          {renderInfoRow('Güncellenme', formatDate(check.updated_at, 'dd.MM.yyyy HH:mm'), Calendar)}
-        </Card>
-      </ScrollView>
+        <View style={styles.bottomCurve} />
       </View>
 
+      {/* İçerik */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={DashboardColors.primary}
+          />
+        }
+      >
+        {/* Loading */}
+        {isLoading && (
+          <View style={styles.skeletonContainer}>
+            {[1, 2, 3, 4].map(i => (
+              <View key={i} style={styles.card}>
+                <View style={styles.sectionHeader}>
+                  <Skeleton width={140} height={20} />
+                </View>
+                <View style={styles.cardContent}>
+                  <Skeleton width="100%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="80%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="60%" height={16} />
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Hata */}
+        {!isLoading && (error || !check) && (
+          <View style={styles.errorState}>
+            <View style={styles.errorIcon}>
+              <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+            </View>
+            <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+            <Text style={styles.errorText}>{error || 'Çek bulunamadı'}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => fetchCheck()}>
+              <Ionicons name="refresh" size={18} color="#fff" />
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Normal içerik */}
+        {!isLoading && check && (
+          <>
+            {/* Cari Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Cari Bilgileri" icon="person-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Cari Adı"
+                  value={check.contact?.name || '-'}
+                  icon="person-outline"
+                  highlight
+                />
+                {check.contact?.code && (
+                  <InfoRow
+                    label="Cari Kodu"
+                    value={check.contact.code}
+                    icon="barcode-outline"
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* Çek Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Çek Bilgileri" icon="document-text-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Çek Numarası"
+                  value={check.check_number}
+                  icon="document-outline"
+                  highlight
+                />
+                {check.portfolio_number && (
+                  <InfoRow
+                    label="Portföy No"
+                    value={check.portfolio_number}
+                    icon="folder-outline"
+                  />
+                )}
+                <InfoRow
+                  label="Düzenleme Tarihi"
+                  value={formatDate(check.issue_date, 'dd.MM.yyyy')}
+                  icon="calendar-outline"
+                />
+                <InfoRow
+                  label="Vade Tarihi"
+                  value={formatDate(check.due_date, 'dd.MM.yyyy')}
+                  icon="calendar-outline"
+                  highlight
+                />
+              </View>
+            </View>
+
+            {/* Banka Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Banka Bilgileri" icon="business-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Banka"
+                  value={check.bank_name}
+                  icon="business-outline"
+                />
+                <InfoRow
+                  label="Şube"
+                  value={check.branch_name}
+                  icon="git-branch-outline"
+                />
+                {check.account_number && (
+                  <InfoRow
+                    label="Hesap No"
+                    value={check.account_number}
+                    icon="card-outline"
+                  />
+                )}
+                {check.drawer_name && (
+                  <InfoRow
+                    label="Keşideci"
+                    value={check.drawer_name}
+                    icon="person-outline"
+                  />
+                )}
+                {check.endorser_name && (
+                  <InfoRow
+                    label="Ciranta"
+                    value={check.endorser_name}
+                    icon="swap-horizontal-outline"
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* Tutar Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Tutar Bilgileri" icon="cash-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Tutar"
+                  value={formatCheckAmount(check.amount, check.currency_type)}
+                  icon="cash-outline"
+                  highlight
+                />
+                <InfoRow
+                  label="Para Birimi"
+                  value={getCurrencyLabel(check.currency_type)}
+                  icon="globe-outline"
+                />
+              </View>
+            </View>
+
+            {/* Durum Tarihleri */}
+            {(check.transferred_date || check.cleared_date || check.bounced_date || check.cancelled_date) && (
+              <View style={styles.card}>
+                <SectionHeader title="Tarih Bilgileri" icon="time-outline" />
+                <View style={styles.cardContent}>
+                  {check.transferred_date && (
+                    <InfoRow
+                      label="Transfer Tarihi"
+                      value={formatDate(check.transferred_date, 'dd.MM.yyyy')}
+                      icon="arrow-forward-outline"
+                    />
+                  )}
+                  {check.cleared_date && (
+                    <InfoRow
+                      label="Tahsil Tarihi"
+                      value={formatDate(check.cleared_date, 'dd.MM.yyyy')}
+                      icon="checkmark-circle-outline"
+                    />
+                  )}
+                  {check.bounced_date && (
+                    <InfoRow
+                      label="Karşılıksız Tarihi"
+                      value={formatDate(check.bounced_date, 'dd.MM.yyyy')}
+                      icon="alert-circle-outline"
+                    />
+                  )}
+                  {check.cancelled_date && (
+                    <InfoRow
+                      label="İptal Tarihi"
+                      value={formatDate(check.cancelled_date, 'dd.MM.yyyy')}
+                      icon="close-circle-outline"
+                    />
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Transfer Bilgileri */}
+            {check.transferred_to && (
+              <View style={styles.card}>
+                <SectionHeader title="Transfer Bilgileri" icon="swap-horizontal-outline" />
+                <View style={styles.cardContent}>
+                  <InfoRow
+                    label="Transfer Yeri"
+                    value={check.transferred_to.name}
+                    icon="business-outline"
+                    highlight
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Açıklama */}
+            {check.description && (
+              <View style={styles.card}>
+                <SectionHeader title="Açıklama" icon="document-text-outline" />
+                <View style={styles.cardContent}>
+                  <Text style={styles.descriptionText}>{check.description}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Sistem Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Sistem Bilgileri" icon="time-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Oluşturulma"
+                  value={formatDate(check.created_at, 'dd.MM.yyyy HH:mm')}
+                  icon="add-circle-outline"
+                />
+                <InfoRow
+                  label="Son Güncelleme"
+                  value={formatDate(check.updated_at, 'dd.MM.yyyy HH:mm')}
+                  icon="refresh-outline"
+                />
+              </View>
+            </View>
+
+            {/* Alt boşluk */}
+            <View style={{ height: insets.bottom + DashboardSpacing['3xl'] }} />
+          </>
+        )}
+      </ScrollView>
+
+      {/* Silme Onay Dialogu */}
       <ConfirmDialog
-        visible={showDeleteConfirm}
+        ref={deleteDialogRef}
         title="Çeki Sil"
         message="Bu çeki silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        type="danger"
         confirmText="Sil"
         cancelText="İptal"
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        isLoading={isDeleting}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.primary
   },
-  content: {
+
+  // Header
+  headerContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingBottom: 24
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: DashboardSpacing.md
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleSection: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    marginHorizontal: DashboardSpacing.md
   },
-  scrollView: {
-    flex: 1,
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
   },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing['3xl'],
+  headerActionsPlaceholder: {
+    width: 96
   },
-  summaryCard: {
-    marginBottom: Spacing.lg,
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)'
+  },
+  headerName: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3,
+    flex: 1
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginTop: DashboardSpacing.md
   },
   summaryContent: {
-    alignItems: 'center',
-    padding: Spacing.lg,
+    flex: 1
   },
-  summaryTop: {
+  summaryLabel: {
+    fontSize: DashboardFontSizes.sm,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: DashboardSpacing.xs
+  },
+  summaryAmount: {
+    fontSize: DashboardFontSizes['4xl'],
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.5
+  },
+  badgesContainer: {
+    alignItems: 'flex-end',
+    gap: DashboardSpacing.xs
+  },
+  typeBadge: {
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.xs,
+    borderRadius: DashboardBorderRadius.full
+  },
+  typeBadgeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600'
+  },
+  statusBadge: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
+    alignItems: 'center',
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.full,
+    gap: 6
   },
-  amountText: {
-    ...Typography.headingXL,
-    marginBottom: Spacing.xs,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
   },
-  currencyText: {
-    ...Typography.bodyMD,
+  statusBadgeText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600'
   },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+
+  // İçerik
+  content: {
+    flex: 1,
+    backgroundColor: DashboardColors.background
+  },
+  contentContainer: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md
+  },
+
+  // Kartlar
   card: {
-    marginBottom: Spacing.lg,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.sm
   },
-  cardTitle: {
-    ...Typography.headingSM,
-    marginBottom: Spacing.md,
+  cardContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
   },
+
+  // Bölüm Başlığı
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sectionTitle: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
+  },
+
+  // Bilgi Satırı
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
+    paddingVertical: DashboardSpacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  infoRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    flex: 1,
-  },
-  infoRowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    flex: 1,
-    justifyContent: 'flex-end',
+    borderBottomColor: DashboardColors.borderLight
   },
   infoLabel: {
-    ...Typography.bodySM,
-    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  infoIcon: {
+    marginRight: DashboardSpacing.sm
+  },
+  infoLabelText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
   infoValue: {
-    ...Typography.bodySM,
-    fontWeight: '600',
-    textAlign: 'right',
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textPrimary,
+    maxWidth: '50%',
+    textAlign: 'right'
   },
+  infoValueHighlight: {
+    color: DashboardColors.primary,
+    fontWeight: '600'
+  },
+
+  // Açıklama
   descriptionText: {
-    ...Typography.bodyMD,
-    lineHeight: 22,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    lineHeight: 22
   },
-  loadingContainer: {
+
+  // Skeleton
+  skeletonContainer: {
+    gap: DashboardSpacing.md
+  },
+
+  // Hata durumu
+  errorState: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.light.background,
-    gap: Spacing.md,
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-  },
-  errorContainer: {
-    flex: 1,
     justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
+  },
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
     alignItems: 'center',
-    backgroundColor: Colors.light.background,
-    padding: Spacing.xl,
-    gap: Spacing.md,
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
   },
   errorTitle: {
-    ...Typography.headingLG,
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
   },
   errorText: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
     textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
   },
   retryButton: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
   },
   retryButtonText: {
-    ...Typography.buttonMD,
-    color: Colors.light.surface,
-  },
-});
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  }
+})

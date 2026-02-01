@@ -1,60 +1,129 @@
 /**
- * New Check Screen
+ * Yeni Çek Oluşturma Sayfası
  *
- * Create new check (çek).
- * Matches backend MobileStoreCheckRequest validation.
+ * CLAUDE.md tasarım ilkelerine uygun modern tasarım
+ * Referans: cash-register/new.tsx
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   TouchableOpacity,
-} from 'react-native';
-import { router } from 'expo-router';
-import { Save } from 'lucide-react-native';
-import { Input, Card } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { SearchableSelect } from '@/components/ui/searchable-select';
-import { DateInput } from '@/components/ui/date-input';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, BorderRadius, Brand, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
-import { createCheck, CheckFormData, CheckType, CheckStatus, CurrencyType } from '@/services/endpoints/checks';
-import { getContacts, Contact } from '@/services/endpoints/contacts';
-import { getErrorMessage, getValidationErrors } from '@/services/api';
+  ActivityIndicator
+} from 'react-native'
+import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import Toast from 'react-native-toast-message'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
+import { Input } from '@/components/ui'
+import { SelectInput } from '@/components/ui/select-input'
+import { SearchableSelect } from '@/components/ui/searchable-select'
+import { DateInput } from '@/components/ui/date-input'
+import {
+  createCheck,
+  CheckFormData,
+  CheckType,
+  CheckStatus,
+  CurrencyType
+} from '@/services/endpoints/checks'
+import { getContacts, Contact } from '@/services/endpoints/contacts'
+import { getErrorMessage, getValidationErrors } from '@/services/api'
 
-// Type options
+// Çek tipi seçenekleri
 const TYPE_OPTIONS = [
-  { label: 'Alınan', value: 'received' },
-  { label: 'Verilen', value: 'issued' },
-];
+  { label: 'Alınan Çek', value: 'received' },
+  { label: 'Verilen Çek', value: 'issued' }
+]
 
-// Status options
+// Durum seçenekleri
 const STATUS_OPTIONS = [
   { label: 'Beklemede', value: 'pending' },
   { label: 'Transfer Edildi', value: 'transferred' },
   { label: 'Tahsil Edildi', value: 'cleared' },
   { label: 'Karşılıksız', value: 'bounced' },
-  { label: 'İptal Edildi', value: 'cancelled' },
-];
+  { label: 'İptal Edildi', value: 'cancelled' }
+]
 
-// Currency options
+// Para birimi seçenekleri (CLAUDE.md'deki desteklenen döviz kodları)
 const CURRENCY_OPTIONS = [
   { label: 'Türk Lirası (TRY)', value: 'TRY' },
   { label: 'Amerikan Doları (USD)', value: 'USD' },
   { label: 'Euro (EUR)', value: 'EUR' },
   { label: 'İngiliz Sterlini (GBP)', value: 'GBP' },
-];
+  { label: 'Avustralya Doları (AUD)', value: 'AUD' },
+  { label: 'Danimarka Kronu (DKK)', value: 'DKK' },
+  { label: 'İsviçre Frangı (CHF)', value: 'CHF' },
+  { label: 'İsveç Kronu (SEK)', value: 'SEK' },
+  { label: 'Kanada Doları (CAD)', value: 'CAD' },
+  { label: 'Kuveyt Dinarı (KWD)', value: 'KWD' },
+  { label: 'Norveç Kronu (NOK)', value: 'NOK' },
+  { label: 'Suudi Arabistan Riyali (SAR)', value: 'SAR' },
+  { label: 'Japon Yeni (JPY)', value: 'JPY' },
+  { label: 'BAE Dirhemi (AED)', value: 'AED' }
+]
 
 export default function NewCheckScreen() {
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const insets = useSafeAreaInsets()
+
+  // Animasyonlu orb'lar için shared values
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
+
+  useEffect(() => {
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
 
   // Form state
   const [formData, setFormData] = useState<CheckFormData>({
@@ -72,360 +141,511 @@ export default function NewCheckScreen() {
     amount: 0,
     currency_type: 'TRY',
     status: 'pending',
-    description: '',
-  });
+    description: ''
+  })
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Contacts for searchable select
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loadingContacts, setLoadingContacts] = useState(false);
+  // Cariler
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [loadingContacts, setLoadingContacts] = useState(false)
 
-  // Fetch contacts on mount
+  // Carileri yükle
   useEffect(() => {
     const fetchContacts = async () => {
-      setLoadingContacts(true);
+      setLoadingContacts(true)
       try {
-        const response = await getContacts({ per_page: 100, is_active: true });
-        setContacts(response.contacts);
+        const response = await getContacts({ per_page: 100, is_active: true })
+        setContacts(response.contacts)
       } catch (err) {
-        console.error('Failed to load contacts:', err);
+        console.error('Failed to load contacts:', err)
       } finally {
-        setLoadingContacts(false);
+        setLoadingContacts(false)
       }
-    };
-    fetchContacts();
-  }, []);
+    }
+    fetchContacts()
+  }, [])
 
-  // Handle input change
+  // Input değişiklik handler'ı
   const handleInputChange = useCallback((field: keyof CheckFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }))
 
-    // Clear error for this field
+    // Bu alan için hatayı temizle
     if (errors[field]) {
       setErrors(prevErrors => {
-        const newErrors = { ...prevErrors };
-        delete newErrors[field];
-        return newErrors;
-      });
+        const newErrors = { ...prevErrors }
+        delete newErrors[field]
+        return newErrors
+      })
     }
-  }, [errors]);
+  }, [errors])
 
-  // Validation function matching backend rules
+  // Doğrulama
   const validateForm = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {}
 
-    // Required fields
+    // Zorunlu alanlar
     if (!formData.contact_id || formData.contact_id === 0) {
-      newErrors.contact_id = 'Cari seçimi zorunludur.';
+      newErrors.contact_id = 'Cari seçimi zorunludur.'
     }
     if (!formData.check_number?.trim()) {
-      newErrors.check_number = 'Çek numarası zorunludur.';
+      newErrors.check_number = 'Çek numarası zorunludur.'
     }
     if (!formData.bank_name?.trim()) {
-      newErrors.bank_name = 'Banka adı zorunludur.';
+      newErrors.bank_name = 'Banka adı zorunludur.'
     }
     if (!formData.branch_name?.trim()) {
-      newErrors.branch_name = 'Şube adı zorunludur.';
+      newErrors.branch_name = 'Şube adı zorunludur.'
     }
     if (!formData.type) {
-      newErrors.type = 'Çek tipi zorunludur.';
+      newErrors.type = 'Çek tipi zorunludur.'
     }
     if (!formData.issue_date) {
-      newErrors.issue_date = 'Düzenleme tarihi zorunludur.';
+      newErrors.issue_date = 'Düzenleme tarihi zorunludur.'
     }
     if (!formData.due_date) {
-      newErrors.due_date = 'Vade tarihi zorunludur.';
+      newErrors.due_date = 'Vade tarihi zorunludur.'
     }
     if (!formData.amount || formData.amount <= 0) {
-      newErrors.amount = 'Tutar 0\'dan büyük olmalıdır.';
+      newErrors.amount = 'Tutar 0\'dan büyük olmalıdır.'
     }
     if (!formData.currency_type) {
-      newErrors.currency_type = 'Para birimi zorunludur.';
+      newErrors.currency_type = 'Para birimi zorunludur.'
     }
     if (!formData.status) {
-      newErrors.status = 'Durum zorunludur.';
+      newErrors.status = 'Durum zorunludur.'
     }
 
-    // Date validation
+    // Tarih kontrolü
     if (formData.issue_date && formData.due_date) {
-      const issueDate = new Date(formData.issue_date);
-      const dueDate = new Date(formData.due_date);
+      const issueDate = new Date(formData.issue_date)
+      const dueDate = new Date(formData.due_date)
       if (dueDate < issueDate) {
-        newErrors.due_date = 'Vade tarihi, düzenleme tarihinden önce olamaz.';
+        newErrors.due_date = 'Vade tarihi, düzenleme tarihinden önce olamaz.'
       }
     }
 
-    // Length validations
+    // Uzunluk kontrolleri
     if (formData.check_number && formData.check_number.length > 255) {
-      newErrors.check_number = 'Çek numarası en fazla 255 karakter olabilir.';
+      newErrors.check_number = 'Çek numarası en fazla 255 karakter olabilir.'
     }
     if (formData.bank_name && formData.bank_name.length > 255) {
-      newErrors.bank_name = 'Banka adı en fazla 255 karakter olabilir.';
+      newErrors.bank_name = 'Banka adı en fazla 255 karakter olabilir.'
     }
     if (formData.branch_name && formData.branch_name.length > 255) {
-      newErrors.branch_name = 'Şube adı en fazla 255 karakter olabilir.';
+      newErrors.branch_name = 'Şube adı en fazla 255 karakter olabilir.'
     }
 
-    // Amount validation
-    if (formData.amount && formData.amount > 999999999999.99) {
-      newErrors.amount = 'Tutar çok büyük.';
-    }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [formData])
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
+  // Geri butonu
+  const handleBack = useCallback(() => {
+    router.back()
+  }, [])
 
-  // Submit handler
+  // Form gönderimi
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
-      return;
+      Toast.show({
+        type: 'error',
+        text1: 'Lütfen zorunlu alanları doldurunuz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await createCheck(formData);
+      await createCheck(formData)
 
-      success('Başarılı', 'Çek başarıyla oluşturuldu.');
-      router.back();
+      Toast.show({
+        type: 'success',
+        text1: 'Çek başarıyla oluşturuldu',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      router.back()
     } catch (error: any) {
-      const validationErrors = getValidationErrors(error);
+      const validationErrors = getValidationErrors(error)
       if (validationErrors) {
-        // Convert Laravel errors to flat object
-        const flatErrors: Record<string, string> = {};
+        const flatErrors: Record<string, string> = {}
         Object.entries(validationErrors).forEach(([field, messages]) => {
           if (Array.isArray(messages) && messages.length > 0) {
-            flatErrors[field] = messages[0];
+            flatErrors[field] = messages[0]
           }
-        });
-        setErrors(flatErrors);
+        })
+        setErrors(flatErrors)
       } else {
-        showError('Hata', getErrorMessage(error));
+        Toast.show({
+          type: 'error',
+          text1: getErrorMessage(error),
+          position: 'top',
+          visibilityTime: 1500
+        })
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  }, [formData, validateForm, success, showError]);
+  }, [formData, validateForm])
 
-  // Prepare contact options
+  // Cari seçenekleri
   const contactOptions = contacts.map(contact => ({
     label: contact.name,
     value: contact.id,
-    subtitle: contact.code,
-  }));
+    subtitle: contact.code
+  }))
 
   return (
     <View style={styles.container}>
-      <FullScreenHeader
-        title="Yeni Çek"
-        subtitle="Çek bilgilerini girin"
-        rightIcons={
-          <TouchableOpacity
-            onPress={handleSubmit}
-            activeOpacity={0.7}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Save size={22} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
-        }
-      />
+      {/* Header with gradient and animated orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
 
-      <KeyboardAvoidingView
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Orta: Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Yeni Çek</Text>
+            </View>
+
+            {/* Sağ: Kaydet Butonu */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* Form Content */}
+      <KeyboardAwareScrollView
         style={styles.content}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        contentContainerStyle={styles.contentContainer}
+        bottomOffset={20}
       >
-        <ScrollView
-          style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Card variant="outlined" style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
+        {/* Temel Bilgiler */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="document-text-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
+          </View>
 
-          <SearchableSelect
-            label="Cari"
-            placeholder="Cari seçin"
-            options={contactOptions}
-            value={formData.contact_id || undefined}
-            onValueChange={(value) => handleInputChange('contact_id', value)}
-            error={errors.contact_id}
-            loading={loadingContacts}
-            required
-          />
+          <View style={styles.sectionContent}>
+            <SearchableSelect
+              label="Cari *"
+              placeholder="Cari seçin"
+              options={contactOptions}
+              value={formData.contact_id || undefined}
+              onValueChange={(value) => handleInputChange('contact_id', value)}
+              error={errors.contact_id}
+              loading={loadingContacts}
+            />
 
-          <Input
-            label="Çek Numarası"
-            placeholder="ÇEK-2025-001"
-            value={formData.check_number}
-            onChangeText={(value) => handleInputChange('check_number', value)}
-            error={errors.check_number}
-            required
-          />
+            <Input
+              label="Çek Numarası *"
+              placeholder="Örn: ÇEK-2025-001"
+              value={formData.check_number}
+              onChangeText={(text) => handleInputChange('check_number', text)}
+              error={errors.check_number}
+              maxLength={255}
+            />
 
-          <SelectInput
-            label="Çek Tipi"
-            options={TYPE_OPTIONS}
-            value={formData.type}
-            onValueChange={(value) => handleInputChange('type', value as CheckType)}
-            error={errors.type}
-            required
-          />
+            <SelectInput
+              label="Çek Tipi *"
+              options={TYPE_OPTIONS}
+              selectedValue={formData.type}
+              onValueChange={(value) => handleInputChange('type', value as CheckType)}
+              error={errors.type}
+            />
 
-          <SelectInput
-            label="Durum"
-            options={STATUS_OPTIONS}
-            value={formData.status}
-            onValueChange={(value) => handleInputChange('status', value as CheckStatus)}
-            error={errors.status}
-            required
-          />
-        </Card>
+            <SelectInput
+              label="Durum *"
+              options={STATUS_OPTIONS}
+              selectedValue={formData.status}
+              onValueChange={(value) => handleInputChange('status', value as CheckStatus)}
+              error={errors.status}
+            />
+          </View>
+        </View>
 
-        <Card variant="outlined" style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Banka Bilgileri</Text>
+        {/* Banka Bilgileri */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="business-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Banka Bilgileri</Text>
+          </View>
 
-          <Input
-            label="Banka Adı"
-            placeholder="Ziraat Bankası"
-            value={formData.bank_name}
-            onChangeText={(value) => handleInputChange('bank_name', value)}
-            error={errors.bank_name}
-            required
-          />
+          <View style={styles.sectionContent}>
+            <Input
+              label="Banka Adı *"
+              placeholder="Örn: Ziraat Bankası"
+              value={formData.bank_name}
+              onChangeText={(text) => handleInputChange('bank_name', text)}
+              error={errors.bank_name}
+              maxLength={255}
+            />
 
-          <Input
-            label="Şube Adı"
-            placeholder="Bakırköy Şubesi"
-            value={formData.branch_name}
-            onChangeText={(value) => handleInputChange('branch_name', value)}
-            error={errors.branch_name}
-            required
-          />
+            <Input
+              label="Şube Adı *"
+              placeholder="Örn: Bakırköy Şubesi"
+              value={formData.branch_name}
+              onChangeText={(text) => handleInputChange('branch_name', text)}
+              error={errors.branch_name}
+              maxLength={255}
+            />
 
-          <Input
-            label="Hesap Numarası"
-            placeholder="123456789"
-            value={formData.account_number}
-            onChangeText={(value) => handleInputChange('account_number', value)}
-            error={errors.account_number}
-            keyboardType="numeric"
-          />
+            <Input
+              label="Hesap Numarası"
+              placeholder="Opsiyonel"
+              value={formData.account_number}
+              onChangeText={(text) => handleInputChange('account_number', text)}
+              error={errors.account_number}
+              keyboardType="numeric"
+            />
 
-          <Input
-            label="Keşideci Adı"
-            placeholder="Ali Veli"
-            value={formData.drawer_name}
-            onChangeText={(value) => handleInputChange('drawer_name', value)}
-            error={errors.drawer_name}
-          />
+            <Input
+              label="Keşideci Adı"
+              placeholder="Opsiyonel"
+              value={formData.drawer_name}
+              onChangeText={(text) => handleInputChange('drawer_name', text)}
+              error={errors.drawer_name}
+            />
 
-          <Input
-            label="Ciranta Adı"
-            placeholder="Mehmet Can"
-            value={formData.endorser_name}
-            onChangeText={(value) => handleInputChange('endorser_name', value)}
-            error={errors.endorser_name}
-          />
+            <Input
+              label="Ciranta Adı"
+              placeholder="Opsiyonel"
+              value={formData.endorser_name}
+              onChangeText={(text) => handleInputChange('endorser_name', text)}
+              error={errors.endorser_name}
+            />
 
-          <Input
-            label="Portföy Numarası"
-            placeholder="PORT-001"
-            value={formData.portfolio_number}
-            onChangeText={(value) => handleInputChange('portfolio_number', value)}
-            error={errors.portfolio_number}
-          />
-        </Card>
+            <Input
+              label="Portföy Numarası"
+              placeholder="Opsiyonel"
+              value={formData.portfolio_number}
+              onChangeText={(text) => handleInputChange('portfolio_number', text)}
+              error={errors.portfolio_number}
+            />
+          </View>
+        </View>
 
-        <Card variant="outlined" style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Tarih ve Tutar</Text>
+        {/* Tarih ve Tutar */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="calendar-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Tarih ve Tutar</Text>
+          </View>
 
-          <DateInput
-            label="Düzenleme Tarihi"
-            value={formData.issue_date}
-            onChangeDate={(value) => handleInputChange('issue_date', value)}
-            error={errors.issue_date}
-            required
-          />
+          <View style={styles.sectionContent}>
+            <DateInput
+              label="Düzenleme Tarihi *"
+              value={formData.issue_date}
+              onChangeDate={(value) => handleInputChange('issue_date', value)}
+              error={errors.issue_date}
+            />
 
-          <DateInput
-            label="Vade Tarihi"
-            value={formData.due_date}
-            onChangeDate={(value) => handleInputChange('due_date', value)}
-            error={errors.due_date}
-            required
-          />
+            <DateInput
+              label="Vade Tarihi *"
+              value={formData.due_date}
+              onChangeDate={(value) => handleInputChange('due_date', value)}
+              error={errors.due_date}
+            />
 
-          <Input
-            label="Tutar"
-            placeholder="0.00"
-            value={formData.amount.toString()}
-            onChangeText={(value) => {
-              const numValue = parseFloat(value) || 0;
-              handleInputChange('amount', numValue);
-            }}
-            error={errors.amount}
-            keyboardType="decimal-pad"
-            required
-          />
+            <Input
+              label="Tutar *"
+              placeholder="0.00"
+              value={formData.amount ? String(formData.amount) : ''}
+              onChangeText={(text) => {
+                const numValue = parseFloat(text) || 0
+                handleInputChange('amount', numValue)
+              }}
+              error={errors.amount}
+              keyboardType="decimal-pad"
+            />
 
-          <SelectInput
-            label="Para Birimi"
-            options={CURRENCY_OPTIONS}
-            value={formData.currency_type}
-            onValueChange={(value) => handleInputChange('currency_type', value as CurrencyType)}
-            error={errors.currency_type}
-            required
-          />
-        </Card>
+            <SelectInput
+              label="Para Birimi *"
+              options={CURRENCY_OPTIONS}
+              selectedValue={formData.currency_type}
+              onValueChange={(value) => handleInputChange('currency_type', value as CurrencyType)}
+              error={errors.currency_type}
+            />
+          </View>
+        </View>
 
-        <Card variant="outlined" style={styles.card}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Diğer</Text>
+        {/* Diğer Bilgiler */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="create-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Diğer Bilgiler</Text>
+          </View>
 
-          <Input
-            label="Açıklama"
-            placeholder="Çek hakkında notlar..."
-            value={formData.description}
-            onChangeText={(value) => handleInputChange('description', value)}
-            error={errors.description}
-            multiline
-            numberOfLines={4}
-          />
-        </Card>
-      </ScrollView>
-      </KeyboardAvoidingView>
+          <View style={styles.sectionContent}>
+            <Input
+              label="Açıklama"
+              placeholder="Opsiyonel"
+              value={formData.description}
+              onChangeText={(text) => handleInputChange('description', text)}
+              error={errors.description}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+        </View>
+      </KeyboardAwareScrollView>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.background
+  },
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: DashboardSpacing.lg
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.md
+  },
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
+  },
+  saveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  saveButtonDisabled: {
+    opacity: 0.5
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
   },
   content: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    flex: 1
   },
-  scrollView: {
-    flex: 1,
+  contentContainer: {
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
   },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing['3xl'],
+  section: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.lg,
+    overflow: 'hidden'
   },
-  card: {
-    marginBottom: Spacing.lg,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingSM,
-    marginBottom: Spacing.md,
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
-});
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
+  }
+})
