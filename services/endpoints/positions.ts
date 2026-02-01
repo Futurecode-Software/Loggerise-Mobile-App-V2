@@ -9,6 +9,22 @@ import api from '../api';
 // Position status type
 export type PositionStatus = 'active' | 'completed' | 'cancelled' | 'draft';
 
+// Position status colors for UI
+export const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
+  active: { primary: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' },
+  completed: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' },
+  cancelled: { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' },
+  draft: { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' },
+};
+
+// Position status labels
+export const STATUS_LABELS: Record<string, string> = {
+  active: 'Aktif',
+  completed: 'Tamamlandı',
+  cancelled: 'İptal',
+  draft: 'Taslak',
+};
+
 // Position type
 export type PositionType = 'import' | 'export';
 
