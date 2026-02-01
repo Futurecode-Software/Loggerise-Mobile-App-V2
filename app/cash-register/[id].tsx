@@ -1,10 +1,10 @@
 /**
- * Cash Register Detail Screen
+ * Kasa Detay Sayfası
  *
- * Shows cash register details with balance information.
+ * Kasa bilgilerini detaylı görüntüleme - CLAUDE.md tasarım ilkeleri ile uyumlu
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -12,367 +12,824 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+  ActivityIndicator
+} from 'react-native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useFocusEffect } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Edit,
-  Trash2,
-  Hash,
-  MapPin,
-  Wallet,
-  User,
-  FileText,
-  AlertCircle,
-} from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
 import {
   getCashRegister,
   deleteCashRegister,
   CashRegister,
   formatBalance,
-  getCurrencyLabel,
-} from '@/services/endpoints/cash-registers';
+  getCurrencyLabel
+} from '@/services/endpoints/cash-registers'
+
+// Tarih formatlama
+const formatDate = (dateString?: string): string => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
+  } catch {
+    return dateString
+  }
+}
+
+// Bölüm başlığı
+interface SectionHeaderProps {
+  title: string
+  icon: keyof typeof Ionicons.glyphMap
+  count?: number
+  isExpanded?: boolean
+  onToggle?: () => void
+}
+
+function SectionHeader({ title, icon, count, isExpanded, onToggle }: SectionHeaderProps) {
+  return (
+    <TouchableOpacity
+      style={styles.sectionHeader}
+      onPress={onToggle}
+      disabled={!onToggle}
+      activeOpacity={onToggle ? 0.7 : 1}
+    >
+      <View style={styles.sectionHeaderLeft}>
+        <View style={styles.sectionIcon}>
+          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
+        </View>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {count !== undefined && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{count}</Text>
+          </View>
+        )}
+      </View>
+      {onToggle && (
+        <Ionicons
+          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={DashboardColors.textMuted}
+        />
+      )}
+    </TouchableOpacity>
+  )
+}
+
+// Bilgi satırı
+interface InfoRowProps {
+  label: string
+  value: string
+  icon?: keyof typeof Ionicons.glyphMap
+  highlight?: boolean
+}
+
+function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={styles.infoLabel}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={14}
+            color={DashboardColors.textMuted}
+            style={styles.infoIcon}
+          />
+        )}
+        <Text style={styles.infoLabelText}>{label}</Text>
+      </View>
+      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
+        {value}
+      </Text>
+    </View>
+  )
+}
 
 export default function CashRegisterDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const cashRegisterId = id ? parseInt(id, 10) : null
 
-  const [cashRegister, setCashRegister] = useState<CashRegister | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // State
+  const [cashRegister, setCashRegister] = useState<CashRegister | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  // Fetch cash register data
-  const fetchCashRegister = useCallback(async () => {
-    if (!id) return;
+  // Refs
+  const isMountedRef = useRef(true)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
+
+  // Veri çekme
+  const fetchCashRegister = useCallback(async (showLoading = true) => {
+    if (!cashRegisterId) {
+      setError('Geçersiz kasa ID')
+      setIsLoading(false)
+      return
+    }
 
     try {
-      setError(null);
-      const data = await getCashRegister(parseInt(id, 10));
-      setCashRegister(data);
+      if (showLoading) {
+        setIsLoading(true)
+        setError(null)
+      }
+
+      const data = await getCashRegister(cashRegisterId)
+
+      if (isMountedRef.current) {
+        setCashRegister(data)
+        setError(null)
+      }
     } catch (err) {
-      console.error('Cash register fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Kasa bilgileri yüklenemedi');
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Kasa bilgileri yüklenemedi')
+      }
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
     }
-  }, [id]);
+  }, [cashRegisterId])
 
   useEffect(() => {
-    fetchCashRegister();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    isMountedRef.current = true
+    fetchCashRegister()
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchCashRegister();
-  };
-
-  // Delete cash register
-  const handleDelete = () => {
-    setShowDeleteConfirm(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!id) return;
-    setIsDeleting(true);
-    try {
-      await deleteCashRegister(parseInt(id, 10));
-      success('Başarılı', 'Kasa silindi.');
-      router.back();
-    } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Kasa silinemedi.');
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
+    return () => {
+      isMountedRef.current = false
     }
-  };
+  }, [fetchCashRegister])
 
-  // Render info row
-  const renderInfoRow = (
-    label: string,
-    value?: string | number | boolean,
-    icon?: any
-  ) => {
-    if (value === undefined || value === null || value === '') return null;
-    const Icon = icon;
-    const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayır') : String(value);
+  // Edit sayfasından dönüşte yenile
+  useFocusEffect(
+    useCallback(() => {
+      fetchCashRegister(false)
+    }, [fetchCashRegister])
+  )
 
-    return (
-      <View style={styles.infoRow}>
-        <View style={styles.infoRowLeft}>
-          {Icon && <Icon size={16} color={colors.textMuted} />}
-          <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}:</Text>
-        </View>
-        <Text style={[styles.infoValue, { color: colors.text }]}>{displayValue}</Text>
-      </View>
-    );
-  };
+  // Yenileme
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    fetchCashRegister(false)
+  }, [fetchCashRegister])
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Kasa Detayı" showBackButton />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Kasa bilgileri yükleniyor...
-          </Text>
-        </View>
-      </View>
-    );
+  // Düzenleme
+  const handleEdit = () => {
+    if (!cashRegisterId) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/cash-register/${cashRegisterId}/edit`)
   }
 
-  // Error state
-  if (error || !cashRegister) {
+  // Silme dialogunu aç
+  const handleDelete = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    deleteDialogRef.current?.present()
+  }
+
+  // Silme işlemini gerçekleştir
+  const confirmDelete = async () => {
+    if (!cashRegisterId) return
+
+    setIsDeleting(true)
+    try {
+      await deleteCashRegister(cashRegisterId)
+      deleteDialogRef.current?.dismiss()
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      Toast.show({
+        type: 'success',
+        text1: 'Kasa başarıyla silindi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+
+      setTimeout(() => {
+        router.back()
+      }, 300)
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Kasa silinemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Geri
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
+
+  // Header içeriği
+  const renderHeaderContent = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.headerInfo}>
+          <Skeleton width={160} height={24} style={{ marginBottom: DashboardSpacing.sm }} />
+          <View style={styles.badgeRow}>
+            <Skeleton width={80} height={24} borderRadius={12} />
+            <Skeleton width={80} height={24} borderRadius={12} />
+          </View>
+        </View>
+      )
+    }
+
+    if (!cashRegister) return null
+
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Kasa Detayı" showBackButton />
-        <View style={styles.errorContainer}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            {error || 'Kasa bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchCashRegister}
+      <View style={styles.headerInfo}>
+        <View style={styles.nameRow}>
+          <View style={styles.nameIcon}>
+            <Ionicons name="wallet" size={16} color="#fff" />
+          </View>
+          <Text style={styles.headerName}>{cashRegister.name}</Text>
+        </View>
+
+        {cashRegister.code && (
+          <Text style={styles.headerCode}>#{cashRegister.code}</Text>
+        )}
+
+        <View style={styles.badgeRow}>
+          <View style={styles.currencyBadge}>
+            <Ionicons name="cash-outline" size={14} color="rgba(255, 255, 255, 0.9)" />
+            <Text style={styles.currencyBadgeText}>
+              {getCurrencyLabel(cashRegister.currency_type)}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: cashRegister.is_active
+                ? 'rgba(16, 185, 129, 0.2)'
+                : 'rgba(239, 68, 68, 0.2)'
+              }
+            ]}
           >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: cashRegister.is_active
+                  ? DashboardColors.success
+                  : DashboardColors.danger
+                }
+              ]}
+            />
+            <Text
+              style={[
+                styles.statusBadgeText,
+                { color: cashRegister.is_active
+                  ? DashboardColors.success
+                  : DashboardColors.danger
+                }
+              ]}
+            >
+              {cashRegister.is_active ? 'Aktif' : 'Pasif'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Bakiye Özeti */}
+        <View style={styles.balanceSummary}>
+          <Text style={styles.balanceLabel}>Güncel Bakiye</Text>
+          <Text
+            style={[
+              styles.balanceAmount,
+              cashRegister.balance < 0 && styles.balanceNegative
+            ]}
+          >
+            {formatBalance(cashRegister.balance, cashRegister.currency_type)}
+          </Text>
         </View>
       </View>
-    );
+    )
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-        title={cashRegister.name}
-        showBackButton
-        rightIcons={
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => router.push(`/cash-register/${cashRegister.id}/edit` as any)}
-            >
-              <Edit size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Trash2 size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </View>
-        }
-      />
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
 
-      {/* Balance Card */}
-      <View style={[styles.balanceCard, { backgroundColor: Brand.primary }]}>
-        <Text style={styles.balanceLabel}>Güncel Bakiye</Text>
-        <Text
-          style={[
-            styles.balanceAmount,
-            cashRegister.balance < 0 && { color: 'rgba(255, 255, 255, 0.8)' },
-          ]}
-        >
-          {formatBalance(cashRegister.balance, cashRegister.currency_type)}
-        </Text>
-        <View style={styles.balanceFooter}>
-          <Badge
-            label={getCurrencyLabel(cashRegister.currency_type)}
-            variant="outline"
-            size="sm"
-            style={{ borderColor: '#FFFFFF', backgroundColor: 'rgba(255,255,255,0.2)' }}
-            textStyle={{ color: '#FFFFFF' }}
-          />
-          <Badge
-            label={cashRegister.is_active ? 'Aktif' : 'Pasif'}
-            variant={cashRegister.is_active ? 'success' : 'default'}
-            size="sm"
-          />
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {!isLoading && cashRegister && (
+              <View style={styles.headerActions}>
+                <TouchableOpacity style={styles.headerButton} onPress={handleEdit}>
+                  <Ionicons name="create-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.headerButton, styles.deleteButton]}
+                  onPress={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={22} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {renderHeaderContent()}
         </View>
+
+        <View style={styles.bottomCurve} />
       </View>
 
-      {/* Details */}
+      {/* İçerik */}
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={DashboardColors.primary}
+          />
         }
       >
-        {/* Kasa Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Kasa Bilgileri</Text>
-          {renderInfoRow('Kasa Adı', cashRegister.name, Wallet)}
-          {cashRegister.code && renderInfoRow('Kasa Kodu', cashRegister.code, Hash)}
-          {cashRegister.location && renderInfoRow('Konum', cashRegister.location, MapPin)}
-          {cashRegister.responsible_user && renderInfoRow(
-            'Sorumlu',
-            cashRegister.responsible_user.name,
-            User
-          )}
-        </Card>
+        {/* Loading */}
+        {isLoading && (
+          <View style={styles.skeletonContainer}>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={styles.card}>
+                <View style={styles.sectionHeader}>
+                  <Skeleton width={140} height={20} />
+                </View>
+                <View style={styles.cardContent}>
+                  <Skeleton width="100%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="80%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="60%" height={16} />
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
-        {/* Bakiye Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Bakiye Bilgileri</Text>
-          {renderInfoRow('Açılış Bakiyesi', formatBalance(cashRegister.opening_balance, cashRegister.currency_type), Wallet)}
-          {renderInfoRow('Güncel Bakiye', formatBalance(cashRegister.balance, cashRegister.currency_type), Wallet)}
-        </Card>
+        {/* Hata */}
+        {!isLoading && (error || !cashRegister) && (
+          <View style={styles.errorState}>
+            <View style={styles.errorIcon}>
+              <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+            </View>
+            <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+            <Text style={styles.errorText}>{error || 'Kasa bulunamadı'}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => fetchCashRegister()}>
+              <Ionicons name="refresh" size={18} color="#fff" />
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-        {/* Açıklama */}
-        {cashRegister.description && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Açıklama</Text>
-            <Text style={[styles.descriptionText, { color: colors.textSecondary }]}>
-              {cashRegister.description}
-            </Text>
-          </Card>
+        {/* Normal içerik */}
+        {!isLoading && cashRegister && (
+          <>
+            {/* Kasa Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Kasa Bilgileri" icon="wallet-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Kasa Adı"
+                  value={cashRegister.name}
+                  icon="text-outline"
+                  highlight
+                />
+                {cashRegister.code && (
+                  <InfoRow
+                    label="Kasa Kodu"
+                    value={cashRegister.code}
+                    icon="barcode-outline"
+                  />
+                )}
+                {cashRegister.location && (
+                  <InfoRow
+                    label="Konum"
+                    value={cashRegister.location}
+                    icon="location-outline"
+                  />
+                )}
+                {cashRegister.responsible_user && (
+                  <InfoRow
+                    label="Sorumlu"
+                    value={cashRegister.responsible_user.name}
+                    icon="person-outline"
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* Bakiye Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Bakiye Bilgileri" icon="cash-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Para Birimi"
+                  value={getCurrencyLabel(cashRegister.currency_type)}
+                  icon="globe-outline"
+                />
+                <InfoRow
+                  label="Açılış Bakiyesi"
+                  value={formatBalance(cashRegister.opening_balance, cashRegister.currency_type)}
+                  icon="log-in-outline"
+                />
+                <InfoRow
+                  label="Güncel Bakiye"
+                  value={formatBalance(cashRegister.balance, cashRegister.currency_type)}
+                  icon="wallet-outline"
+                  highlight
+                />
+              </View>
+            </View>
+
+            {/* Açıklama */}
+            {cashRegister.description && (
+              <View style={styles.card}>
+                <SectionHeader title="Açıklama" icon="document-text-outline" />
+                <View style={styles.cardContent}>
+                  <Text style={styles.descriptionText}>{cashRegister.description}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Sistem Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Sistem Bilgileri" icon="time-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Oluşturulma"
+                  value={formatDate(cashRegister.created_at)}
+                  icon="add-circle-outline"
+                />
+                <InfoRow
+                  label="Son Güncelleme"
+                  value={formatDate(cashRegister.updated_at)}
+                  icon="refresh-outline"
+                />
+                <InfoRow
+                  label="Durum"
+                  value={cashRegister.is_active ? 'Aktif' : 'Pasif'}
+                  icon={cashRegister.is_active ? 'checkmark-circle-outline' : 'close-circle-outline'}
+                />
+              </View>
+            </View>
+
+            {/* Alt boşluk */}
+            <View style={{ height: insets.bottom + DashboardSpacing['3xl'] }} />
+          </>
         )}
       </ScrollView>
 
-      {/* Delete Confirm Dialog */}
+      {/* Silme Onay Dialogu */}
       <ConfirmDialog
-        visible={showDeleteConfirm}
+        ref={deleteDialogRef}
         title="Kasayı Sil"
         message="Bu kasayı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        type="danger"
         confirmText="Sil"
         cancelText="İptal"
-        isDangerous
+        onConfirm={confirmDelete}
         isLoading={isDeleting}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.primary
+  },
+
+  // Header
+  headerContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingBottom: 24
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: DashboardSpacing.lg
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   headerActions: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  headerButton: {
-    padding: Spacing.sm,
-  },
-  loadingContainer: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
+    gap: DashboardSpacing.sm
   },
-  loadingText: {
-    ...Typography.bodyMD,
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)'
   },
-  errorContainer: {
-    flex: 1,
+  headerInfo: {
+    gap: DashboardSpacing.sm
+  },
+  nameRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing['2xl'],
-    gap: Spacing.md,
+    gap: DashboardSpacing.sm
   },
-  errorTitle: {
-    ...Typography.headingMD,
+  nameIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
-  errorText: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
+  headerName: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.5
   },
-  retryButton: {
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+  headerCode: {
+    fontSize: DashboardFontSizes.sm,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginLeft: 44
   },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
+  badgeRow: {
+    flexDirection: 'row',
+    gap: DashboardSpacing.sm,
+    marginTop: DashboardSpacing.xs
+  },
+  currencyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 6,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    gap: 4
+  },
+  currencyBadgeText: {
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.9)'
   },
-  balanceCard: {
-    margin: Spacing.lg,
-    padding: Spacing.xl,
-    borderRadius: BorderRadius.xl,
-    gap: Spacing.md,
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 6,
+    borderRadius: DashboardBorderRadius.full,
+    gap: 4
+  },
+  statusBadgeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600'
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
+  },
+  balanceSummary: {
+    marginTop: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)'
   },
   balanceLabel: {
-    ...Typography.bodyMD,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: DashboardFontSizes.sm,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: DashboardSpacing.xs
   },
   balanceAmount: {
-    ...Typography.headingXL,
-    color: '#FFFFFF',
-    fontWeight: '700',
+    fontSize: DashboardFontSizes['4xl'],
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.5
   },
-  balanceFooter: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
+  balanceNegative: {
+    color: 'rgba(239, 68, 68, 0.9)'
   },
-  scrollView: {
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+
+  // İçerik
+  content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    backgroundColor: DashboardColors.background
   },
-  scrollContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    paddingBottom: Spacing['2xl'],
+  contentContainer: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md
   },
-  sectionCard: {
-    padding: Spacing.md,
+
+  // Kartlar
+  card: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.sm
+  },
+  cardContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+
+  // Bölüm Başlığı
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingSM,
-    marginBottom: Spacing.md,
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
+  countBadge: {
+    backgroundColor: DashboardColors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10
+  },
+  countText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600',
+    color: '#fff'
+  },
+
+  // Bilgi Satırı
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
-    gap: Spacing.sm,
-  },
-  infoRowLeft: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    flex: 1,
+    paddingVertical: DashboardSpacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
   },
   infoLabel: {
-    ...Typography.bodySM,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  infoIcon: {
+    marginRight: DashboardSpacing.sm
+  },
+  infoLabelText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
   infoValue: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
-    textAlign: 'right',
+    color: DashboardColors.textPrimary,
+    maxWidth: '50%',
+    textAlign: 'right'
   },
+  infoValueHighlight: {
+    color: DashboardColors.primary,
+    fontWeight: '600'
+  },
+
+  // Açıklama
   descriptionText: {
-    ...Typography.bodyMD,
-    lineHeight: 20,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    lineHeight: 22
   },
-});
+
+  // Skeleton
+  skeletonContainer: {
+    gap: DashboardSpacing.md
+  },
+
+  // Hata durumu
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
+  },
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  errorTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
+  },
+  retryButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  }
+})
