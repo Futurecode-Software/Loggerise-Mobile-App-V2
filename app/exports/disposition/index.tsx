@@ -13,27 +13,28 @@ import {
   TouchableOpacity,
   FlatList,
   RefreshControl,
-  ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import {
-  Plus,
-  Check,
-  Trash2,
-  Package,
-  MapPin,
-  Truck,
-  User,
-  X,
-  ChevronDown,
-  ChevronUp,
-  AlertCircle,
-} from 'lucide-react-native';
-import { Card, Badge, Button } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { PageHeader } from '@/components/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import LoadPickerModal, { LoadPickerModalRef } from '@/components/modals/LoadPickerModal';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardBorderRadius,
+  DashboardFontSizes,
+  DashboardShadows,
+  DashboardAnimations,
+} from '@/constants/dashboard-theme';
 import { useToast } from '@/hooks/use-toast';
 import {
   getDispositionData,
@@ -46,10 +47,264 @@ import {
   DraftPosition,
   DispositionData,
 } from '@/services/endpoints/disposition';
-import { Load, getStatusLabel, getStatusColor } from '@/services/endpoints/loads';
+import { Load } from '@/services/endpoints/loads';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+// Pozisyon durum renkleri
+const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
+  active: { primary: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' },
+  completed: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' },
+  cancelled: { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' },
+  draft: { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' },
+};
+
+// Skeleton Component
+function PositionCardSkeleton() {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Skeleton width={48} height={48} borderRadius={12} />
+        <View style={{ flex: 1, marginLeft: DashboardSpacing.sm }}>
+          <Skeleton width={160} height={18} />
+          <Skeleton width={80} height={14} style={{ marginTop: 4 }} />
+        </View>
+        <Skeleton width={60} height={24} borderRadius={12} />
+      </View>
+      <View style={styles.cardInfo}>
+        <Skeleton width={120} height={14} />
+        <Skeleton width={100} height={14} />
+      </View>
+    </View>
+  );
+}
+
+// Draft Position Card Component
+interface DraftPositionCardProps {
+  position: DraftPosition;
+  isExpanded: boolean;
+  isConfirming: boolean;
+  onToggleExpand: () => void;
+  onAddLoad: () => void;
+  onConfirm: () => void;
+  onDelete: () => void;
+  onRemoveLoad: (load: Load) => void;
+}
+
+function DraftPositionCard({
+  position,
+  isExpanded,
+  isConfirming,
+  onToggleExpand,
+  onAddLoad,
+  onConfirm,
+  onDelete,
+  onRemoveLoad,
+}: DraftPositionCardProps) {
+  const scale = useSharedValue(1);
+  const colors = STATUS_COLORS.draft;
+  const loads = position.loads || [];
+  const capacity = calculatePositionCapacity(loads);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy);
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, DashboardAnimations.springBouncy);
+  };
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onToggleExpand();
+  };
+
+  return (
+    <AnimatedPressable
+      style={[styles.card, animStyle]}
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      {/* Header */}
+      <View style={styles.cardHeader}>
+        <View style={[styles.cardIcon, { backgroundColor: colors.bg }]}>
+          <Ionicons name="map-outline" size={20} color={colors.primary} />
+        </View>
+        <View style={styles.cardHeaderContent}>
+          <Text style={styles.cardName} numberOfLines={1}>
+            Taslak Pozisyon #{position.id}
+          </Text>
+          <View style={styles.cardMeta}>
+            {position.truck_tractor && (
+              <View style={styles.metaItem}>
+                <Ionicons name="car-outline" size={12} color={DashboardColors.textMuted} />
+                <Text style={styles.metaText}>{position.truck_tractor.plate}</Text>
+              </View>
+            )}
+            <View style={styles.metaItem}>
+              <Ionicons name="cube-outline" size={12} color={DashboardColors.textMuted} />
+              <Text style={styles.metaText}>{loads.length} yük</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.cardActions}>
+          <View style={[styles.statusBadge, { backgroundColor: colors.bg }]}>
+            <Text style={[styles.statusText, { color: colors.primary }]}>Taslak</Text>
+          </View>
+          <Ionicons
+            name={isExpanded ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color={DashboardColors.textMuted}
+          />
+        </View>
+      </View>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <View style={styles.expandedContent}>
+          {/* Capacity Info */}
+          <View style={styles.capacityRow}>
+            <View style={styles.capacityItem}>
+              <Text style={styles.capacityLabel}>Hacim</Text>
+              <Text style={styles.capacityValue}>{capacity.totalVolume} m³</Text>
+            </View>
+            <View style={styles.capacityItem}>
+              <Text style={styles.capacityLabel}>Ağırlık</Text>
+              <Text style={styles.capacityValue}>{capacity.totalWeight} kg</Text>
+            </View>
+            <View style={styles.capacityItem}>
+              <Text style={styles.capacityLabel}>LDM</Text>
+              <Text style={styles.capacityValue}>{capacity.totalLademetre}</Text>
+            </View>
+          </View>
+
+          {/* Loads List */}
+          {loads.length > 0 ? (
+            <View style={styles.loadsList}>
+              <Text style={styles.loadsTitle}>Atanmış Yükler</Text>
+              {loads.map((load) => (
+                <View key={load.id} style={styles.loadItem}>
+                  <View style={styles.loadInfo}>
+                    <Text style={styles.loadNumber}>{load.load_number}</Text>
+                    <Text style={styles.loadCargo} numberOfLines={1}>
+                      {load.cargo_name || '-'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeLoadBtn}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      onRemoveLoad(load);
+                    }}
+                  >
+                    <Ionicons name="close" size={14} color={DashboardColors.danger} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyLoads}>
+              <Ionicons name="alert-circle-outline" size={24} color={DashboardColors.textMuted} />
+              <Text style={styles.emptyLoadsText}>Henüz yük atanmamış</Text>
+            </View>
+          )}
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.actionBtnSecondary]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onAddLoad();
+              }}
+            >
+              <Ionicons name="add" size={16} color={DashboardColors.primary} />
+              <Text style={[styles.actionBtnText, { color: DashboardColors.primary }]}>
+                Yük Ekle
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                styles.actionBtnPrimary,
+                (isConfirming || loads.length === 0) && styles.actionBtnDisabled,
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                onConfirm();
+              }}
+              disabled={isConfirming || loads.length === 0}
+            >
+              {isConfirming ? (
+                <Ionicons name="refresh" size={16} color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                  <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Onayla</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.actionBtnDanger]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                onDelete();
+              }}
+            >
+              <Ionicons name="trash-outline" size={16} color={DashboardColors.danger} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </AnimatedPressable>
+  );
+}
+
+// Empty State
+function EmptyState() {
+  return (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="map-outline" size={64} color={DashboardColors.textMuted} />
+      </View>
+      <Text style={styles.emptyTitle}>Taslak pozisyon yok</Text>
+      <Text style={styles.emptyText}>
+        Yeni taslak oluşturmak için + butonuna tıklayın
+      </Text>
+    </View>
+  );
+}
+
+// Error State
+interface ErrorStateProps {
+  error: string;
+  onRetry: () => void;
+}
+
+function ErrorState({ error, onRetry }: ErrorStateProps) {
+  return (
+    <View style={styles.errorState}>
+      <View style={styles.errorIcon}>
+        <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+      </View>
+      <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+      <Text style={styles.errorText}>{error}</Text>
+      <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+        <Ionicons name="refresh" size={18} color="#fff" />
+        <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 export default function DispositionScreen() {
-  const colors = Colors.light;
   const { success, error: showError } = useToast();
 
   // Data state
@@ -121,6 +376,7 @@ export default function DispositionScreen() {
 
   // Create new draft position
   const handleCreateDraft = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsCreating(true);
     try {
       const position = await createDraftPosition('export');
@@ -220,260 +476,96 @@ export default function DispositionScreen() {
     });
   };
 
-  // Render draft position card
-  const renderDraftPosition = ({ item: position }: { item: DraftPosition }) => {
-    const isExpanded = expandedPositions.has(position.id);
-    const loads = position.loads || [];
-    const capacity = calculatePositionCapacity(loads);
-    const isConfirmingThis = isConfirming === position.id;
-
-    return (
-      <Card style={styles.positionCard}>
-        {/* Header */}
-        <TouchableOpacity
-          style={styles.positionHeader}
-          onPress={() => togglePositionExpand(position.id)}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.positionIcon, { backgroundColor: Brand.primary + '15' }]}>
-            <MapPin size={20} color={Brand.primary} />
-          </View>
-          <View style={styles.positionInfo}>
-            <Text style={[styles.positionTitle, { color: colors.text }]}>
-              Taslak Pozisyon #{position.id}
-            </Text>
-            <View style={styles.positionMeta}>
-              {position.truck_tractor && (
-                <View style={styles.metaItem}>
-                  <Truck size={12} color={colors.textMuted} />
-                  <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                    {position.truck_tractor.plate}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.metaItem}>
-                <Package size={12} color={colors.textMuted} />
-                <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                  {loads.length} yük
-                </Text>
-              </View>
-            </View>
-          </View>
-          <View style={styles.positionActions}>
-            <Badge label="Taslak" variant="warning" size="sm" />
-            {isExpanded ? (
-              <ChevronUp size={20} color={colors.textMuted} />
-            ) : (
-              <ChevronDown size={20} color={colors.textMuted} />
-            )}
-          </View>
-        </TouchableOpacity>
-
-        {/* Expanded Content */}
-        {isExpanded && (
-          <View style={styles.positionContent}>
-            {/* Capacity Info */}
-            <View style={[styles.capacityRow, { backgroundColor: colors.surface }]}>
-              <View style={styles.capacityItem}>
-                <Text style={[styles.capacityLabel, { color: colors.textSecondary }]}>Hacim</Text>
-                <Text style={[styles.capacityValue, { color: colors.text }]}>
-                  {capacity.totalVolume} m³
-                </Text>
-              </View>
-              <View style={styles.capacityItem}>
-                <Text style={[styles.capacityLabel, { color: colors.textSecondary }]}>Ağırlık</Text>
-                <Text style={[styles.capacityValue, { color: colors.text }]}>
-                  {capacity.totalWeight} kg
-                </Text>
-              </View>
-              <View style={styles.capacityItem}>
-                <Text style={[styles.capacityLabel, { color: colors.textSecondary }]}>LDM</Text>
-                <Text style={[styles.capacityValue, { color: colors.text }]}>
-                  {capacity.totalLademetre}
-                </Text>
-              </View>
-            </View>
-
-            {/* Loads List */}
-            {loads.length > 0 ? (
-              <View style={styles.loadsList}>
-                <Text style={[styles.loadsTitle, { color: colors.text }]}>Atanmış Yükler</Text>
-                {loads.map((load) => (
-                  <View
-                    key={load.id}
-                    style={[styles.loadItem, { borderColor: colors.border }]}
-                  >
-                    <View style={styles.loadInfo}>
-                      <Text style={[styles.loadNumber, { color: colors.text }]}>
-                        {load.load_number}
-                      </Text>
-                      <Text
-                        style={[styles.loadCargo, { color: colors.textSecondary }]}
-                        numberOfLines={1}
-                      >
-                        {load.cargo_name || '-'}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={[styles.removeLoadBtn, { backgroundColor: colors.dangerLight }]}
-                      onPress={() => handleRemoveLoad(position, load)}
-                    >
-                      <X size={14} color={colors.danger} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyLoads}>
-                <AlertCircle size={24} color={colors.textMuted} />
-                <Text style={[styles.emptyLoadsText, { color: colors.textSecondary }]}>
-                  Henüz yük atanmamış
-                </Text>
-              </View>
-            )}
-
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                onPress={() => handleOpenLoadPicker(position)}
-              >
-                <Plus size={16} color={Brand.primary} />
-                <Text style={[styles.actionBtnText, { color: Brand.primary }]}>Yük Ekle</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: Brand.primary }]}
-                onPress={() => handleConfirmDraft(position)}
-                disabled={isConfirmingThis || loads.length === 0}
-              >
-                {isConfirmingThis ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Check size={16} color="#FFFFFF" />
-                    <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Onayla</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: colors.dangerLight }]}
-                onPress={() => handleDeleteDraft(position)}
-              >
-                <Trash2 size={16} color={colors.danger} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </Card>
-    );
+  const handleBackPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.back();
   };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Dispozisyon" showBackButton />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
-          <Text style={styles.loadingText}>Yükleniyor...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Dispozisyon" showBackButton />
-        <View style={styles.errorContainer}>
-          <AlertCircle size={64} color="#FFFFFF" />
-          <Text style={styles.errorTitle}>Bir hata oluştu</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => {
-              setIsLoading(true);
-              fetchData();
-            }}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
 
   const draftPositions = data?.draft_positions || [];
   const unassignedLoads = data?.unassigned_loads || [];
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-          title="Dispozisyon"
-          subtitle={`${draftPositions.length} taslak • ${unassignedLoads.length} atanmamış yük`}
-          showBackButton
-          rightIcons={
-            <TouchableOpacity
-              onPress={handleCreateDraft}
-              disabled={isCreating}
-              activeOpacity={0.7}
-              style={{ padding: Spacing.sm }}
-            >
-              {isCreating ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Plus size={22} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          }
-        />
-
-        <View style={styles.contentCard}>
-          {/* Stats Bar */}
-          <View style={[styles.statsBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: Brand.primary }]}>{draftPositions.length}</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Taslak</Text>
-        </View>
-        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.warning }]}>{unassignedLoads.length}</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Atanmamış</Text>
-        </View>
-        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.success }]}>
-            {data?.active_positions?.length || 0}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Aktif</Text>
-        </View>
-      </View>
-
-      {/* Draft Positions List */}
-      <FlatList
-        data={draftPositions}
-        renderItem={renderDraftPosition}
-        keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyList}>
-            <MapPin size={48} color={colors.textMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              Taslak pozisyon yok
-            </Text>
-            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-              Yeni taslak oluşturmak için + butonuna tıklayın
-            </Text>
-          </View>
-        }
+    <View style={styles.container}>
+      <PageHeader
+        title="Dispozisyon"
+        icon="map-outline"
+        subtitle={`${draftPositions.length} taslak • ${unassignedLoads.length} atanmamış yük`}
+        showBackButton
+        onBackPress={handleBackPress}
+        rightActions={[
+          {
+            icon: 'add',
+            onPress: handleCreateDraft,
+            isLoading: isCreating,
+          },
+        ]}
       />
+
+      <View style={styles.content}>
+        {/* Stats Bar */}
+        {!isLoading && !error && (
+          <View style={styles.statsBar}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: DashboardColors.primary }]}>
+                {draftPositions.length}
+              </Text>
+              <Text style={styles.statLabel}>Taslak</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: DashboardColors.warning }]}>
+                {unassignedLoads.length}
+              </Text>
+              <Text style={styles.statLabel}>Atanmamış</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: DashboardColors.success }]}>
+                {data?.active_positions?.length || 0}
+              </Text>
+              <Text style={styles.statLabel}>Aktif</Text>
+            </View>
+          </View>
+        )}
+
+        {/* List */}
+        {isLoading ? (
+          <View style={styles.listContent}>
+            <PositionCardSkeleton />
+            <PositionCardSkeleton />
+            <PositionCardSkeleton />
+          </View>
+        ) : error ? (
+          <ErrorState error={error} onRetry={() => { setIsLoading(true); fetchData(); }} />
+        ) : (
+          <FlatList
+            data={draftPositions}
+            renderItem={({ item }) => (
+              <DraftPositionCard
+                position={item}
+                isExpanded={expandedPositions.has(item.id)}
+                isConfirming={isConfirming === item.id}
+                onToggleExpand={() => togglePositionExpand(item.id)}
+                onAddLoad={() => handleOpenLoadPicker(item)}
+                onConfirm={() => handleConfirmDraft(item)}
+                onDelete={() => handleDeleteDraft(item)}
+                onRemoveLoad={(load) => handleRemoveLoad(item, load)}
+              />
+            )}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={DashboardColors.primary}
+              />
+            }
+            ListEmptyComponent={<EmptyState />}
+          />
+        )}
+      </View>
 
       {/* Load Picker Modal */}
       <LoadPickerModal
@@ -499,121 +591,94 @@ export default function DispositionScreen() {
         }}
       />
     </View>
-  </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.primary,
   },
-  contentCard: {
+  content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: 'hidden',
-    ...Shadows.lg,
+    backgroundColor: DashboardColors.background,
   },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    color: '#FFFFFF',
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing['2xl'],
-    gap: Spacing.md,
-  },
-  errorTitle: {
-    ...Typography.headingMD,
-    color: '#FFFFFF',
-  },
-  errorText: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-    color: 'rgba(255, 255, 255, 0.9)',
-  },
-  retryButton: {
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    backgroundColor: '#FFFFFF',
-  },
-  retryButtonText: {
-    color: Brand.primary,
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
+
+  // Stats Bar
   statsBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    padding: Spacing.md,
-    marginHorizontal: Spacing.lg,
-    marginVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
+    padding: DashboardSpacing.md,
+    marginHorizontal: DashboardSpacing.lg,
+    marginVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.surface,
     borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
   },
   statValue: {
-    ...Typography.headingMD,
+    fontSize: DashboardFontSizes.xl,
     fontWeight: '700',
   },
   statLabel: {
-    ...Typography.bodyXS,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textSecondary,
     marginTop: 2,
   },
   statDivider: {
     width: 1,
     height: 30,
+    backgroundColor: DashboardColors.borderLight,
   },
+
+  // List
   listContent: {
-    padding: Spacing.lg,
-    paddingBottom: 100,
-    gap: Spacing.md,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing.xl,
   },
-  positionCard: {
-    padding: 0,
-    overflow: 'hidden',
+
+  // Card
+  card: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.md,
   },
-  positionHeader: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.md,
-    gap: Spacing.md,
   },
-  positionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  cardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  positionInfo: {
+  cardHeaderContent: {
     flex: 1,
+    marginLeft: DashboardSpacing.sm,
+    marginRight: DashboardSpacing.md,
   },
-  positionTitle: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
+  cardName: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary,
+    letterSpacing: 0.3,
+    marginBottom: 2,
   },
-  positionMeta: {
+  cardMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    marginTop: Spacing.xs,
+    gap: DashboardSpacing.md,
+    marginTop: DashboardSpacing.xs,
   },
   metaItem: {
     flexDirection: 'row',
@@ -621,115 +686,221 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metaText: {
-    ...Typography.bodyXS,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted,
   },
-  positionActions: {
+  cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
-  positionContent: {
+  statusBadge: {
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.md,
+  },
+  statusText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '700',
+  },
+
+  // Expanded Content
+  expandedContent: {
     borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    padding: Spacing.md,
-    gap: Spacing.md,
+    borderTopColor: DashboardColors.borderLight,
+    paddingTop: DashboardSpacing.md,
+    marginTop: DashboardSpacing.md,
+    gap: DashboardSpacing.md,
   },
   capacityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.sm,
+    padding: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.background,
   },
   capacityItem: {
     alignItems: 'center',
   },
   capacityLabel: {
-    ...Typography.bodyXS,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textSecondary,
   },
   capacityValue: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: DashboardColors.textPrimary,
     marginTop: 2,
   },
+
+  // Loads List
   loadsList: {
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   loadsTitle: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
-    marginBottom: Spacing.xs,
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.xs,
   },
   loadItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.sm,
+    padding: DashboardSpacing.sm,
     borderWidth: 1,
-    borderRadius: BorderRadius.sm,
-    gap: Spacing.sm,
+    borderColor: DashboardColors.borderLight,
+    borderRadius: DashboardBorderRadius.md,
+    gap: DashboardSpacing.sm,
   },
   loadInfo: {
     flex: 1,
   },
   loadNumber: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
+    color: DashboardColors.textPrimary,
   },
   loadCargo: {
-    ...Typography.bodyXS,
-    marginTop: 2,
-  },
-  loadCustomer: {
-    ...Typography.bodyXS,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textSecondary,
     marginTop: 2,
   },
   removeLoadBtn: {
     width: 28,
     height: 28,
     borderRadius: 14,
+    backgroundColor: DashboardColors.dangerBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyLoads: {
     alignItems: 'center',
-    padding: Spacing.lg,
-    gap: Spacing.sm,
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.sm,
   },
   emptyLoadsText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
   },
+
+  // Action Buttons
   actionButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    gap: Spacing.xs,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.md,
+    gap: DashboardSpacing.xs,
     flex: 1,
   },
+  actionBtnPrimary: {
+    backgroundColor: DashboardColors.primary,
+  },
+  actionBtnSecondary: {
+    backgroundColor: DashboardColors.background,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
+  },
+  actionBtnDanger: {
+    backgroundColor: DashboardColors.dangerBg,
+    flex: 0.5,
+  },
+  actionBtnDisabled: {
+    opacity: 0.5,
+  },
   actionBtnText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
   },
-  emptyList: {
+
+  // Card Info (Skeleton için)
+  cardInfo: {
+    gap: DashboardSpacing.xs,
+    paddingTop: DashboardSpacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: DashboardColors.borderLight,
+    marginTop: DashboardSpacing.md,
+  },
+
+  // Empty State
+  emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-    gap: Spacing.md,
+    paddingVertical: DashboardSpacing['3xl'],
+    paddingHorizontal: DashboardSpacing.xl,
+  },
+  emptyIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl,
   },
   emptyTitle: {
-    ...Typography.headingSM,
-  },
-  emptySubtitle: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
     textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: DashboardFontSizes.md,
+    color: DashboardColors.textMuted,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+
+  // Error State
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl'],
+  },
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl,
+  },
+  errorTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: DashboardSpacing.xl,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+  },
+  retryButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
