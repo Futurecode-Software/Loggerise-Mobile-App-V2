@@ -244,91 +244,6 @@ export default function CashRegisterDetailScreen() {
     router.back()
   }
 
-  // Header içeriği
-  const renderHeaderContent = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.headerInfo}>
-          <Skeleton width={160} height={24} style={{ marginBottom: DashboardSpacing.sm }} />
-          <View style={styles.badgeRow}>
-            <Skeleton width={80} height={24} borderRadius={12} />
-            <Skeleton width={80} height={24} borderRadius={12} />
-          </View>
-        </View>
-      )
-    }
-
-    if (!cashRegister) return null
-
-    return (
-      <View style={styles.headerInfo}>
-        <View style={styles.nameRow}>
-          <View style={styles.nameIcon}>
-            <Ionicons name="wallet" size={16} color="#fff" />
-          </View>
-          <Text style={styles.headerName}>{cashRegister.name}</Text>
-        </View>
-
-        {cashRegister.code && (
-          <Text style={styles.headerCode}>#{cashRegister.code}</Text>
-        )}
-
-        <View style={styles.badgeRow}>
-          <View style={styles.currencyBadge}>
-            <Ionicons name="cash-outline" size={14} color="rgba(255, 255, 255, 0.9)" />
-            <Text style={styles.currencyBadgeText}>
-              {getCurrencyLabel(cashRegister.currency_type)}
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: cashRegister.is_active
-                ? 'rgba(16, 185, 129, 0.2)'
-                : 'rgba(239, 68, 68, 0.2)'
-              }
-            ]}
-          >
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: cashRegister.is_active
-                  ? DashboardColors.success
-                  : DashboardColors.danger
-                }
-              ]}
-            />
-            <Text
-              style={[
-                styles.statusBadgeText,
-                { color: cashRegister.is_active
-                  ? DashboardColors.success
-                  : DashboardColors.danger
-                }
-              ]}
-            >
-              {cashRegister.is_active ? 'Aktif' : 'Pasif'}
-            </Text>
-          </View>
-        </View>
-
-        {/* Bakiye Özeti */}
-        <View style={styles.balanceSummary}>
-          <Text style={styles.balanceLabel}>Güncel Bakiye</Text>
-          <Text
-            style={[
-              styles.balanceAmount,
-              cashRegister.balance < 0 && styles.balanceNegative
-            ]}
-          >
-            {formatBalance(cashRegister.balance, cashRegister.currency_type)}
-          </Text>
-        </View>
-      </View>
-    )
-  }
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -343,12 +258,29 @@ export default function CashRegisterDetailScreen() {
         <View style={styles.glowOrb2} />
 
         <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          {/* Üst Bar: Geri + Başlık + Aksiyonlar */}
           <View style={styles.headerBar}>
             <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
               <Ionicons name="chevron-back" size={24} color="#fff" />
             </TouchableOpacity>
 
-            {!isLoading && cashRegister && (
+            {/* Başlık - Orta */}
+            {isLoading ? (
+              <View style={styles.headerTitleSection}>
+                <Skeleton width={140} height={22} />
+              </View>
+            ) : cashRegister ? (
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerName} numberOfLines={1}>
+                  {cashRegister.name}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.headerTitleSection} />
+            )}
+
+            {/* Aksiyonlar - Sağ */}
+            {!isLoading && cashRegister ? (
               <View style={styles.headerActions}>
                 <TouchableOpacity style={styles.headerButton} onPress={handleEdit}>
                   <Ionicons name="create-outline" size={22} color="#fff" />
@@ -365,10 +297,80 @@ export default function CashRegisterDetailScreen() {
                   )}
                 </TouchableOpacity>
               </View>
+            ) : (
+              <View style={styles.headerActionsPlaceholder} />
             )}
           </View>
 
-          {renderHeaderContent()}
+          {/* Alt Bilgiler: Kod + Badge'ler + Bakiye */}
+          {isLoading ? (
+            <View style={styles.headerInfo}>
+              <Skeleton width={80} height={16} style={{ marginBottom: DashboardSpacing.sm }} />
+              <View style={styles.badgeRow}>
+                <Skeleton width={90} height={28} borderRadius={14} />
+                <Skeleton width={70} height={28} borderRadius={14} />
+              </View>
+            </View>
+          ) : cashRegister ? (
+            <View style={styles.headerInfo}>
+              {cashRegister.code && (
+                <Text style={styles.headerCode}>#{cashRegister.code}</Text>
+              )}
+
+              <View style={styles.badgeRow}>
+                <View style={styles.currencyBadge}>
+                  <Ionicons name="cash-outline" size={14} color="rgba(255, 255, 255, 0.9)" />
+                  <Text style={styles.currencyBadgeText}>
+                    {getCurrencyLabel(cashRegister.currency_type)}
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: cashRegister.is_active
+                      ? 'rgba(16, 185, 129, 0.2)'
+                      : 'rgba(239, 68, 68, 0.2)'
+                    }
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.statusDot,
+                      { backgroundColor: cashRegister.is_active
+                        ? DashboardColors.success
+                        : DashboardColors.danger
+                      }
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      { color: cashRegister.is_active
+                        ? DashboardColors.success
+                        : DashboardColors.danger
+                      }
+                    ]}
+                  >
+                    {cashRegister.is_active ? 'Aktif' : 'Pasif'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Bakiye Özeti */}
+              <View style={styles.balanceSummary}>
+                <Text style={styles.balanceLabel}>Güncel Bakiye</Text>
+                <Text
+                  style={[
+                    styles.balanceAmount,
+                    cashRegister.balance < 0 && styles.balanceNegative
+                  ]}
+                >
+                  {formatBalance(cashRegister.balance, cashRegister.currency_type)}
+                </Text>
+              </View>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.bottomCurve} />
@@ -569,9 +571,8 @@ const styles = StyleSheet.create({
   },
   headerBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: DashboardSpacing.lg
+    marginBottom: DashboardSpacing.md
   },
   headerButton: {
     width: 44,
@@ -581,40 +582,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center'
   },
+  headerTitleSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    marginHorizontal: DashboardSpacing.md
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: DashboardSpacing.sm
   },
+  headerActionsPlaceholder: {
+    width: 96 // 44 + 8 + 44 (iki buton + gap)
+  },
   deleteButton: {
     backgroundColor: 'rgba(239, 68, 68, 0.2)'
   },
   headerInfo: {
-    gap: DashboardSpacing.sm
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DashboardSpacing.sm
-  },
-  nameIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center'
+    gap: DashboardSpacing.sm,
+    marginTop: DashboardSpacing.xs
   },
   headerName: {
-    fontSize: DashboardFontSizes.xl,
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '700',
     color: '#fff',
-    letterSpacing: 0.5
+    letterSpacing: 0.3,
+    flex: 1
   },
   headerCode: {
     fontSize: DashboardFontSizes.sm,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginLeft: 44
+    color: 'rgba(255, 255, 255, 0.7)'
   },
   badgeRow: {
     flexDirection: 'row',
