@@ -1,200 +1,383 @@
-import { FullScreenHeader } from '@/components/header';
-import { Badge, Card, Input } from '@/components/ui';
-import { BorderRadius, Brand, Colors, Spacing, Typography, Shadows } from '@/constants/theme';
-import {
-    getDriverFullName,
-    getTrips,
-    getTripStatusLabel,
-    getTripStatusVariant,
-    getTripTypeLabel,
-    getVehicleOwnerTypeLabel,
-    Pagination,
-    Trip,
-    TripFilters,
-    TripStatus,
-} from '@/services/endpoints/trips';
-import { router, useFocusEffect } from 'expo-router';
-import {
-    AlertCircle,
-    ArrowRight,
-    Calendar,
-    Container,
-    Filter,
-    MapPin,
-    Route,
-    Search,
-    Ship,
-    Train,
-    Truck,
-    User,
-    Layers,
-    Clock,
-    Activity,
-    CheckCircle,
-    XCircle,
-} from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-    ActivityIndicator,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+/**
+ * Seferler Liste Sayfası
+ *
+ * CLAUDE.md tasarım ilkelerine uygun modern liste sayfası
+ */
 
-const STATUS_FILTERS = [
-  { id: 'all', label: 'Tümü', color: undefined, icon: Layers },
-  { id: 'planning', label: 'Planlama', color: '#f5a623', icon: Clock },
-  { id: 'active', label: 'Aktif', color: '#3b82f6', icon: Activity },
-  { id: 'completed', label: 'Tamamlandı', color: '#22c55e', icon: CheckCircle },
-  { id: 'cancelled', label: 'İptal', color: '#ef4444', icon: XCircle },
-];
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  RefreshControl,
+  Pressable
+} from 'react-native'
+import { router, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring
+} from 'react-native-reanimated'
+import { PageHeader } from '@/components/navigation'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardBorderRadius,
+  DashboardFontSizes,
+  DashboardShadows,
+  DashboardAnimations
+} from '@/constants/dashboard-theme'
+import {
+  getDriverFullName,
+  getTrips,
+  getTripStatusLabel,
+  getTripStatusVariant,
+  getTripTypeLabel,
+  getVehicleOwnerTypeLabel,
+  Pagination,
+  Trip,
+  TripFilters,
+  TripStatus,
+} from '@/services/endpoints/trips'
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+
+// Durum filtreleri
+const STATUS_FILTERS: { id: 'all' | TripStatus; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { id: 'all', label: 'Tümü', icon: 'layers-outline', color: '#6B7280' },
+  { id: 'planning', label: 'Planlama', icon: 'time-outline', color: '#F59E0B' },
+  { id: 'active', label: 'Aktif', icon: 'pulse-outline', color: '#3B82F6' },
+  { id: 'completed', label: 'Tamamlandı', icon: 'checkmark-circle-outline', color: '#10B981' },
+  { id: 'cancelled', label: 'İptal', icon: 'close-circle-outline', color: '#EF4444' },
+]
+
+// Status renkleri
+const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
+  planning: { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' },
+  active: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' },
+  completed: { primary: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' },
+  cancelled: { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' }
+}
+
+// Skeleton Component
+function TripCardSkeleton() {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Skeleton width={48} height={48} borderRadius={12} />
+        <View style={{ flex: 1, marginLeft: DashboardSpacing.sm }}>
+          <Skeleton width={140} height={18} />
+          <Skeleton width={100} height={14} style={{ marginTop: 4 }} />
+        </View>
+        <Skeleton width={70} height={24} borderRadius={12} />
+      </View>
+      <View style={styles.cardInfo}>
+        <Skeleton width="100%" height={14} />
+        <Skeleton width="70%" height={14} />
+      </View>
+      <View style={styles.cardFooter}>
+        <Skeleton width={80} height={14} />
+        <Skeleton width={80} height={14} />
+      </View>
+    </View>
+  )
+}
+
+// Card Component
+interface TripCardProps {
+  item: Trip
+  onPress: () => void
+}
+
+function TripCard({ item, onPress }: TripCardProps) {
+  const scale = useSharedValue(1)
+  const statusColors = STATUS_COLORS[item.status || 'active'] || STATUS_COLORS.active
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }))
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy)
+  }
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
+
+  // Tarih formatlama
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return '-'
+    try {
+      return new Date(dateString).toLocaleDateString('tr-TR', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      })
+    } catch {
+      return dateString
+    }
+  }
+
+  return (
+    <AnimatedPressable
+      style={[styles.card, animStyle]}
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      {/* Header */}
+      <View style={styles.cardHeader}>
+        <View style={[styles.cardIcon, { backgroundColor: DashboardColors.primaryGlow }]}>
+          <Ionicons name="car-outline" size={20} color={DashboardColors.primary} />
+        </View>
+        <View style={styles.cardHeaderContent}>
+          <Text style={styles.cardTitle} numberOfLines={1}>
+            {item.trip_number || '-'}
+          </Text>
+          {item.trip_type && (
+            <Text style={styles.cardSubtitle} numberOfLines={1}>
+              {getTripTypeLabel(item.trip_type)}
+            </Text>
+          )}
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
+          <Text style={[styles.statusBadgeText, { color: statusColors.primary }]}>
+            {getTripStatusLabel(item.status)}
+          </Text>
+        </View>
+      </View>
+
+      {/* Transport Type Badges */}
+      {(item.is_roro || item.is_train || item.is_mafi) && (
+        <View style={styles.transportBadges}>
+          {item.is_roro && (
+            <View style={[styles.transportBadge, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
+              <Ionicons name="boat-outline" size={12} color="#3B82F6" />
+              <Text style={[styles.transportText, { color: '#3B82F6' }]}>RoRo</Text>
+            </View>
+          )}
+          {item.is_train && (
+            <View style={[styles.transportBadge, { backgroundColor: 'rgba(139, 92, 246, 0.12)' }]}>
+              <Ionicons name="train-outline" size={12} color="#8B5CF6" />
+              <Text style={[styles.transportText, { color: '#8B5CF6' }]}>Tren</Text>
+            </View>
+          )}
+          {item.is_mafi && (
+            <View style={[styles.transportBadge, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
+              <Ionicons name="cube-outline" size={12} color="#F59E0B" />
+              <Text style={[styles.transportText, { color: '#F59E0B' }]}>Mafi</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Info */}
+      <View style={styles.cardInfo}>
+        {item.route && (
+          <View style={styles.infoRow}>
+            <Ionicons name="navigate-outline" size={14} color={DashboardColors.textMuted} />
+            <Text style={styles.infoText} numberOfLines={1}>{item.route}</Text>
+          </View>
+        )}
+        {(item.truck_tractor || item.trailer) && (
+          <View style={styles.infoRow}>
+            <Ionicons name="car-sport-outline" size={14} color={DashboardColors.textMuted} />
+            <Text style={styles.infoText}>
+              {item.truck_tractor?.plate || '-'}
+              {item.trailer && ` → ${item.trailer.plate}`}
+            </Text>
+          </View>
+        )}
+        {item.driver && (
+          <View style={styles.infoRow}>
+            <Ionicons name="person-outline" size={14} color={DashboardColors.textMuted} />
+            <Text style={styles.infoText}>
+              {getDriverFullName(item.driver)}
+              {item.second_driver && ` + ${getDriverFullName(item.second_driver)}`}
+            </Text>
+          </View>
+        )}
+        {item.manual_location && (
+          <View style={styles.infoRow}>
+            <Ionicons name="location-outline" size={14} color={DashboardColors.success} />
+            <Text style={styles.infoText} numberOfLines={1}>{item.manual_location}</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Footer */}
+      <View style={styles.cardFooter}>
+        <View style={styles.statItem}>
+          <Ionicons name="business-outline" size={14} color={DashboardColors.textMuted} />
+          <Text style={styles.statText}>{getVehicleOwnerTypeLabel(item.vehicle_owner_type)}</Text>
+        </View>
+        {item.loads && item.loads.length > 0 && (
+          <View style={styles.statItem}>
+            <Ionicons name="cube-outline" size={14} color={DashboardColors.primary} />
+            <Text style={[styles.statText, { color: DashboardColors.primary, fontWeight: '600' }]}>
+              {item.loads.length} yük
+            </Text>
+          </View>
+        )}
+        {item.estimated_arrival_date && (
+          <View style={styles.statItem}>
+            <Ionicons name="calendar-outline" size={14} color={DashboardColors.textMuted} />
+            <Text style={styles.statText}>{formatDate(item.estimated_arrival_date)}</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Arrow */}
+      <View style={styles.cardArrow}>
+        <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
+      </View>
+    </AnimatedPressable>
+  )
+}
+
+// Empty State
+function EmptyState({ hasSearch, hasError, errorMessage, onRetry }: {
+  hasSearch: boolean
+  hasError: boolean
+  errorMessage?: string
+  onRetry?: () => void
+}) {
+  if (hasError) {
+    return (
+      <View style={styles.emptyState}>
+        <View style={[styles.emptyIcon, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}>
+          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        </View>
+        <Text style={styles.emptyTitle}>Bir hata oluştu</Text>
+        <Text style={styles.emptyText}>{errorMessage || 'Seferler yüklenemedi'}</Text>
+        {onRetry && (
+          <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    )
+  }
+
+  return (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="car-outline" size={64} color={DashboardColors.textMuted} />
+      </View>
+      <Text style={styles.emptyTitle}>
+        {hasSearch ? 'Sonuç bulunamadı' : 'Henüz sefer yok'}
+      </Text>
+      <Text style={styles.emptyText}>
+        {hasSearch
+          ? 'Farklı bir arama terimi deneyin'
+          : 'Seferler pozisyonlar aracılığıyla otomatik oluşturulur'}
+      </Text>
+    </View>
+  )
+}
 
 export default function TripsScreen() {
-  const colors = Colors.light;
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<'all' | TripStatus>('all')
 
   // API state
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [trips, setTrips] = useState<Trip[]>([])
+  const [pagination, setPagination] = useState<Pagination | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Refs to prevent duplicate calls
-  const isMountedRef = useRef(true);
-  const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasInitialFetchRef = useRef(false);
-  const isFirstFocusRef = useRef(true);
+  // Refs
+  const isMountedRef = useRef(true)
+  const fetchIdRef = useRef(0)
+  const hasInitialFetchRef = useRef(false)
 
-  // Core fetch function - no dependencies on state
+  // Veri çekme fonksiyonu
   const executeFetch = useCallback(
-    async (search: string, filter: string, page: number = 1, append: boolean = false) => {
-      const currentFetchId = ++fetchIdRef.current;
+    async (
+      filter: 'all' | TripStatus,
+      page: number = 1,
+      append: boolean = false
+    ) => {
+      const currentFetchId = ++fetchIdRef.current
 
       try {
-        setError(null);
+        setError(null)
 
-        // Build filters
         const filters: TripFilters = {
           page,
           per_page: 20,
           is_active: true,
-        };
-
-        // Add search filter
-        if (search.trim()) {
-          filters.search = search.trim();
         }
 
-        // Add status filter
         if (filter !== 'all') {
-          filters.status = filter as TripStatus;
+          filters.status = filter
         }
 
-        const response = await getTrips(filters);
+        const response = await getTrips(filters)
 
-        // Only update if this is still the latest request
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
           if (append) {
-            setTrips((prev) => [...prev, ...response.trips]);
+            setTrips((prev) => [...prev, ...response.trips])
           } else {
-            setTrips(response.trips);
+            setTrips(response.trips)
           }
-          setPagination(response.pagination);
-          hasInitialFetchRef.current = true;
+          setPagination(response.pagination)
+          hasInitialFetchRef.current = true
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Trips fetch error:', err);
-          setError(err instanceof Error ? err.message : 'Seferler yüklenemedi');
+          console.error('Trips fetch error:', err)
+          setError(err instanceof Error ? err.message : 'Seferler yüklenemedi')
         }
       } finally {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          setIsLoading(false);
-          setIsLoadingMore(false);
-          setRefreshing(false);
+          setIsLoading(false)
+          setIsLoadingMore(false)
+          setRefreshing(false)
         }
       }
     },
     []
-  );
+  )
 
-  // Initial fetch - only once on mount
+  // İlk yükleme
   useEffect(() => {
-    isMountedRef.current = true;
-    executeFetch(searchQuery, activeFilter, 1, false);
+    isMountedRef.current = true
+    executeFetch(activeFilter, 1, false)
 
     return () => {
-      isMountedRef.current = false;
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []); // Empty deps - only run on mount
-
-  // Filter change - immediate fetch
-  useEffect(() => {
-    if (!hasInitialFetchRef.current) return;
-
-    setIsLoading(true);
-    executeFetch(searchQuery, activeFilter, 1, false);
-  }, [activeFilter]); // Only activeFilter
-
-  // Search with debounce
-  useEffect(() => {
-    if (!hasInitialFetchRef.current) return;
-
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
+      isMountedRef.current = false
     }
+  }, [])
 
-    debounceTimeoutRef.current = setTimeout(() => {
-      setIsLoading(true);
-      executeFetch(searchQuery, activeFilter, 1, false);
-    }, 500);
-
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, [searchQuery]); // Only searchQuery
-
-  // Refs for useFocusEffect to avoid re-triggering
-  const executeFetchRef = useRef(executeFetch);
-  const searchQueryRef = useRef(searchQuery);
-  const activeFilterRef = useRef(activeFilter);
+  // Filtre değişimi
   useEffect(() => {
-    executeFetchRef.current = executeFetch;
-    searchQueryRef.current = searchQuery;
-    activeFilterRef.current = activeFilter;
-  }, [executeFetch, searchQuery, activeFilter]);
+    if (!hasInitialFetchRef.current) return
 
-  // Refresh when screen comes into focus
+    setIsLoading(true)
+    executeFetch(activeFilter, 1, false)
+  }, [activeFilter])
+
+  // Ekran focus olduğunda yenile
   useFocusEffect(
     useCallback(() => {
-      if (isFirstFocusRef.current) {
-        isFirstFocusRef.current = false;
-        return;
-      }
-      // Refresh data when screen comes into focus
       if (hasInitialFetchRef.current) {
-        executeFetchRef.current(searchQueryRef.current, activeFilterRef.current, 1, false);
+        executeFetch(activeFilter, 1, false)
       }
-    }, [])
-  );
+    }, [activeFilter, executeFetch])
+  )
 
   const onRefresh = async () => {
-    setRefreshing(true);
-    await executeFetch(searchQuery, activeFilter, 1, false);
-  };
+    setRefreshing(true)
+    await executeFetch(activeFilter, 1, false)
+  }
 
   const loadMore = () => {
     if (
@@ -202,469 +385,362 @@ export default function TripsScreen() {
       pagination &&
       pagination.current_page < pagination.last_page
     ) {
-      setIsLoadingMore(true);
-      executeFetch(searchQuery, activeFilter, pagination.current_page + 1, true);
+      setIsLoadingMore(true)
+      executeFetch(activeFilter, pagination.current_page + 1, true)
     }
-  };
+  }
 
-  // Format date for display
-  const formatDate = (dateString?: string): string => {
-    if (!dateString) return '-';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('tr-TR', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
-    } catch {
-      return dateString;
-    }
-  };
+  const handleCardPress = (item: Trip) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/logistics/trip/${item.id}`)
+  }
 
-  const getStatusBadge = (status?: TripStatus) => {
-    const label = getTripStatusLabel(status);
-    const variant = getTripStatusVariant(status);
-    return <Badge label={label} variant={variant} size="sm" />;
-  };
+  const handleBackPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
 
-  const renderTrip = ({ item }: { item: Trip }) => (
-    <Card
-      style={styles.tripCard}
-      onPress={() => router.push(`/logistics/trip/${item.id}` as any)}
-    >
-      {/* Header */}
-      <View style={styles.tripHeader}>
-        <View style={styles.tripNumberContainer}>
-          <Text style={[styles.tripNumber, { color: colors.text }]}>
-            {item.trip_number || '-'}
-          </Text>
-          {item.trip_type ? (
-            <Text style={[styles.tripType, { color: colors.textSecondary }]}>
-              {getTripTypeLabel(item.trip_type)}
-            </Text>
-          ) : null}
-        </View>
-        {getStatusBadge(item.status)}
-      </View>
+  // Aktif filtre sayısı
+  const activeFilterCount = activeFilter !== 'all' ? 1 : 0
 
-      {/* Transport Type Icons */}
-      {(item.is_roro || item.is_train || item.is_mafi) ? (
-        <View style={styles.transportIcons}>
-          {item.is_roro ? (
-            <View style={[styles.transportBadge, { backgroundColor: '#3b82f6' + '20' }]}>
-              <Ship size={14} color="#3b82f6" />
-              <Text style={[styles.transportText, { color: '#3b82f6' }]}>RoRo</Text>
-            </View>
-          ) : null}
-          {item.is_train ? (
-            <View style={[styles.transportBadge, { backgroundColor: '#8b5cf6' + '20' }]}>
-              <Train size={14} color="#8b5cf6" />
-              <Text style={[styles.transportText, { color: '#8b5cf6' }]}>Tren</Text>
-            </View>
-          ) : null}
-          {item.is_mafi ? (
-            <View style={[styles.transportBadge, { backgroundColor: '#f59e0b' + '20' }]}>
-              <Container size={14} color="#f59e0b" />
-              <Text style={[styles.transportText, { color: '#f59e0b' }]}>Mafi</Text>
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-
-      {/* Route */}
-      {item.route ? (
-        <View style={styles.routeContainer}>
-          <Route size={16} color={colors.icon} />
-          <Text style={[styles.routeText, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.route}
-          </Text>
-        </View>
-      ) : null}
-
-      {/* Vehicle Info */}
-      <View style={styles.vehicleContainer}>
-        {item.truck_tractor ? (
-          <View style={styles.vehicleItem}>
-            <Truck size={14} color={colors.icon} />
-            <Text style={[styles.vehicleText, { color: colors.textSecondary }]}>
-              {item.truck_tractor.plate || '-'}
-            </Text>
-          </View>
-        ) : null}
-        {item.trailer ? (
-          <View style={styles.vehicleItem}>
-            <ArrowRight size={12} color={colors.icon} style={{ marginHorizontal: 4 }} />
-            <Text style={[styles.vehicleText, { color: colors.textSecondary }]}>
-              {item.trailer.plate || '-'}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      {/* Driver Info */}
-      {item.driver ? (
-        <View style={styles.driverContainer}>
-          <User size={14} color={colors.icon} />
-          <Text style={[styles.driverText, { color: colors.textSecondary }]}>
-            {getDriverFullName(item.driver)}
-          </Text>
-          {item.second_driver ? (
-            <Text style={[styles.driverText, { color: colors.textMuted }]}>
-              {` + ${getDriverFullName(item.second_driver)}`}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
-
-      {/* Location */}
-      {item.manual_location ? (
-        <View style={styles.locationContainer}>
-          <MapPin size={14} color={colors.success} />
-          <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.manual_location}
-          </Text>
-        </View>
-      ) : null}
-
-      {/* Dates */}
-      {item.estimated_arrival_date ? (
-        <View style={styles.dateContainer}>
-          <Calendar size={14} color={colors.icon} />
-          <Text style={[styles.dateText, { color: colors.textMuted }]}>
-            Tahmini: {formatDate(item.estimated_arrival_date)}
-          </Text>
-        </View>
-      ) : null}
-
-      {/* Footer Info */}
-      <View style={[styles.footerContainer, { borderTopColor: colors.border }]}>
-        <View style={styles.footerItem}>
-          <Text style={[styles.footerLabel, { color: colors.textMuted }]}>Araç Durumu:</Text>
-          <Text style={[styles.footerValue, { color: colors.text }]}>
-            {getVehicleOwnerTypeLabel(item.vehicle_owner_type)}
-          </Text>
-        </View>
-        {item.loads && item.loads.length > 0 ? (
-          <View style={styles.footerItem}>
-            <Text style={[styles.footerLabel, { color: colors.textMuted }]}>Yük:</Text>
-            <Text style={[styles.footerValue, { color: Brand.primary }]}>
-              {item.loads.length} adet
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    </Card>
-  );
-
-  const renderEmptyState = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Seferler yükleniyor...
-          </Text>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            Bir hata oluştu
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {error}
-          </Text>
+  // Filter Chips render
+  const renderFilterChips = () => (
+    <View style={styles.filterChipsContainer}>
+      {STATUS_FILTERS.map((filter) => {
+        const isActive = activeFilter === filter.id
+        return (
           <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+            key={filter.id}
+            style={[
+              styles.filterChip,
+              isActive && styles.filterChipActive
+            ]}
             onPress={() => {
-              setIsLoading(true);
-              executeFetch(searchQuery, activeFilter, 1, false);
+              Haptics.selectionAsync()
+              setActiveFilter(filter.id)
             }}
+            activeOpacity={0.7}
           >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            <Ionicons
+              name={filter.icon}
+              size={14}
+              color={isActive ? '#fff' : DashboardColors.textSecondary}
+            />
+            <Text style={[
+              styles.filterChipText,
+              isActive && styles.filterChipTextActive
+            ]}>
+              {filter.label}
+            </Text>
           </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.emptyState}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-          <Truck size={64} color={colors.textMuted} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {searchQuery ? 'Sonuç bulunamadı' : 'Henüz sefer eklenmemiş'}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          {searchQuery
-            ? 'Farklı bir arama terimi deneyin'
-            : 'Seferler pozisyonlar aracılığıyla otomatik oluşturulur'}
-        </Text>
-      </View>
-    );
-  };
-
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={Brand.primary} />
-      </View>
-    );
-  };
-
-  // Prepare tabs for header - similar to position detail page
-  const headerTabs = STATUS_FILTERS.map((filter) => {
-    const Icon = filter.icon;
-    const isActive = activeFilter === filter.id;
-    return {
-      id: filter.id,
-      label: filter.label,
-      icon: <Icon size={16} color="#FFFFFF" strokeWidth={isActive ? 2.5 : 2} />,
-      isActive,
-      onPress: () => setActiveFilter(filter.id),
-    };
-  });
+        )
+      })}
+    </View>
+  )
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
+    <View style={styles.container}>
+      <PageHeader
         title="Seferler"
+        icon="car-outline"
+        subtitle={pagination ? `${pagination.total} sefer` : undefined}
         showBackButton
-        onBackPress={() => router.back()}
-        subtitle={pagination && pagination.total ? `${pagination.total} sefer` : undefined}
-        tabs={headerTabs}
-        rightIcons={
-          <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
-            <Filter size={22} color="#FFFFFF" />
-          </TouchableOpacity>
-        }
+        onBackPress={handleBackPress}
       />
 
-      {/* Content Area */}
-      <View style={styles.contentArea}>
-        {/* Search */}
-        <View style={styles.searchContainer}>
-          <Input
-            placeholder="Sefer no, plaka veya güzergah ile ara..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            leftIcon={<Search size={20} color={colors.icon} />}
-            containerStyle={styles.searchInput}
-          />
-        </View>
+      <View style={styles.content}>
+        {/* Filter Chips */}
+        {renderFilterChips()}
 
-        {/* Trip List */}
-        <FlatList
-          data={trips}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderTrip}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={renderEmptyState}
-          ListFooterComponent={renderFooter}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={Brand.primary}
-            />
-          }
-        />
+        {/* Active Filter Indicator */}
+        {activeFilterCount > 0 && (
+          <View style={styles.activeFilterBar}>
+            <View style={styles.activeFilterContent}>
+              <Ionicons name="funnel" size={14} color={DashboardColors.primary} />
+              <Text style={styles.activeFilterText}>
+                {activeFilterCount} filtre aktif
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setActiveFilter('all')}
+              style={styles.clearFilterButton}
+            >
+              <Ionicons name="close-circle" size={20} color={DashboardColors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* List */}
+        {isLoading ? (
+          <View style={styles.listContent}>
+            <TripCardSkeleton />
+            <TripCardSkeleton />
+            <TripCardSkeleton />
+          </View>
+        ) : (
+          <FlatList
+            data={trips}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({ item }) => (
+              <TripCard
+                item={item}
+                onPress={() => handleCardPress(item)}
+              />
+            )}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <EmptyState
+                hasSearch={false}
+                hasError={!!error}
+                errorMessage={error || undefined}
+                onRetry={() => {
+                  setIsLoading(true)
+                  executeFetch(activeFilter, 1, false)
+                }}
+              />
+            }
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={DashboardColors.primary}
+              />
+            }
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary
   },
-  contentArea: {
+  content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
-    overflow: 'hidden',
+    backgroundColor: DashboardColors.background
   },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
-  searchInput: {
-    marginBottom: 0,
-  },
-  listContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    flexGrow: 1,
-  },
-  tripCard: {
-    marginBottom: 0,
-  },
-  tripHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.sm,
-  },
-  tripNumberContainer: {
-    flex: 1,
-  },
-  tripNumber: {
-    ...Typography.bodyMD,
-    fontWeight: '700',
-  },
-  tripType: {
-    ...Typography.bodySM,
-    marginTop: 2,
-  },
-  transportIcons: {
+
+  // Filter Chips
+  filterChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.sm,
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.xs,
+    paddingVertical: DashboardSpacing.xs,
+    paddingHorizontal: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: DashboardColors.background,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight
+  },
+  filterChipActive: {
+    backgroundColor: DashboardColors.primary,
+    borderColor: DashboardColors.primary
+  },
+  filterChipText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary
+  },
+  filterChipTextActive: {
+    color: '#fff'
+  },
+
+  // Active Filter Bar
+  activeFilterBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.primaryGlow,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  activeFilterContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  activeFilterText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.primary,
+    fontWeight: '500'
+  },
+  clearFilterButton: {
+    padding: DashboardSpacing.xs
+  },
+
+  // List
+  listContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing.xl
+  },
+
+  // Card
+  card: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.md,
+    position: 'relative',
+    ...DashboardShadows.md
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: DashboardSpacing.md
+  },
+  cardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  cardHeaderContent: {
+    flex: 1,
+    marginLeft: DashboardSpacing.sm,
+    marginRight: DashboardSpacing.md
+  },
+  cardTitle: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary,
+    letterSpacing: 0.3,
+    marginBottom: 2
+  },
+  cardSubtitle: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted,
+    fontWeight: '500'
+  },
+  statusBadge: {
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.md
+  },
+  statusBadgeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '700'
+  },
+
+  // Transport Badges
+  transportBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DashboardSpacing.xs,
+    marginBottom: DashboardSpacing.sm
   },
   transportBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.sm,
     paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
+    borderRadius: DashboardBorderRadius.sm
   },
   transportText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '500'
   },
-  routeContainer: {
+
+  // Info
+  cardInfo: {
+    gap: DashboardSpacing.xs,
+    paddingBottom: DashboardSpacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
+    gap: DashboardSpacing.sm
   },
-  routeText: {
-    ...Typography.bodySM,
+  infoText: {
     flex: 1,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textMuted
   },
-  vehicleContainer: {
+
+  // Footer
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: DashboardSpacing.md,
+    gap: DashboardSpacing.lg
+  },
+  statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    gap: DashboardSpacing.xs
   },
-  vehicleItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
+  statText: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted
   },
-  vehicleText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
+  cardArrow: {
+    position: 'absolute',
+    right: DashboardSpacing.md,
+    bottom: DashboardSpacing.lg + 4
   },
-  driverContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
-  },
-  driverText: {
-    ...Typography.bodySM,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
-  },
-  locationText: {
-    ...Typography.bodySM,
-    flex: 1,
-  },
-  dateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.md,
-  },
-  dateText: {
-    ...Typography.bodySM,
-  },
-  footerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-  },
-  footerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  footerLabel: {
-    ...Typography.bodySM,
-  },
-  footerValue: {
-    ...Typography.bodySM,
-    fontWeight: '600',
-  },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
+
+  // Empty State
   emptyState: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
+    paddingVertical: DashboardSpacing['3xl'],
+    paddingHorizontal: DashboardSpacing.xl
   },
   emptyIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: DashboardColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: DashboardSpacing.xl
   },
   emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
   },
-  emptySubtitle: {
-    ...Typography.bodyMD,
+  emptyText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textMuted,
     textAlign: 'center',
+    lineHeight: 24
   },
   retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    marginTop: DashboardSpacing.xl,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.md,
+    backgroundColor: DashboardColors.primary
   },
   retryButtonText: {
     color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  loadingMore: {
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
-  },
-});
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600'
+  }
+})

@@ -1,11 +1,13 @@
 /**
- * Trip Detail Screen
+ * Sefer Detay Sayfası
  *
- * Shows trip details with positions, loads, fuel records, advances, and expenses.
- * Matches web version at /lojistik-yonetimi/seferler/{id}
+ * CLAUDE.md tasarım ilkelerine uygun detay sayfası
+ * - useFocusEffect ile edit'ten dönüşte yenileme
+ * - isMountedRef ile memory leak önleme
+ * - ConfirmDialog ile silme onayı
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -14,35 +16,21 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+} from 'react-native'
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import { PageHeader } from '@/components/navigation'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
-  Edit,
-  Trash2,
-  Truck,
-  User,
-  Calendar,
-  MapPin,
-  Package,
-  FileText,
-  Route,
-  Ship,
-  Train,
-  Container,
-  Fuel,
-  Banknote,
-  Receipt,
-  AlertTriangle,
-  ArrowRight,
-  ArrowRightLeft,
-  ChevronRight,
-} from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
-import { formatCurrency, formatNumber } from '@/utils/formatters';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardBorderRadius,
+  DashboardFontSizes,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
+import { formatCurrency } from '@/utils/currency'
 import {
   getTrip,
   deleteTrip,
@@ -52,384 +40,431 @@ import {
   getVehicleOwnerTypeLabel,
   getDriverFullName,
   getTripTypeLabel,
-} from '@/services/endpoints/trips';
+} from '@/services/endpoints/trips'
 import {
   getPositions,
   Position,
   getPositionTypeLabel,
-  getVehicleOwnerTypeLabel as getPositionVehicleOwnerTypeLabel,
-  getDriverFullName as getPositionDriverFullName,
-} from '@/services/endpoints/positions';
+} from '@/services/endpoints/positions'
 
 // Tab types
-type TabId = 'info' | 'loads' | 'positions';
+type TabId = 'info' | 'loads' | 'positions'
 
-const TABS: { id: TabId; label: string; icon: any }[] = [
-  { id: 'info', label: 'Bilgiler', icon: FileText },
-  { id: 'loads', label: 'Yükler', icon: Package },
-  { id: 'positions', label: 'Pozisyonlar', icon: MapPin },
-];
+const TABS: { id: TabId; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { id: 'info', label: 'Bilgiler', icon: 'document-text-outline' },
+  { id: 'loads', label: 'Yükler', icon: 'cube-outline' },
+  { id: 'positions', label: 'Pozisyonlar', icon: 'location-outline' },
+]
+
+// Status renkleri
+const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
+  planning: { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' },
+  active: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' },
+  completed: { primary: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' },
+  cancelled: { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' }
+}
+
+// SectionHeader Component
+function SectionHeader({ title, icon }: { title: string; icon: keyof typeof Ionicons.glyphMap }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Ionicons name={icon} size={18} color={DashboardColors.primary} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  )
+}
+
+// InfoRow Component
+function InfoRow({ label, value, icon }: { label: string; value?: string | number | boolean; icon?: keyof typeof Ionicons.glyphMap }) {
+  if (value === undefined || value === null || value === '' || value === false || value === '-') return null
+  const displayValue = typeof value === 'boolean' ? 'Evet' : String(value)
+  if (!displayValue || displayValue.trim() === '') return null
+
+  return (
+    <View style={styles.infoRow}>
+      {icon && <Ionicons name={icon} size={16} color={DashboardColors.textMuted} />}
+      <Text style={styles.infoLabel}>{label}:</Text>
+      <Text style={styles.infoValue}>{displayValue}</Text>
+    </View>
+  )
+}
 
 export default function TripDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>()
 
-  const [trip, setTrip] = useState<Trip | null>(null);
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingPositions, setIsLoadingPositions] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>('info');
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [trip, setTrip] = useState<Trip | null>(null)
+  const [positions, setPositions] = useState<Position[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingPositions, setIsLoadingPositions] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<TabId>('info')
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  // Fetch trip data
-  const fetchTrip = useCallback(async () => {
-    if (!id) return;
+  // Memory leak koruması
+  const isMountedRef = useRef(true)
+
+  // Sefer verilerini çek
+  const fetchTrip = useCallback(async (showLoading = true) => {
+    if (!id) return
 
     try {
-      setError(null);
-      const data = await getTrip(parseInt(id, 10));
-      setTrip(data);
-    } catch (err) {
-      console.error('Trip fetch error:', err);
-      // Provide more specific error messages
-      let errorMessage = 'Sefer bilgileri yüklenemedi';
-      if (err instanceof Error) {
-        if (err.message.includes('status code 500')) {
-          errorMessage = 'Sunucu hatası: Sefer kaydı alınamadı. Lütfen daha sonra tekrar deneyin veya yöneticinize başvurun.';
-        } else if (err.message.includes('status code 404')) {
-          errorMessage = 'Sefer bulunamadı. Silinmiş veya artık mevcut olmayan bir sefer olabilir.';
-        } else {
-          errorMessage = err.message;
-        }
+      if (showLoading) setError(null)
+      const data = await getTrip(parseInt(id, 10))
+      if (isMountedRef.current) {
+        setTrip(data)
       }
-      setError(errorMessage);
+    } catch (err) {
+      if (isMountedRef.current) {
+        console.error('Trip fetch error:', err)
+        let errorMessage = 'Sefer bilgileri yüklenemedi'
+        if (err instanceof Error) {
+          if (err.message.includes('status code 500')) {
+            errorMessage = 'Sunucu hatası: Sefer kaydı alınamadı. Lütfen daha sonra tekrar deneyin.'
+          } else if (err.message.includes('status code 404')) {
+            errorMessage = 'Sefer bulunamadı. Silinmiş veya mevcut olmayan bir sefer olabilir.'
+          } else {
+            errorMessage = err.message
+          }
+        }
+        setError(errorMessage)
+      }
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
     }
-  }, [id]);
+  }, [id])
 
-  // Fetch positions for this trip
+  // Pozisyonları çek
   const fetchPositions = useCallback(async () => {
-    if (!id) return;
+    if (!id) return
 
     try {
-      setIsLoadingPositions(true);
+      setIsLoadingPositions(true)
       const response = await getPositions({
         trip_id: parseInt(id, 10),
-        per_page: 100, // Get all positions for this trip
-      });
-      setPositions(response.positions);
+        per_page: 100,
+      })
+      if (isMountedRef.current) {
+        setPositions(response.positions)
+      }
     } catch (err) {
-      console.error('Positions fetch error:', err);
-      // Don't set error - just show empty state
+      console.error('Positions fetch error:', err)
     } finally {
-      setIsLoadingPositions(false);
+      if (isMountedRef.current) {
+        setIsLoadingPositions(false)
+      }
     }
-  }, [id]);
+  }, [id])
 
+  // İlk yükleme
   useEffect(() => {
-    fetchTrip();
-    fetchPositions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    isMountedRef.current = true
+    fetchTrip()
+    fetchPositions()
+
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [fetchTrip, fetchPositions])
+
+  // Edit'ten dönüşte yenileme
+  useFocusEffect(
+    useCallback(() => {
+      fetchTrip(false)
+      fetchPositions()
+    }, [fetchTrip, fetchPositions])
+  )
 
   const onRefresh = () => {
-    setRefreshing(true);
-    fetchTrip();
-    fetchPositions();
-  };
+    setRefreshing(true)
+    fetchTrip()
+    fetchPositions()
+  }
 
-  // Delete trip - open confirm dialog
+  // Silme dialog'unu aç
   const handleDelete = () => {
-    setShowDeleteConfirm(true);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    setShowDeleteConfirm(true)
+  }
 
-  // Confirm and execute delete
+  // Silme işlemini gerçekleştir
   const handleConfirmDelete = async () => {
-    if (!id) return;
-    setIsDeleting(true);
+    if (!id) return
+    setIsDeleting(true)
     try {
-      await deleteTrip(parseInt(id, 10));
-      success('Başarılı', 'Sefer silindi.');
-      router.back();
+      await deleteTrip(parseInt(id, 10))
+      Toast.show({ type: 'success', text1: 'Başarılı', text2: 'Sefer silindi', position: 'top', visibilityTime: 1500 })
+      router.back()
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Sefer silinemedi.');
+      Toast.show({ type: 'error', text1: 'Hata', text2: err instanceof Error ? err.message : 'Sefer silinemedi', position: 'top', visibilityTime: 1500 })
     } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
     }
-  };
+  }
 
-  // Format date
+  // Tarih formatlama
   const formatDate = (dateString?: string): string => {
-    if (!dateString) return '-';
+    if (!dateString) return '-'
     try {
       return new Date(dateString).toLocaleDateString('tr-TR', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
-      });
+      })
     } catch {
-      return dateString;
+      return dateString
     }
-  };
+  }
 
-  // Render info section
-  const renderInfoRow = (label: string, value?: string | number | boolean, icon?: any) => {
-    // Return null for undefined, null, empty string, false boolean, or dash
-    if (value === undefined || value === null || value === '' || value === false || value === '-') return null;
-    const Icon = icon;
-    // Safely convert value to string
-    const displayValue = typeof value === 'boolean' ? 'Evet' : String(value);
+  // Geri butonu
+  const handleBackPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
 
-    // Don't render if displayValue is empty or just whitespace
-    if (!displayValue || displayValue.trim() === '') return null;
+  // Düzenle butonu
+  const handleEditPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/logistics/trip/${trip?.id}/edit`)
+  }
 
-    return (
-      <View style={styles.infoRow}>
-        {Icon && <Icon size={16} color={colors.textMuted} />}
-        <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}:</Text>
-        <Text style={[styles.infoValue, { color: colors.text }]}>{displayValue}</Text>
-      </View>
-    );
-  };
-
-  // Render info tab
+  // Bilgiler tab'ı
   const renderInfoTab = () => {
-    if (!trip) return null;
+    if (!trip) return null
 
     return (
       <View style={styles.tabContent}>
         {/* Genel Bilgiler */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Genel Bilgiler</Text>
-          {renderInfoRow('Sefer No', trip.trip_number)}
-          {renderInfoRow('Sefer Tipi', getTripTypeLabel(trip.trip_type))}
-          {renderInfoRow('Güzergah', trip.route)}
-          {renderInfoRow('Tahmini Varış', formatDate(trip.estimated_arrival_date))}
-          {renderInfoRow('Gerçek Varış', formatDate(trip.actual_arrival_date))}
-          {renderInfoRow('Notlar', trip.notes)}
-        </Card>
+        <View style={styles.sectionCard}>
+          <SectionHeader title="Genel Bilgiler" icon="information-circle-outline" />
+          <InfoRow label="Sefer No" value={trip.trip_number} />
+          <InfoRow label="Sefer Tipi" value={getTripTypeLabel(trip.trip_type)} />
+          <InfoRow label="Güzergah" value={trip.route} icon="navigate-outline" />
+          <InfoRow label="Tahmini Varış" value={formatDate(trip.estimated_arrival_date)} icon="calendar-outline" />
+          <InfoRow label="Gerçek Varış" value={formatDate(trip.actual_arrival_date)} icon="checkmark-circle-outline" />
+          <InfoRow label="Notlar" value={trip.notes} icon="document-text-outline" />
+        </View>
 
         {/* Taşıma Tipi */}
         {!!(trip.is_roro || trip.is_train || trip.is_mafi) && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Taşıma Tipi</Text>
-            {renderInfoRow('RoRo', trip.is_roro)}
-            {renderInfoRow('Tren', trip.is_train)}
-            {renderInfoRow('Mafi', trip.is_mafi)}
-          </Card>
+          <View style={styles.sectionCard}>
+            <SectionHeader title="Taşıma Tipi" icon="swap-horizontal-outline" />
+            <InfoRow label="RoRo" value={trip.is_roro} icon="boat-outline" />
+            <InfoRow label="Tren" value={trip.is_train} icon="train-outline" />
+            <InfoRow label="Mafi" value={trip.is_mafi} icon="cube-outline" />
+          </View>
         )}
 
         {/* Araç Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Araç Bilgileri</Text>
-          {renderInfoRow('Araç Durumu', getVehicleOwnerTypeLabel(trip.vehicle_owner_type))}
-          {trip.vehicle_owner_contact && renderInfoRow('Araç Sahibi', trip.vehicle_owner_contact.name)}
-          {trip.truck_tractor && renderInfoRow('Çekici', trip.truck_tractor.plate)}
-          {trip.trailer && renderInfoRow('Römork', trip.trailer.plate)}
-          {renderInfoRow('Konum', trip.manual_location)}
-        </Card>
+        <View style={styles.sectionCard}>
+          <SectionHeader title="Araç Bilgileri" icon="car-outline" />
+          <InfoRow label="Araç Durumu" value={getVehicleOwnerTypeLabel(trip.vehicle_owner_type)} />
+          {trip.vehicle_owner_contact && <InfoRow label="Araç Sahibi" value={trip.vehicle_owner_contact.name} icon="business-outline" />}
+          {trip.truck_tractor && <InfoRow label="Çekici" value={trip.truck_tractor.plate} icon="car-sport-outline" />}
+          {trip.trailer && <InfoRow label="Römork" value={trip.trailer.plate} icon="trail-sign-outline" />}
+          <InfoRow label="Konum" value={trip.manual_location} icon="location-outline" />
+        </View>
 
         {/* Sürücü Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Sürücü Bilgileri</Text>
-          {trip.driver && renderInfoRow('1. Sürücü', getDriverFullName(trip.driver))}
-          {trip.second_driver && renderInfoRow('2. Sürücü', getDriverFullName(trip.second_driver))}
-        </Card>
+        <View style={styles.sectionCard}>
+          <SectionHeader title="Sürücü Bilgileri" icon="person-outline" />
+          {trip.driver && <InfoRow label="1. Sürücü" value={getDriverFullName(trip.driver)} icon="person-outline" />}
+          {trip.second_driver && <InfoRow label="2. Sürücü" value={getDriverFullName(trip.second_driver)} icon="people-outline" />}
+        </View>
 
         {/* Garaj Bilgileri */}
         {!!(trip.garage_location || trip.garage_entry_date || trip.garage_exit_date) && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Garaj Bilgileri</Text>
-            {renderInfoRow('Garaj Konumu', trip.garage_location)}
-            {renderInfoRow('Giriş Tarihi', formatDate(trip.garage_entry_date))}
-            {renderInfoRow('Çıkış Tarihi', formatDate(trip.garage_exit_date))}
-          </Card>
+          <View style={styles.sectionCard}>
+            <SectionHeader title="Garaj Bilgileri" icon="home-outline" />
+            <InfoRow label="Garaj Konumu" value={trip.garage_location} />
+            <InfoRow label="Giriş Tarihi" value={formatDate(trip.garage_entry_date)} icon="enter-outline" />
+            <InfoRow label="Çıkış Tarihi" value={formatDate(trip.garage_exit_date)} icon="exit-outline" />
+          </View>
         )}
 
         {/* Sınır Kapısı - Çıkış */}
         {!!(trip.border_exit_gate || trip.border_exit_date) && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Sınır Kapısı - Çıkış</Text>
-            {renderInfoRow('Çıkış Kapısı', trip.border_exit_gate)}
-            {renderInfoRow('Çıkış Tarihi', formatDate(trip.border_exit_date))}
-            {renderInfoRow('Manifest No', trip.border_exit_manifest_no)}
-            {renderInfoRow('Manifest Tarihi', formatDate(trip.border_exit_manifest_date))}
-          </Card>
+          <View style={styles.sectionCard}>
+            <SectionHeader title="Sınır Kapısı - Çıkış" icon="arrow-forward-circle-outline" />
+            <InfoRow label="Çıkış Kapısı" value={trip.border_exit_gate} />
+            <InfoRow label="Çıkış Tarihi" value={formatDate(trip.border_exit_date)} icon="calendar-outline" />
+            <InfoRow label="Manifest No" value={trip.border_exit_manifest_no} />
+            <InfoRow label="Manifest Tarihi" value={formatDate(trip.border_exit_manifest_date)} />
+          </View>
         )}
 
         {/* Sınır Kapısı - Giriş */}
         {!!(trip.border_entry_gate || trip.border_entry_date) && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Sınır Kapısı - Giriş</Text>
-            {renderInfoRow('Giriş Kapısı', trip.border_entry_gate)}
-            {renderInfoRow('Giriş Tarihi', formatDate(trip.border_entry_date))}
-            {renderInfoRow('Manifest No', trip.border_entry_manifest_no)}
-            {renderInfoRow('Manifest Tarihi', formatDate(trip.border_entry_manifest_date))}
-          </Card>
+          <View style={styles.sectionCard}>
+            <SectionHeader title="Sınır Kapısı - Giriş" icon="arrow-back-circle-outline" />
+            <InfoRow label="Giriş Kapısı" value={trip.border_entry_gate} />
+            <InfoRow label="Giriş Tarihi" value={formatDate(trip.border_entry_date)} icon="calendar-outline" />
+            <InfoRow label="Manifest No" value={trip.border_entry_manifest_no} />
+            <InfoRow label="Manifest Tarihi" value={formatDate(trip.border_entry_manifest_date)} />
+          </View>
         )}
 
         {/* Mühür Bilgileri */}
         {!!(trip.seal_no || trip.sealing_person) && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Mühür Bilgileri</Text>
-            {renderInfoRow('Mühür No', trip.seal_no)}
-            {renderInfoRow('Mühürleyen Kişi', trip.sealing_person)}
-          </Card>
+          <View style={styles.sectionCard}>
+            <SectionHeader title="Mühür Bilgileri" icon="lock-closed-outline" />
+            <InfoRow label="Mühür No" value={trip.seal_no} />
+            <InfoRow label="Mühürleyen Kişi" value={trip.sealing_person} icon="person-outline" />
+          </View>
         )}
 
         {/* Sigorta Bilgileri */}
         {!!(trip.insurance_status || trip.insurance_date || trip.insurance_amount) && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Sigorta Bilgileri</Text>
-            {renderInfoRow('Sigorta Durumu', trip.insurance_status)}
-            {renderInfoRow('Sigorta Tarihi', formatDate(trip.insurance_date))}
-            {renderInfoRow('Sigorta Tutarı', formatCurrency(trip.insurance_amount, trip.insurance_currency))}
-          </Card>
+          <View style={styles.sectionCard}>
+            <SectionHeader title="Sigorta Bilgileri" icon="shield-checkmark-outline" />
+            <InfoRow label="Sigorta Durumu" value={trip.insurance_status} />
+            <InfoRow label="Sigorta Tarihi" value={formatDate(trip.insurance_date)} icon="calendar-outline" />
+            <InfoRow label="Sigorta Tutarı" value={formatCurrency(trip.insurance_amount, trip.insurance_currency)} icon="cash-outline" />
+          </View>
         )}
 
         {/* Yakıt Bilgileri */}
         {!!(trip.current_fuel_liters || trip.fuel_added_liters || trip.remaining_fuel_liters) && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Yakıt Bilgileri</Text>
-            {renderInfoRow('Mevcut Yakıt', trip.current_fuel_liters ? `${trip.current_fuel_liters} L` : undefined)}
-            {renderInfoRow('Eklenen Yakıt', trip.fuel_added_liters ? `${trip.fuel_added_liters} L` : undefined)}
-            {renderInfoRow('Kalan Yakıt', trip.remaining_fuel_liters ? `${trip.remaining_fuel_liters} L` : undefined)}
-            {renderInfoRow('Tüketim Yüzdesi', trip.fuel_consumption_percentage ? `%${trip.fuel_consumption_percentage}` : undefined)}
-          </Card>
+          <View style={styles.sectionCard}>
+            <SectionHeader title="Yakıt Bilgileri" icon="flash-outline" />
+            <InfoRow label="Mevcut Yakıt" value={trip.current_fuel_liters ? `${trip.current_fuel_liters} L` : undefined} />
+            <InfoRow label="Eklenen Yakıt" value={trip.fuel_added_liters ? `${trip.fuel_added_liters} L` : undefined} />
+            <InfoRow label="Kalan Yakıt" value={trip.remaining_fuel_liters ? `${trip.remaining_fuel_liters} L` : undefined} />
+            <InfoRow label="Tüketim Yüzdesi" value={trip.fuel_consumption_percentage ? `%${trip.fuel_consumption_percentage}` : undefined} />
+          </View>
         )}
 
         {/* Kiralama Bilgileri */}
         {trip.vehicle_owner_type === 'rental' && !!trip.rental_fee && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Kiralama Bilgileri</Text>
-            {renderInfoRow('Kiralama Ücreti', formatCurrency(trip.rental_fee, trip.rental_currency))}
-          </Card>
+          <View style={styles.sectionCard}>
+            <SectionHeader title="Kiralama Bilgileri" icon="receipt-outline" />
+            <InfoRow label="Kiralama Ücreti" value={formatCurrency(trip.rental_fee, trip.rental_currency)} icon="cash-outline" />
+          </View>
         )}
       </View>
-    );
-  };
+    )
+  }
 
-  // Render loads tab
+  // Yükler tab'ı
   const renderLoadsTab = () => {
-    const loads = trip?.loads || [];
+    const loads = trip?.loads || []
 
     if (loads.length === 0) {
       return (
         <View style={styles.emptyTab}>
-          <Package size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Bu sefere henüz yük eklenmemiş
-          </Text>
+          <View style={styles.emptyIconContainer}>
+            <Ionicons name="cube-outline" size={48} color={DashboardColors.textMuted} />
+          </View>
+          <Text style={styles.emptyText}>Bu sefere henüz yük eklenmemiş</Text>
         </View>
-      );
+      )
+    }
+
+    const getLoadStatusColor = (status?: string) => {
+      switch (status) {
+        case 'delivered': return { primary: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' }
+        case 'in_transit': return { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' }
+        case 'cancelled': return { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' }
+        default: return { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' }
+      }
     }
 
     return (
       <View style={styles.tabContent}>
-        {loads.map((load) => (
-          <Card key={load.id} style={styles.itemCard}>
-            <View style={styles.itemHeader}>
-              <View style={styles.itemTitleRow}>
-                <Package size={18} color={Brand.primary} />
-                <Text style={[styles.itemTitle, { color: colors.text }]}>
-                  {load.load_number}
-                </Text>
+        {loads.map((load) => {
+          const statusColor = getLoadStatusColor(load.status)
+          return (
+            <View key={load.id} style={styles.itemCard}>
+              <View style={styles.itemHeader}>
+                <View style={styles.itemTitleRow}>
+                  <View style={[styles.itemIcon, { backgroundColor: DashboardColors.primaryGlow }]}>
+                    <Ionicons name="cube-outline" size={18} color={DashboardColors.primary} />
+                  </View>
+                  <Text style={styles.itemTitle} numberOfLines={1}>
+                    {load.load_number}
+                  </Text>
+                </View>
+                {load.status && (
+                  <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
+                    <Text style={[styles.statusBadgeText, { color: statusColor.primary }]}>
+                      {load.status}
+                    </Text>
+                  </View>
+                )}
               </View>
-              {load.status && (
-                <Badge
-                  label={load.status}
-                  variant={
-                    load.status === 'delivered' ? 'success' :
-                    load.status === 'in_transit' ? 'info' :
-                    load.status === 'cancelled' ? 'danger' : 'warning'
-                  }
-                  size="sm"
-                />
+              {(load.cargo_name || load.load_type) && (
+                <View style={styles.itemDetails}>
+                  {load.cargo_name && (
+                    <Text style={styles.loadCargo}>{load.cargo_name}</Text>
+                  )}
+                  {load.load_type && (
+                    <Text style={styles.loadType}>Tip: {load.load_type}</Text>
+                  )}
+                </View>
               )}
             </View>
-            <View style={styles.itemDetails}>
-              {load.cargo_name && (
-                <Text style={[styles.loadCargo, { color: colors.textSecondary }]}>
-                  {load.cargo_name}
-                </Text>
-              )}
-              {load.load_type && (
-                <Text style={[styles.loadType, { color: colors.textMuted }]}>
-                  Tip: {load.load_type}
-                </Text>
-              )}
-            </View>
-          </Card>
-        ))}
+          )
+        })}
       </View>
-    );
-  };
+    )
+  }
 
-  // Navigate to position detail
+  // Pozisyon detayına git
   const navigateToPosition = (position: Position) => {
-    // Route based on position type (export or import)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     const basePath = position.position_type === 'export'
       ? '/logistics/exports/positions'
-      : '/logistics/imports/positions';
-    router.push(`${basePath}/${position.id}` as any);
-  };
+      : '/logistics/imports/positions'
+    router.push(`${basePath}/${position.id}`)
+  }
 
-  // Get position status color
-  const getPositionStatusColor = (status?: string): string => {
+  // Pozisyon status rengi
+  const getPositionStatusColor = (status?: string) => {
     switch (status) {
-      case 'active':
-        return '#22c55e';
-      case 'completed':
-        return '#3b82f6';
-      case 'cancelled':
-        return '#ef4444';
-      case 'draft':
-        return '#f59e0b';
-      default:
-        return '#6B7280';
+      case 'active': return { primary: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' }
+      case 'completed': return { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' }
+      case 'cancelled': return { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' }
+      case 'draft': return { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' }
+      default: return { primary: '#6B7280', bg: 'rgba(107, 114, 128, 0.12)' }
     }
-  };
+  }
 
-  // Get position status label
+  // Pozisyon status etiketi
   const getPositionStatusLabel = (status?: string): string => {
     const labels: Record<string, string> = {
       active: 'Aktif',
       completed: 'Tamamlandı',
       cancelled: 'İptal',
       draft: 'Taslak',
-    };
-    return status ? labels[status] || status : 'Aktif';
-  };
+    }
+    return status ? labels[status] || status : 'Aktif'
+  }
 
-  // Render positions tab
+  // Pozisyonlar tab'ı
   const renderPositionsTab = () => {
     if (isLoadingPositions) {
       return (
         <View style={styles.emptyTab}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Pozisyonlar yükleniyor...
-          </Text>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.emptyText}>Pozisyonlar yükleniyor...</Text>
         </View>
-      );
+      )
     }
 
     if (positions.length === 0) {
       return (
         <View style={styles.emptyTab}>
-          <MapPin size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Bu sefere henüz pozisyon eklenmemiş
-          </Text>
+          <View style={styles.emptyIconContainer}>
+            <Ionicons name="location-outline" size={48} color={DashboardColors.textMuted} />
+          </View>
+          <Text style={styles.emptyText}>Bu sefere henüz pozisyon eklenmemiş</Text>
         </View>
-      );
+      )
     }
 
     return (
@@ -437,228 +472,199 @@ export default function TripDetailScreen() {
         {positions.map((position) => {
           const driverName = position.driver
             ? `${position.driver.first_name} ${position.driver.last_name}`.trim()
-            : null;
-          const vehiclePlate = position.truck_tractor?.plate || position.trailer?.plate;
+            : null
+          const vehiclePlate = position.truck_tractor?.plate || position.trailer?.plate
+          const statusColor = getPositionStatusColor(position.status)
 
           return (
             <TouchableOpacity
               key={position.id}
               activeOpacity={0.7}
               onPress={() => navigateToPosition(position)}
+              style={styles.positionCard}
             >
-              <Card style={styles.positionCard}>
-                <View style={styles.positionHeader}>
-                  <View style={styles.positionTitleRow}>
-                    <View style={[styles.positionIcon, { backgroundColor: Brand.primary + '15' }]}>
-                      <MapPin size={18} color={Brand.primary} />
-                    </View>
-                    <View style={styles.positionInfo}>
-                      <Text style={[styles.positionNumber, { color: colors.text }]}>
-                        {position.position_number || 'Taslak'}
-                      </Text>
-                      <View style={styles.positionTypeBadge}>
-                        <Text style={[styles.positionTypeText, {
-                          color: position.position_type === 'export' ? '#3b82f6' : '#8b5cf6'
-                        }]}>
-                          {getPositionTypeLabel(position.position_type)}
-                        </Text>
+              <View style={styles.positionHeader}>
+                <View style={styles.positionTitleRow}>
+                  <View style={[styles.positionIcon, { backgroundColor: DashboardColors.primaryGlow }]}>
+                    <Ionicons name="location-outline" size={18} color={DashboardColors.primary} />
+                  </View>
+                  <View style={styles.positionInfo}>
+                    <Text style={styles.positionNumber}>
+                      {position.position_number || 'Taslak'}
+                    </Text>
+                    <Text style={[styles.positionTypeText, {
+                      color: position.position_type === 'export' ? '#3B82F6' : '#8B5CF6'
+                    }]}>
+                      {getPositionTypeLabel(position.position_type)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.positionRight}>
+                  <View style={[styles.statusDot, { backgroundColor: statusColor.primary }]} />
+                  <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
+                </View>
+              </View>
+
+              {/* Position Details */}
+              <View style={styles.positionDetails}>
+                {position.route && (
+                  <View style={styles.positionDetailRow}>
+                    <Ionicons name="navigate-outline" size={14} color={DashboardColors.textMuted} />
+                    <Text style={styles.positionDetailText} numberOfLines={1}>
+                      {position.route}
+                    </Text>
+                  </View>
+                )}
+                {vehiclePlate && (
+                  <View style={styles.positionDetailRow}>
+                    <Ionicons name="car-sport-outline" size={14} color={DashboardColors.textMuted} />
+                    <Text style={styles.positionDetailText}>
+                      {vehiclePlate}
+                      {(position.trailer?.plate && position.truck_tractor?.plate) && ` / ${position.trailer.plate}`}
+                    </Text>
+                  </View>
+                )}
+                {driverName && (
+                  <View style={styles.positionDetailRow}>
+                    <Ionicons name="person-outline" size={14} color={DashboardColors.textMuted} />
+                    <Text style={styles.positionDetailText}>{driverName}</Text>
+                  </View>
+                )}
+                {!!(position.loads_count !== undefined && position.loads_count > 0) && (
+                  <View style={styles.positionDetailRow}>
+                    <Ionicons name="cube-outline" size={14} color={DashboardColors.textMuted} />
+                    <Text style={styles.positionDetailText}>{position.loads_count} yük</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Status Badge */}
+              <View style={styles.positionFooter}>
+                <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
+                  <Text style={[styles.statusBadgeText, { color: statusColor.primary }]}>
+                    {getPositionStatusLabel(position.status)}
+                  </Text>
+                </View>
+                {!!(position.is_roro || position.is_train) && (
+                  <View style={styles.transportBadges}>
+                    {position.is_roro && (
+                      <View style={[styles.miniTransportBadge, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
+                        <Ionicons name="boat-outline" size={12} color="#3B82F6" />
                       </View>
-                    </View>
+                    )}
+                    {position.is_train && (
+                      <View style={[styles.miniTransportBadge, { backgroundColor: 'rgba(139, 92, 246, 0.12)' }]}>
+                        <Ionicons name="train-outline" size={12} color="#8B5CF6" />
+                      </View>
+                    )}
                   </View>
-                  <View style={styles.positionRight}>
-                    <View style={[
-                      styles.statusDot,
-                      { backgroundColor: getPositionStatusColor(position.status) }
-                    ]} />
-                    <ChevronRight size={20} color={colors.textMuted} />
-                  </View>
-                </View>
-
-                {/* Position Details */}
-                <View style={styles.positionDetails}>
-                  {position.route && (
-                    <View style={styles.positionDetailRow}>
-                      <Route size={14} color={colors.icon} />
-                      <Text style={[styles.positionDetailText, { color: colors.textSecondary }]} numberOfLines={1}>
-                        {position.route}
-                      </Text>
-                    </View>
-                  )}
-                  {vehiclePlate && (
-                    <View style={styles.positionDetailRow}>
-                      <Truck size={14} color={colors.icon} />
-                      <Text style={[styles.positionDetailText, { color: colors.textSecondary }]}>
-                        {vehiclePlate}
-                        {(position.trailer?.plate && position.truck_tractor?.plate) && ` / ${position.trailer.plate}`}
-                      </Text>
-                    </View>
-                  )}
-                  {driverName && (
-                    <View style={styles.positionDetailRow}>
-                      <User size={14} color={colors.icon} />
-                      <Text style={[styles.positionDetailText, { color: colors.textSecondary }]}>
-                        {driverName}
-                      </Text>
-                    </View>
-                  )}
-                  {!!(position.loads_count !== undefined && position.loads_count > 0) && (
-                    <View style={styles.positionDetailRow}>
-                      <Package size={14} color={colors.icon} />
-                      <Text style={[styles.positionDetailText, { color: colors.textSecondary }]}>
-                        {position.loads_count} yük
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Status Badge */}
-                <View style={styles.positionFooter}>
-                  <Badge
-                    label={getPositionStatusLabel(position.status)}
-                    variant={
-                      position.status === 'active' ? 'success' :
-                      position.status === 'completed' ? 'info' :
-                      position.status === 'cancelled' ? 'danger' : 'warning'
-                    }
-                    size="sm"
-                  />
-                  {!!(position.is_roro || position.is_train) && (
-                    <View style={styles.transportBadges}>
-                      {position.is_roro && (
-                        <View style={[styles.miniTransportBadge, { backgroundColor: '#3b82f6' + '20' }]}>
-                          <Ship size={12} color="#3b82f6" />
-                        </View>
-                      )}
-                      {position.is_train && (
-                        <View style={[styles.miniTransportBadge, { backgroundColor: '#8b5cf6' + '20' }]}>
-                          <Train size={12} color="#8b5cf6" />
-                        </View>
-                      )}
-                    </View>
-                  )}
-                </View>
-              </Card>
+                )}
+              </View>
             </TouchableOpacity>
-          );
+          )
         })}
       </View>
-    );
-  };
+    )
+  }
 
-  // Render tab content
+  // Tab içeriğini render et
   const renderTabContent = () => {
     switch (activeTab) {
       case 'info':
-        return renderInfoTab();
+        return renderInfoTab()
       case 'loads':
-        return renderLoadsTab();
+        return renderLoadsTab()
       case 'positions':
-        return renderPositionsTab();
+        return renderPositionsTab()
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader
+      <View style={styles.container}>
+        <PageHeader
           title="Sefer Detayı"
+          icon="car-outline"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
         />
-        <View style={styles.contentArea}>
+        <View style={styles.content}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Brand.primary} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Sefer bilgileri yükleniyor...
-            </Text>
+            <ActivityIndicator size="large" color={DashboardColors.primary} />
+            <Text style={styles.loadingText}>Sefer bilgileri yükleniyor...</Text>
           </View>
         </View>
       </View>
-    );
+    )
   }
 
   // Error state
   if (error || !trip) {
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader
+      <View style={styles.container}>
+        <PageHeader
           title="Sefer Detayı"
+          icon="car-outline"
           showBackButton
-          onBackPress={() => router.back()}
+          onBackPress={handleBackPress}
         />
-        <View style={styles.contentArea}>
+        <View style={styles.content}>
           <View style={styles.errorContainer}>
-            <AlertTriangle size={64} color={colors.danger} />
-            <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-            <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-              {error || 'Sefer bulunamadı'}
-            </Text>
-            <TouchableOpacity
-              style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-              onPress={fetchTrip}
-            >
+            <View style={[styles.emptyIconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}>
+              <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+            </View>
+            <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+            <Text style={styles.errorText}>{error || 'Sefer bulunamadı'}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => fetchTrip()}>
               <Text style={styles.retryButtonText}>Tekrar Dene</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.retryButton, { backgroundColor: colors.surface, marginTop: Spacing.sm, borderWidth: 1, borderColor: colors.border }]}
-              onPress={() => router.back()}
-            >
-              <Text style={[styles.retryButtonText, { color: colors.text }]}>Geri Dön</Text>
+            <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+              <Text style={styles.backButtonText}>Geri Dön</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
-    );
+    )
   }
 
+  const statusColors = STATUS_COLORS[trip.status || 'active'] || STATUS_COLORS.active
+
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
+    <View style={styles.container}>
+      <PageHeader
         title={trip.trip_number}
+        icon="car-outline"
         showBackButton
-        onBackPress={() => router.back()}
-        rightIcons={
-          <>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => router.push(`/logistics/trip/${trip.id}/edit` as any)}
-            >
-              <Edit size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Trash2 size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </>
-        }
+        onBackPress={handleBackPress}
+        rightActions={[
+          {
+            icon: 'create-outline',
+            onPress: handleEditPress
+          },
+          {
+            icon: 'trash-outline',
+            onPress: handleDelete,
+            color: '#EF4444'
+          }
+        ]}
       />
 
-      {/* Content Area */}
-      <View style={styles.contentArea}>
+      <View style={styles.content}>
         {/* Trip Summary Card */}
-        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.summaryCard}>
           <View style={styles.summaryHeader}>
-            <View style={[styles.typeIconLarge, { backgroundColor: Brand.primary + '15' }]}>
-              <Truck size={32} color={Brand.primary} />
+            <View style={[styles.summaryIcon, { backgroundColor: DashboardColors.primaryGlow }]}>
+              <Ionicons name="car-outline" size={32} color={DashboardColors.primary} />
             </View>
             <View style={styles.summaryInfo}>
-              <Text style={[styles.summaryNumber, { color: colors.text }]}>{trip.trip_number}</Text>
+              <Text style={styles.summaryNumber}>{trip.trip_number}</Text>
               {trip.route && (
                 <View style={styles.routeRow}>
-                  <Route size={14} color={colors.textMuted} />
-                  <Text style={[styles.summaryRoute, { color: colors.textSecondary }]} numberOfLines={1}>
-                    {trip.route}
-                  </Text>
+                  <Ionicons name="navigate-outline" size={14} color={DashboardColors.textMuted} />
+                  <Text style={styles.summaryRoute} numberOfLines={1}>{trip.route}</Text>
                 </View>
               )}
             </View>
@@ -666,23 +672,23 @@ export default function TripDetailScreen() {
 
           {/* Transport Type Badges */}
           {!!(trip.is_roro || trip.is_train || trip.is_mafi) && (
-            <View style={styles.transportIcons}>
+            <View style={styles.transportBadges}>
               {trip.is_roro && (
-                <View style={[styles.transportBadge, { backgroundColor: '#3b82f6' + '20' }]}>
-                  <Ship size={14} color="#3b82f6" />
-                  <Text style={[styles.transportText, { color: '#3b82f6' }]}>RoRo</Text>
+                <View style={[styles.transportBadge, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
+                  <Ionicons name="boat-outline" size={14} color="#3B82F6" />
+                  <Text style={[styles.transportText, { color: '#3B82F6' }]}>RoRo</Text>
                 </View>
               )}
               {trip.is_train && (
-                <View style={[styles.transportBadge, { backgroundColor: '#8b5cf6' + '20' }]}>
-                  <Train size={14} color="#8b5cf6" />
-                  <Text style={[styles.transportText, { color: '#8b5cf6' }]}>Tren</Text>
+                <View style={[styles.transportBadge, { backgroundColor: 'rgba(139, 92, 246, 0.12)' }]}>
+                  <Ionicons name="train-outline" size={14} color="#8B5CF6" />
+                  <Text style={[styles.transportText, { color: '#8B5CF6' }]}>Tren</Text>
                 </View>
               )}
               {trip.is_mafi && (
-                <View style={[styles.transportBadge, { backgroundColor: '#f59e0b' + '20' }]}>
-                  <Container size={14} color="#f59e0b" />
-                  <Text style={[styles.transportText, { color: '#f59e0b' }]}>Mafi</Text>
+                <View style={[styles.transportBadge, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
+                  <Ionicons name="cube-outline" size={14} color="#F59E0B" />
+                  <Text style={[styles.transportText, { color: '#F59E0B' }]}>Mafi</Text>
                 </View>
               )}
             </View>
@@ -690,23 +696,27 @@ export default function TripDetailScreen() {
 
           {/* Status and Type Badges */}
           <View style={styles.badgeRow}>
-            <Badge
-              label={getTripStatusLabel(trip.status)}
-              variant={getTripStatusVariant(trip.status)}
-              size="sm"
-            />
+            <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
+              <Text style={[styles.statusBadgeText, { color: statusColors.primary }]}>
+                {getTripStatusLabel(trip.status)}
+              </Text>
+            </View>
             {trip.trip_type && (
-              <Badge
-                label={getTripTypeLabel(trip.trip_type)}
-                variant="info"
-                size="sm"
-              />
+              <View style={[styles.statusBadge, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
+                <Text style={[styles.statusBadgeText, { color: '#3B82F6' }]}>
+                  {getTripTypeLabel(trip.trip_type)}
+                </Text>
+              </View>
             )}
-            <Badge
-              label={getVehicleOwnerTypeLabel(trip.vehicle_owner_type)}
-              variant={trip.vehicle_owner_type === 'own' ? 'success' : 'warning'}
-              size="sm"
-            />
+            <View style={[styles.statusBadge, {
+              backgroundColor: trip.vehicle_owner_type === 'own' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)'
+            }]}>
+              <Text style={[styles.statusBadgeText, {
+                color: trip.vehicle_owner_type === 'own' ? '#10B981' : '#F59E0B'
+              }]}>
+                {getVehicleOwnerTypeLabel(trip.vehicle_owner_type)}
+              </Text>
+            </View>
           </View>
 
           {/* Vehicle Info */}
@@ -714,20 +724,16 @@ export default function TripDetailScreen() {
             <View style={styles.vehicleRow}>
               {trip.truck_tractor?.plate && (
                 <View style={styles.vehicleItem}>
-                  <Truck size={14} color={colors.icon} />
-                  <Text style={[styles.vehicleText, { color: colors.text }]}>
-                    {trip.truck_tractor.plate}
-                  </Text>
+                  <Ionicons name="car-sport-outline" size={14} color={DashboardColors.textMuted} />
+                  <Text style={styles.vehicleText}>{trip.truck_tractor.plate}</Text>
                 </View>
               )}
               {trip.truck_tractor?.plate && trip.trailer?.plate && (
-                <ArrowRight size={12} color={colors.icon} />
+                <Ionicons name="arrow-forward" size={12} color={DashboardColors.textMuted} />
               )}
               {trip.trailer?.plate && (
                 <View style={styles.vehicleItem}>
-                  <Text style={[styles.vehicleText, { color: colors.text }]}>
-                    {trip.trailer.plate}
-                  </Text>
+                  <Text style={styles.vehicleText}>{trip.trailer.plate}</Text>
                 </View>
               )}
             </View>
@@ -736,57 +742,52 @@ export default function TripDetailScreen() {
           {/* Driver Info */}
           {trip.driver && (
             <View style={styles.driverRow}>
-              <User size={14} color={colors.icon} />
-              <Text style={[styles.driverText, { color: colors.textSecondary }]}>
+              <Ionicons name="person-outline" size={14} color={DashboardColors.textMuted} />
+              <Text style={styles.driverText}>
                 {getDriverFullName(trip.driver)}
+                {trip.second_driver && ` + ${getDriverFullName(trip.second_driver)}`}
               </Text>
-              {trip.second_driver && (
-                <Text style={[styles.driverText, { color: colors.textMuted }]}>
-                  {' + '}{getDriverFullName(trip.second_driver)}
-                </Text>
-              )}
             </View>
           )}
         </View>
 
         {/* Tabs */}
-        <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
+        <View style={styles.tabsContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
             {TABS.map((tab) => {
-              const TabIcon = tab.icon;
-              const isActive = activeTab === tab.id;
-              // Count items for badge
-              let count = 0;
-              if (tab.id === 'loads') count = trip.loads?.length || 0;
-              if (tab.id === 'positions') count = positions.length;
+              const isActive = activeTab === tab.id
+              let count = 0
+              if (tab.id === 'loads') count = trip.loads?.length || 0
+              if (tab.id === 'positions') count = positions.length
 
               return (
                 <TouchableOpacity
                   key={tab.id}
-                  style={[
-                    styles.tab,
-                    isActive && { borderBottomColor: Brand.primary },
-                  ]}
-                  onPress={() => setActiveTab(tab.id)}
+                  style={[styles.tab, isActive && styles.tabActive]}
+                  onPress={() => {
+                    Haptics.selectionAsync()
+                    setActiveTab(tab.id)
+                  }}
                 >
                   <View style={styles.tabIconRow}>
-                    <TabIcon size={18} color={isActive ? Brand.primary : colors.textMuted} />
+                    <Ionicons
+                      name={tab.icon}
+                      size={18}
+                      color={isActive ? DashboardColors.primary : DashboardColors.textMuted}
+                    />
                     {count > 0 && (
-                      <View style={[styles.tabBadge, { backgroundColor: isActive ? Brand.primary : colors.textMuted }]}>
+                      <View style={[styles.tabBadge, {
+                        backgroundColor: isActive ? DashboardColors.primary : DashboardColors.textMuted
+                      }]}>
                         <Text style={styles.tabBadgeText}>{count}</Text>
                       </View>
                     )}
                   </View>
-                  <Text
-                    style={[
-                      styles.tabText,
-                      { color: isActive ? Brand.primary : colors.textSecondary },
-                    ]}
-                  >
+                  <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
                     {tab.label}
                   </Text>
                 </TouchableOpacity>
-              );
+              )
             })}
           </ScrollView>
         </View>
@@ -797,7 +798,11 @@ export default function TripDetailScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={DashboardColors.primary}
+            />
           }
         >
           {renderTabContent()}
@@ -817,156 +822,194 @@ export default function TripDetailScreen() {
         onCancel={() => setShowDeleteConfirm(false)}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary
   },
-  contentArea: {
+  content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
-    overflow: 'hidden',
+    backgroundColor: DashboardColors.background
   },
-  headerButton: {
-    padding: Spacing.sm,
-  },
+
+  // Loading & Error
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
   loadingText: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary
   },
   errorContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing['2xl'],
-    gap: Spacing.md,
+    padding: DashboardSpacing['2xl'],
+    gap: DashboardSpacing.md
   },
   errorTitle: {
-    ...Typography.headingMD,
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary
   },
   errorText: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center'
   },
   retryButton: {
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    marginTop: DashboardSpacing.md,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.md,
+    backgroundColor: DashboardColors.primary
   },
   retryButtonText: {
     color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600'
   },
-  summaryCard: {
-    margin: Spacing.lg,
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
+  backButton: {
+    marginTop: DashboardSpacing.sm,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.md,
+    backgroundColor: DashboardColors.surface,
     borderWidth: 1,
-    gap: Spacing.md,
+    borderColor: DashboardColors.borderLight
+  },
+  backButtonText: {
+    color: DashboardColors.textPrimary,
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600'
+  },
+
+  // Summary Card
+  summaryCard: {
+    margin: DashboardSpacing.lg,
+    padding: DashboardSpacing.lg,
+    borderRadius: DashboardBorderRadius.xl,
+    backgroundColor: DashboardColors.surface,
+    gap: DashboardSpacing.md,
+    ...DashboardShadows.md
   },
   summaryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
-  typeIconLarge: {
+  summaryIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   summaryInfo: {
-    flex: 1,
+    flex: 1
   },
   summaryNumber: {
-    ...Typography.headingLG,
+    fontSize: DashboardFontSizes['2xl'],
+    fontWeight: '700',
+    color: DashboardColors.textPrimary
   },
   routeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
+    gap: DashboardSpacing.xs,
+    marginTop: DashboardSpacing.xs
   },
   summaryRoute: {
-    ...Typography.bodyMD,
-    flex: 1,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    flex: 1
   },
-  transportIcons: {
+  transportBadges: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
   transportBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.sm,
     paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
+    borderRadius: DashboardBorderRadius.sm
   },
   transportText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '500'
   },
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm
+  },
+  statusBadge: {
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.md
+  },
+  statusBadgeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '700'
   },
   vehicleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm
   },
   vehicleItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
   vehicleText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
+    color: DashboardColors.textPrimary
   },
   driverRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
   driverText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
+
+  // Tabs
   tabsContainer: {
     borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
   },
   tabsContent: {
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.xs,
+    paddingHorizontal: DashboardSpacing.md,
+    gap: DashboardSpacing.xs
   },
   tab: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
     alignItems: 'center',
-    minWidth: 80,
+    minWidth: 80
+  },
+  tabActive: {
+    borderBottomColor: DashboardColors.primary
   },
   tabIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: DashboardSpacing.xs
   },
   tabBadge: {
     minWidth: 16,
@@ -974,168 +1017,216 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 4,
+    marginLeft: 4
   },
   tabBadgeText: {
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '600',
-    paddingHorizontal: 4,
+    paddingHorizontal: 4
   },
   tabText: {
-    ...Typography.bodyXS,
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '500',
+    color: DashboardColors.textSecondary
+  },
+  tabTextActive: {
+    color: DashboardColors.primary
   },
   scrollView: {
-    flex: 1,
+    flex: 1
   },
   scrollContent: {
-    paddingBottom: Spacing['2xl'],
+    paddingBottom: DashboardSpacing['2xl']
   },
   tabContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
   },
+
+  // Section Card
   sectionCard: {
-    padding: Spacing.md,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    ...DashboardShadows.sm
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    marginBottom: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
   },
   sectionTitle: {
-    ...Typography.headingSM,
-    marginBottom: Spacing.md,
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.xs,
-    gap: Spacing.sm,
+    paddingVertical: DashboardSpacing.xs,
+    gap: DashboardSpacing.sm
   },
   infoLabel: {
-    ...Typography.bodySM,
-    minWidth: 120,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    minWidth: 120
   },
   infoValue: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textPrimary,
     flex: 1,
-    fontWeight: '500',
+    fontWeight: '500'
   },
+
+  // Empty Tab
   emptyTab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-    gap: Spacing.md,
+    paddingVertical: DashboardSpacing['3xl'],
+    gap: DashboardSpacing.md
+  },
+  emptyIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.surface,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   emptyText: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
     textAlign: 'center',
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: DashboardSpacing.xl
   },
+
+  // Item Card (Loads)
   itemCard: {
-    padding: Spacing.md,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    ...DashboardShadows.sm
   },
   itemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
+    marginBottom: DashboardSpacing.sm
   },
   itemTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
     flex: 1,
-    marginRight: Spacing.sm,
+    marginRight: DashboardSpacing.sm
+  },
+  itemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   itemTitle: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
-    flex: 1,
+    color: DashboardColors.textPrimary,
+    flex: 1
   },
   itemDetails: {
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
   loadCargo: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
   loadType: {
-    ...Typography.bodyXS,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted
   },
-  // Position card styles
+
+  // Position Card
   positionCard: {
-    padding: Spacing.md,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.sm
   },
   positionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between'
   },
   positionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm
   },
   positionIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   positionInfo: {
-    flex: 1,
+    flex: 1
   },
   positionNumber: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
-  },
-  positionTypeBadge: {
-    marginTop: 2,
+    color: DashboardColors.textPrimary
   },
   positionTypeText: {
-    ...Typography.bodyXS,
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '500',
+    marginTop: 2
   },
   positionRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm
   },
   statusDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: 4
   },
   positionDetails: {
-    marginTop: Spacing.sm,
-    marginLeft: 44, // Align with text after icon
-    gap: Spacing.xs,
+    marginTop: DashboardSpacing.sm,
+    marginLeft: 44,
+    gap: DashboardSpacing.xs
   },
   positionDetailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm
   },
   positionDetailText: {
-    ...Typography.bodySM,
-    flex: 1,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    flex: 1
   },
   positionFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: Spacing.md,
-    marginLeft: 44,
-  },
-  transportBadges: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
+    marginTop: DashboardSpacing.md,
+    marginLeft: 44
   },
   miniTransportBadge: {
     width: 24,
     height: 24,
     borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+    justifyContent: 'center'
+  }
+})
