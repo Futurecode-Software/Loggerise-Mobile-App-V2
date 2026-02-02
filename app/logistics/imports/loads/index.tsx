@@ -380,13 +380,23 @@ export default function ImportLoadsScreen() {
     executeFetch(searchQuery, activeFilter, 1, false)
   }, [activeFilter])
 
+  // Refs for useFocusEffect to avoid re-triggering
+  const executeFetchRef = useRef(executeFetch)
+  const searchQueryRef = useRef(searchQuery)
+  const activeFilterRef = useRef(activeFilter)
+  useEffect(() => {
+    executeFetchRef.current = executeFetch
+    searchQueryRef.current = searchQuery
+    activeFilterRef.current = activeFilter
+  }, [executeFetch, searchQuery, activeFilter])
+
   // Ekran focus olduğunda yenile
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        executeFetch(searchQuery, activeFilter, 1, false)
+        executeFetchRef.current(searchQueryRef.current, activeFilterRef.current, 1, false)
       }
-    }, [searchQuery, activeFilter, executeFetch])
+    }, [])
   )
 
   const onRefresh = async () => {

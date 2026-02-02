@@ -200,6 +200,12 @@ export default function MessagesScreen() {
   // Current user ID
   const currentUserId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : 0
 
+  // Ref to store updateUnreadCount to avoid re-creating fetchConversations
+  const updateUnreadCountRef = useRef(updateUnreadCount)
+  useEffect(() => {
+    updateUnreadCountRef.current = updateUnreadCount
+  }, [updateUnreadCount])
+
   // Fetch conversations from API
   const fetchConversations = useCallback(async (showLoading = true) => {
     try {
@@ -214,7 +220,7 @@ export default function MessagesScreen() {
       const response = await getConversations(filters)
       setConversations(response.conversations)
       setTotalUnreadCount(response.totalUnreadCount)
-      updateUnreadCount(response.totalUnreadCount)
+      updateUnreadCountRef.current(response.totalUnreadCount)
       hasInitialFetchRef.current = true
     } catch (err) {
       console.error('Conversations fetch error:', err)
@@ -223,7 +229,7 @@ export default function MessagesScreen() {
       setIsLoading(false)
       setRefreshing(false)
     }
-  }, [searchQuery, updateUnreadCount])
+  }, [searchQuery])
 
   // Handle new message from WebSocket
   const handleNewConversationMessage = useCallback((message: Message, conversationId: number) => {
@@ -294,12 +300,13 @@ export default function MessagesScreen() {
     }
   }, [fetchConversations, reconnect])
 
-  // Initial load
+  // Initial load - only run once on mount
   useEffect(() => {
     fetchConversations()
-  }, [fetchConversations])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Search with debounce
+  // Search with debounce - only trigger on searchQuery changes
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false
@@ -311,15 +318,21 @@ export default function MessagesScreen() {
     }, 500)
 
     return () => clearTimeout(timeoutId)
-  }, [searchQuery, fetchConversations])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery])
 
-  // Refresh on screen focus
+  // Refresh on screen focus - use ref to avoid dependency issues
+  const fetchConversationsRef = useRef(fetchConversations)
+  useEffect(() => {
+    fetchConversationsRef.current = fetchConversations
+  }, [fetchConversations])
+
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        fetchConversations(false)
+        fetchConversationsRef.current(false)
       }
-    }, [fetchConversations])
+    }, [])
   )
 
   const onRefresh = useCallback(async () => {

@@ -343,13 +343,21 @@ export default function PromissoryNotesScreen() {
     executeFetch(activeFilter, 1, false)
   }, [activeFilter])
 
+  // Ref to store executeFetch and activeFilter to avoid useFocusEffect re-triggering
+  const executeFetchRef = useRef(executeFetch)
+  const activeFilterRef = useRef(activeFilter)
+  useEffect(() => {
+    executeFetchRef.current = executeFetch
+    activeFilterRef.current = activeFilter
+  }, [executeFetch, activeFilter])
+
   // Ekran focus olduğunda yenile
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        executeFetch(activeFilter, 1, false)
+        executeFetchRef.current(activeFilterRef.current, 1, false)
       }
-    }, [activeFilter, executeFetch])
+    }, [])
   )
 
   const onRefresh = async () => {

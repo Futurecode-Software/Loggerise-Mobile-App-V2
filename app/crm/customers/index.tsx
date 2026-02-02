@@ -142,13 +142,23 @@ export default function CrmCustomersListScreen() {
     };
   }, [searchQuery]); // Only searchQuery
 
+  // Refs for useFocusEffect to avoid re-triggering
+  const executeFetchRef = useRef(executeFetch);
+  const searchQueryRef = useRef(searchQuery);
+  const activeFilterRef = useRef(activeFilter);
+  useEffect(() => {
+    executeFetchRef.current = executeFetch;
+    searchQueryRef.current = searchQuery;
+    activeFilterRef.current = activeFilter;
+  }, [executeFetch, searchQuery, activeFilter]);
+
   // Refresh when screen is focused (e.g., after delete/create/edit)
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        executeFetch(searchQuery, activeFilter, 1, false, false);
+        executeFetchRef.current(searchQueryRef.current, activeFilterRef.current, 1, false, false);
       }
-    }, [searchQuery, activeFilter, executeFetch])
+    }, [])
   );
 
   const onRefresh = async () => {

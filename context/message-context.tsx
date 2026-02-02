@@ -84,12 +84,20 @@ export function MessageProvider({ children }: MessageProviderProps) {
     setUnreadCount((prev) => Math.max(0, prev - amount));
   }, []);
 
-  // Initialize when user is authenticated
+  // Initialize when user is authenticated - only run once when auth state changes to true
+  const hasInitializedRef = React.useRef(false);
+
   useEffect(() => {
-    if (isAuthenticated && !isInitializing) {
+    if (isAuthenticated && !isInitializing && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
       refreshUnreadCount();
     }
-  }, [isAuthenticated, isInitializing, refreshUnreadCount]);
+    // Reset flag on logout
+    if (!isAuthenticated && !isInitializing) {
+      hasInitializedRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isInitializing]);
 
   // Clear on logout
   useEffect(() => {

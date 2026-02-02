@@ -167,6 +167,16 @@ export default function TripsScreen() {
     };
   }, [searchQuery]); // Only searchQuery
 
+  // Refs for useFocusEffect to avoid re-triggering
+  const executeFetchRef = useRef(executeFetch);
+  const searchQueryRef = useRef(searchQuery);
+  const activeFilterRef = useRef(activeFilter);
+  useEffect(() => {
+    executeFetchRef.current = executeFetch;
+    searchQueryRef.current = searchQuery;
+    activeFilterRef.current = activeFilter;
+  }, [executeFetch, searchQuery, activeFilter]);
+
   // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -176,9 +186,9 @@ export default function TripsScreen() {
       }
       // Refresh data when screen comes into focus
       if (hasInitialFetchRef.current) {
-        executeFetch(searchQuery, activeFilter, 1, false);
+        executeFetchRef.current(searchQueryRef.current, activeFilterRef.current, 1, false);
       }
-    }, [searchQuery, activeFilter, executeFetch])
+    }, [])
   );
 
   const onRefresh = async () => {

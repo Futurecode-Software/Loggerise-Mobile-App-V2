@@ -419,13 +419,25 @@ export default function LoadsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery])
 
+  // Refs for useFocusEffect to avoid re-triggering
+  const executeFetchRef = useRef(executeFetch)
+  const searchQueryRef = useRef(searchQuery)
+  const activeStatusFilterRef = useRef(activeStatusFilter)
+  const activeDirectionFilterRef = useRef(activeDirectionFilter)
+  useEffect(() => {
+    executeFetchRef.current = executeFetch
+    searchQueryRef.current = searchQuery
+    activeStatusFilterRef.current = activeStatusFilter
+    activeDirectionFilterRef.current = activeDirectionFilter
+  }, [executeFetch, searchQuery, activeStatusFilter, activeDirectionFilter])
+
   // Sayfa odaklandığında yenile
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        executeFetch(searchQuery, activeStatusFilter, activeDirectionFilter, 1, false)
+        executeFetchRef.current(searchQueryRef.current, activeStatusFilterRef.current, activeDirectionFilterRef.current, 1, false)
       }
-    }, [searchQuery, activeStatusFilter, activeDirectionFilter, executeFetch])
+    }, [])
   )
 
   // Yenile (pull-to-refresh)

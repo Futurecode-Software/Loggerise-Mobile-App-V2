@@ -306,13 +306,21 @@ export default function ExportPositionsScreen() {
     executeFetch(searchQuery, 1, false);
   }, [activeStatusFilter, executeFetch]);
 
+  // Refs for useFocusEffect to avoid re-triggering
+  const executeFetchRef = useRef(executeFetch);
+  const searchQueryRef = useRef(searchQuery);
+  useEffect(() => {
+    executeFetchRef.current = executeFetch;
+    searchQueryRef.current = searchQuery;
+  }, [executeFetch, searchQuery]);
+
   // Refresh on screen focus
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        executeFetch(searchQuery, 1, false);
+        executeFetchRef.current(searchQueryRef.current, 1, false);
       }
-    }, [searchQuery, executeFetch])
+    }, [])
   );
 
   const onRefresh = async () => {

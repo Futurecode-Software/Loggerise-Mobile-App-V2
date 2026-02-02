@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useRef, ReactNode } from 'react';
 import { useNotifications } from '@/hooks/use-notifications';
 import { Notification, RecentNotificationsResponse } from '@/services/endpoints/notifications';
 import { useAuth } from './auth-context';
@@ -44,19 +44,37 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     clearNotifications,
   } = useNotifications();
 
-  // Initialize notifications when user is authenticated
+  // Ref to store initialize function to avoid re-triggering useEffect
+  const initializeRef = useRef(initialize);
   useEffect(() => {
-    if (isAuthenticated && !isInitializing && !isInitialized) {
-      initialize();
+    initializeRef.current = initialize;
+  }, [initialize]);
+
+  // Initialize notifications when user is authenticated - only once
+  const hasInitializedRef = useRef(false);
+  useEffect(() => {
+    if (isAuthenticated && !isInitializing && !isInitialized && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      initializeRef.current();
     }
-  }, [isAuthenticated, isInitializing, isInitialized, initialize]);
+    // Reset on logout
+    if (!isAuthenticated && !isInitializing) {
+      hasInitializedRef.current = false;
+    }
+  }, [isAuthenticated, isInitializing, isInitialized]);
+
+  // Ref to store clearNotifications to avoid re-triggering useEffect
+  const clearNotificationsRef = useRef(clearNotifications);
+  useEffect(() => {
+    clearNotificationsRef.current = clearNotifications;
+  }, [clearNotifications]);
 
   // Clear notifications on logout
   useEffect(() => {
     if (!isAuthenticated && !isInitializing) {
-      clearNotifications();
+      clearNotificationsRef.current();
     }
-  }, [isAuthenticated, isInitializing, clearNotifications]);
+  }, [isAuthenticated, isInitializing]);
 
   const value: NotificationContextValue = {
     unreadCount,

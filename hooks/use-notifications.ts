@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
@@ -66,11 +66,16 @@ export function useNotifications() {
     }
   }, []);
 
+  // Ref to track initialization to avoid dependency on isInitialized state
+  const isInitializingRef = useRef(false);
+
   /**
    * Initialize notifications
    */
   const initialize = useCallback(async () => {
-    if (isInitialized) return;
+    // Use ref to prevent multiple initializations without depending on state
+    if (isInitializingRef.current) return;
+    isInitializingRef.current = true;
 
     // Get initial unread count from API
     await refreshUnreadCount();
@@ -90,7 +95,7 @@ export function useNotifications() {
     }
 
     setIsInitialized(true);
-  }, [isInitialized, refreshUnreadCount]);
+  }, [refreshUnreadCount]);
 
   /**
    * Fetch recent notifications from API
@@ -152,6 +157,8 @@ export function useNotifications() {
   const clearNotifications = useCallback(async () => {
     setNotifications([]);
     setUnreadCount(0);
+    setIsInitialized(false);
+    isInitializingRef.current = false;
   }, []);
 
   return {

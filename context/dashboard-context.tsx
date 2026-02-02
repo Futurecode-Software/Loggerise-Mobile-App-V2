@@ -241,87 +241,75 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
+  // Refs to track loaded tabs without causing re-renders
+  const loadedTabsRef = React.useRef<Set<DashboardTab>>(new Set())
+
   // Tab'a ozel verileri getir
   const fetchTabData = useCallback(
     async (tab: DashboardTab, forceRefresh: boolean = false) => {
-      if (!availableDashboards[tab]) return
+      // Check if tab data already loaded using ref (avoids dependency on stats)
+      if (!forceRefresh && loadedTabsRef.current.has(tab)) {
+        return
+      }
 
       setLoadingTab(tab)
       try {
         switch (tab) {
-          case 'overview':
-            if (!overviewStats || forceRefresh) {
-              const data = await getOverviewStats()
-              setOverviewStats(data)
-            }
+          case 'overview': {
+            const data = await getOverviewStats()
+            setOverviewStats(data)
             break
-          case 'logistics':
-            if (!logisticsStats || forceRefresh) {
-              const data = await getLogisticsStats()
-              setLogisticsStats(data)
-            }
+          }
+          case 'logistics': {
+            const data = await getLogisticsStats()
+            setLogisticsStats(data)
             break
-          case 'warehouse':
-            if (!warehouseStats || forceRefresh) {
-              const data = await getWarehouseStats()
-              setWarehouseStats(data)
-            }
+          }
+          case 'warehouse': {
+            const data = await getWarehouseStats()
+            setWarehouseStats(data)
             break
-          case 'domestic':
-            if (!domesticStats || forceRefresh) {
-              const data = await getDomesticStats()
-              setDomesticStats(data)
-            }
+          }
+          case 'domestic': {
+            const data = await getDomesticStats()
+            setDomesticStats(data)
             break
-          case 'finance':
-            if (!financeStats || forceRefresh) {
-              const data = await getFinanceStats()
-              setFinanceStats(data)
-            }
+          }
+          case 'finance': {
+            const data = await getFinanceStats()
+            setFinanceStats(data)
             break
-          case 'crm':
-            if (!crmStats || forceRefresh) {
-              const data = await getCRMStats()
-              setCrmStats(data)
-            }
+          }
+          case 'crm': {
+            const data = await getCRMStats()
+            setCrmStats(data)
             break
-          case 'fleet':
-            if (!fleetStats || forceRefresh) {
-              const data = await getFleetStats()
-              setFleetStats(data)
-            }
+          }
+          case 'fleet': {
+            const data = await getFleetStats()
+            setFleetStats(data)
             break
-          case 'stock':
-            if (!stockStats || forceRefresh) {
-              const data = await getStockStats()
-              setStockStats(data)
-            }
+          }
+          case 'stock': {
+            const data = await getStockStats()
+            setStockStats(data)
             break
-          case 'hr':
-            if (!hrStats || forceRefresh) {
-              const data = await getHRStats()
-              setHrStats(data)
-            }
+          }
+          case 'hr': {
+            const data = await getHRStats()
+            setHrStats(data)
             break
+          }
         }
+        // Mark tab as loaded
+        loadedTabsRef.current.add(tab)
       } catch (err) {
         console.error(`${tab} stats error:`, err)
       } finally {
         setLoadingTab(null)
       }
     },
-    [
-      availableDashboards,
-      overviewStats,
-      logisticsStats,
-      warehouseStats,
-      domesticStats,
-      financeStats,
-      crmStats,
-      fleetStats,
-      stockStats,
-      hrStats,
-    ]
+    [] // No dependencies on stats - use ref for cache tracking
   )
 
   // Mevcut tab'in istatistiklerini al
@@ -380,6 +368,9 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     setStockStats(null)
     setHrStats(null)
 
+    // Clear loaded tabs cache
+    loadedTabsRef.current.clear()
+
     // Verileri yeniden getir
     await Promise.all([fetchAvailableDashboards(), fetchBasicStats()])
     await fetchTabData(activeTab, true)
@@ -405,6 +396,8 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
       setIsLoadingAvailable(false)
       setError(null)
       setActiveTab('overview')
+      // Clear loaded tabs cache
+      loadedTabsRef.current.clear()
     }
   }, [isAuthenticated, isInitializing])
 
