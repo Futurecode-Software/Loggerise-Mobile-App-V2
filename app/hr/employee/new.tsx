@@ -1,28 +1,39 @@
 /**
  * New Employee Screen
  *
- * Create new employee (personel).
- * Matches backend StoreEmployeeRequest validation.
+ * Yeni çalışan oluşturma ekranı.
+ * Backend StoreEmployeeRequest validation kurallarına uyumlu.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { router } from 'expo-router';
-import { Save } from 'lucide-react-native';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Input, Card, Checkbox } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  ActivityIndicator
+} from 'react-native'
+import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import Toast from 'react-native-toast-message'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
+import { Input } from '@/components/ui'
+import { SearchableSelectModal, SearchableSelectModalRef } from '@/components/modals/SearchableSelectModal'
 import {
   createEmployee,
   EmployeeFormData,
@@ -30,30 +41,30 @@ import {
   ContractType,
   Position,
   Gender,
-  MaritalStatus,
-} from '@/services/endpoints/employees';
-import { getErrorMessage, getValidationErrors } from '@/services/api';
+  MaritalStatus
+} from '@/services/endpoints/employees'
+import { getErrorMessage, getValidationErrors } from '@/services/api'
 
-// Employment status options
+// İstihdam durumu seçenekleri
 const EMPLOYMENT_STATUS_OPTIONS = [
   { label: 'Aktif', value: 'active' },
   { label: 'Pasif', value: 'passive' },
   { label: 'İzinde', value: 'on_leave' },
   { label: 'Askıya Alındı', value: 'suspended' },
-  { label: 'İşten Ayrıldı', value: 'terminated' },
-];
+  { label: 'İşten Ayrıldı', value: 'terminated' }
+]
 
-// Contract type options
+// Sözleşme tipi seçenekleri
 const CONTRACT_TYPE_OPTIONS = [
   { label: 'Tam Zamanlı', value: 'full_time' },
   { label: 'Yarı Zamanlı', value: 'part_time' },
   { label: 'Geçici', value: 'temporary' },
   { label: 'Sezonluk', value: 'seasonal' },
   { label: 'Stajyer', value: 'internship' },
-  { label: 'Serbest', value: 'freelance' },
-];
+  { label: 'Serbest', value: 'freelance' }
+]
 
-// Position options
+// Pozisyon seçenekleri
 const POSITION_OPTIONS = [
   { label: 'Ofis Personeli', value: 'office_staff' },
   { label: 'Sürücü', value: 'driver' },
@@ -70,29 +81,78 @@ const POSITION_OPTIONS = [
   { label: 'Güvenlik', value: 'security' },
   { label: 'Temizlik Personeli', value: 'cleaning_staff' },
   { label: 'Stajyer', value: 'intern' },
-  { label: 'Diğer', value: 'other' },
-];
+  { label: 'Diğer', value: 'other' }
+]
 
-// Gender options
+// Cinsiyet seçenekleri
 const GENDER_OPTIONS = [
   { label: 'Erkek', value: 'male' },
   { label: 'Kadın', value: 'female' },
-  { label: 'Diğer', value: 'other' },
-];
+  { label: 'Diğer', value: 'other' }
+]
 
-// Marital status options
+// Medeni durum seçenekleri
 const MARITAL_STATUS_OPTIONS = [
   { label: 'Bekar', value: 'single' },
   { label: 'Evli', value: 'married' },
   { label: 'Boşanmış', value: 'divorced' },
-  { label: 'Dul', value: 'widowed' },
-];
+  { label: 'Dul', value: 'widowed' }
+]
 
 export default function NewEmployeeScreen() {
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const insets = useSafeAreaInsets()
 
-  // Form state
+  // Modal refs
+  const genderModalRef = useRef<SearchableSelectModalRef>(null)
+  const maritalStatusModalRef = useRef<SearchableSelectModalRef>(null)
+  const employmentStatusModalRef = useRef<SearchableSelectModalRef>(null)
+  const contractTypeModalRef = useRef<SearchableSelectModalRef>(null)
+  const positionModalRef = useRef<SearchableSelectModalRef>(null)
+
+  // Animasyonlu orb'lar için shared values
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
+
+  useEffect(() => {
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
+
+  // Form state - backend validation kurallarına uygun
   const [formData, setFormData] = useState<EmployeeFormData>({
     citizenship_no: '',
     first_name: '',
@@ -100,138 +160,184 @@ export default function NewEmployeeScreen() {
     phone_1: '',
     email: '',
     employment_status: 'active',
-    status: true,
-  });
+    status: true
+  })
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Handle input change
+  // Input değişiklik handler'ı
   const handleInputChange = useCallback((field: keyof EmployeeFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }))
 
-    // Clear error for this field
+    // Bu alan için hatayı temizle
     if (errors[field]) {
       setErrors(prevErrors => {
-        const newErrors = { ...prevErrors };
-        delete newErrors[field];
-        return newErrors;
-      });
+        const newErrors = { ...prevErrors }
+        delete newErrors[field]
+        return newErrors
+      })
     }
-  }, [errors]);
+  }, [errors])
 
-  // Validation function matching backend rules
+  // Backend validation kurallarına uygun doğrulama
   const validateForm = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {}
 
-    // Required fields
+    // Zorunlu alanlar
     if (!formData.citizenship_no?.trim()) {
-      newErrors.citizenship_no = 'TC Kimlik No zorunludur.';
+      newErrors.citizenship_no = 'TC Kimlik No zorunludur.'
     } else if (formData.citizenship_no.length > 11) {
-      newErrors.citizenship_no = 'TC Kimlik No en fazla 11 karakter olabilir.';
+      newErrors.citizenship_no = 'TC Kimlik No en fazla 11 karakter olabilir.'
     }
 
     if (!formData.first_name?.trim()) {
-      newErrors.first_name = 'Ad zorunludur.';
+      newErrors.first_name = 'Ad zorunludur.'
     } else if (formData.first_name.length > 100) {
-      newErrors.first_name = 'Ad en fazla 100 karakter olabilir.';
+      newErrors.first_name = 'Ad en fazla 100 karakter olabilir.'
     }
 
     if (!formData.last_name?.trim()) {
-      newErrors.last_name = 'Soyad zorunludur.';
+      newErrors.last_name = 'Soyad zorunludur.'
     } else if (formData.last_name.length > 100) {
-      newErrors.last_name = 'Soyad en fazla 100 karakter olabilir.';
+      newErrors.last_name = 'Soyad en fazla 100 karakter olabilir.'
     }
 
     if (!formData.phone_1?.trim()) {
-      newErrors.phone_1 = 'Telefon zorunludur.';
+      newErrors.phone_1 = 'Telefon zorunludur.'
     } else if (formData.phone_1.length > 20) {
-      newErrors.phone_1 = 'Telefon en fazla 20 karakter olabilir.';
+      newErrors.phone_1 = 'Telefon en fazla 20 karakter olabilir.'
     }
 
     if (!formData.email?.trim()) {
-      newErrors.email = 'E-posta adresi zorunludur.';
+      newErrors.email = 'E-posta adresi zorunludur.'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Geçerli bir e-posta adresi giriniz.';
+      newErrors.email = 'Geçerli bir e-posta adresi giriniz.'
     } else if (formData.email.length > 255) {
-      newErrors.email = 'E-posta en fazla 255 karakter olabilir.';
+      newErrors.email = 'E-posta en fazla 255 karakter olabilir.'
     }
 
     if (!formData.employment_status) {
-      newErrors.employment_status = 'İstihdam durumu zorunludur.';
+      newErrors.employment_status = 'İstihdam durumu zorunludur.'
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [formData])
 
-  // Submit handler
+  // Geri butonu
+  const handleBack = useCallback(() => {
+    router.back()
+  }, [])
+
+  // Form gönderimi
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
-      return;
+      Toast.show({
+        type: 'error',
+        text1: 'Lütfen zorunlu alanları doldurunuz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await createEmployee(formData);
+      await createEmployee(formData)
 
-      // Success toast goster ve hemen geri don
-      success('Başarılı', 'Çalışan başarıyla oluşturuldu.');
-      router.back();
+      Toast.show({
+        type: 'success',
+        text1: 'Çalışan başarıyla oluşturuldu',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      router.back()
     } catch (error: any) {
-      const validationErrors = getValidationErrors(error);
+      const validationErrors = getValidationErrors(error)
       if (validationErrors) {
-        const flatErrors: Record<string, string> = {};
+        // Laravel hatalarını düz objeye çevir
+        const flatErrors: Record<string, string> = {}
         Object.entries(validationErrors).forEach(([field, messages]) => {
           if (Array.isArray(messages) && messages.length > 0) {
-            flatErrors[field] = messages[0];
+            flatErrors[field] = messages[0]
           }
-        });
-        setErrors(flatErrors);
+        })
+        setErrors(flatErrors)
       } else {
-        showError('Hata', getErrorMessage(error));
+        Toast.show({
+          type: 'error',
+          text1: getErrorMessage(error),
+          position: 'top',
+          visibilityTime: 1500
+        })
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  }, [formData, validateForm, success, showError]);
+  }, [formData, validateForm])
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-        title="Yeni Çalışan"
-        showBackButton
-        onBackPress={() => router.back()}
-        rightIcons={
-          <TouchableOpacity
-            onPress={handleSubmit}
-            style={styles.headerButton}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Save size={22} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
-        }
-      />
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <View style={styles.container}>
+      {/* Header with gradient and animated orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Orta: Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Yeni Çalışan</Text>
+            </View>
+
+            {/* Sağ: Kaydet Butonu */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* Form Content */}
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        bottomOffset={20}
       >
+        {/* Temel Bilgiler Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="person-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
+          </View>
 
-        {/* Form Content */}
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.formCard}>
-            {/* Temel Bilgiler */}
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
-
+          <View style={styles.sectionContent}>
             <Input
               label="TC Kimlik No *"
               placeholder="11 haneli TC kimlik numarası"
@@ -278,29 +384,60 @@ export default function NewEmployeeScreen() {
               maxLength={50}
             />
 
-            <SelectInput
-              label="Cinsiyet"
-              options={GENDER_OPTIONS}
-              selectedValue={formData.gender}
-              onValueChange={(value) => handleInputChange('gender', value as Gender)}
-              error={errors.gender}
-              placeholder="Seçiniz"
-            />
+            {/* Cinsiyet */}
+            <View>
+              <Text style={styles.inputLabel}>Cinsiyet</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.gender && styles.selectTriggerError]}
+                onPress={() => genderModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.selectTriggerText,
+                  !formData.gender && styles.selectTriggerPlaceholder
+                ]}>
+                  {formData.gender
+                    ? GENDER_OPTIONS.find(opt => opt.value === formData.gender)?.label
+                    : 'Seçiniz'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.gender && <Text style={styles.errorText}>{errors.gender}</Text>}
+            </View>
 
-            <SelectInput
-              label="Medeni Durum"
-              options={MARITAL_STATUS_OPTIONS}
-              selectedValue={formData.marital_status}
-              onValueChange={(value) => handleInputChange('marital_status', value as MaritalStatus)}
-              error={errors.marital_status}
-              placeholder="Seçiniz"
-            />
+            {/* Medeni Durum */}
+            <View>
+              <Text style={styles.inputLabel}>Medeni Durum</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.marital_status && styles.selectTriggerError]}
+                onPress={() => maritalStatusModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.selectTriggerText,
+                  !formData.marital_status && styles.selectTriggerPlaceholder
+                ]}>
+                  {formData.marital_status
+                    ? MARITAL_STATUS_OPTIONS.find(opt => opt.value === formData.marital_status)?.label
+                    : 'Seçiniz'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.marital_status && <Text style={styles.errorText}>{errors.marital_status}</Text>}
+            </View>
+          </View>
+        </View>
 
-            {/* İletişim Bilgileri */}
-            <Text style={[styles.sectionTitle, { color: colors.text, marginTop: Spacing.lg }]}>
-              İletişim Bilgileri
-            </Text>
+        {/* İletişim Bilgileri Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="call-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>İletişim Bilgileri</Text>
+          </View>
 
+          <View style={styles.sectionContent}>
             <Input
               label="Telefon *"
               placeholder="Örn: 0555 123 45 67"
@@ -343,7 +480,7 @@ export default function NewEmployeeScreen() {
             />
 
             <Input
-              label="Acil Durum Telefon 1"
+              label="Acil Durum Telefon"
               placeholder="Opsiyonel"
               value={formData.emergency_phone_1}
               onChangeText={(text) => handleInputChange('emergency_phone_1', text)}
@@ -351,111 +488,331 @@ export default function NewEmployeeScreen() {
               keyboardType="phone-pad"
               maxLength={20}
             />
-
-            {/* İstihdam Bilgileri */}
-            <Text style={[styles.sectionTitle, { color: colors.text, marginTop: Spacing.lg }]}>
-              İstihdam Bilgileri
-            </Text>
-
-            <SelectInput
-              label="İstihdam Durumu *"
-              options={EMPLOYMENT_STATUS_OPTIONS}
-              selectedValue={formData.employment_status}
-              onValueChange={(value) => handleInputChange('employment_status', value as EmploymentStatus)}
-              error={errors.employment_status}
-            />
-
-            <SelectInput
-              label="Sözleşme Tipi"
-              options={CONTRACT_TYPE_OPTIONS}
-              selectedValue={formData.contract_type}
-              onValueChange={(value) => handleInputChange('contract_type', value as ContractType)}
-              error={errors.contract_type}
-              placeholder="Seçiniz"
-            />
-
-            <SelectInput
-              label="Pozisyon"
-              options={POSITION_OPTIONS}
-              selectedValue={formData.position}
-              onValueChange={(value) => handleInputChange('position', value as Position)}
-              error={errors.position}
-              placeholder="Seçiniz"
-            />
-
-            {/* Aktif/Pasif */}
-            <View style={[styles.switchRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={styles.switchContent}>
-                <Text style={[styles.switchLabel, { color: colors.text }]}>
-                  Aktif Çalışan
-                </Text>
-                <Text style={[styles.switchDescription, { color: colors.textSecondary }]}>
-                  Bu çalışan aktif olacak
-                </Text>
-              </View>
-              <Checkbox
-                value={formData.status ?? true}
-                onValueChange={(val) => handleInputChange('status', val)}
-              />
-            </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+
+        {/* İstihdam Bilgileri Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="briefcase-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>İstihdam Bilgileri</Text>
+          </View>
+
+          <View style={styles.sectionContent}>
+            {/* İstihdam Durumu */}
+            <View>
+              <Text style={styles.inputLabel}>İstihdam Durumu *</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.employment_status && styles.selectTriggerError]}
+                onPress={() => employmentStatusModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.selectTriggerText}>
+                  {EMPLOYMENT_STATUS_OPTIONS.find(opt => opt.value === formData.employment_status)?.label || 'Aktif'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.employment_status && <Text style={styles.errorText}>{errors.employment_status}</Text>}
+            </View>
+
+            {/* Sözleşme Tipi */}
+            <View>
+              <Text style={styles.inputLabel}>Sözleşme Tipi</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.contract_type && styles.selectTriggerError]}
+                onPress={() => contractTypeModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.selectTriggerText,
+                  !formData.contract_type && styles.selectTriggerPlaceholder
+                ]}>
+                  {formData.contract_type
+                    ? CONTRACT_TYPE_OPTIONS.find(opt => opt.value === formData.contract_type)?.label
+                    : 'Seçiniz'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.contract_type && <Text style={styles.errorText}>{errors.contract_type}</Text>}
+            </View>
+
+            {/* Pozisyon */}
+            <View>
+              <Text style={styles.inputLabel}>Pozisyon</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.position && styles.selectTriggerError]}
+                onPress={() => positionModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.selectTriggerText,
+                  !formData.position && styles.selectTriggerPlaceholder
+                ]}>
+                  {formData.position
+                    ? POSITION_OPTIONS.find(opt => opt.value === formData.position)?.label
+                    : 'Seçiniz'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.position && <Text style={styles.errorText}>{errors.position}</Text>}
+            </View>
+
+            {/* Aktif/Pasif Toggle */}
+            <TouchableOpacity
+              style={styles.toggleRow}
+              onPress={() => handleInputChange('status', !formData.status)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.toggleContent}>
+                <Text style={styles.toggleLabel}>Aktif Çalışan</Text>
+                <Text style={styles.toggleDescription}>Bu çalışan kullanıma açık olacak</Text>
+              </View>
+              <View style={[
+                styles.toggleSwitch,
+                formData.status && styles.toggleSwitchActive
+              ]}>
+                <View style={[
+                  styles.toggleKnob,
+                  formData.status && styles.toggleKnobActive
+                ]} />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAwareScrollView>
+
+      {/* Modals */}
+      <SearchableSelectModal
+        ref={genderModalRef}
+        title="Cinsiyet"
+        options={GENDER_OPTIONS}
+        selectedValue={formData.gender}
+        onSelect={(option) => handleInputChange('gender', option.value as Gender)}
+      />
+      <SearchableSelectModal
+        ref={maritalStatusModalRef}
+        title="Medeni Durum"
+        options={MARITAL_STATUS_OPTIONS}
+        selectedValue={formData.marital_status}
+        onSelect={(option) => handleInputChange('marital_status', option.value as MaritalStatus)}
+      />
+      <SearchableSelectModal
+        ref={employmentStatusModalRef}
+        title="İstihdam Durumu"
+        options={EMPLOYMENT_STATUS_OPTIONS}
+        selectedValue={formData.employment_status}
+        onSelect={(option) => handleInputChange('employment_status', option.value as EmploymentStatus)}
+      />
+      <SearchableSelectModal
+        ref={contractTypeModalRef}
+        title="Sözleşme Tipi"
+        options={CONTRACT_TYPE_OPTIONS}
+        selectedValue={formData.contract_type}
+        onSelect={(option) => handleInputChange('contract_type', option.value as ContractType)}
+      />
+      <SearchableSelectModal
+        ref={positionModalRef}
+        title="Pozisyon"
+        options={POSITION_OPTIONS}
+        selectedValue={formData.position}
+        onSelect={(option) => handleInputChange('position', option.value as Position)}
+      />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
-  keyboardAvoidingView: {
-    flex: 1,
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
   },
-  headerButton: {
-    padding: Spacing.sm,
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
   },
-  content: {
-    flex: 1,
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
   },
-  contentContainer: {
-    flexGrow: 1,
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
   },
-  formCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: Spacing['2xl'],
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing['2xl'],
-    ...Shadows.lg,
-    gap: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  switchRow: {
+  headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    marginVertical: Spacing.xs,
+    paddingBottom: DashboardSpacing.lg
   },
-  switchContent: {
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleContainer: {
     flex: 1,
-    marginRight: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.md
   },
-  switchLabel: {
-    ...Typography.bodyMD,
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
+  },
+  saveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  saveButtonDisabled: {
+    opacity: 0.5
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+  content: {
+    flex: 1
+  },
+  contentContainer: {
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
+  },
+  section: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.lg,
+    overflow: 'hidden'
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sectionTitle: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
+  },
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: DashboardSpacing.md,
+    paddingHorizontal: DashboardSpacing.lg,
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg
+  },
+  toggleContent: {
+    flex: 1,
+    marginRight: DashboardSpacing.md
+  },
+  toggleLabel: {
+    fontSize: DashboardFontSizes.base,
     fontWeight: '500',
+    color: DashboardColors.textPrimary
   },
-  switchDescription: {
-    ...Typography.bodySM,
-    marginTop: Spacing.xs,
+  toggleDescription: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    marginTop: 2
   },
-});
+  toggleSwitch: {
+    width: 52,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: DashboardColors.borderLight,
+    padding: 2,
+    justifyContent: 'center'
+  },
+  toggleSwitchActive: {
+    backgroundColor: DashboardColors.primary
+  },
+  toggleKnob: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#fff'
+  },
+  toggleKnobActive: {
+    alignSelf: 'flex-end'
+  },
+  inputLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textPrimary,
+    marginBottom: 8
+  },
+  selectTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: 14,
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight
+  },
+  selectTriggerError: {
+    borderColor: DashboardColors.error
+  },
+  selectTriggerText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
+    flex: 1
+  },
+  selectTriggerPlaceholder: {
+    color: DashboardColors.textSecondary
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.error,
+    marginTop: 4
+  }
+})

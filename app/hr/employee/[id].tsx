@@ -1,10 +1,10 @@
 /**
- * Employee Detail Screen
+ * Çalışan Detay Sayfası
  *
- * Shows employee details with related information.
+ * Çalışan bilgilerini detaylı görüntüleme - CLAUDE.md tasarım ilkeleri ile uyumlu
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -12,24 +12,25 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+  ActivityIndicator
+} from 'react-native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useFocusEffect } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Edit,
-  Trash2,
-  User,
-  Mail,
-  Phone,
-  Briefcase,
-  Calendar,
-  AlertCircle,
-} from 'lucide-react-native';
-import { Card } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
 import {
   getEmployee,
   deleteEmployee,
@@ -38,309 +39,736 @@ import {
   getContractTypeLabel,
   getPositionLabel,
   getGenderLabel,
-  getMaritalStatusLabel,
-} from '@/services/endpoints/employees';
+  getMaritalStatusLabel
+} from '@/services/endpoints/employees'
+
+// Tarih formatlama
+const formatDate = (dateString?: string): string => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
+  } catch {
+    return dateString
+  }
+}
+
+// Bölüm başlığı
+interface SectionHeaderProps {
+  title: string
+  icon: keyof typeof Ionicons.glyphMap
+}
+
+function SectionHeader({ title, icon }: SectionHeaderProps) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionIcon}>
+        <Ionicons name={icon} size={16} color={DashboardColors.primary} />
+      </View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  )
+}
+
+// Bilgi satırı
+interface InfoRowProps {
+  label: string
+  value: string
+  icon?: keyof typeof Ionicons.glyphMap
+  highlight?: boolean
+}
+
+function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={styles.infoLabel}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={14}
+            color={DashboardColors.textMuted}
+            style={styles.infoIcon}
+          />
+        )}
+        <Text style={styles.infoLabelText}>{label}</Text>
+      </View>
+      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
+        {value}
+      </Text>
+    </View>
+  )
+}
 
 export default function EmployeeDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const employeeId = id ? parseInt(id, 10) : null
 
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // State
+  const [employee, setEmployee] = useState<Employee | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  // Fetch employee data
-  const fetchEmployee = useCallback(async () => {
-    if (!id) return;
+  // Refs
+  const isMountedRef = useRef(true)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
+
+  // Veri çekme
+  const fetchEmployee = useCallback(async (showLoading = true) => {
+    if (!employeeId) {
+      setError('Geçersiz çalışan ID')
+      setIsLoading(false)
+      return
+    }
 
     try {
-      setError(null);
-      const data = await getEmployee(parseInt(id, 10));
-      setEmployee(data);
+      if (showLoading) {
+        setIsLoading(true)
+        setError(null)
+      }
+
+      const data = await getEmployee(employeeId)
+
+      if (isMountedRef.current) {
+        setEmployee(data)
+        setError(null)
+      }
     } catch (err) {
-      console.error('Employee fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Çalışan bilgileri yüklenemedi');
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Çalışan bilgileri yüklenemedi')
+      }
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
     }
-  }, [id]);
+  }, [employeeId])
 
   useEffect(() => {
-    fetchEmployee();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    isMountedRef.current = true
+    fetchEmployee()
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchEmployee();
-  };
-
-  // Delete employee
-  const handleDelete = () => {
-    setShowDeleteConfirm(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!id) return;
-    setIsDeleting(true);
-    try {
-      await deleteEmployee(parseInt(id, 10));
-      // Success toast goster ve hemen geri don
-      success('Başarılı', 'Çalışan silindi.');
-      router.back();
-    } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Çalışan silinemedi.');
-      // Hata durumunda state'leri temizle
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
+    return () => {
+      isMountedRef.current = false
     }
-    // Not: Basari durumunda sayfa geri dondugu icin state temizlemeye gerek yok
-  };
+  }, [fetchEmployee])
 
-  // Render info row
-  const renderInfoRow = (
-    label: string,
-    value?: string | number | boolean,
-    icon?: any
-  ) => {
-    if (value === undefined || value === null || value === '') return null;
-    const Icon = icon;
-    const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayır') : String(value);
+  // Edit sayfasından dönüşte yenile
+  useFocusEffect(
+    useCallback(() => {
+      fetchEmployee(false)
+    }, [fetchEmployee])
+  )
 
-    return (
-      <View style={styles.infoRow}>
-        <View style={styles.infoRowLeft}>
-          {Icon && <Icon size={16} color={colors.textMuted} />}
-          <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}:</Text>
-        </View>
-        <Text style={[styles.infoValue, { color: colors.text }]}>{displayValue}</Text>
-      </View>
-    );
-  };
+  // Yenileme
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    fetchEmployee(false)
+  }, [fetchEmployee])
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <FullScreenHeader
-          title="Çalışan Detayı"
-          showBackButton
-          onBackPress={() => router.back()}
-        />
-        <View style={styles.content}>
-          <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color={Brand.primary} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Çalışan bilgileri yükleniyor...
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
+  // Düzenleme
+  const handleEdit = () => {
+    if (!employeeId) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/hr/employee/${employeeId}/edit`)
   }
 
-  // Error state
-  if (error || !employee) {
-    return (
-      <View style={styles.container}>
-        <FullScreenHeader
-          title="Çalışan Detayı"
-          showBackButton
-          onBackPress={() => router.back()}
-        />
-        <View style={styles.content}>
-          <View style={styles.errorCard}>
-            <AlertCircle size={64} color={colors.danger} />
-            <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-            <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-              {error || 'Çalışan bulunamadı'}
-            </Text>
-            <TouchableOpacity
-              style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-              onPress={fetchEmployee}
-            >
-              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
+  // Silme dialogunu aç
+  const handleDelete = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    deleteDialogRef.current?.present()
+  }
+
+  // Silme işlemini gerçekleştir
+  const confirmDelete = async () => {
+    if (!employeeId) return
+
+    setIsDeleting(true)
+    try {
+      await deleteEmployee(employeeId)
+      deleteDialogRef.current?.dismiss()
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      Toast.show({
+        type: 'success',
+        text1: 'Çalışan başarıyla silindi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+
+      setTimeout(() => {
+        router.back()
+      }, 300)
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Çalışan silinemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Geri
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
   }
 
   return (
     <View style={styles.container}>
-      <FullScreenHeader
-        title={employee.full_name}
-        showBackButton
-        onBackPress={() => router.back()}
-        rightIcons={
-          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-            <TouchableOpacity
-              onPress={() => router.push(`/hr/employee/${employee.id}/edit` as any)}
-              activeOpacity={0.7}
-            >
-              <Edit size={20} color="#FFFFFF" />
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          {/* Üst Bar: Geri + Başlık + Aksiyonlar */}
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleDelete}
-              activeOpacity={0.7}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Trash2 size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
+
+            {/* Başlık - Orta */}
+            {isLoading ? (
+              <View style={styles.headerTitleSection}>
+                <Skeleton width={140} height={22} />
+              </View>
+            ) : employee ? (
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerName} numberOfLines={1}>
+                  {employee.first_name} {employee.last_name}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.headerTitleSection} />
+            )}
+
+            {/* Aksiyonlar - Sağ */}
+            {!isLoading && employee ? (
+              <View style={styles.headerActions}>
+                <TouchableOpacity style={styles.headerButton} onPress={handleEdit}>
+                  <Ionicons name="create-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.headerButton, styles.deleteButton]}
+                  onPress={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={22} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.headerActionsPlaceholder} />
+            )}
           </View>
-        }
-      />
 
-      {/* Details */}
-      <View style={styles.content}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
-          }
-        >
-          {/* Temel Bilgiler */}
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Temel Bilgiler</Text>
-            {renderInfoRow('TC Kimlik No', employee.citizenship_no, User)}
-            {employee.employee_code && renderInfoRow('Personel Kodu', employee.employee_code, Briefcase)}
-            {employee.sgk_number && renderInfoRow('SGK No', employee.sgk_number, Briefcase)}
-            {employee.gender && renderInfoRow('Cinsiyet', getGenderLabel(employee.gender), User)}
-            {employee.marital_status && renderInfoRow('Medeni Durum', getMaritalStatusLabel(employee.marital_status), User)}
-          </Card>
+          {/* Pozisyon ve Durum */}
+          {isLoading ? (
+            <View style={styles.positionRow}>
+              <Skeleton width={120} height={16} />
+              <Skeleton width={70} height={32} borderRadius={16} />
+            </View>
+          ) : employee ? (
+            <View style={styles.positionRow}>
+              <View style={styles.positionInfo}>
+                <Ionicons name="briefcase-outline" size={14} color="rgba(255, 255, 255, 0.7)" />
+                <Text style={styles.positionText}>
+                  {employee.position ? getPositionLabel(employee.position) : 'Pozisyon belirtilmemiş'}
+                </Text>
+              </View>
+              <View style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: employee.employment_status === 'active'
+                    ? 'rgba(16, 185, 129, 0.2)'
+                    : employee.employment_status === 'on_leave'
+                      ? 'rgba(245, 158, 11, 0.2)'
+                      : 'rgba(239, 68, 68, 0.2)'
+                }
+              ]}>
+                <View style={[
+                  styles.statusDot,
+                  {
+                    backgroundColor: employee.employment_status === 'active'
+                      ? DashboardColors.success
+                      : employee.employment_status === 'on_leave'
+                        ? DashboardColors.warning
+                        : DashboardColors.danger
+                  }
+                ]} />
+                <Text style={[
+                  styles.statusBadgeText,
+                  {
+                    color: employee.employment_status === 'active'
+                      ? DashboardColors.success
+                      : employee.employment_status === 'on_leave'
+                        ? DashboardColors.warning
+                        : DashboardColors.danger
+                  }
+                ]}>
+                  {getEmploymentStatusLabel(employee.employment_status)}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
 
-          {/* İletişim Bilgileri */}
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>İletişim Bilgileri</Text>
-            {renderInfoRow('Telefon', employee.phone_1, Phone)}
-            {employee.phone_2 && renderInfoRow('Telefon 2', employee.phone_2, Phone)}
-            {renderInfoRow('E-posta', employee.email, Mail)}
-            {employee.home_phone && renderInfoRow('Ev Telefonu', employee.home_phone, Phone)}
-            {employee.emergency_phone_1 && renderInfoRow('Acil Durum Tel', employee.emergency_phone_1, Phone)}
-          </Card>
-
-          {/* İstihdam Bilgileri */}
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>İstihdam Bilgileri</Text>
-            {renderInfoRow('Durum', getEmploymentStatusLabel(employee.employment_status), Briefcase)}
-            {employee.contract_type && renderInfoRow('Sözleşme Tipi', getContractTypeLabel(employee.contract_type), Briefcase)}
-            {employee.position && renderInfoRow('Pozisyon', getPositionLabel(employee.position), Briefcase)}
-            {employee.start_date && renderInfoRow('Başlangıç Tarihi', new Date(employee.start_date).toLocaleDateString('tr-TR'), Calendar)}
-            {employee.end_date && renderInfoRow('Bitiş Tarihi', new Date(employee.end_date).toLocaleDateString('tr-TR'), Calendar)}
-          </Card>
-        </ScrollView>
+        <View style={styles.bottomCurve} />
       </View>
 
-      {/* Delete Confirm Dialog */}
+      {/* İçerik */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={DashboardColors.primary}
+          />
+        }
+      >
+        {/* Loading */}
+        {isLoading && (
+          <View style={styles.skeletonContainer}>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={styles.card}>
+                <View style={styles.sectionHeader}>
+                  <Skeleton width={140} height={20} />
+                </View>
+                <View style={styles.cardContent}>
+                  <Skeleton width="100%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="80%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="60%" height={16} />
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Hata */}
+        {!isLoading && (error || !employee) && (
+          <View style={styles.errorState}>
+            <View style={styles.errorIcon}>
+              <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+            </View>
+            <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+            <Text style={styles.errorText}>{error || 'Çalışan bulunamadı'}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => fetchEmployee()}>
+              <Ionicons name="refresh" size={18} color="#fff" />
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Normal içerik */}
+        {!isLoading && employee && (
+          <>
+            {/* Temel Bilgiler */}
+            <View style={styles.card}>
+              <SectionHeader title="Temel Bilgiler" icon="person-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="TC Kimlik No"
+                  value={employee.citizenship_no}
+                  icon="card-outline"
+                  highlight
+                />
+                {employee.employee_code && (
+                  <InfoRow
+                    label="Personel Kodu"
+                    value={employee.employee_code}
+                    icon="barcode-outline"
+                  />
+                )}
+                {employee.sgk_number && (
+                  <InfoRow
+                    label="SGK No"
+                    value={employee.sgk_number}
+                    icon="shield-checkmark-outline"
+                  />
+                )}
+                {employee.gender && (
+                  <InfoRow
+                    label="Cinsiyet"
+                    value={getGenderLabel(employee.gender)}
+                    icon="people-outline"
+                  />
+                )}
+                {employee.marital_status && (
+                  <InfoRow
+                    label="Medeni Durum"
+                    value={getMaritalStatusLabel(employee.marital_status)}
+                    icon="heart-outline"
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* İletişim Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="İletişim Bilgileri" icon="call-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Telefon"
+                  value={employee.phone_1}
+                  icon="phone-portrait-outline"
+                  highlight
+                />
+                {employee.phone_2 && (
+                  <InfoRow
+                    label="Telefon 2"
+                    value={employee.phone_2}
+                    icon="phone-portrait-outline"
+                  />
+                )}
+                <InfoRow
+                  label="E-posta"
+                  value={employee.email}
+                  icon="mail-outline"
+                />
+                {employee.home_phone && (
+                  <InfoRow
+                    label="Ev Telefonu"
+                    value={employee.home_phone}
+                    icon="home-outline"
+                  />
+                )}
+                {employee.emergency_phone_1 && (
+                  <InfoRow
+                    label="Acil Durum Tel"
+                    value={employee.emergency_phone_1}
+                    icon="alert-circle-outline"
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* İstihdam Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="İstihdam Bilgileri" icon="briefcase-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Durum"
+                  value={getEmploymentStatusLabel(employee.employment_status)}
+                  icon="checkbox-outline"
+                  highlight
+                />
+                {employee.contract_type && (
+                  <InfoRow
+                    label="Sözleşme Tipi"
+                    value={getContractTypeLabel(employee.contract_type)}
+                    icon="document-text-outline"
+                  />
+                )}
+                {employee.position && (
+                  <InfoRow
+                    label="Pozisyon"
+                    value={getPositionLabel(employee.position)}
+                    icon="people-circle-outline"
+                  />
+                )}
+                {employee.start_date && (
+                  <InfoRow
+                    label="Başlangıç Tarihi"
+                    value={formatDate(employee.start_date)}
+                    icon="calendar-outline"
+                  />
+                )}
+                {employee.end_date && (
+                  <InfoRow
+                    label="Bitiş Tarihi"
+                    value={formatDate(employee.end_date)}
+                    icon="calendar-outline"
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* Alt boşluk */}
+            <View style={{ height: insets.bottom + DashboardSpacing['3xl'] }} />
+          </>
+        )}
+      </ScrollView>
+
+      {/* Silme Onay Dialogu */}
       <ConfirmDialog
-        visible={showDeleteConfirm}
+        ref={deleteDialogRef}
         title="Çalışanı Sil"
         message="Bu çalışanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        type="danger"
         confirmText="Sil"
         cancelText="İptal"
-        isDangerous
+        onConfirm={confirmDelete}
         isLoading={isDeleting}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.primary
   },
+
+  // Header
+  headerContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingBottom: 24
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: DashboardSpacing.md
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    marginHorizontal: DashboardSpacing.md
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  headerActionsPlaceholder: {
+    width: 96 // 44 + 8 + 44 (iki buton + gap)
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)'
+  },
+  headerName: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3,
+    flex: 1
+  },
+  positionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: DashboardSpacing.sm
+  },
+  positionInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  positionText: {
+    fontSize: DashboardFontSizes.sm,
+    color: 'rgba(255, 255, 255, 0.7)'
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.full,
+    gap: 6
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
+  },
+  statusBadgeText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600'
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+
+  // İçerik
   content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    backgroundColor: DashboardColors.background
   },
-  scrollView: {
-    flex: 1,
+  contentContainer: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md
   },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing['3xl'],
-  },
+
+  // Kartlar
   card: {
-    marginBottom: Spacing.lg,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.sm
   },
-  cardTitle: {
-    ...Typography.headingSM,
-    marginBottom: Spacing.md,
+  cardContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
   },
+
+  // Bölüm Başlığı
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sectionTitle: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
+  },
+
+  // Bilgi Satırı
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
+    paddingVertical: DashboardSpacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  infoRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    flex: 1,
+    borderBottomColor: DashboardColors.borderLight
   },
   infoLabel: {
-    ...Typography.bodySM,
-    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1
+  },
+  infoIcon: {
+    marginRight: DashboardSpacing.sm
+  },
+  infoLabelText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
   infoValue: {
-    ...Typography.bodySM,
-    fontWeight: '600',
-    textAlign: 'right',
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textPrimary,
+    maxWidth: '50%',
+    textAlign: 'right'
   },
-  loadingCard: {
+  infoValueHighlight: {
+    color: DashboardColors.primary,
+    fontWeight: '600'
+  },
+
+  // Skeleton
+  skeletonContainer: {
+    gap: DashboardSpacing.md
+  },
+
+  // Hata durumu
+  errorState: {
     flex: 1,
-    backgroundColor: Colors.light.background,
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.md,
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-  },
-  errorCard: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
     justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
+  },
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
     alignItems: 'center',
-    padding: Spacing.xl,
-    gap: Spacing.md,
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
   },
   errorTitle: {
-    ...Typography.headingLG,
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
   },
   errorText: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
     textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
   },
   retryButton: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
   },
   retryButtonText: {
-    ...Typography.buttonMD,
-    color: Colors.light.surface,
-  },
-});
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  }
+})
