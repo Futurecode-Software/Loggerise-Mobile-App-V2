@@ -14,7 +14,8 @@ import {
   RefreshControl,
   Pressable,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
+  TextInput
 } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -22,8 +23,7 @@ import * as Haptics from 'expo-haptics'
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
-  FadeInDown
+  withSpring
 } from 'react-native-reanimated'
 import {
   BottomSheetModal,
@@ -163,6 +163,14 @@ function LoadCard({ item, onPress }: LoadCardProps) {
             <Ionicons name="business-outline" size={14} color={DashboardColors.textMuted} />
             <Text style={styles.infoText} numberOfLines={1}>
               {item.customer.name}
+            </Text>
+          </View>
+        )}
+        {item.declaration_no && (
+          <View style={styles.infoRow}>
+            <Ionicons name="document-text-outline" size={14} color={DashboardColors.textMuted} />
+            <Text style={styles.infoText} numberOfLines={1}>
+              Beyanname: {item.declaration_no}
             </Text>
           </View>
         )}
@@ -464,7 +472,7 @@ export default function ImportLoadsScreen() {
 
   // Özet Header'ı
   const renderSummaryHeader = () => (
-    <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.summarySection}>
+    <View style={styles.summarySection}>
       <SummaryCard
         title="Toplam"
         count={stats.total}
@@ -489,7 +497,7 @@ export default function ImportLoadsScreen() {
         icon="flag-outline"
         color={DashboardColors.success}
       />
-    </Animated.View>
+    </View>
   )
 
   // Liste footer'ı (daha fazla yükleme göstergesi)
@@ -524,6 +532,25 @@ export default function ImportLoadsScreen() {
       />
 
       <View style={styles.content}>
+        {/* Arama */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons name="search" size={20} color={DashboardColors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Yük numarası, kargo veya müşteri ara..."
+              placeholderTextColor={DashboardColors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color={DashboardColors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
         {/* Aktif Filtre Göstergesi */}
         {activeFilter !== 'all' && (
           <View style={styles.activeFilterBar}>
@@ -657,6 +684,29 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     backgroundColor: DashboardColors.background
+  },
+
+  // Arama
+  searchContainer: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.md,
+    backgroundColor: DashboardColors.background
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.lg,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    gap: DashboardSpacing.sm,
+    ...DashboardShadows.sm
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
+    paddingVertical: 0
   },
 
   // Aktif Filtre Barı

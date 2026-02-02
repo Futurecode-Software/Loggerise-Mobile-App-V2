@@ -64,7 +64,8 @@
       "Bash(if [ -d \"C:/Users/Ufuk/Documents/GitHub/FlsV2\" ])",
       "Bash(then echo \"exists\")",
       "Bash(else echo \"not found\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -672,6 +672,149 @@ export default function LoadDetailScreen() {
               </View>
             </View>
 
+            {/* Beyanname Bilgileri - Sadece ihracat/ithalat yüklerinde */}
+            {load.direction && (
+              <View style={styles.card}>
+                <SectionHeader title="Beyanname Bilgileri" icon="document-text-outline" />
+                <View style={styles.cardContent}>
+                  <InfoRow
+                    label="Beyanname No"
+                    value={load.declaration_no || '-'}
+                    icon="barcode-outline"
+                  />
+                  <InfoRow
+                    label="Sunulma Tarihi"
+                    value={formatDate(load.declaration_submission_date)}
+                    icon="calendar-outline"
+                  />
+                  <InfoRow
+                    label="Hazır Bildirim Tarihi"
+                    value={formatDate(load.declaration_ready_date)}
+                    icon="checkmark-done-outline"
+                  />
+                  <InfoRow
+                    label="Fiziki Muayene Tarihi"
+                    value={formatDate(load.declaration_inspection_date)}
+                    icon="search-outline"
+                  />
+                  <InfoRow
+                    label="Araç Çıkabilir Tarihi"
+                    value={formatDate(load.declaration_clearance_date)}
+                    icon="car-outline"
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Fatura Bilgileri - Sadece ihracat/ithalat yüklerinde */}
+            {load.direction && (
+              <View style={styles.card}>
+                <SectionHeader title="Mal Fatura Bilgileri" icon="receipt-outline" />
+                <View style={styles.cardContent}>
+                  <InfoRow
+                    label="Fatura No"
+                    value={load.cargo_invoice_no || '-'}
+                    icon="document-outline"
+                  />
+                  <InfoRow
+                    label="Fatura Tarihi"
+                    value={formatDate(load.cargo_invoice_date)}
+                    icon="calendar-outline"
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Gümrük Bilgileri - Sadece ihracat/ithalat yüklerinde */}
+            {load.direction && (load.gtip_hs_code || load.atr_no || load.regime_no) && (
+              <View style={styles.card}>
+                <SectionHeader title="Gümrük Bilgileri" icon="globe-outline" />
+                <View style={styles.cardContent}>
+                  <InfoRow
+                    label="GTIP - HS Kodu"
+                    value={load.gtip_hs_code || '-'}
+                    icon="code-outline"
+                  />
+                  <InfoRow
+                    label="ATR No"
+                    value={load.atr_no || '-'}
+                    icon="document-text-outline"
+                  />
+                  <InfoRow
+                    label="Rejim No"
+                    value={load.regime_no || '-'}
+                    icon="key-outline"
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Belge Durumları - Sadece ihracat/ithalat yüklerinde */}
+            {load.direction && (
+              load.invoice_document ||
+              load.atr_document ||
+              load.packing_list_document ||
+              load.origin_certificate_document ||
+              load.health_certificate_document ||
+              load.eur1_document ||
+              load.t1_t2_document
+            ) && (
+              <View style={styles.card}>
+                <SectionHeader title="Belge Durumları" icon="folder-outline" />
+                <View style={styles.cardContent}>
+                  {load.invoice_document && (
+                    <InfoRow
+                      label="Fatura"
+                      value={load.invoice_document === 'original' ? 'Orijinal' : 'Kopya'}
+                      icon="receipt-outline"
+                    />
+                  )}
+                  {load.atr_document && (
+                    <InfoRow
+                      label="ATR"
+                      value={load.atr_document === 'original' ? 'Orijinal' : 'Kopya'}
+                      icon="document-text-outline"
+                    />
+                  )}
+                  {load.packing_list_document && (
+                    <InfoRow
+                      label="Çeki Listesi"
+                      value={load.packing_list_document === 'original' ? 'Orijinal' : 'Kopya'}
+                      icon="list-outline"
+                    />
+                  )}
+                  {load.origin_certificate_document && (
+                    <InfoRow
+                      label="Menşei Belgesi"
+                      value={load.origin_certificate_document === 'original' ? 'Orijinal' : 'Kopya'}
+                      icon="flag-outline"
+                    />
+                  )}
+                  {load.health_certificate_document && (
+                    <InfoRow
+                      label="Sağlık Sertifikası"
+                      value={load.health_certificate_document === 'original' ? 'Orijinal' : 'Kopya'}
+                      icon="medkit-outline"
+                    />
+                  )}
+                  {load.eur1_document && (
+                    <InfoRow
+                      label="EUR-1"
+                      value={load.eur1_document === 'original' ? 'Orijinal' : 'Kopya'}
+                      icon="document-outline"
+                    />
+                  )}
+                  {load.t1_t2_document && (
+                    <InfoRow
+                      label="T1/T2"
+                      value={load.t1_t2_document === 'original' ? 'Orijinal' : 'Kopya'}
+                      icon="document-attach-outline"
+                    />
+                  )}
+                </View>
+              </View>
+            )}
+
             {/* Sistem Bilgileri */}
             <View style={styles.card}>
               <SectionHeader title="Sistem Bilgileri" icon="time-outline" />
