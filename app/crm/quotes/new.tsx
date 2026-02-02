@@ -11,13 +11,11 @@ import {
   View,
   Text,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
+import { Spacing, Brand, Shadows } from '@/constants/theme';
 import { FullScreenHeader } from '@/components/header/FullScreenHeader';
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmDialog } from '@/components/ui';
@@ -33,7 +31,6 @@ import { QuoteCreatePricingScreen } from '@/components/quote/steps/pricing';
 import { QuoteCreatePreviewScreen } from '@/components/quote/steps/preview';
 
 export default function CreateMultiStepQuoteScreen() {
-  const colors = Colors.light;
   const { success, error: showError } = useToast();
 
   // Global form state
@@ -220,11 +217,7 @@ export default function CreateMultiStepQuoteScreen() {
         onBackPress={() => currentStep > 1 ? goToPreviousStep() : router.back()}
       />
 
-      <KeyboardAvoidingView
-        style={styles.content}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={100}
-      >
+      <View style={styles.content}>
         {/* Stepper */}
         <QuoteFormStepper
           currentStep={currentStep}
@@ -249,7 +242,7 @@ export default function CreateMultiStepQuoteScreen() {
             <Text style={styles.loadingText}>Teklif oluşturuluyor...</Text>
           </View>
         )}
-      </KeyboardAvoidingView>
+      </View>
 
       {/* Send Confirmation Dialog */}
       <ConfirmDialog

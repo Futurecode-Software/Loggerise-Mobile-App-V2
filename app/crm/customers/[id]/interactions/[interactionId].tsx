@@ -3,14 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useToast } from '@/hooks/use-toast';
-import { ConfirmDialog } from '@/components/ui';
+import { ConfirmDialog, Input, Button, Card, Badge } from '@/components/ui';
 import { FullScreenHeader } from '@/components/header';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -24,7 +22,6 @@ import {
   Mail,
   Clock,
 } from 'lucide-react-native';
-import { Input, Button, Card, Badge } from '@/components/ui';
 import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
 import {
   getCustomerInteraction,
@@ -34,11 +31,9 @@ import {
   cancelInteraction,
   InteractionFormData,
   InteractionType,
-  InteractionStatus,
   getInteractionTypeLabel,
   getInteractionStatusLabel,
   getInteractionStatusVariant,
-  formatDateTime,
 } from '@/services/endpoints/customer-interactions';
 
 const INTERACTION_TYPES = [
@@ -261,15 +256,12 @@ export default function InteractionDetailScreen() {
         }
       />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        bottomOffset={20}
       >
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
           {/* Status Actions (only if not editing) */}
           {!isEditing && formData.status === 'pending' && (
             <View style={styles.actionsRow}>
@@ -425,8 +417,7 @@ export default function InteractionDetailScreen() {
               style={styles.submitButton}
             />
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
 
       {/* Complete Dialog */}
       <ConfirmDialog
@@ -468,9 +459,6 @@ export default function InteractionDetailScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  keyboardView: {
     flex: 1,
   },
   content: {

@@ -1,26 +1,45 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * CRM Müşteri Düzenleme Sayfası
+ *
+ * CLAUDE.md form sayfası standardına uygun modern tasarım.
+ * Referans: app/crm/customers/new.tsx
+ */
+
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
-} from 'react-native';
-import { useToast } from '@/hooks/use-toast';
-import { FullScreenHeader } from '@/components/header';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Save, AlertCircle } from 'lucide-react-native';
-import { Input, Button, Card, Select } from '@/components/ui';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+  TextInput
+} from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import Toast from 'react-native-toast-message'
+import { router, useLocalSearchParams } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
 import {
   getCrmCustomer,
   updateCrmCustomer,
   CrmCustomerFormData,
   CrmCustomerStatus,
-} from '@/services/endpoints/crm-customers';
+} from '@/services/endpoints/crm-customers'
 import {
   searchCountries,
   searchStates,
@@ -29,13 +48,55 @@ import {
   TURKEY_ID,
   FOREIGN_DEFAULT_TAX_NUMBER,
   LocationOption,
-} from '@/services/endpoints/locations';
+} from '@/services/endpoints/locations'
 
 export default function EditCrmCustomerScreen() {
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const customerId = parseInt(id, 10);
+  const insets = useSafeAreaInsets()
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const customerId = parseInt(id, 10)
+
+  // Animasyonlu orb'lar için shared values
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
+
+  useEffect(() => {
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,17 +119,21 @@ export default function EditCrmCustomerScreen() {
     notes: '',
   });
 
-  // Location states
-  const [countries, setCountries] = useState<LocationOption[]>([]);
-  const [states, setStates] = useState<LocationOption[]>([]);
-  const [cities, setCities] = useState<LocationOption[]>([]);
-  const [taxOffices, setTaxOffices] = useState<LocationOption[]>([]);
+  // Location states (kept for future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [countries, setCountries] = useState<LocationOption[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [states, setStates] = useState<LocationOption[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [cities, setCities] = useState<LocationOption[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [taxOffices, setTaxOffices] = useState<LocationOption[]>([])
 
-  // Loading states
-  const [loadingCountries, setLoadingCountries] = useState(false);
-  const [loadingStates, setLoadingStates] = useState(false);
-  const [loadingCities, setLoadingCities] = useState(false);
-  const [loadingTaxOffices, setLoadingTaxOffices] = useState(false);
+  // Loading states (kept for future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [loadingStates, setLoadingStates] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [loadingCities, setLoadingCities] = useState(false)
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -138,7 +203,8 @@ export default function EditCrmCustomerScreen() {
     fetchData();
   }, [customerId]);
 
-  // Load states when country changes (after initial load)
+  // Load states when country changes (kept for future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCountryChange = async (countryId: number | undefined) => {
     if (countryId) {
       setFormData((prev) => ({
@@ -146,35 +212,36 @@ export default function EditCrmCustomerScreen() {
         country_id: countryId,
         main_state_id: undefined,
         main_city_id: undefined,
-      }));
-      setLoadingStates(true);
+      }))
+      setLoadingStates(true)
       try {
-        const data = await searchStates(countryId);
-        setStates(data);
-        setCities([]);
+        const data = await searchStates(countryId)
+        setStates(data)
+        setCities([])
       } catch (err) {
-        console.error('Failed to load states:', err);
+        console.error('Failed to load states:', err)
       } finally {
-        setLoadingStates(false);
+        setLoadingStates(false)
       }
     }
-  };
+  }
 
-  // Load cities when state changes
+  // Load cities when state changes (kept for future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleStateChange = async (stateId: number | undefined) => {
     if (stateId) {
-      setFormData((prev) => ({ ...prev, main_state_id: stateId, main_city_id: undefined }));
-      setLoadingCities(true);
+      setFormData((prev) => ({ ...prev, main_state_id: stateId, main_city_id: undefined }))
+      setLoadingCities(true)
       try {
-        const data = await searchCities(stateId);
-        setCities(data);
+        const data = await searchCities(stateId)
+        setCities(data)
       } catch (err) {
-        console.error('Failed to load cities:', err);
+        console.error('Failed to load cities:', err)
       } finally {
-        setLoadingCities(false);
+        setLoadingCities(false)
       }
     }
-  };
+  }
 
   const handleLocationToggle = async (isDomestic: boolean) => {
     setIsTurkish(isDomestic);
@@ -215,156 +282,229 @@ export default function EditCrmCustomerScreen() {
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {}
 
     if (!formData.name?.trim()) {
-      newErrors.name = 'Müşteri adı zorunludur';
+      newErrors.name = 'Müşteri adı zorunludur'
     }
 
     if (!formData.legal_type) {
-      newErrors.legal_type = 'Yasal tip zorunludur';
+      newErrors.legal_type = 'Yasal tip zorunludur'
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Geçerli bir e-posta adresi giriniz';
+      newErrors.email = 'Geçerli bir e-posta adresi giriniz'
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      showError('Hata', 'Lütfen formu eksiksiz doldurunuz');
-      return;
+      Toast.show({
+        type: 'error',
+        text1: 'Lütfen formu eksiksiz doldurunuz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await updateCrmCustomer(customerId, formData);
-      success('Başarılı', 'CRM müşterisi başarıyla güncellendi');
-      router.back();
+      await updateCrmCustomer(customerId, formData)
+      Toast.show({
+        type: 'success',
+        text1: 'CRM müşterisi başarıyla güncellendi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      router.back()
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Müşteri güncellenemedi');
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Müşteri güncellenemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
+
+  const handleBack = () => {
+    router.back()
+  }
+
+  // Section Header Component
+  const renderSectionHeader = (title: string, icon: keyof typeof Ionicons.glyphMap) => (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionIcon}>
+        <Ionicons name={icon} size={18} color={DashboardColors.primary} />
+      </View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  )
 
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="CRM Müşterisi Düzenle" showBackButton />
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Müşteri Düzenle</Text>
+              </View>
+              <View style={styles.headerButton} />
+            </View>
+          </View>
+          <View style={styles.bottomCurve} />
+        </View>
         <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Müşteri bilgileri yükleniyor...
-          </Text>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Müşteri bilgileri yükleniyor...</Text>
         </View>
       </View>
-    );
+    )
   }
 
   // Error state
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="CRM Müşterisi Düzenle" showBackButton />
-        <View style={styles.errorState}>
-          <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Müşteri Düzenle</Text>
+              </View>
+              <View style={styles.headerButton} />
+            </View>
           </View>
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorSubtitle, { color: colors.textSecondary }]}>{error}</Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => router.back()}
-          >
+          <View style={styles.bottomCurve} />
+        </View>
+        <View style={styles.errorState}>
+          <View style={styles.errorIcon}>
+            <Ionicons name="alert-circle" size={64} color={DashboardColors.danger} />
+          </View>
+          <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+          <Text style={styles.errorSubtitle}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={handleBack}>
             <Text style={styles.retryButtonText}>Geri Dön</Text>
           </TouchableOpacity>
         </View>
       </View>
-    );
+    )
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      {/* Header */}
-      <FullScreenHeader
-        title="CRM Müşterisi Düzenle"
-        showBackButton
-        rightIcons={
-          <TouchableOpacity
-            onPress={handleSubmit}
-            activeOpacity={0.7}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Save size={20} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
-        }
-      />
+    <View style={styles.container}>
+      {/* Header with gradient and animated orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Orta: Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Müşteri Düzenle</Text>
+            </View>
+
+            {/* Sağ: Kaydet Butonu */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={[styles.headerButton, isSubmitting && styles.headerButtonDisabled]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* Form Content */}
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        bottomOffset={20}
       >
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Basic Information */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
-
+        {/* Temel Bilgiler */}
+        <View style={styles.section}>
+          {renderSectionHeader('Temel Bilgiler', 'person-outline')}
+          <View style={styles.sectionContent}>
             {/* Legal Type & Location Toggle */}
             <View style={styles.toggleRow}>
               {/* Legal Type */}
               <View style={styles.toggleGroup}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>
-                  Yasal Tip <Text style={{ color: colors.danger }}>*</Text>
+                <Text style={styles.inputLabel}>
+                  Yasal Tip <Text style={{ color: DashboardColors.danger }}>*</Text>
                 </Text>
-                <View style={styles.radioGroup}>
+                <View style={styles.chipGroup}>
                   <TouchableOpacity
                     style={[
-                      styles.toggleButton,
-                      formData.legal_type === 'company' && [
-                        styles.toggleButtonActive,
-                        { backgroundColor: '#2196F3' + '20', borderColor: '#2196F3' },
-                      ],
+                      styles.chip,
+                      formData.legal_type === 'company' && styles.chipActive
                     ]}
                     onPress={() => setFormData({ ...formData, legal_type: 'company' })}
                   >
-                    <Text
-                      style={[
-                        styles.toggleText,
-                        { color: formData.legal_type === 'company' ? '#2196F3' : colors.text },
-                      ]}
-                    >
+                    <Text style={[
+                      styles.chipText,
+                      formData.legal_type === 'company' && styles.chipTextActive
+                    ]}>
                       Şirket
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
-                      styles.toggleButton,
-                      formData.legal_type === 'individual' && [
-                        styles.toggleButtonActive,
-                        { backgroundColor: '#2196F3' + '20', borderColor: '#2196F3' },
-                      ],
+                      styles.chip,
+                      formData.legal_type === 'individual' && styles.chipActive
                     ]}
                     onPress={() => setFormData({ ...formData, legal_type: 'individual' })}
                   >
-                    <Text
-                      style={[
-                        styles.toggleText,
-                        { color: formData.legal_type === 'individual' ? '#2196F3' : colors.text },
-                      ]}
-                    >
+                    <Text style={[
+                      styles.chipText,
+                      formData.legal_type === 'individual' && styles.chipTextActive
+                    ]}>
                       Bireysel
                     </Text>
                   </TouchableOpacity>
@@ -373,37 +513,33 @@ export default function EditCrmCustomerScreen() {
 
               {/* Location Toggle */}
               <View style={styles.toggleGroup}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Konum</Text>
-                <View style={styles.radioGroup}>
+                <Text style={styles.inputLabel}>Konum</Text>
+                <View style={styles.chipGroup}>
                   <TouchableOpacity
                     style={[
-                      styles.toggleButton,
-                      isTurkish && [
-                        styles.toggleButtonActive,
-                        { backgroundColor: '#FF9800' + '20', borderColor: '#FF9800' },
-                      ],
+                      styles.chip,
+                      isTurkish && styles.chipActiveOrange
                     ]}
                     onPress={() => handleLocationToggle(true)}
                   >
-                    <Text
-                      style={[styles.toggleText, { color: isTurkish ? '#FF9800' : colors.text }]}
-                    >
+                    <Text style={[
+                      styles.chipText,
+                      isTurkish && styles.chipTextActive
+                    ]}>
                       Yurtiçi
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
-                      styles.toggleButton,
-                      !isTurkish && [
-                        styles.toggleButtonActive,
-                        { backgroundColor: '#FF9800' + '20', borderColor: '#FF9800' },
-                      ],
+                      styles.chip,
+                      !isTurkish && styles.chipActiveOrange
                     ]}
                     onPress={() => handleLocationToggle(false)}
                   >
-                    <Text
-                      style={[styles.toggleText, { color: !isTurkish ? '#FF9800' : colors.text }]}
-                    >
+                    <Text style={[
+                      styles.chipText,
+                      !isTurkish && styles.chipTextActive
+                    ]}>
                       Yurtdışı
                     </Text>
                   </TouchableOpacity>
@@ -411,192 +547,199 @@ export default function EditCrmCustomerScreen() {
               </View>
             </View>
 
-            <Input
-              label="Müşteri Adı"
-              placeholder="Örn: ABC Lojistik A.Ş."
-              value={formData.name}
-              onChangeText={(value) => setFormData({ ...formData, name: value })}
-              error={errors.name}
-              required
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>
+                Müşteri Adı <Text style={{ color: DashboardColors.danger }}>*</Text>
+              </Text>
+              <TextInput
+                style={[styles.input, errors.name && styles.inputError]}
+                value={formData.name}
+                onChangeText={(value) => setFormData({ ...formData, name: value })}
+                placeholder="Örn: ABC Lojistik A.Ş."
+                placeholderTextColor={DashboardColors.textMuted}
+              />
+              {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+            </View>
 
-            <Input
-              label="Kısa Ad"
-              placeholder="Örn: ABC"
-              value={formData.short_name}
-              onChangeText={(value) => setFormData({ ...formData, short_name: value })}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Kısa Ad</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.short_name}
+                onChangeText={(value) => setFormData({ ...formData, short_name: value })}
+                placeholder="Örn: ABC"
+                placeholderTextColor={DashboardColors.textMuted}
+              />
+            </View>
 
-            <Input
-              label="Kod"
-              placeholder="Otomatik oluşturulmuş"
-              value={formData.code}
-              onChangeText={(value) => setFormData({ ...formData, code: value })}
-              editable={false}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Kod</Text>
+              <TextInput
+                style={[styles.input, styles.inputDisabled]}
+                value={formData.code}
+                editable={false}
+                placeholder="Otomatik oluşturulmuş"
+                placeholderTextColor={DashboardColors.textMuted}
+              />
+            </View>
 
-            <Input
-              label="Kategori"
-              placeholder="Örn: Perakende, Toptan"
-              value={formData.category}
-              onChangeText={(value) => setFormData({ ...formData, category: value })}
-            />
-          </Card>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Kategori</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.category}
+                onChangeText={(value) => setFormData({ ...formData, category: value })}
+                placeholder="Örn: Perakende, Toptan"
+                placeholderTextColor={DashboardColors.textMuted}
+              />
+            </View>
+          </View>
+        </View>
 
-          {/* Tax & Location Information */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Vergi ve Konum Bilgileri
-            </Text>
+        {/* Vergi ve Konum Bilgileri */}
+        <View style={styles.section}>
+          {renderSectionHeader('Vergi ve Konum Bilgileri', 'document-text-outline')}
+          <View style={styles.sectionContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Vergi Numarası</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.tax_number}
+                onChangeText={(value) => setFormData({ ...formData, tax_number: value })}
+                placeholder="XXXXXXXXXX"
+                placeholderTextColor={DashboardColors.textMuted}
+                keyboardType="numeric"
+              />
+            </View>
 
-            {/* Tax Office - Only for domestic */}
-            {isTurkish && (
-              <Select
-                label="Vergi Dairesi"
-                data={taxOffices}
-                value={formData.tax_office_id?.toString()}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, tax_office_id: value ? Number(value) : undefined })
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Ana Adres</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={formData.main_address}
+                onChangeText={(value) => setFormData({ ...formData, main_address: value })}
+                placeholder="Adres giriniz"
+                placeholderTextColor={DashboardColors.textMuted}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* İletişim Bilgileri */}
+        <View style={styles.section}>
+          {renderSectionHeader('İletişim Bilgileri', 'call-outline')}
+          <View style={styles.sectionContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>E-posta</Text>
+              <TextInput
+                style={[styles.input, errors.email && styles.inputError]}
+                value={formData.email}
+                onChangeText={(value) => setFormData({ ...formData, email: value })}
+                placeholder="ornek@sirket.com"
+                placeholderTextColor={DashboardColors.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Telefon</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.phone}
+                onChangeText={(value) => setFormData({ ...formData, phone: value })}
+                placeholder="+90 XXX XXX XX XX"
+                placeholderTextColor={DashboardColors.textMuted}
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Faks</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.fax}
+                onChangeText={(value) => setFormData({ ...formData, fax: value })}
+                placeholder="+90 XXX XXX XX XX"
+                placeholderTextColor={DashboardColors.textMuted}
+                keyboardType="phone-pad"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Finansal Bilgiler */}
+        <View style={styles.section}>
+          {renderSectionHeader('Finansal Bilgiler', 'wallet-outline')}
+          <View style={styles.sectionContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Para Birimi</Text>
+              <View style={styles.chipGroup}>
+                {['TRY', 'USD', 'EUR', 'GBP'].map((currency) => (
+                  <TouchableOpacity
+                    key={currency}
+                    style={[
+                      styles.chip,
+                      formData.currency_type === currency && styles.chipActive
+                    ]}
+                    onPress={() => setFormData({ ...formData, currency_type: currency })}
+                  >
+                    <Text style={[
+                      styles.chipText,
+                      formData.currency_type === currency && styles.chipTextActive
+                    ]}>
+                      {currency}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Risk Limiti ({formData.currency_type || 'TRY'})</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.risk_limit?.toString()}
+                onChangeText={(value) =>
+                  setFormData({ ...formData, risk_limit: value ? Number(value) : undefined })
                 }
-                placeholder="Vergi dairesi seçiniz"
-                loading={loadingTaxOffices}
-                onSearch={async (query) => {
-                  const results = await searchTaxOffices(undefined, query);
-                  return results;
-                }}
+                placeholder="Sınırsız kredi için boş bırakın"
+                placeholderTextColor={DashboardColors.textMuted}
+                keyboardType="numeric"
               />
-            )}
+            </View>
 
-            <Input
-              label="Vergi Numarası"
-              placeholder="XXXXXXXXXX"
-              value={formData.tax_number}
-              onChangeText={(value) => setFormData({ ...formData, tax_number: value })}
-              keyboardType="numeric"
-            />
-
-            {/* Country - Only for foreign */}
-            {!isTurkish && (
-              <Select
-                label="Ülke"
-                data={countries}
-                value={formData.country_id?.toString()}
-                onValueChange={(value) => handleCountryChange(value ? Number(value) : undefined)}
-                placeholder="Ülke seçiniz"
-                loading={loadingCountries}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Notlar</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={formData.notes}
+                onChangeText={(value) => setFormData({ ...formData, notes: value })}
+                placeholder="Bu müşteri hakkında dahili notlar..."
+                placeholderTextColor={DashboardColors.textMuted}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
               />
-            )}
+            </View>
+          </View>
+        </View>
 
-            <Input
-              label="Ana Adres"
-              placeholder="Adres giriniz"
-              value={formData.main_address}
-              onChangeText={(value) => setFormData({ ...formData, main_address: value })}
-              multiline
-              numberOfLines={3}
-            />
-
-            <Select
-              label={isTurkish ? 'İl' : 'Eyalet/Bölge'}
-              data={states}
-              value={formData.main_state_id?.toString()}
-              onValueChange={(value) => handleStateChange(value ? Number(value) : undefined)}
-              placeholder={isTurkish ? 'İl seçiniz' : 'Eyalet seçiniz'}
-              loading={loadingStates}
-            />
-
-            <Select
-              label={isTurkish ? 'İlçe' : 'Şehir'}
-              data={cities}
-              value={formData.main_city_id?.toString()}
-              onValueChange={(value) =>
-                setFormData({ ...formData, main_city_id: value ? Number(value) : undefined })
-              }
-              placeholder={isTurkish ? 'İlçe seçiniz' : 'Şehir seçiniz'}
-              loading={loadingCities}
-              disabled={!formData.main_state_id}
-            />
-          </Card>
-
-          {/* Contact Information */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>İletişim Bilgileri</Text>
-
-            <Input
-              label="E-posta"
-              placeholder="ornek@sirket.com"
-              value={formData.email}
-              onChangeText={(value) => setFormData({ ...formData, email: value })}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              error={errors.email}
-            />
-
-            <Input
-              label="Telefon"
-              placeholder="+90 XXX XXX XX XX"
-              value={formData.phone}
-              onChangeText={(value) => setFormData({ ...formData, phone: value })}
-              keyboardType="phone-pad"
-            />
-
-            <Input
-              label="Faks"
-              placeholder="+90 XXX XXX XX XX"
-              value={formData.fax}
-              onChangeText={(value) => setFormData({ ...formData, fax: value })}
-              keyboardType="phone-pad"
-            />
-          </Card>
-
-          {/* Financial Information */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Finansal Bilgiler</Text>
-
-            <Select
-              label="Para Birimi"
-              data={[
-                { label: 'TRY - Türk Lirası', value: 'TRY' },
-                { label: 'USD - Amerikan Doları', value: 'USD' },
-                { label: 'EUR - Euro', value: 'EUR' },
-                { label: 'GBP - İngiliz Sterlini', value: 'GBP' },
-              ]}
-              value={formData.currency_type || undefined}
-              onValueChange={(value: string | number | undefined) => setFormData({ ...formData, currency_type: (value as string) || 'TRY' })}
-              placeholder="Para birimi seçiniz"
-            />
-
-            <Input
-              label={`Risk Limiti (${formData.currency_type || 'TRY'})`}
-              placeholder="Sınırsız kredi için boş bırakın"
-              value={formData.risk_limit?.toString()}
-              onChangeText={(value) =>
-                setFormData({ ...formData, risk_limit: value ? Number(value) : undefined })
-              }
-              keyboardType="numeric"
-            />
-
-            <Input
-              label="Notlar"
-              placeholder="Bu müşteri hakkında dahili notlar..."
-              value={formData.notes}
-              onChangeText={(value) => setFormData({ ...formData, notes: value })}
-              multiline
-              numberOfLines={4}
-            />
-          </Card>
-
-          {/* Status */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Durum</Text>
-
-            <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Durum</Text>
+        {/* Durum */}
+        <View style={styles.section}>
+          {renderSectionHeader('Durum', 'flag-outline')}
+          <View style={styles.sectionContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Müşteri Durumu</Text>
               <View style={styles.statusButtons}>
                 {[
-                  { value: 'active', label: 'Aktif', color: colors.success },
-                  { value: 'passive', label: 'Pasif', color: colors.textMuted },
-                  { value: 'blacklist', label: 'Kara Liste', color: colors.danger },
+                  { value: 'active', label: 'Aktif', color: DashboardColors.success },
+                  { value: 'passive', label: 'Pasif', color: DashboardColors.warning },
+                  { value: 'blacklist', label: 'Kara Liste', color: DashboardColors.danger },
                 ].map((status) => (
                   <TouchableOpacity
                     key={status.value}
@@ -604,8 +747,8 @@ export default function EditCrmCustomerScreen() {
                       styles.statusButton,
                       formData.status === status.value && [
                         styles.statusButtonActive,
-                        { borderColor: status.color },
-                      ],
+                        { borderColor: status.color, backgroundColor: status.color + '15' }
+                      ]
                     ]}
                     onPress={() =>
                       setFormData({ ...formData, status: status.value as CrmCustomerStatus })
@@ -614,9 +757,7 @@ export default function EditCrmCustomerScreen() {
                     <Text
                       style={[
                         styles.statusButtonText,
-                        {
-                          color: formData.status === status.value ? status.color : colors.text,
-                        },
+                        { color: formData.status === status.value ? status.color : DashboardColors.textSecondary }
                       ]}
                     >
                       {status.label}
@@ -625,147 +766,301 @@ export default function EditCrmCustomerScreen() {
                 ))}
               </View>
             </View>
-          </Card>
+          </View>
+        </View>
 
-          {/* Submit Button */}
-          <Button
-            title={isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-            variant="primary"
-            style={styles.submitButton}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
+        {/* Submit Button */}
+        <TouchableOpacity
+          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
+              <Text style={styles.submitButtonText}>Güncelle</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* Bottom spacing */}
+        <View style={{ height: DashboardSpacing['2xl'] }} />
+      </KeyboardAwareScrollView>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
-  keyboardView: {
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerButtonDisabled: {
+    opacity: 0.5
+  },
+  headerTitleContainer: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.md
+  },
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
   },
   content: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    flex: 1
   },
   contentContainer: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    paddingBottom: Spacing['4xl'],
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
   },
   section: {
-    padding: Spacing.lg,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.lg,
+    overflow: 'hidden',
+    ...DashboardShadows.sm
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.lg,
-  },
-  formGroup: {
-    marginBottom: Spacing.lg,
-  },
-  label: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '600',
-    marginBottom: Spacing.sm,
+    color: DashboardColors.textPrimary
+  },
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
   },
   toggleRow: {
-    gap: Spacing.md,
-    marginBottom: Spacing.lg,
+    gap: DashboardSpacing.md,
+    marginBottom: DashboardSpacing.md
   },
   toggleGroup: {
-    flex: 1,
+    flex: 1
   },
-  radioGroup: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
+  inputGroup: {
+    marginBottom: DashboardSpacing.sm
   },
-  toggleButton: {
-    flex: 1,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+  inputLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.xs
+  },
+  input: {
+    backgroundColor: DashboardColors.background,
     borderWidth: 1,
-    borderColor: Colors.light.border,
-    alignItems: 'center',
+    borderColor: DashboardColors.borderLight,
+    borderRadius: DashboardBorderRadius.lg,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.md,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
+    minHeight: 48
   },
-  toggleButtonActive: {
-    borderWidth: 2,
+  inputError: {
+    borderColor: DashboardColors.danger
   },
-  toggleText: {
-    ...Typography.bodySM,
-    fontWeight: '600',
+  inputDisabled: {
+    backgroundColor: DashboardColors.borderLight,
+    color: DashboardColors.textMuted
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.danger,
+    marginTop: DashboardSpacing.xs
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top'
+  },
+  chipGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DashboardSpacing.xs,
+    marginTop: DashboardSpacing.xs
+  },
+  chip: {
+    paddingVertical: DashboardSpacing.xs,
+    paddingHorizontal: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: DashboardColors.background,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight
+  },
+  chipActive: {
+    backgroundColor: DashboardColors.primary,
+    borderColor: DashboardColors.primary
+  },
+  chipActiveOrange: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B'
+  },
+  chipText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary
+  },
+  chipTextActive: {
+    color: '#fff'
   },
   statusButtons: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-    flexWrap: 'wrap',
+    gap: DashboardSpacing.sm,
+    flexWrap: 'wrap'
   },
   statusButton: {
     flex: 1,
     minWidth: '30%',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+    padding: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.light.border,
+    borderColor: DashboardColors.borderLight,
     alignItems: 'center',
+    backgroundColor: DashboardColors.background
   },
   statusButtonActive: {
-    borderWidth: 2,
+    borderWidth: 2
   },
   statusButtonText: {
-    ...Typography.bodySM,
-    fontWeight: '600',
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600'
   },
   submitButton: {
-    marginTop: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.primary,
+    paddingVertical: DashboardSpacing.lg,
+    borderRadius: DashboardBorderRadius.xl,
+    ...DashboardShadows.md
+  },
+  submitButtonDisabled: {
+    opacity: 0.6
+  },
+  submitButtonText: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: '#fff'
   },
   loadingState: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.md
   },
   errorState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
+    paddingHorizontal: DashboardSpacing['2xl']
   },
   errorIcon: {
     width: 128,
     height: 128,
     borderRadius: 64,
+    backgroundColor: DashboardColors.dangerBg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: DashboardSpacing.xl
   },
   errorTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
   },
   errorSubtitle: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center'
   },
   retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    marginTop: DashboardSpacing.xl,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary
   },
   retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-});
+    color: '#fff',
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600'
+  }
+})

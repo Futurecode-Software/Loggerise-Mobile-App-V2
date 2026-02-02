@@ -3,11 +3,9 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useToast } from '@/hooks/use-toast';
 import { FullScreenHeader } from '@/components/header';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -109,15 +107,12 @@ export default function NewInteractionScreen() {
         }
       />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        bottomOffset={20}
       >
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
           {/* Interaction Type */}
           <Card style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Görüşme Tipi</Text>
@@ -262,17 +257,13 @@ export default function NewInteractionScreen() {
             variant="primary"
             style={styles.submitButton}
           />
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  keyboardView: {
     flex: 1,
   },
   content: {

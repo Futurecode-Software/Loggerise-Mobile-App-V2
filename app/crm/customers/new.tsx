@@ -1,26 +1,44 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * Yeni CRM Müşterisi Oluşturma Sayfası
+ *
+ * CLAUDE.md form sayfası standardına uygun modern tasarım.
+ * Referans: app/accounting/invoices/new.tsx
+ */
+
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
-} from 'react-native';
-import { useToast } from '@/hooks/use-toast';
-import { router } from 'expo-router';
-import { Save } from 'lucide-react-native';
-import { Input, Button, Card, Select } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+  TextInput
+} from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import Toast from 'react-native-toast-message'
+import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
 import {
   createCrmCustomer,
   CrmCustomerFormData,
   CrmCustomerStatus,
-  LegalType,
-} from '@/services/endpoints/crm-customers';
+} from '@/services/endpoints/crm-customers'
 import {
   searchCountries,
   searchStates,
@@ -29,11 +47,53 @@ import {
   TURKEY_ID,
   FOREIGN_DEFAULT_TAX_NUMBER,
   LocationOption,
-} from '@/services/endpoints/locations';
+} from '@/services/endpoints/locations'
 
 export default function NewCrmCustomerScreen() {
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const insets = useSafeAreaInsets()
+
+  // Animasyonlu orb'lar için shared values
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
+
+  useEffect(() => {
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTurkish, setIsTurkish] = useState(true);
@@ -165,120 +225,159 @@ export default function NewCrmCustomerScreen() {
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {}
 
     if (!formData.name?.trim()) {
-      newErrors.name = 'Müşteri adı zorunludur';
+      newErrors.name = 'Müşteri adı zorunludur'
     }
 
     if (!formData.legal_type) {
-      newErrors.legal_type = 'Yasal tip zorunludur';
+      newErrors.legal_type = 'Yasal tip zorunludur'
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Geçerli bir e-posta adresi giriniz';
+      newErrors.email = 'Geçerli bir e-posta adresi giriniz'
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      showError('Hata', 'Lütfen formu eksiksiz doldurunuz');
-      return;
+      Toast.show({
+        type: 'error',
+        text1: 'Lütfen formu eksiksiz doldurunuz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      const customer = await createCrmCustomer(formData);
-      success('Başarılı', 'CRM müşterisi başarıyla oluşturuldu');
-      router.replace(`/crm/customers/${customer.id}` as any);
+      const customer = await createCrmCustomer(formData)
+      Toast.show({
+        type: 'success',
+        text1: 'CRM müşterisi başarıyla oluşturuldu',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      router.replace(`/crm/customers/${customer.id}` as any)
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Müşteri oluşturulamadı');
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Müşteri oluşturulamadı',
+        position: 'top',
+        visibilityTime: 1500
+      })
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
+
+  const handleBack = () => {
+    router.back()
+  }
+
+  // Section Header Component
+  const renderSectionHeader = (title: string, icon: keyof typeof Ionicons.glyphMap) => (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionIcon}>
+        <Ionicons name={icon} size={18} color={DashboardColors.primary} />
+      </View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  )
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      {/* Full Screen Header */}
-      <FullScreenHeader
-        title="Yeni CRM Müşterisi"
-        showBackButton
-        rightIcons={
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-            activeOpacity={0.7}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Save size={20} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
-        }
-      />
+    <View style={styles.container}>
+      {/* Header with gradient and animated orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Orta: Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Yeni CRM Müşterisi</Text>
+            </View>
+
+            {/* Sağ: Kaydet Butonu */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={[styles.headerButton, isSubmitting && styles.headerButtonDisabled]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* Form Content */}
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        bottomOffset={20}
       >
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Basic Information */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
-
+        {/* Temel Bilgiler */}
+        <View style={styles.section}>
+          {renderSectionHeader('Temel Bilgiler', 'person-outline')}
+          <View style={styles.sectionContent}>
             {/* Legal Type & Location Toggle */}
             <View style={styles.toggleRow}>
               {/* Legal Type */}
               <View style={styles.toggleGroup}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>
-                  Yasal Tip <Text style={{ color: colors.danger }}>*</Text>
+                <Text style={styles.inputLabel}>
+                  Yasal Tip <Text style={{ color: DashboardColors.danger }}>*</Text>
                 </Text>
-                <View style={styles.radioGroup}>
+                <View style={styles.chipGroup}>
                   <TouchableOpacity
                     style={[
-                      styles.toggleButton,
-                      formData.legal_type === 'company' && [
-                        styles.toggleButtonActive,
-                        { backgroundColor: '#2196F3' + '20', borderColor: '#2196F3' },
-                      ],
+                      styles.chip,
+                      formData.legal_type === 'company' && styles.chipActive
                     ]}
                     onPress={() => setFormData({ ...formData, legal_type: 'company' })}
                   >
-                    <Text
-                      style={[
-                        styles.toggleText,
-                        { color: formData.legal_type === 'company' ? '#2196F3' : colors.text },
-                      ]}
-                    >
+                    <Text style={[
+                      styles.chipText,
+                      formData.legal_type === 'company' && styles.chipTextActive
+                    ]}>
                       Şirket
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
-                      styles.toggleButton,
-                      formData.legal_type === 'individual' && [
-                        styles.toggleButtonActive,
-                        { backgroundColor: '#2196F3' + '20', borderColor: '#2196F3' },
-                      ],
+                      styles.chip,
+                      formData.legal_type === 'individual' && styles.chipActive
                     ]}
                     onPress={() => setFormData({ ...formData, legal_type: 'individual' })}
                   >
-                    <Text
-                      style={[
-                        styles.toggleText,
-                        { color: formData.legal_type === 'individual' ? '#2196F3' : colors.text },
-                      ]}
-                    >
+                    <Text style={[
+                      styles.chipText,
+                      formData.legal_type === 'individual' && styles.chipTextActive
+                    ]}>
                       Bireysel
                     </Text>
                   </TouchableOpacity>
@@ -287,37 +386,33 @@ export default function NewCrmCustomerScreen() {
 
               {/* Location Toggle */}
               <View style={styles.toggleGroup}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Konum</Text>
-                <View style={styles.radioGroup}>
+                <Text style={styles.inputLabel}>Konum</Text>
+                <View style={styles.chipGroup}>
                   <TouchableOpacity
                     style={[
-                      styles.toggleButton,
-                      isTurkish && [
-                        styles.toggleButtonActive,
-                        { backgroundColor: '#FF9800' + '20', borderColor: '#FF9800' },
-                      ],
+                      styles.chip,
+                      isTurkish && styles.chipActiveOrange
                     ]}
                     onPress={() => handleLocationToggle(true)}
                   >
-                    <Text
-                      style={[styles.toggleText, { color: isTurkish ? '#FF9800' : colors.text }]}
-                    >
+                    <Text style={[
+                      styles.chipText,
+                      isTurkish && styles.chipTextActive
+                    ]}>
                       Yurtiçi
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
-                      styles.toggleButton,
-                      !isTurkish && [
-                        styles.toggleButtonActive,
-                        { backgroundColor: '#FF9800' + '20', borderColor: '#FF9800' },
-                      ],
+                      styles.chip,
+                      !isTurkish && styles.chipActiveOrange
                     ]}
                     onPress={() => handleLocationToggle(false)}
                   >
-                    <Text
-                      style={[styles.toggleText, { color: !isTurkish ? '#FF9800' : colors.text }]}
-                    >
+                    <Text style={[
+                      styles.chipText,
+                      !isTurkish && styles.chipTextActive
+                    ]}>
                       Yurtdışı
                     </Text>
                   </TouchableOpacity>
@@ -325,180 +420,176 @@ export default function NewCrmCustomerScreen() {
               </View>
             </View>
 
-            <Input
-              label="Müşteri Adı"
-              placeholder="Örn: ABC Lojistik A.Ş."
-              value={formData.name}
-              onChangeText={(value) => setFormData({ ...formData, name: value })}
-              error={errors.name}
-              required
-            />
-
-            <Input
-              label="Kısa Ad"
-              placeholder="Örn: ABC"
-              value={formData.short_name}
-              onChangeText={(value) => setFormData({ ...formData, short_name: value })}
-            />
-
-            <Input
-              label="Kategori"
-              placeholder="Örn: Perakende, Toptan"
-              value={formData.category}
-              onChangeText={(value) => setFormData({ ...formData, category: value })}
-            />
-          </Card>
-
-          {/* Tax & Location Information */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Vergi ve Konum Bilgileri
-            </Text>
-
-            {/* Tax Office - Only for domestic */}
-            {isTurkish && (
-              <Select
-                label="Vergi Dairesi"
-                data={taxOffices}
-                value={formData.tax_office_id?.toString()}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, tax_office_id: value ? Number(value) : undefined })
-                }
-                placeholder="Vergi dairesi seçiniz"
-                loading={loadingTaxOffices}
-                onSearch={async (query) => {
-                  const results = await searchTaxOffices(query);
-                  return results;
-                }}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>
+                Müşteri Adı <Text style={{ color: DashboardColors.danger }}>*</Text>
+              </Text>
+              <TextInput
+                style={[styles.input, errors.name && styles.inputError]}
+                value={formData.name}
+                onChangeText={(value) => setFormData({ ...formData, name: value })}
+                placeholder="Örn: ABC Lojistik A.Ş."
+                placeholderTextColor={DashboardColors.textMuted}
               />
-            )}
+              {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+            </View>
 
-            <Input
-              label="Vergi Numarası"
-              placeholder="XXXXXXXXXX"
-              value={formData.tax_number}
-              onChangeText={(value) => setFormData({ ...formData, tax_number: value })}
-              keyboardType="numeric"
-            />
-
-            {/* Country - Only for foreign */}
-            {!isTurkish && (
-              <Select
-                label="Ülke"
-                data={countries}
-                value={formData.country_id?.toString()}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, country_id: value ? Number(value) : undefined })
-                }
-                placeholder="Ülke seçiniz"
-                loading={loadingCountries}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Kısa Ad</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.short_name}
+                onChangeText={(value) => setFormData({ ...formData, short_name: value })}
+                placeholder="Örn: ABC"
+                placeholderTextColor={DashboardColors.textMuted}
               />
-            )}
+            </View>
 
-            <Input
-              label="Ana Adres"
-              placeholder="Adres giriniz"
-              value={formData.main_address}
-              onChangeText={(value) => setFormData({ ...formData, main_address: value })}
-              multiline
-              numberOfLines={3}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Kategori</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.category}
+                onChangeText={(value) => setFormData({ ...formData, category: value })}
+                placeholder="Örn: Perakende, Toptan"
+                placeholderTextColor={DashboardColors.textMuted}
+              />
+            </View>
+          </View>
+        </View>
 
-            <Select
-              label={isTurkish ? 'İl' : 'Eyalet/Bölge'}
-              data={states}
-              value={formData.main_state_id?.toString()}
-              onValueChange={(value) =>
-                setFormData({ ...formData, main_state_id: value ? Number(value) : undefined })
-              }
-              placeholder={isTurkish ? 'İl seçiniz' : 'Eyalet seçiniz'}
-              loading={loadingStates}
-            />
+        {/* Vergi ve Konum Bilgileri */}
+        <View style={styles.section}>
+          {renderSectionHeader('Vergi ve Konum Bilgileri', 'document-text-outline')}
+          <View style={styles.sectionContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Vergi Numarası</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.tax_number}
+                onChangeText={(value) => setFormData({ ...formData, tax_number: value })}
+                placeholder="XXXXXXXXXX"
+                placeholderTextColor={DashboardColors.textMuted}
+                keyboardType="numeric"
+              />
+            </View>
 
-            <Select
-              label={isTurkish ? 'İlçe' : 'Şehir'}
-              data={cities}
-              value={formData.main_city_id?.toString()}
-              onValueChange={(value) =>
-                setFormData({ ...formData, main_city_id: value ? Number(value) : undefined })
-              }
-              placeholder={isTurkish ? 'İlçe seçiniz' : 'Şehir seçiniz'}
-              loading={loadingCities}
-              disabled={!formData.main_state_id}
-            />
-          </Card>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Ana Adres</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={formData.main_address}
+                onChangeText={(value) => setFormData({ ...formData, main_address: value })}
+                placeholder="Adres giriniz"
+                placeholderTextColor={DashboardColors.textMuted}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+          </View>
+        </View>
 
-          {/* Contact Information */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>İletişim Bilgileri</Text>
+        {/* İletişim Bilgileri */}
+        <View style={styles.section}>
+          {renderSectionHeader('İletişim Bilgileri', 'call-outline')}
+          <View style={styles.sectionContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>E-posta</Text>
+              <TextInput
+                style={[styles.input, errors.email && styles.inputError]}
+                value={formData.email}
+                onChangeText={(value) => setFormData({ ...formData, email: value })}
+                placeholder="ornek@sirket.com"
+                placeholderTextColor={DashboardColors.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            </View>
 
-            <Input
-              label="E-posta"
-              placeholder="ornek@sirket.com"
-              value={formData.email}
-              onChangeText={(value) => setFormData({ ...formData, email: value })}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              error={errors.email}
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Telefon</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.phone}
+                onChangeText={(value) => setFormData({ ...formData, phone: value })}
+                placeholder="+90 XXX XXX XX XX"
+                placeholderTextColor={DashboardColors.textMuted}
+                keyboardType="phone-pad"
+              />
+            </View>
+          </View>
+        </View>
 
-            <Input
-              label="Telefon"
-              placeholder="+90 XXX XXX XX XX"
-              value={formData.phone}
-              onChangeText={(value) => setFormData({ ...formData, phone: value })}
-              keyboardType="phone-pad"
-            />
-          </Card>
+        {/* Finansal Bilgiler */}
+        <View style={styles.section}>
+          {renderSectionHeader('Finansal Bilgiler', 'wallet-outline')}
+          <View style={styles.sectionContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Para Birimi</Text>
+              <View style={styles.chipGroup}>
+                {['TRY', 'USD', 'EUR', 'GBP'].map((currency) => (
+                  <TouchableOpacity
+                    key={currency}
+                    style={[
+                      styles.chip,
+                      formData.currency_type === currency && styles.chipActive
+                    ]}
+                    onPress={() => setFormData({ ...formData, currency_type: currency })}
+                  >
+                    <Text style={[
+                      styles.chipText,
+                      formData.currency_type === currency && styles.chipTextActive
+                    ]}>
+                      {currency}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
-          {/* Financial Information */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Finansal Bilgiler</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Risk Limiti ({formData.currency_type || 'TRY'})</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.risk_limit?.toString()}
+                onChangeText={(value) =>
+                  setFormData({ ...formData, risk_limit: value ? Number(value) : undefined })
+                }
+                placeholder="Sınırsız kredi için boş bırakın"
+                placeholderTextColor={DashboardColors.textMuted}
+                keyboardType="numeric"
+              />
+            </View>
 
-            <Select
-              label="Para Birimi"
-              data={[
-                { label: 'TRY - Türk Lirası', value: 'TRY' },
-                { label: 'USD - Amerikan Doları', value: 'USD' },
-                { label: 'EUR - Euro', value: 'EUR' },
-                { label: 'GBP - İngiliz Sterlini', value: 'GBP' },
-              ]}
-              value={formData.currency_type}
-              onValueChange={(value) => setFormData({ ...formData, currency_type: value?.toString() || 'TRY' })}
-              placeholder="Para birimi seçiniz"
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Notlar</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={formData.notes}
+                onChangeText={(value) => setFormData({ ...formData, notes: value })}
+                placeholder="Bu müşteri hakkında dahili notlar..."
+                placeholderTextColor={DashboardColors.textMuted}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+          </View>
+        </View>
 
-            <Input
-              label={`Risk Limiti (${formData.currency_type || 'TRY'})`}
-              placeholder="Sınırsız kredi için boş bırakın"
-              value={formData.risk_limit?.toString()}
-              onChangeText={(value) =>
-                setFormData({ ...formData, risk_limit: value ? Number(value) : undefined })
-              }
-              keyboardType="numeric"
-            />
-
-            <Input
-              label="Notlar"
-              placeholder="Bu müşteri hakkında dahili notlar..."
-              value={formData.notes}
-              onChangeText={(value) => setFormData({ ...formData, notes: value })}
-              multiline
-              numberOfLines={4}
-            />
-          </Card>
-
-          {/* Status */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Durum</Text>
-
-            <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Durum</Text>
+        {/* Durum */}
+        <View style={styles.section}>
+          {renderSectionHeader('Durum', 'flag-outline')}
+          <View style={styles.sectionContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Müşteri Durumu</Text>
               <View style={styles.statusButtons}>
                 {[
-                  { value: 'active', label: 'Aktif', color: colors.success },
-                  { value: 'passive', label: 'Pasif', color: colors.textMuted },
-                  { value: 'blacklist', label: 'Kara Liste', color: colors.danger },
+                  { value: 'active', label: 'Aktif', color: DashboardColors.success },
+                  { value: 'passive', label: 'Pasif', color: DashboardColors.warning },
+                  { value: 'blacklist', label: 'Kara Liste', color: DashboardColors.danger },
                 ].map((status) => (
                   <TouchableOpacity
                     key={status.value}
@@ -506,8 +597,8 @@ export default function NewCrmCustomerScreen() {
                       styles.statusButton,
                       formData.status === status.value && [
                         styles.statusButtonActive,
-                        { borderColor: status.color },
-                      ],
+                        { borderColor: status.color, backgroundColor: status.color + '15' }
+                      ]
                     ]}
                     onPress={() =>
                       setFormData({ ...formData, status: status.value as CrmCustomerStatus })
@@ -516,9 +607,7 @@ export default function NewCrmCustomerScreen() {
                     <Text
                       style={[
                         styles.statusButtonText,
-                        {
-                          color: formData.status === status.value ? status.color : colors.text,
-                        },
+                        { color: formData.status === status.value ? status.color : DashboardColors.textSecondary }
                       ]}
                     >
                       {status.label}
@@ -527,107 +616,248 @@ export default function NewCrmCustomerScreen() {
                 ))}
               </View>
             </View>
-          </Card>
+          </View>
+        </View>
 
-          {/* Submit Button */}
-          <Button
-            title={isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-            variant="primary"
-            style={styles.submitButton}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
+        {/* Submit Button */}
+        <TouchableOpacity
+          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
+              <Text style={styles.submitButtonText}>Kaydet</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* Bottom spacing */}
+        <View style={{ height: DashboardSpacing['2xl'] }} />
+      </KeyboardAwareScrollView>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.background
+  },
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: DashboardSpacing.lg
   },
   headerButton: {
-    padding: Spacing.sm,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
-  keyboardView: {
+  headerButtonDisabled: {
+    opacity: 0.5
+  },
+  headerTitleContainer: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.md
+  },
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
   },
   content: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    flex: 1
   },
   contentContainer: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    paddingBottom: Spacing['4xl'],
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
   },
   section: {
-    padding: Spacing.lg,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.lg,
+    overflow: 'hidden',
+    ...DashboardShadows.sm
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.lg,
-  },
-  formGroup: {
-    marginBottom: Spacing.lg,
-  },
-  label: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '600',
-    marginBottom: Spacing.sm,
+    color: DashboardColors.textPrimary
+  },
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
   },
   toggleRow: {
-    gap: Spacing.md,
-    marginBottom: Spacing.lg,
+    gap: DashboardSpacing.md,
+    marginBottom: DashboardSpacing.md
   },
   toggleGroup: {
-    flex: 1,
+    flex: 1
   },
-  radioGroup: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
+  inputGroup: {
+    marginBottom: DashboardSpacing.sm
   },
-  toggleButton: {
-    flex: 1,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+  inputLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.xs
+  },
+  input: {
+    backgroundColor: DashboardColors.background,
     borderWidth: 1,
-    borderColor: Colors.light.border,
-    alignItems: 'center',
+    borderColor: DashboardColors.borderLight,
+    borderRadius: DashboardBorderRadius.lg,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.md,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
+    minHeight: 48
   },
-  toggleButtonActive: {
-    borderWidth: 2,
+  inputError: {
+    borderColor: DashboardColors.danger
   },
-  toggleText: {
-    ...Typography.bodySM,
-    fontWeight: '600',
+  errorText: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.danger,
+    marginTop: DashboardSpacing.xs
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top'
+  },
+  chipGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DashboardSpacing.xs,
+    marginTop: DashboardSpacing.xs
+  },
+  chip: {
+    paddingVertical: DashboardSpacing.xs,
+    paddingHorizontal: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: DashboardColors.background,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight
+  },
+  chipActive: {
+    backgroundColor: DashboardColors.primary,
+    borderColor: DashboardColors.primary
+  },
+  chipActiveOrange: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B'
+  },
+  chipText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary
+  },
+  chipTextActive: {
+    color: '#fff'
   },
   statusButtons: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-    flexWrap: 'wrap',
+    gap: DashboardSpacing.sm,
+    flexWrap: 'wrap'
   },
   statusButton: {
     flex: 1,
     minWidth: '30%',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+    padding: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.light.border,
+    borderColor: DashboardColors.borderLight,
     alignItems: 'center',
+    backgroundColor: DashboardColors.background
   },
   statusButtonActive: {
-    borderWidth: 2,
+    borderWidth: 2
   },
   statusButtonText: {
-    ...Typography.bodySM,
-    fontWeight: '600',
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600'
   },
   submitButton: {
-    marginTop: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.primary,
+    paddingVertical: DashboardSpacing.lg,
+    borderRadius: DashboardBorderRadius.xl,
+    ...DashboardShadows.md
   },
-});
+  submitButtonDisabled: {
+    opacity: 0.6
+  },
+  submitButtonText: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: '#fff'
+  }
+})
