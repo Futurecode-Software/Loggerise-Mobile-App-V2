@@ -175,7 +175,7 @@ export default function MoreScreen() {
         { icon: 'document-text', label: 'Senetler', route: '/accounting/promissory-note', color: '#a855f7' },
         { icon: 'swap-horizontal', label: 'Mali Hareketler', route: '/accounting/transactions', color: '#6366f1' },
         { icon: 'people', label: 'Cariler', route: '/crm/customers', color: '#f59e0b' },
-        { icon: 'document', label: 'Faturalar', route: '/finance/invoices', color: '#ef4444' },
+        { icon: 'document', label: 'Faturalar', route: '/accounting/invoices', color: '#ef4444' },
         { icon: 'cube', label: 'Ürünler', route: '/inventory/stock/products', color: '#10b981' },
         { icon: 'pricetag', label: 'Markalar', route: '/inventory/stock/brands', color: '#8b5cf6' },
         { icon: 'layers', label: 'Modeller', route: '/inventory/stock/models', color: '#06b6d4' },
