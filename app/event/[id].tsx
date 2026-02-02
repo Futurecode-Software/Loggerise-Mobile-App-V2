@@ -1,10 +1,11 @@
 /**
- * Event Detail Screen
+ * Event Detail Screen (Etkinlik Detayı)
  *
- * Shows event details with complete functionality.
+ * Dashboard theme + statik glow orbs + SectionHeader + InfoRow pattern
+ * CLAUDE.md standartlarına tam uyumlu
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import {
   View,
   Text,
@@ -13,29 +14,21 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+} from 'react-native'
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
-  Edit,
-  Trash2,
-  Calendar,
-  Clock,
-  User,
-  Building2,
-  Phone,
-  MessageCircle,
-  Mail,
-  CheckCircle,
-  AlertCircle,
-  Flag,
-  Bell,
-  FileText,
-} from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardBorderRadius,
+  DashboardFontSizes,
+  DashboardShadows,
+} from '@/constants/dashboard-theme'
 import {
   getEvent,
   deleteEvent,
@@ -43,196 +36,375 @@ import {
   Event,
   getEventTypeLabel,
   getEventStatusLabel,
-  getEventStatusColor,
   getPriorityLabel,
-  getPriorityColor,
   getContactMethodLabel,
   getReminderLabel,
   formatEventTimeRange,
   ReminderMinutes,
-} from '@/services/endpoints/events';
-import { formatDate } from '@/utils/formatters';
+} from '@/services/endpoints/events'
+import { formatDate } from '@/utils/formatters'
+
+// Status colors
+const STATUS_COLORS: Record<string, string> = {
+  pending: '#F59E0B',
+  completed: '#10B981',
+  cancelled: '#EF4444',
+  rescheduled: '#6366F1',
+}
+
+// Priority colors
+const PRIORITY_COLORS: Record<string, string> = {
+  low: '#6B7280',
+  normal: '#3B82F6',
+  high: '#F59E0B',
+  urgent: '#EF4444',
+}
+
+// Section Header Component
+function SectionHeader({ title, icon }: { title: string; icon: keyof typeof Ionicons.glyphMap }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionHeaderIcon}>
+        <Ionicons name={icon} size={20} color={DashboardColors.primary} />
+      </View>
+      <Text style={styles.sectionHeaderText}>{title}</Text>
+    </View>
+  )
+}
+
+// Info Row Component
+function InfoRow({
+  label,
+  value,
+  badge,
+}: {
+  label: string
+  value?: string | number | boolean
+  badge?: { label: string; color: string }
+}) {
+  if (value === undefined || value === null || value === '') return null
+
+  const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayır') : String(value)
+
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      {badge ? (
+        <View style={[styles.infoBadge, { backgroundColor: `${badge.color}15` }]}>
+          <Text style={[styles.infoBadgeText, { color: badge.color }]}>{badge.label}</Text>
+        </View>
+      ) : (
+        <Text style={styles.infoValue}>{displayValue}</Text>
+      )}
+    </View>
+  )
+}
 
 export default function EventDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const insets = useSafeAreaInsets()
 
-  const [event, setEvent] = useState<Event | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [event, setEvent] = useState<Event | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isCompleting, setIsCompleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
 
-  // Fetch event data
-  const fetchEvent = useCallback(async () => {
-    if (!id) return;
-
-    try {
-      setError(null);
-      const data = await getEvent(parseInt(id, 10));
-      setEvent(data);
-    } catch (err) {
-      console.error('Event fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Etkinlik bilgileri yüklenemedi');
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
-    }
-  }, [id]);
+  const isMountedRef = useRef(true)
 
   useEffect(() => {
-    fetchEvent();
-  }, [id]);
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  // Fetch event data
+  const fetchEvent = useCallback(
+    async (showLoading = true) => {
+      if (!id) return
+
+      if (showLoading) {
+        setIsLoading(true)
+      }
+
+      try {
+        setError(null)
+        const data = await getEvent(parseInt(id, 10))
+        if (isMountedRef.current) {
+          setEvent(data)
+        }
+      } catch (err) {
+        console.error('Event fetch error:', err)
+        if (isMountedRef.current) {
+          setError(err instanceof Error ? err.message : 'Etkinlik bilgileri yüklenemedi')
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setIsLoading(false)
+          setRefreshing(false)
+        }
+      }
+    },
+    [id]
+  )
+
+  useEffect(() => {
+    fetchEvent()
+  }, [fetchEvent])
+
+  // Refresh on focus (after edit)
+  useFocusEffect(
+    useCallback(() => {
+      if (!isLoading) {
+        fetchEvent(false)
+      }
+    }, [fetchEvent, isLoading])
+  )
 
   const onRefresh = () => {
-    setRefreshing(true);
-    fetchEvent();
-  };
+    setRefreshing(true)
+    fetchEvent(false)
+  }
 
   // Delete event
   const handleDelete = () => {
-    setShowDeleteConfirm(true);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    setShowDeleteConfirm(true)
+  }
 
   const handleConfirmDelete = async () => {
-    if (!id) return;
-    setIsDeleting(true);
+    if (!id) return
+    setIsDeleting(true)
     try {
-      await deleteEvent(parseInt(id, 10));
-      success('Başarılı', 'Etkinlik silindi.');
-      router.back();
+      await deleteEvent(parseInt(id, 10))
+      Toast.show({
+        type: 'success',
+        text1: 'Başarılı',
+        text2: 'Etkinlik silindi.',
+        position: 'top',
+        visibilityTime: 1500,
+      })
+      router.back()
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Etkinlik silinemedi.');
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: err instanceof Error ? err.message : 'Etkinlik silinemedi.',
+        position: 'top',
+        visibilityTime: 2000,
+      })
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
     }
-  };
+  }
 
   // Complete event
   const handleComplete = () => {
-    setShowCompleteConfirm(true);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    setShowCompleteConfirm(true)
+  }
 
   const handleConfirmComplete = async () => {
-    if (!id) return;
-    setIsCompleting(true);
+    if (!id) return
+    setIsCompleting(true)
     try {
-      const result = await completeEvent(parseInt(id, 10), {});
-      setEvent(result.event);
-      success('Başarılı', 'Etkinlik tamamlandı.');
-      setShowCompleteConfirm(false);
-      // Optionally show next event toast if created
-      if (result.nextEvent) {
-        setTimeout(() => {
-          success('Bilgi', 'Yeni takip etkinliği oluşturuldu.');
-        }, 1000);
+      const result = await completeEvent(parseInt(id, 10), {})
+      if (isMountedRef.current) {
+        setEvent(result.event)
+        Toast.show({
+          type: 'success',
+          text1: 'Başarılı',
+          text2: 'Etkinlik tamamlandı.',
+          position: 'top',
+          visibilityTime: 1500,
+        })
+        setShowCompleteConfirm(false)
+
+        // Next event notification
+        if (result.nextEvent) {
+          setTimeout(() => {
+            Toast.show({
+              type: 'info',
+              text1: 'Bilgi',
+              text2: 'Yeni takip etkinliği oluşturuldu.',
+              position: 'top',
+              visibilityTime: 2000,
+            })
+          }, 1000)
+        }
       }
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Etkinlik tamamlanamadı.');
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: err instanceof Error ? err.message : 'Etkinlik tamamlanamadı.',
+        position: 'top',
+        visibilityTime: 2000,
+      })
     } finally {
-      setIsCompleting(false);
+      if (isMountedRef.current) {
+        setIsCompleting(false)
+      }
     }
-  };
+  }
 
-  // Render info row
-  const renderInfoRow = (
-    label: string,
-    value?: string | number | boolean | null,
-    icon?: any,
-    badge?: { label: string; variant: any }
-  ) => {
-    if (value === undefined || value === null || value === '') return null;
-    const Icon = icon;
-    const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayır') : String(value);
+  const handleBackPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
 
-    return (
-      <View style={styles.infoRow}>
-        <View style={styles.infoRowLeft}>
-          {Icon && <Icon size={16} color={colors.textMuted} />}
-          <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}:</Text>
-        </View>
-        <View style={styles.infoRowRight}>
-          {badge ? (
-            <Badge label={badge.label} variant={badge.variant} size="sm" />
-          ) : (
-            <Text style={[styles.infoValue, { color: colors.text }]}>{displayValue}</Text>
-          )}
-        </View>
-      </View>
-    );
-  };
+  const handleEditPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/event/${id}/edit` as any)
+  }
 
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Etkinlik Detayı" showBackButton />
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          {/* Statik glow orbs */}
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity
+                onPress={handleBackPress}
+                style={styles.headerButton}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Etkinlik Detayı</Text>
+              </View>
+              <View style={styles.headerButton} />
+            </View>
+          </View>
+        </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Etkinlik bilgileri yükleniyor...
-          </Text>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Etkinlik bilgileri yükleniyor...</Text>
         </View>
       </View>
-    );
+    )
   }
 
   // Error state
   if (error || !event) {
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Etkinlik Detayı" showBackButton />
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity
+                onPress={handleBackPress}
+                style={styles.headerButton}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Etkinlik Detayı</Text>
+              </View>
+              <View style={styles.headerButton} />
+            </View>
+          </View>
+        </View>
         <View style={styles.errorContainer}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            {error || 'Etkinlik bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchEvent}
-          >
+          <Ionicons name="alert-circle" size={64} color={DashboardColors.danger} />
+          <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+          <Text style={styles.errorText}>{error || 'Etkinlik bulunamadı'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => fetchEvent()}>
+            <Ionicons name="refresh" size={20} color="#FFFFFF" />
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
       </View>
-    );
+    )
   }
 
-  const canComplete = event.status === 'pending';
+  const canComplete = event.status === 'pending'
+  const statusColor = STATUS_COLORS[event.status] || DashboardColors.textSecondary
+  const priorityColor = PRIORITY_COLORS[event.priority] || DashboardColors.textSecondary
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-        title={event.title}
-        showBackButton
-        rightIcons={
-          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-            <TouchableOpacity
-              onPress={() => router.push(`/event/${event.id}/edit` as any)}
-              activeOpacity={0.7}
-            >
-              <Edit size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleDelete}
-              activeOpacity={0.7}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Trash2 size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </View>
-        }
-      />
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
 
+        {/* Statik glow orbs */}
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            <TouchableOpacity
+              onPress={handleBackPress}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {event.title}
+              </Text>
+              <Text style={styles.headerSubtitle}>Etkinlik Detayı</Text>
+            </View>
+
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={handleEditPress}
+                style={styles.headerButton}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleDelete}
+                style={styles.headerButton}
+                activeOpacity={0.7}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="trash-outline" size={24} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* Content */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
@@ -241,162 +413,123 @@ export default function EventDetailScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Brand.primary}
-            colors={[Brand.primary]}
+            tintColor={DashboardColors.primary}
           />
         }
       >
         {/* Status & Priority Section */}
-        <Card style={styles.card}>
-          <View style={styles.cardHeader}>
-            <FileText size={20} color={Brand.primary} />
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Durum</Text>
-          </View>
-          <View style={styles.cardContent}>
-            {renderInfoRow('Durum', undefined, undefined, {
+        <SectionHeader title="Durum" icon="information-circle-outline" />
+        <View style={styles.section}>
+          <InfoRow
+            label="Durum"
+            badge={{
               label: getEventStatusLabel(event.status),
-              variant: getEventStatusColor(event.status),
-            })}
-            {renderInfoRow('Öncelik', undefined, Flag, {
+              color: statusColor,
+            }}
+          />
+          <InfoRow
+            label="Öncelik"
+            badge={{
               label: getPriorityLabel(event.priority),
-              variant: getPriorityColor(event.priority),
-            })}
-            {renderInfoRow('Tür', getEventTypeLabel(event.event_type))}
-          </View>
-        </Card>
+              color: priorityColor,
+            }}
+          />
+          <InfoRow label="Tür" value={getEventTypeLabel(event.event_type)} />
+        </View>
 
         {/* Time Section */}
-        <Card style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Calendar size={20} color={Brand.primary} />
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Tarih & Saat</Text>
-          </View>
-          <View style={styles.cardContent}>
-            {renderInfoRow(
-              'Başlangıç',
-              formatDate(event.start_datetime, 'dd MMMM yyyy, HH:mm'),
-              Clock
-            )}
-            {renderInfoRow(
-              'Bitiş',
-              formatDate(event.end_datetime, 'dd MMMM yyyy, HH:mm'),
-              Clock
-            )}
-            {renderInfoRow('Süre', formatEventTimeRange(event))}
-            {renderInfoRow('Tüm Gün', event.is_all_day)}
-          </View>
-        </Card>
+        <SectionHeader title="Tarih & Saat" icon="calendar-outline" />
+        <View style={styles.section}>
+          <InfoRow label="Başlangıç" value={formatDate(event.start_datetime, 'dd MMMM yyyy, HH:mm')} />
+          <InfoRow label="Bitiş" value={formatDate(event.end_datetime, 'dd MMMM yyyy, HH:mm')} />
+          <InfoRow label="Süre" value={formatEventTimeRange(event)} />
+          <InfoRow label="Tüm Gün" value={event.is_all_day} />
+        </View>
 
         {/* Description */}
         {event.description && (
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <FileText size={20} color={Brand.primary} />
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Açıklama</Text>
+          <>
+            <SectionHeader title="Açıklama" icon="document-text-outline" />
+            <View style={styles.section}>
+              <Text style={styles.description}>{event.description}</Text>
             </View>
-            <View style={styles.cardContent}>
-              <Text style={[styles.description, { color: colors.text }]}>
-                {event.description}
-              </Text>
-            </View>
-          </Card>
+          </>
         )}
 
         {/* Customer Section */}
         {event.customer && (
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Building2 size={20} color={Brand.primary} />
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Müşteri</Text>
+          <>
+            <SectionHeader title="Müşteri" icon="business-outline" />
+            <View style={styles.section}>
+              <InfoRow label="Müşteri Adı" value={event.customer.name} />
+              {event.customer.code && <InfoRow label="Müşteri Kodu" value={event.customer.code} />}
             </View>
-            <View style={styles.cardContent}>
-              {renderInfoRow('Müşteri Adı', event.customer.name, User)}
-              {event.customer.code && renderInfoRow('Müşteri Kodu', event.customer.code)}
-            </View>
-          </Card>
+          </>
         )}
 
         {/* Contact Method Section */}
         {event.contact_method && (
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Phone size={20} color={Brand.primary} />
-              <Text style={[styles.cardTitle, { color: colors.text }]}>İletişim</Text>
+          <>
+            <SectionHeader title="İletişim" icon="call-outline" />
+            <View style={styles.section}>
+              <InfoRow label="İletişim Yöntemi" value={getContactMethodLabel(event.contact_method)} />
+              {event.contact_detail && <InfoRow label="Detay" value={event.contact_detail} />}
             </View>
-            <View style={styles.cardContent}>
-              {renderInfoRow(
-                'İletişim Yöntemi',
-                getContactMethodLabel(event.contact_method)
-              )}
-              {event.contact_detail && renderInfoRow('Detay', event.contact_detail)}
-            </View>
-          </Card>
+          </>
         )}
 
         {/* Reminder Section */}
         {event.reminder_minutes && (
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Bell size={20} color={Brand.primary} />
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Hatırlatıcı</Text>
-            </View>
-            <View style={styles.cardContent}>
-              {renderInfoRow(
-                'Hatırlatıcı',
-                getReminderLabel(event.reminder_minutes as ReminderMinutes),
-                Bell
-              )}
-              {event.reminder_datetime && renderInfoRow(
-                'Hatırlatıcı Zamanı',
-                formatDate(event.reminder_datetime, 'dd MMMM yyyy, HH:mm'),
-                Clock
+          <>
+            <SectionHeader title="Hatırlatıcı" icon="alarm-outline" />
+            <View style={styles.section}>
+              <InfoRow
+                label="Hatırlatıcı"
+                value={getReminderLabel(event.reminder_minutes as ReminderMinutes)}
+              />
+              {event.reminder_datetime && (
+                <InfoRow
+                  label="Hatırlatıcı Zamanı"
+                  value={formatDate(event.reminder_datetime, 'dd MMMM yyyy, HH:mm')}
+                />
               )}
             </View>
-          </Card>
+          </>
         )}
 
-        {/* Outcome Section (for completed events) */}
+        {/* Outcome Section */}
         {event.outcome && (
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <CheckCircle size={20} color={Brand.primary} />
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Sonuç</Text>
+          <>
+            <SectionHeader title="Sonuç" icon="checkmark-circle-outline" />
+            <View style={styles.section}>
+              <Text style={styles.description}>{event.outcome}</Text>
             </View>
-            <View style={styles.cardContent}>
-              <Text style={[styles.description, { color: colors.text }]}>
-                {event.outcome}
-              </Text>
-            </View>
-          </Card>
+          </>
         )}
 
         {/* Next Action Section */}
         {event.next_action && (
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <AlertCircle size={20} color={Brand.primary} />
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Sonraki Adım</Text>
+          <>
+            <SectionHeader title="Sonraki Adım" icon="arrow-forward-circle-outline" />
+            <View style={styles.section}>
+              <Text style={styles.description}>{event.next_action}</Text>
             </View>
-            <View style={styles.cardContent}>
-              <Text style={[styles.description, { color: colors.text }]}>
-                {event.next_action}
-              </Text>
-            </View>
-          </Card>
+          </>
         )}
 
         {/* Complete Button */}
         {canComplete && (
           <TouchableOpacity
-            style={[styles.completeButton, { backgroundColor: Brand.primary }]}
+            style={styles.completeButton}
             onPress={handleComplete}
             disabled={isCompleting}
+            activeOpacity={0.7}
           >
             {isCompleting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <CheckCircle size={20} color="#FFFFFF" />
+                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
                 <Text style={styles.completeButtonText}>Etkinliği Tamamla</Text>
               </>
             )}
@@ -404,24 +537,11 @@ export default function EventDetailScreen() {
         )}
 
         {/* Timestamps */}
-        <Card style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Clock size={20} color={Brand.primary} />
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Kayıt Bilgileri</Text>
-          </View>
-          <View style={styles.cardContent}>
-            {renderInfoRow(
-              'Oluşturulma',
-              formatDate(event.created_at, 'dd MMMM yyyy, HH:mm'),
-              Calendar
-            )}
-            {renderInfoRow(
-              'Güncelleme',
-              formatDate(event.updated_at, 'dd MMMM yyyy, HH:mm'),
-              Calendar
-            )}
-          </View>
-        </Card>
+        <SectionHeader title="Kayıt Bilgileri" icon="time-outline" />
+        <View style={styles.section}>
+          <InfoRow label="Oluşturulma" value={formatDate(event.created_at, 'dd MMMM yyyy, HH:mm')} />
+          <InfoRow label="Güncelleme" value={formatDate(event.updated_at, 'dd MMMM yyyy, HH:mm')} />
+        </View>
       </ScrollView>
 
       {/* Delete Confirmation Dialog */}
@@ -449,128 +569,218 @@ export default function EventDetailScreen() {
         onCancel={() => setShowCompleteConfirm(false)}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary,
   },
-  content: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+
+  // Header
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden',
   },
-  contentContainer: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing['3xl'],
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
   },
-  card: {
-    marginBottom: Spacing.lg,
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
-  cardHeader: {
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.md,
+  },
+  headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    justifyContent: 'space-between',
   },
-  cardTitle: {
-    ...Typography.headingSM,
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: DashboardSpacing.md,
+  },
+  headerTitle: {
+    fontSize: DashboardFontSizes['2xl'],
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    fontSize: DashboardFontSizes.sm,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: DashboardSpacing.sm,
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: DashboardColors.background,
+  },
+  loadingText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.md,
+  },
+
+  // Error
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: DashboardColors.background,
+    paddingHorizontal: DashboardSpacing.xl,
+  },
+  errorTitle: {
+    fontSize: DashboardFontSizes.xl,
     fontWeight: '600',
-    marginLeft: Spacing.sm,
+    color: DashboardColors.textPrimary,
+    marginTop: DashboardSpacing.md,
   },
-  cardContent: {
-    gap: Spacing.sm,
+  errorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
+    marginTop: DashboardSpacing.sm,
+    marginBottom: DashboardSpacing.xl,
   },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+  },
+  retryButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+
+  // Content
+  content: {
+    flex: 1,
+    backgroundColor: DashboardColors.background,
+  },
+  contentContainer: {
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl'],
+  },
+
+  // Section Header
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: DashboardSpacing.xl,
+    marginBottom: DashboardSpacing.md,
+    gap: DashboardSpacing.sm,
+  },
+  sectionHeaderIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: DashboardBorderRadius.md,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionHeaderText: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary,
+  },
+
+  // Section
+  section: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.sm,
+  },
+
+  // Info Row
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.xs,
-  },
-  infoRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    flex: 1,
-  },
-  infoRowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    flex: 1,
-    justifyContent: 'flex-end',
+    paddingVertical: DashboardSpacing.xs,
   },
   infoLabel: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    flex: 1,
   },
   infoValue: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '500',
+    color: DashboardColors.textPrimary,
     textAlign: 'right',
+    flex: 1,
   },
+  infoBadge: {
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.md,
+  },
+  infoBadgeText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600',
+  },
+
+  // Description
   description: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
     lineHeight: 22,
   },
+
+  // Complete Button
   completeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.lg,
-    ...Shadows.sm,
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.primary,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    marginTop: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.lg,
+    ...DashboardShadows.sm,
   },
   completeButtonText: {
-    ...Typography.bodyLG,
+    fontSize: DashboardFontSizes.lg,
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Shadows.lg,
-  },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  errorContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-    ...Shadows.lg,
-  },
-  errorTitle: {
-    ...Typography.headingMD,
-    fontWeight: '600',
-    marginTop: Spacing.md,
-  },
-  errorText: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.xl,
-  },
-  retryButton: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.lg,
-  },
-  retryButtonText: {
-    ...Typography.bodyMD,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-});
+})
