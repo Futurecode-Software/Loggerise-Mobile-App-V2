@@ -42,6 +42,7 @@ interface PageHeaderAction {
   onPress: () => void
   isLoading?: boolean
   disabled?: boolean
+  badge?: number
 }
 
 interface PageHeaderProps {
@@ -63,9 +64,10 @@ interface HeaderButtonProps {
   isBack?: boolean
   isLoading?: boolean
   disabled?: boolean
+  badge?: number
 }
 
-function HeaderButton({ icon, label, onPress, isBack = false, isLoading = false, disabled = false }: HeaderButtonProps) {
+function HeaderButton({ icon, label, onPress, isBack = false, isLoading = false, disabled = false, badge }: HeaderButtonProps) {
   const scale = useSharedValue(1)
 
   const animStyle = useAnimatedStyle(() => ({
@@ -90,25 +92,32 @@ function HeaderButton({ icon, label, onPress, isBack = false, isLoading = false,
   }
 
   return (
-    <AnimatedPressable
-      style={[styles.headerButton, animStyle, (disabled || isLoading) && styles.headerButtonDisabled]}
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled || isLoading}
-    >
-      {isLoading ? (
-        <ActivityIndicator size="small" color={DashboardColors.textOnPrimary} />
-      ) : icon ? (
-        <Ionicons
-          name={isBack ? 'chevron-back' : icon}
-          size={isBack ? 24 : 20}
-          color={DashboardColors.textOnPrimary}
-        />
-      ) : label ? (
-        <Text style={styles.headerButtonText}>{label}</Text>
-      ) : null}
-    </AnimatedPressable>
+    <View>
+      <AnimatedPressable
+        style={[styles.headerButton, animStyle, (disabled || isLoading) && styles.headerButtonDisabled]}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="small" color={DashboardColors.textOnPrimary} />
+        ) : icon ? (
+          <Ionicons
+            name={isBack ? 'chevron-back' : icon}
+            size={isBack ? 24 : 20}
+            color={DashboardColors.textOnPrimary}
+          />
+        ) : label ? (
+          <Text style={styles.headerButtonText}>{label}</Text>
+        ) : null}
+      </AnimatedPressable>
+      {badge !== undefined && badge > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge > 9 ? '9+' : badge}</Text>
+        </View>
+      )}
+    </View>
   )
 }
 
@@ -265,6 +274,7 @@ export default function PageHeader({
                     onPress={action.onPress}
                     isLoading={action.isLoading}
                     disabled={action.disabled}
+                    badge={action.badge}
                   />
                 ))}
               </View>
@@ -379,6 +389,25 @@ const styles = StyleSheet.create({
   },
   headerButtonDisabled: {
     opacity: 0.5,
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: DashboardColors.primary,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
   },
   bottomCurve: {
     position: 'absolute',

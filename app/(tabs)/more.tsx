@@ -169,12 +169,12 @@ export default function MoreScreen() {
       label: 'Muhasebe',
       color: '#3b82f6',
       subItems: [
+        { icon: 'people', label: 'Cariler', route: '/accounting/contacts', color: '#f59e0b' },
         { icon: 'wallet', label: 'Kasalar', route: '/accounting/cash-register', color: '#14b8a6' },
         { icon: 'business', label: 'Bankalar', route: '/accounting/bank', color: '#22c55e' },
         { icon: 'receipt', label: 'Çekler', route: '/accounting/check', color: '#f97316' },
         { icon: 'document-text', label: 'Senetler', route: '/accounting/promissory-note', color: '#a855f7' },
         { icon: 'swap-horizontal', label: 'Mali Hareketler', route: '/accounting/transactions', color: '#6366f1' },
-        { icon: 'people', label: 'Cariler', route: '/crm/customers', color: '#f59e0b' },
         { icon: 'document', label: 'Faturalar', route: '/accounting/invoices', color: '#ef4444' },
         { icon: 'cube', label: 'Ürünler', route: '/inventory/stock/products', color: '#10b981' },
         { icon: 'pricetag', label: 'Markalar', route: '/inventory/stock/brands', color: '#8b5cf6' },

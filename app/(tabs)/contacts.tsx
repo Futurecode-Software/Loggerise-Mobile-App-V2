@@ -218,7 +218,7 @@ export default function ContactsScreen() {
 
   const handleContactPress = (contact: Contact) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    router.push(`/crm/customers/${contact.id}`)
+    router.push(`/accounting/contacts/${contact.id}`)
   }
 
   return (
@@ -231,7 +231,7 @@ export default function ContactsScreen() {
           icon: 'add',
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-            router.push('/crm/customers/new')
+            router.push('/accounting/contacts/new')
           }
         }}
       />

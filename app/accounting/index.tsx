@@ -81,6 +81,14 @@ export default function AccountingDashboard() {
         showsVerticalScrollIndicator={false}
       >
         <ModuleCard
+          title="Cariler"
+          description="Müşteri ve tedarikçi yönetimi"
+          icon="people-outline"
+          iconBg={DashboardColors.accent}
+          route="/accounting/contacts"
+        />
+
+        <ModuleCard
           title="Kasa"
           description="Nakit para girişi ve çıkışları"
           icon="wallet-outline"

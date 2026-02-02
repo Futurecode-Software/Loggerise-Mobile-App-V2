@@ -125,6 +125,7 @@ export interface ContactFilters {
   type?: ContactType;
   legal_type?: LegalType;
   status?: ContactStatus;
+  currency_type?: string;
   is_active?: boolean;
   include_potential?: boolean;
   page?: number;
