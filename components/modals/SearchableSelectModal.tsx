@@ -160,7 +160,7 @@ function SearchableSelectModalComponent<T = any>(
         <Text style={[styles.emptyText, { color: colors.text }]}>{emptyMessage}</Text>
         {searchQuery.trim() && (
           <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
-            "{searchQuery}" için sonuç bulunamadı
+            &quot;{searchQuery}&quot; için sonuç bulunamadı
           </Text>
         )}
       </View>

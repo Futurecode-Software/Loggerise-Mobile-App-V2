@@ -69,6 +69,21 @@ export function setAuthStateChangeCallback(
 }
 
 /**
+ * Helper to safely parse JSON response
+ * Handles cases where axios doesn't auto-parse JSON in React Native
+ */
+function safeJsonParse(data: unknown): unknown {
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return data;
+    }
+  }
+  return data;
+}
+
+/**
  * Create Axios instance with base configuration
  */
 const api: AxiosInstance = axios.create({
@@ -107,10 +122,24 @@ api.interceptors.request.use(
 
 /**
  * Response Interceptor
- * Handles common error cases
+ * Handles common error cases and ensures JSON parsing
  */
 api.interceptors.response.use(
   (response: AxiosResponse) => {
+    // Ensure response data is parsed (React Native edge case fix)
+    if (typeof response.data === 'string') {
+      try {
+        response.data = JSON.parse(response.data);
+      } catch (parseError) {
+        // Log parse error for debugging - this indicates malformed JSON from backend
+        if (__DEV__) {
+          console.warn('[API] JSON parse failed for response:', response.config?.url);
+          console.warn('[API] Parse error:', parseError);
+          console.warn('[API] Raw data (first 300 chars):', response.data.substring(0, 300));
+        }
+        // Keep original string if not valid JSON
+      }
+    }
     return response;
   },
   async (error: AxiosError<ApiErrorResponse>) => {

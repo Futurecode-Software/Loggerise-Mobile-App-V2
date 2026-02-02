@@ -315,7 +315,7 @@ export function SearchableSelect({
         </Text>
         {searchQuery && (
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            "{searchQuery}" için sonuç yok
+            &quot;{searchQuery}&quot; için sonuç yok
           </Text>
         )}
       </View>

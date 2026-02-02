@@ -101,7 +101,7 @@ export function QuickSuggestions({
                   style={[styles.suggestionPrompt, { color: colors.textMuted }]}
                   numberOfLines={1}
                 >
-                  "{suggestion.prompt}"
+                  &quot;{suggestion.prompt}&quot;
                 </Text>
               </View>
               <ArrowRight size={16} color={colors.textMuted} />

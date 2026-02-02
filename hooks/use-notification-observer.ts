@@ -93,13 +93,13 @@ function handleNotificationNavigation(notification: import('expo-notifications')
 
     case 'document_expiry':
       if (data.employee_id) {
-        router.push(`/employee/${data.employee_id}` as any);
+        router.push(`/hr/employee/${data.employee_id}` as any);
       }
       break;
 
     case 'payment_reminder':
       if (data.contact_id) {
-        router.push(`/contact/${data.contact_id}` as any);
+        router.push(`/crm/customers/${data.contact_id}` as any);
       }
       break;
 

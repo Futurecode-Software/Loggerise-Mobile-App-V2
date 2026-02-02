@@ -105,7 +105,7 @@ export function QuoteCreateCargoItemsScreen({
             <Package size={48} color="#9CA3AF" />
             <Text style={styles.emptyText}>Henüz kargo kalemi eklenmedi</Text>
             <Text style={styles.emptySubtext}>
-              Aşağıdaki "Kalem Ekle" butonuna basarak kargo kalemi ekleyebilirsiniz
+              Aşağıdaki &quot;Kalem Ekle&quot; butonuna basarak kargo kalemi ekleyebilirsiniz
             </Text>
           </Card>
         )}

@@ -228,9 +228,14 @@ export async function getConversations(
     const response = await api.get<ConversationsListResponse>('/conversations', {
       params: filters,
     });
+
+    if (!response.data?.data) {
+      throw new Error('Geçersiz konuşmalar yanıtı');
+    }
+
     return {
-      conversations: response.data.data.conversations,
-      totalUnreadCount: response.data.data.total_unread_count,
+      conversations: response.data.data.conversations || [],
+      totalUnreadCount: response.data.data.total_unread_count || 0,
     };
   } catch (error) {
     const message = getErrorMessage(error);
@@ -255,18 +260,45 @@ export async function getConversation(
     const response = await api.get<ConversationShowResponse>(`/conversations/${id}`, {
       params: { page, per_page: perPage },
     });
+
+    // Parse response data - handle both string and object formats
+    let apiResponse: ConversationShowResponse | null = null;
+
+    if (typeof response.data === 'string') {
+      try {
+        apiResponse = JSON.parse(response.data) as ConversationShowResponse;
+      } catch (parseError) {
+        console.error('[Messaging API] JSON parse error:', parseError);
+        console.error('[Messaging API] Raw response (first 500 chars):',
+          (response.data as string).substring(0, 500));
+        throw new Error('Sunucudan geçersiz yanıt alındı');
+      }
+    } else if (response.data && typeof response.data === 'object') {
+      apiResponse = response.data as ConversationShowResponse;
+    }
+
+    // Extract the data property
+    const data = apiResponse?.data;
+
+    if (!data || !data.conversation) {
+      console.error('[Messaging API] Invalid response structure');
+      console.error('[Messaging API] apiResponse:', JSON.stringify(apiResponse)?.substring(0, 300));
+      throw new Error('Konuşma bilgisi alınamadı');
+    }
+
     return {
-      conversation: response.data.data.conversation,
-      messages: response.data.data.messages.data,
-      participants: response.data.data.participants,
+      conversation: data.conversation,
+      messages: data.messages?.data || [],
+      participants: data.participants || [],
       pagination: {
-        current_page: response.data.data.messages.current_page,
-        last_page: response.data.data.messages.last_page,
-        per_page: response.data.data.messages.per_page,
-        total: response.data.data.messages.total,
+        current_page: data.messages?.current_page || 1,
+        last_page: data.messages?.last_page || 1,
+        per_page: data.messages?.per_page || perPage,
+        total: data.messages?.total || 0,
       },
     };
   } catch (error) {
+    console.error('[Messaging API] Error fetching conversation:', error);
     const message = getErrorMessage(error);
     throw new Error(message);
   }
@@ -282,9 +314,14 @@ export async function findOrCreateConversation(
     const response = await api.post<FindOrCreateResponse>('/conversations/find-or-create', {
       user_id: userId,
     });
+
+    if (!response.data?.data?.conversation) {
+      throw new Error('Geçersiz konuşma yanıtı');
+    }
+
     return {
       conversation: response.data.data.conversation,
-      messages: response.data.data.messages,
+      messages: response.data.data.messages || [],
     };
   } catch (error) {
     const message = getErrorMessage(error);
@@ -316,6 +353,11 @@ export async function sendMessage(data: {
       conversation_id: data.conversation_id,
       message: data.message,
     });
+
+    if (!response.data?.data?.message) {
+      throw new Error('Mesaj gönderilemedi');
+    }
+
     return response.data.data.message;
   } catch (error) {
     const message = getErrorMessage(error);
@@ -352,6 +394,11 @@ export async function createGroup(data: CreateGroupRequest): Promise<{
 }> {
   try {
     const response = await api.post<CreateGroupResponse>('/groups', data);
+
+    if (!response.data?.data?.conversation) {
+      throw new Error('Grup oluşturulamadı');
+    }
+
     return response.data.data.conversation;
   } catch (error) {
     const message = getErrorMessage(error);
@@ -379,13 +426,18 @@ export async function getGroupDetails(groupId: number): Promise<{
 }> {
   try {
     const response = await api.get<GroupDetailsResponse>(`/groups/${groupId}/details`);
+
+    if (!response.data?.data?.conversation) {
+      throw new Error('Geçersiz grup yanıtı');
+    }
+
     return {
       conversation: response.data.data.conversation,
-      participants: response.data.data.participants,
-      availableUsers: response.data.data.available_users,
-      currentUserRole: response.data.data.current_user_role,
-      isAdmin: response.data.data.is_admin,
-      isCreator: response.data.data.is_creator,
+      participants: response.data.data.participants || [],
+      availableUsers: response.data.data.available_users || [],
+      currentUserRole: response.data.data.current_user_role || 'member',
+      isAdmin: response.data.data.is_admin || false,
+      isCreator: response.data.data.is_creator || false,
     };
   } catch (error) {
     const message = getErrorMessage(error);
@@ -468,6 +520,11 @@ export async function leaveGroup(groupId: number): Promise<void> {
 export async function getAvailableUsers(): Promise<UserBasic[]> {
   try {
     const response = await api.get<{ success: boolean; data: UserBasic[] }>('/users/available');
+
+    if (!response.data?.data) {
+      throw new Error('Kullanıcılar yüklenemedi');
+    }
+
     return response.data.data;
   } catch (error) {
     const message = getErrorMessage(error);
