@@ -83,7 +83,7 @@ function handleNotificationNavigation(notification: import('expo-notifications')
 
     case 'load_update':
       if (data.id) {
-        router.push(`/load/${data.id}` as any);
+        router.push(`/logistics/load/${data.id}` as any);
       }
       break;
 

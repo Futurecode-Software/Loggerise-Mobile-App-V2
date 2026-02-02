@@ -462,13 +462,13 @@ export default function LoadsScreen() {
   // Yük detayına git
   const handleLoadPress = (load: Load) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    router.push(`/load/${load.id}`)
+    router.push(`/logistics/load/${load.id}`)
   }
 
   // Yeni yük oluştur
   const handleCreateLoad = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    router.push('/load/new')
+    router.push('/logistics/load/new')
   }
 
   // Filtre modalını aç/kapat

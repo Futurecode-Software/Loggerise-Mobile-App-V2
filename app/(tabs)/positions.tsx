@@ -211,7 +211,7 @@ export default function PositionsScreen() {
   const renderPosition = ({ item }: { item: Position }) => (
     <Card
       style={styles.positionCard}
-      onPress={() => router.push(`/position/${item.id}` as any)}
+      onPress={() => router.push(`/logistics/trip/${item.id}` as any)}
     >
       {/* Header */}
       <View style={styles.positionHeader}>
@@ -363,7 +363,7 @@ export default function PositionsScreen() {
         rightIcons={
           <View style={{ flexDirection: 'row', gap: Spacing.md }}>
             <TouchableOpacity
-              onPress={() => router.push('/position/new' as any)}
+              onPress={() => router.push('/logistics/trip/new' as any)}
               activeOpacity={0.7}
             >
               <Plus size={22} color="#FFFFFF" />

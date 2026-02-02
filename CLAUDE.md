@@ -4,6 +4,281 @@ Bu dosya Claude Code'a rehberlik sağlar.
 
 ---
 
+# 📁 UYGULAMA MODÜL YAPISI
+
+Bu bölüm, uygulamadaki tüm modüllerin konumlarını ve amaçlarını açıklar.
+
+## 🗂️ Ana Klasör Yapısı
+
+```
+app/
+├── (auth)/                          # Kimlik doğrulama sayfaları
+│   ├── login.tsx                    # Giriş sayfası
+│   ├── register.tsx                 # Kayıt sayfası
+│   ├── forgot-password.tsx          # Şifre sıfırlama
+│   └── setup-status.tsx             # Kurulum durumu
+│
+├── (tabs)/                          # Ana tab bar sayfaları
+│   ├── index.tsx                    # Ana sayfa/Dashboard
+│   ├── positions.tsx                # Pozisyonlar
+│   ├── loads.tsx                    # Yükler
+│   ├── contacts.tsx                 # Kontaklar
+│   ├── messages.tsx                 # Mesajlar
+│   ├── more.tsx                     # Daha fazla (modül menüsü)
+│   └── profile.tsx                  # Profil
+│
+├── accounting/                      # 💰 MUHASEBE MODÜLÜ
+│   ├── index.tsx                    # Muhasebe dashboard
+│   ├── _layout.tsx                  # Stack layout
+│   │
+│   ├── cash-register/               # Kasa yönetimi
+│   │   ├── index.tsx                # Kasa listesi
+│   │   ├── new.tsx                  # Yeni kasa
+│   │   ├── [id].tsx                 # Kasa detay
+│   │   └── [id]/edit.tsx            # Kasa düzenle
+│   │
+│   ├── bank/                        # Banka hesapları
+│   │   ├── index.tsx                # Banka listesi
+│   │   ├── new.tsx                  # Yeni banka hesabı
+│   │   ├── [id].tsx                 # Banka detay
+│   │   └── [id]/edit.tsx            # Banka düzenle
+│   │
+│   ├── check/                       # Çek yönetimi
+│   │   ├── index.tsx                # Çek listesi
+│   │   ├── new.tsx                  # Yeni çek
+│   │   ├── [id].tsx                 # Çek detay
+│   │   └── [id]/edit.tsx            # Çek düzenle
+│   │
+│   ├── promissory-note/             # Senet yönetimi
+│   │   ├── index.tsx                # Senet listesi
+│   │   ├── new.tsx                  # Yeni senet
+│   │   ├── [id].tsx                 # Senet detay
+│   │   └── [id]/edit.tsx            # Senet düzenle
+│   │
+│   └── transactions/                # Mali işlemler
+│       ├── index.tsx                # İşlem listesi
+│       └── [id].tsx                 # İşlem detay
+│
+├── crm/                             # 👥 CRM MODÜLÜ
+│   ├── index.tsx                    # CRM dashboard
+│   ├── _layout.tsx                  # Stack layout
+│   │
+│   ├── customers/                   # Müşteri yönetimi
+│   │   ├── index.tsx                # Müşteri listesi
+│   │   ├── new.tsx                  # Yeni müşteri
+│   │   ├── [id].tsx                 # Müşteri detay
+│   │   ├── [id]/edit.tsx            # Müşteri düzenle
+│   │   └── [id]/interactions/       # Müşteri etkileşimleri
+│   │       ├── new.tsx              # Yeni etkileşim
+│   │       └── [interactionId].tsx  # Etkileşim detay
+│   │
+│   └── quotes/                      # Teklif yönetimi
+│       ├── new.tsx                  # Yeni teklif
+│       └── [id].tsx                 # Teklif detay
+│
+├── logistics/                       # 🚚 LOJİSTİK MODÜLÜ
+│   ├── index.tsx                    # Lojistik dashboard
+│   ├── _layout.tsx                  # Stack layout
+│   │
+│   ├── domestic/                    # Yurtiçi taşıma
+│   │   ├── index.tsx                # Yurtiçi listesi
+│   │   ├── new.tsx                  # Yeni yurtiçi sipariş
+│   │   └── [id].tsx                 # Yurtiçi detay
+│   │
+│   ├── exports/                     # İhracat operasyonları
+│   │   ├── operations/              # İhracat operasyonları
+│   │   │   └── index.tsx
+│   │   ├── disposition/             # İhracat dispozisyonu
+│   │   │   └── index.tsx
+│   │   ├── positions/               # İhracat pozisyonları
+│   │   │   ├── index.tsx
+│   │   │   └── [id].tsx
+│   │   └── loads/                   # İhracat yükleri
+│   │       └── index.tsx
+│   │
+│   ├── imports/                     # İthalat operasyonları
+│   │   ├── operations/              # İthalat operasyonları
+│   │   │   └── index.tsx
+│   │   ├── disposition/             # İthalat dispozisyonu
+│   │   │   └── index.tsx
+│   │   ├── positions/               # İthalat pozisyonları
+│   │   │   ├── index.tsx
+│   │   │   └── [id].tsx
+│   │   └── loads/                   # İthalat yükleri
+│   │       └── index.tsx
+│   │
+│   ├── load/                        # Yük yönetimi
+│   │   ├── new.tsx                  # Yeni yük
+│   │   ├── [id].tsx                 # Yük detay
+│   │   └── [id]/edit.tsx            # Yük düzenle
+│   │
+│   └── trip/                        # Sefer yönetimi
+│       ├── index.tsx                # Sefer listesi
+│       └── [id].tsx                 # Sefer detay
+│
+├── hr/                              # 👔 İNSAN KAYNAKLARI MODÜLÜ
+│   ├── index.tsx                    # İK dashboard
+│   ├── _layout.tsx                  # Stack layout
+│   │
+│   ├── employee/                    # Çalışan yönetimi
+│   │   ├── index.tsx                # Çalışan listesi
+│   │   ├── new.tsx                  # Yeni çalışan
+│   │   ├── [id].tsx                 # Çalışan detay
+│   │   └── [id]/edit.tsx            # Çalışan düzenle
+│   │
+│   ├── job-postings/                # İş ilanları
+│   │   ├── index.tsx                # İlan listesi
+│   │   ├── new.tsx                  # Yeni ilan
+│   │   ├── [id].tsx                 # İlan detay
+│   │   └── [id]/edit.tsx            # İlan düzenle
+│   │
+│   └── job-applications/            # İş başvuruları
+│       ├── index.tsx                # Başvuru listesi
+│       ├── new.tsx                  # Yeni başvuru
+│       ├── [id].tsx                 # Başvuru detay
+│       └── [id]/edit.tsx            # Başvuru düzenle
+│
+├── inventory/                       # 📦 ENVANTER MODÜLÜ
+│   ├── index.tsx                    # Envanter dashboard
+│   ├── _layout.tsx                  # Stack layout
+│   │
+│   ├── stock/                       # Stok yönetimi
+│   │   ├── index.tsx                # Stok dashboard
+│   │   ├── _layout.tsx              # Stock layout
+│   │   │
+│   │   ├── products/                # Ürün yönetimi
+│   │   │   ├── index.tsx            # Ürün listesi
+│   │   │   ├── new.tsx              # Yeni ürün
+│   │   │   ├── [id]/index.tsx       # Ürün detay
+│   │   │   └── [id]/edit.tsx        # Ürün düzenle
+│   │   │
+│   │   ├── brands/                  # Marka yönetimi
+│   │   │   ├── index.tsx            # Marka listesi
+│   │   │   ├── new.tsx              # Yeni marka
+│   │   │   ├── [id]/index.tsx       # Marka detay
+│   │   │   └── [id]/edit.tsx        # Marka düzenle
+│   │   │
+│   │   ├── models/                  # Model yönetimi
+│   │   │   ├── index.tsx            # Model listesi
+│   │   │   ├── new.tsx              # Yeni model
+│   │   │   └── [id].tsx             # Model detay
+│   │   │
+│   │   ├── categories/              # Kategori yönetimi
+│   │   │   ├── index.tsx            # Kategori listesi
+│   │   │   ├── new.tsx              # Yeni kategori
+│   │   │   ├── [id]/index.tsx       # Kategori detay
+│   │   │   └── [id]/edit.tsx        # Kategori düzenle
+│   │   │
+│   │   └── movements/               # Stok hareketleri
+│   │       ├── index.tsx            # Hareket listesi
+│   │       ├── new.tsx              # Yeni hareket
+│   │       └── [id].tsx             # Hareket detay
+│   │
+│   └── warehouse/                   # Depo yönetimi
+│       ├── index.tsx                # Depo listesi
+│       ├── new.tsx                  # Yeni depo
+│       ├── [id].tsx                 # Depo detay
+│       └── [id]/edit.tsx            # Depo düzenle
+│
+└── fleet/                           # 🚛 FİLO YÖNETİMİ MODÜLÜ
+    ├── index.tsx                    # Filo dashboard
+    ├── _layout.tsx                  # Stack layout
+    │
+    ├── vehicle/                     # Araç yönetimi
+    │   ├── index.tsx                # Araç listesi
+    │   ├── new.tsx                  # Yeni araç
+    │   ├── [id].tsx                 # Araç detay
+    │   └── [id]/edit.tsx            # Araç düzenle
+    │
+    ├── tire-warehouse/              # Lastik deposu
+    │   ├── index.tsx                # Lastik listesi
+    │   ├── new.tsx                  # Yeni lastik kaydı
+    │   └── [id].tsx                 # Lastik detay
+    │
+    ├── driver-tractor/              # Sürücü-Çekici eşleştirme
+    │   ├── index.tsx                # Eşleştirme listesi
+    │   ├── new.tsx                  # Yeni eşleştirme
+    │   └── [id].tsx                 # Eşleştirme detay
+    │
+    ├── tractor-trailer/             # Çekici-Dorse eşleştirme
+    │   ├── index.tsx                # Eşleştirme listesi
+    │   ├── new.tsx                  # Yeni eşleştirme
+    │   └── [id].tsx                 # Eşleştirme detay
+    │
+    └── fault-reports/               # Arıza bildirimleri
+        └── index.tsx                # Arıza listesi
+```
+
+## 🎯 Modül Grupları
+
+### 💰 Accounting (Muhasebe)
+**Route Prefix:** `/accounting/`
+**Amaç:** Finansal işlemler, kasa, banka, çek ve senet yönetimi
+
+### 👥 CRM
+**Route Prefix:** `/crm/`
+**Amaç:** Müşteri ilişkileri yönetimi, teklif oluşturma
+
+### 🚚 Logistics (Lojistik)
+**Route Prefix:** `/logistics/`
+**Amaç:** Yurtiçi/yurtdışı taşıma operasyonları, yük ve sefer yönetimi
+
+### 👔 HR (İnsan Kaynakları)
+**Route Prefix:** `/hr/`
+**Amaç:** Çalışan yönetimi, iş ilanları ve başvuru takibi
+
+### 📦 Inventory (Envanter)
+**Route Prefix:** `/inventory/`
+**Amaç:** Stok, depo ve ürün yönetimi
+
+### 🚛 Fleet (Filo Yönetimi)
+**Route Prefix:** `/fleet/`
+**Amaç:** Araç, lastik ve sürücü yönetimi
+
+## 📍 Hızlı Erişim Rehberi
+
+### Örnek Route'lar
+```
+# Muhasebe
+/accounting/cash-register          → Kasa listesi
+/accounting/bank/123                → Banka detay
+/accounting/check/new               → Yeni çek
+
+# CRM
+/crm/customers                      → Müşteri listesi
+/crm/customers/456/edit             → Müşteri düzenle
+/crm/quotes/789                     → Teklif detay
+
+# Lojistik
+/logistics/domestic                 → Yurtiçi listesi
+/logistics/exports/operations       → İhracat operasyonları
+/logistics/load/123                 → Yük detay
+
+# İK
+/hr/employee                        → Çalışan listesi
+/hr/job-postings/new                → Yeni iş ilanı
+
+# Envanter
+/inventory/stock/products           → Ürün listesi
+/inventory/warehouse/456            → Depo detay
+
+# Filo
+/fleet/vehicle                      → Araç listesi
+/fleet/tire-warehouse/123           → Lastik kaydı detay
+```
+
+## 🔍 Modül Arama Kılavuzu
+
+Bir özellik ararken:
+
+1. **Finansal işlemler** → `accounting/`
+2. **Müşteri/Teklif** → `crm/`
+3. **Taşıma/Yük/Sefer** → `logistics/`
+4. **Personel/İlan** → `hr/`
+5. **Stok/Ürün/Depo** → `inventory/`
+6. **Araç/Lastik** → `fleet/`
+
+
 ## 🚨 KRİTİK: BACKEND SADAKAT KURALI
 
 **EN ÖNEMLİ KURAL:** Backend'e %100 sadakat!

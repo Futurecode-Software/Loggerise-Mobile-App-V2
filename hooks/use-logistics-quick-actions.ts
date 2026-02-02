@@ -19,7 +19,7 @@ export const useLogisticsQuickActions = (): QuickAction[] => {
         icon: Package,
         onPress: () => {
           hapticLight();
-          router.push('/load/new' as any);
+          router.push('/logistics/load/new' as any);
         },
         permission: 'loads.create',
       },

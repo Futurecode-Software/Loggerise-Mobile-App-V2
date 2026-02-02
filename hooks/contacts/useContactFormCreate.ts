@@ -26,7 +26,7 @@ export function useContactFormCreate() {
       })
 
       setTimeout(() => {
-        router.replace(`/contacts/${contact.id}`)
+        router.replace(`/crm/customers/${contact.id}`)
       }, 300)
     } catch (err) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)

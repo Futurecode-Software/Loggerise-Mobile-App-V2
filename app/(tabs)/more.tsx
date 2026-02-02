@@ -169,19 +169,19 @@ export default function MoreScreen() {
       label: 'Muhasebe',
       color: '#3b82f6',
       subItems: [
-        { icon: 'wallet', label: 'Kasalar', route: '/cash-register', color: '#14b8a6' },
-        { icon: 'business', label: 'Bankalar', route: '/bank', color: '#22c55e' },
-        { icon: 'receipt', label: 'Çekler', route: '/check', color: '#f97316' },
-        { icon: 'document-text', label: 'Senetler', route: '/promissory-note', color: '#a855f7' },
-        { icon: 'swap-horizontal', label: 'Mali Hareketler', route: '/transactions', color: '#6366f1' },
-        { icon: 'people', label: 'Cariler', route: '/contacts', color: '#f59e0b' },
+        { icon: 'wallet', label: 'Kasalar', route: '/accounting/cash-register', color: '#14b8a6' },
+        { icon: 'business', label: 'Bankalar', route: '/accounting/bank', color: '#22c55e' },
+        { icon: 'receipt', label: 'Çekler', route: '/accounting/check', color: '#f97316' },
+        { icon: 'document-text', label: 'Senetler', route: '/accounting/promissory-note', color: '#a855f7' },
+        { icon: 'swap-horizontal', label: 'Mali Hareketler', route: '/accounting/transactions', color: '#6366f1' },
+        { icon: 'people', label: 'Cariler', route: '/crm/customers', color: '#f59e0b' },
         { icon: 'document', label: 'Faturalar', route: '/finance/invoices', color: '#ef4444' },
-        { icon: 'cube', label: 'Ürünler', route: '/stock/products', color: '#10b981' },
-        { icon: 'pricetag', label: 'Markalar', route: '/stock/brands', color: '#8b5cf6' },
-        { icon: 'layers', label: 'Modeller', route: '/stock/models', color: '#06b6d4' },
-        { icon: 'file-tray-full', label: 'Kategoriler', route: '/stock/categories', color: '#10b981' },
-        { icon: 'home', label: 'Depolar', route: '/warehouse', color: '#3b82f6' },
-        { icon: 'swap-horizontal', label: 'Stok Hareketleri', route: '/stock/movements', color: '#ec4899' }
+        { icon: 'cube', label: 'Ürünler', route: '/inventory/stock/products', color: '#10b981' },
+        { icon: 'pricetag', label: 'Markalar', route: '/inventory/stock/brands', color: '#8b5cf6' },
+        { icon: 'layers', label: 'Modeller', route: '/inventory/stock/models', color: '#06b6d4' },
+        { icon: 'file-tray-full', label: 'Kategoriler', route: '/inventory/stock/categories', color: '#10b981' },
+        { icon: 'home', label: 'Depolar', route: '/inventory/warehouse', color: '#3b82f6' },
+        { icon: 'swap-horizontal', label: 'Stok Hareketleri', route: '/inventory/stock/movements', color: '#ec4899' }
       ]
     },
     {
@@ -190,8 +190,8 @@ export default function MoreScreen() {
       label: 'CRM',
       color: '#ec4899',
       subItems: [
-        { icon: 'people', label: 'Müşteriler', route: '/crm', color: '#ec4899' },
-        { icon: 'document-text', label: 'Teklifler', route: '/quotes', color: '#84cc16' }
+        { icon: 'people', label: 'Müşteriler', route: '/crm/customers', color: '#ec4899' },
+        { icon: 'document-text', label: 'Teklifler', route: '/crm/quotes', color: '#84cc16' }
       ]
     },
     {
@@ -199,7 +199,7 @@ export default function MoreScreen() {
       icon: 'navigate',
       label: 'Seferler',
       color: '#8b5cf6',
-      route: '/trip'
+      route: '/logistics/trip'
     },
     {
       id: 'ihracatlar',
@@ -207,10 +207,10 @@ export default function MoreScreen() {
       label: 'İhracatlar',
       color: '#0ea5e9',
       subItems: [
-        { icon: 'clipboard', label: 'Operasyonlar', route: '/exports/operations', color: '#0ea5e9' },
-        { icon: 'list', label: 'Dispozisyon', route: '/exports/disposition', color: '#8b5cf6' },
-        { icon: 'location', label: 'Pozisyonlar', route: '/exports/positions', color: '#10b981' },
-        { icon: 'cube', label: 'Yükler', route: '/exports/loads', color: '#f59e0b' }
+        { icon: 'clipboard', label: 'Operasyonlar', route: '/logistics/exports/operations', color: '#0ea5e9' },
+        { icon: 'list', label: 'Dispozisyon', route: '/logistics/exports/disposition', color: '#8b5cf6' },
+        { icon: 'location', label: 'Pozisyonlar', route: '/logistics/exports/positions', color: '#10b981' },
+        { icon: 'cube', label: 'Yükler', route: '/logistics/exports/loads', color: '#f59e0b' }
       ]
     },
     {
@@ -219,10 +219,10 @@ export default function MoreScreen() {
       label: 'İthalatlar',
       color: '#6366f1',
       subItems: [
-        { icon: 'clipboard', label: 'Operasyonlar', route: '/imports/operations', color: '#6366f1' },
-        { icon: 'list', label: 'Dispozisyon', route: '/imports/disposition', color: '#8b5cf6' },
-        { icon: 'location', label: 'Pozisyonlar', route: '/imports/positions', color: '#10b981' },
-        { icon: 'cube', label: 'Yükler', route: '/imports/loads', color: '#f59e0b' }
+        { icon: 'clipboard', label: 'Operasyonlar', route: '/logistics/imports/operations', color: '#6366f1' },
+        { icon: 'list', label: 'Dispozisyon', route: '/logistics/imports/disposition', color: '#8b5cf6' },
+        { icon: 'location', label: 'Pozisyonlar', route: '/logistics/imports/positions', color: '#10b981' },
+        { icon: 'cube', label: 'Yükler', route: '/logistics/imports/loads', color: '#f59e0b' }
       ]
     },
     {
@@ -233,7 +233,7 @@ export default function MoreScreen() {
       subItems: [
         { icon: 'clipboard', label: 'İhracat Planlama', route: '/fleet/export-planning', color: '#0ea5e9' },
         { icon: 'map', label: 'Filo Takip', route: '/fleet/tracking', color: '#22c55e' },
-        { icon: 'car', label: 'Araçlar', route: '/vehicle', color: '#3b82f6' },
+        { icon: 'car', label: 'Araçlar', route: '/fleet/vehicle', color: '#3b82f6' },
         { icon: 'link', label: 'Çekici-Römork Eşleştirme', route: '/fleet/tractor-trailer', color: '#f59e0b' },
         { icon: 'link', label: 'Sürücü-Çekici Eşleştirme', route: '/fleet/driver-tractor', color: '#ec4899' },
         { icon: 'disc', label: 'Lastik Deposu', route: '/fleet/tire-warehouse', color: '#8b5cf6' },
@@ -246,8 +246,8 @@ export default function MoreScreen() {
       label: 'Yurtiçi Taşımacılık',
       color: '#10b981',
       subItems: [
-        { icon: 'clipboard', label: 'İş Emirleri', route: '/domestic', color: '#10b981' },
-        { icon: 'calendar', label: 'Planlama', route: '/domestic/planning', color: '#6366f1' }
+        { icon: 'clipboard', label: 'İş Emirleri', route: '/logistics/domestic', color: '#10b981' },
+        { icon: 'calendar', label: 'Planlama', route: '/logistics/domestic/planning', color: '#6366f1' }
       ]
     },
     {
@@ -268,7 +268,7 @@ export default function MoreScreen() {
       label: 'İnsan Kaynakları',
       color: '#ec4899',
       subItems: [
-        { icon: 'people', label: 'Personeller', route: '/employee', color: '#ec4899' },
+        { icon: 'people', label: 'Personeller', route: '/hr/employee', color: '#ec4899' },
         { icon: 'briefcase', label: 'İş İlanları', route: '/hr/job-postings', color: '#f97316' },
         { icon: 'document-text', label: 'İşe Alım Başvuruları', route: '/hr/job-applications', color: '#84cc16' }
       ]

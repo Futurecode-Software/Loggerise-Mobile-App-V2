@@ -272,7 +272,7 @@ export default function CrmCustomerDetailScreen() {
         </Text>
         <Button
           title="Teklif Listesine Git"
-          onPress={() => router.push('/quotes' as any)}
+          onPress={() => router.push('/crm/quotes' as any)}
           variant="outline"
           style={styles.emptyButton}
         />

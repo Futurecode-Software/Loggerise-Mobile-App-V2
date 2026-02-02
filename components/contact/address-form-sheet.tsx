@@ -341,7 +341,7 @@ export const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheet
           {formData.latitude && formData.longitude && (
             <View style={styles.coordinatesContainer}>
               <Text style={[styles.coordinatesLabel, { color: colors.textMuted }]}>
-                📍 Koordinatlar (Google Maps'ten otomatik)
+                📍 Koordinatlar (Google Maps&apos;ten otomatik)
               </Text>
               <Text style={[styles.coordinatesText, { color: colors.textSecondary }]}>
                 Enlem: {formData.latitude.toFixed(6)} • Boylam: {formData.longitude.toFixed(6)}
