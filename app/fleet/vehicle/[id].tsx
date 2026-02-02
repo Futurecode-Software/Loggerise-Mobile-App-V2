@@ -1,11 +1,11 @@
 /**
- * Vehicle Detail Screen
+ * Araç Detay Sayfası
  *
- * Shows vehicle details with tabs for insurances, maintenances, inspections, and fault reports.
- * Matches web version at /filo-yonetimi/araclar/{id}
+ * CLAUDE.md tasarım ilkelerine uygun modern detay sayfası
+ * Statik glow orbs, useFocusEffect ile yenileme, ConfirmDialog ile silme
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -13,46 +13,41 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+  ActivityIndicator
+} from 'react-native'
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
-  Edit,
-  Trash2,
-  Truck,
-  Car,
-  Box,
-  Shield,
-  Wrench,
-  ClipboardCheck,
-  AlertTriangle,
-  Gauge,
-  FileText,
-} from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
-import { formatCurrency, formatNumber } from '@/utils/formatters';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardBorderRadius,
+  DashboardFontSizes,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
+import { formatCurrency, formatNumber } from '@/utils/formatters'
 import {
   getVehicle,
   deleteVehicle,
   Vehicle,
-} from '@/services/endpoints/vehicles';
+} from '@/services/endpoints/vehicles'
 
 // Tab types
-type TabId = 'info' | 'insurance' | 'maintenance' | 'inspection' | 'faults';
+type TabId = 'info' | 'insurance' | 'maintenance' | 'inspection' | 'faults'
 
-const TABS: { id: TabId; label: string; icon: any }[] = [
-  { id: 'info', label: 'Bilgiler', icon: FileText },
-  { id: 'insurance', label: 'Sigortalar', icon: Shield },
-  { id: 'maintenance', label: 'Bakımlar', icon: Wrench },
-  { id: 'inspection', label: 'Muayeneler', icon: ClipboardCheck },
-  { id: 'faults', label: 'Arızalar', icon: AlertTriangle },
-];
+const TABS: { id: TabId; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { id: 'info', label: 'Bilgiler', icon: 'document-text-outline' },
+  { id: 'insurance', label: 'Sigortalar', icon: 'shield-outline' },
+  { id: 'maintenance', label: 'Bakımlar', icon: 'construct-outline' },
+  { id: 'inspection', label: 'Muayeneler', icon: 'clipboard-outline' },
+  { id: 'faults', label: 'Arızalar', icon: 'warning-outline' },
+]
 
-// Web ile aynı label'lar
+// Label maps
 const vehicleTypeLabels: Record<string, string> = {
   trailer: 'Römork',
   car: 'Otomobil',
@@ -66,7 +61,7 @@ const vehicleTypeLabels: Record<string, string> = {
   construction_machine: 'İş Makinesi',
   van: 'Panelvan',
   pickup: 'Pikap',
-};
+}
 
 const statusLabels: Record<string, string> = {
   available: 'Uygun',
@@ -74,20 +69,20 @@ const statusLabels: Record<string, string> = {
   in_maintenance: 'Bakımda',
   maintenance: 'Bakımda',
   out_of_service: 'Hizmet Dışı',
-};
+}
 
 const ownershipLabels: Record<string, string> = {
   owned: 'Özmal',
   rented: 'Kiralık',
   leased: 'Kiralama',
   subcontractor: 'Taşeron',
-};
+}
 
 const gearTypeLabels: Record<string, string> = {
   manual: 'Manuel',
   automatic: 'Otomatik',
   semi_automatic: 'Yarı Otomatik',
-};
+}
 
 const euroNormLabels: Record<string, string> = {
   euro_3: 'Euro 3',
@@ -97,618 +92,748 @@ const euroNormLabels: Record<string, string> = {
   euro_6d: 'Euro 6d',
   euro_6e: 'Euro 6e',
   electric: 'Elektrikli',
-};
+}
 
 const insuranceTypeLabels: Record<string, string> = {
   comprehensive: 'Kasko',
   traffic: 'Trafik',
   other: 'Diğer',
-};
+}
 
 const faultStatusLabels: Record<string, string> = {
   pending: 'Beklemede',
   in_progress: 'İşlemde',
   resolved: 'Çözüldü',
   cancelled: 'İptal',
-};
+}
 
 const faultPriorityLabels: Record<string, string> = {
   low: 'Düşük',
   medium: 'Orta',
   high: 'Yüksek',
   critical: 'Kritik',
-};
+}
+
+// Status renkleri
+const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
+  available: { primary: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' },
+  in_use: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' },
+  in_maintenance: { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' },
+  maintenance: { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' },
+  out_of_service: { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' }
+}
+
+// Section Header Component
+function SectionHeader({ title, icon }: { title: string; icon: keyof typeof Ionicons.glyphMap }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionIcon}>
+        <Ionicons name={icon} size={18} color={DashboardColors.primary} />
+      </View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  )
+}
+
+// Info Row Component
+function InfoRow({ label, value, icon }: { label: string; value?: string | number | boolean; icon?: keyof typeof Ionicons.glyphMap }) {
+  if (value === undefined || value === null || value === '') return null
+  const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayır') : String(value)
+
+  return (
+    <View style={styles.infoRow}>
+      {icon && <Ionicons name={icon} size={16} color={DashboardColors.textMuted} />}
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{displayValue}</Text>
+    </View>
+  )
+}
 
 export default function VehicleDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const insets = useSafeAreaInsets()
 
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>('info');
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<TabId>('info')
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  // Fetch vehicle data
-  const fetchVehicle = useCallback(async () => {
-    if (!id) return;
+  // Memory leak önleme
+  const isMountedRef = useRef(true)
+
+  // Veri çekme fonksiyonu - useCallback ile
+  const fetchData = useCallback(async (showLoading = true) => {
+    if (!id) return
 
     try {
-      setError(null);
-      const data = await getVehicle(parseInt(id, 10));
-      setVehicle(data);
+      if (showLoading) setIsLoading(true)
+      setError(null)
+      const data = await getVehicle(parseInt(id, 10))
+      if (isMountedRef.current) {
+        setVehicle(data)
+      }
     } catch (err) {
-      console.error('Vehicle fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Araç bilgileri yüklenemedi');
+      if (isMountedRef.current) {
+        console.error('Vehicle fetch error:', err)
+        setError(err instanceof Error ? err.message : 'Araç bilgileri yüklenemedi')
+      }
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
     }
-  }, [id]);
+  }, [id])
 
-  useEffect(() => {
-    fetchVehicle();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  // Edit'ten dönüşte yenileme
+  useFocusEffect(
+    useCallback(() => {
+      isMountedRef.current = true
+      fetchData(false)
+
+      return () => {
+        isMountedRef.current = false
+      }
+    }, [fetchData])
+  )
 
   const onRefresh = () => {
-    setRefreshing(true);
-    fetchVehicle();
-  };
+    setRefreshing(true)
+    fetchData(false)
+  }
 
-  // Delete vehicle - open confirm dialog
   const handleDelete = () => {
-    setShowDeleteConfirm(true);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    setShowDeleteConfirm(true)
+  }
 
-  // Confirm and execute delete
   const handleConfirmDelete = async () => {
-    if (!id) return;
-    setIsDeleting(true);
+    if (!id) return
+    setIsDeleting(true)
     try {
-      await deleteVehicle(parseInt(id, 10));
-      success('Başarılı', 'Araç silindi.');
-      router.back();
+      await deleteVehicle(parseInt(id, 10))
+      Toast.show({
+        type: 'success',
+        text1: 'Araç silindi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      router.back()
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Araç silinemedi.');
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Araç silinemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
     } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
     }
-  };
+  }
+
+  const handleEdit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/fleet/vehicle/${id}/edit`)
+  }
+
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
 
   // Format date
   const formatDate = (dateString?: string): string => {
-    if (!dateString) return '-';
+    if (!dateString) return '-'
     try {
       return new Date(dateString).toLocaleDateString('tr-TR', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
-      });
+      })
     } catch {
-      return dateString;
+      return dateString
     }
-  };
-
-  // formatCurrency replaced with safe formatter from @/utils/formatters
-
-  // Get vehicle type icon
-  const getTypeIcon = () => {
-    if (!vehicle) return Truck;
-    switch (vehicle.vehicle_type) {
-      case 'truck_tractor':
-      case 'truck':
-      case 'light_truck':
-        return Truck;
-      case 'trailer':
-        return Box;
-      case 'car':
-      case 'van':
-      case 'pickup':
-        return Car;
-      default:
-        return Truck;
-    }
-  };
-
-  // Render info section
-  const renderInfoRow = (label: string, value?: string | number | boolean, icon?: any) => {
-    if (value === undefined || value === null || value === '') return null;
-    const Icon = icon;
-    const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayır') : String(value);
-
-    return (
-      <View style={styles.infoRow}>
-        {Icon && <Icon size={16} color={colors.textMuted} />}
-        <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}:</Text>
-        <Text style={[styles.infoValue, { color: colors.text }]}>{displayValue}</Text>
-      </View>
-    );
-  };
+  }
 
   // Render info tab
   const renderInfoTab = () => {
-    if (!vehicle) return null;
+    if (!vehicle) return null
 
-    const isTruckTractor = vehicle.vehicle_type === 'truck_tractor';
-    const isTrailer = vehicle.vehicle_type === 'trailer';
+    const isTruckTractor = vehicle.vehicle_type === 'truck_tractor'
+    const isTrailer = vehicle.vehicle_type === 'trailer'
 
     return (
       <View style={styles.tabContent}>
         {/* Temel Bilgiler */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
-          {renderInfoRow('Marka', vehicle.brand)}
-          {renderInfoRow('Model', vehicle.model)}
-          {renderInfoRow('Model Yılı', vehicle.model_year || vehicle.year)}
-          {renderInfoRow('Renk', vehicle.color)}
-          {renderInfoRow('Ticari Adı', vehicle.commercial_name)}
-          {renderInfoRow('Araç Cinsi', vehicle.vehicle_class)}
-          {renderInfoRow('Araç Sınıfı', vehicle.vehicle_category)}
-          {renderInfoRow('Vites Tipi', vehicle.gear_type ? gearTypeLabels[vehicle.gear_type] : undefined)}
-          {renderInfoRow('Ehliyet Sınıfı', vehicle.document_type)}
-          {renderInfoRow('Toplam KM', formatNumber(vehicle.total_km || vehicle.km_counter, 'km'))}
-          {renderInfoRow('Net Ağırlık', formatNumber(vehicle.net_weight, 'kg'))}
-          {renderInfoRow('Azami Yüklü Ağırlık', formatNumber(vehicle.max_loaded_weight, 'kg'))}
-        </Card>
+        <View style={styles.section}>
+          <SectionHeader title="Temel Bilgiler" icon="car-sport-outline" />
+          <View style={styles.sectionContent}>
+            <InfoRow label="Marka" value={vehicle.brand} />
+            <InfoRow label="Model" value={vehicle.model} />
+            <InfoRow label="Model Yılı" value={vehicle.model_year || vehicle.year} />
+            <InfoRow label="Renk" value={vehicle.color} />
+            <InfoRow label="Ticari Adı" value={vehicle.commercial_name} />
+            <InfoRow label="Araç Cinsi" value={vehicle.vehicle_class} />
+            <InfoRow label="Araç Sınıfı" value={vehicle.vehicle_category} />
+            <InfoRow label="Vites Tipi" value={vehicle.gear_type ? gearTypeLabels[vehicle.gear_type] : undefined} />
+            <InfoRow label="Ehliyet Sınıfı" value={vehicle.document_type} />
+            <InfoRow label="Toplam KM" value={formatNumber(vehicle.total_km || vehicle.km_counter, 'km')} />
+            <InfoRow label="Net Ağırlık" value={formatNumber(vehicle.net_weight, 'kg')} />
+            <InfoRow label="Azami Yüklü Ağırlık" value={formatNumber(vehicle.max_loaded_weight, 'kg')} />
+          </View>
+        </View>
 
         {/* Ruhsat Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Ruhsat Bilgileri</Text>
-          {renderInfoRow('Tescil Sıra No', vehicle.registration_serial_no)}
-          {renderInfoRow('İlk Tescil Tarihi', formatDate(vehicle.first_registration_date))}
-          {renderInfoRow('Tescil Tarihi', formatDate(vehicle.registration_date))}
-          {renderInfoRow('Motor No', vehicle.engine_number)}
-          {renderInfoRow('Şasi No', vehicle.chassis_number)}
-          {renderInfoRow('Motor Gücü', vehicle.engine_power ? `${vehicle.engine_power} kW` : undefined)}
-          {renderInfoRow('Tekerlek Düzeni', vehicle.wheel_formula)}
-          {renderInfoRow('Ruhsat Notu', vehicle.license_info)}
-        </Card>
+        <View style={styles.section}>
+          <SectionHeader title="Ruhsat Bilgileri" icon="document-outline" />
+          <View style={styles.sectionContent}>
+            <InfoRow label="Tescil Sıra No" value={vehicle.registration_serial_no} />
+            <InfoRow label="İlk Tescil Tarihi" value={formatDate(vehicle.first_registration_date)} />
+            <InfoRow label="Tescil Tarihi" value={formatDate(vehicle.registration_date)} />
+            <InfoRow label="Motor No" value={vehicle.engine_number} />
+            <InfoRow label="Şasi No" value={vehicle.chassis_number} />
+            <InfoRow label="Motor Gücü" value={vehicle.engine_power ? `${vehicle.engine_power} kW` : undefined} />
+            <InfoRow label="Tekerlek Düzeni" value={vehicle.wheel_formula} />
+            <InfoRow label="Ruhsat Notu" value={vehicle.license_info} />
+          </View>
+        </View>
 
         {/* Çekici Bilgileri */}
         {isTruckTractor && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Çekici Bilgileri</Text>
-            {renderInfoRow('Euro Norm', vehicle.euro_norm ? euroNormLabels[vehicle.euro_norm] : undefined)}
-            {vehicle.euro_norm === 'electric' ? (
-              renderInfoRow('Batarya Kapasitesi', vehicle.battery_capacity ? `${vehicle.battery_capacity} kWh` : undefined)
-            ) : (
-              renderInfoRow('Yakıt Kapasitesi', vehicle.fuel_capacity ? `${vehicle.fuel_capacity} L` : undefined)
-            )}
-            {renderInfoRow('GPS Takip', vehicle.has_gps_tracker)}
-            {renderInfoRow('GPS Kimlik No', vehicle.gps_identity_no)}
-          </Card>
+          <View style={styles.section}>
+            <SectionHeader title="Çekici Bilgileri" icon="settings-outline" />
+            <View style={styles.sectionContent}>
+              <InfoRow label="Euro Norm" value={vehicle.euro_norm ? euroNormLabels[vehicle.euro_norm] : undefined} />
+              {vehicle.euro_norm === 'electric' ? (
+                <InfoRow label="Batarya Kapasitesi" value={vehicle.battery_capacity ? `${vehicle.battery_capacity} kWh` : undefined} />
+              ) : (
+                <InfoRow label="Yakıt Kapasitesi" value={vehicle.fuel_capacity ? `${vehicle.fuel_capacity} L` : undefined} />
+              )}
+              <InfoRow label="GPS Takip" value={vehicle.has_gps_tracker} />
+              <InfoRow label="GPS Kimlik No" value={vehicle.gps_identity_no} />
+            </View>
+          </View>
         )}
 
         {/* Römork Bilgileri */}
         {isTrailer && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Römork Bilgileri</Text>
-            {renderInfoRow('En', vehicle.trailer_width ? `${vehicle.trailer_width} m` : undefined)}
-            {renderInfoRow('Boy', vehicle.trailer_length ? `${vehicle.trailer_length} m` : undefined)}
-            {renderInfoRow('Yükseklik', vehicle.trailer_height ? `${vehicle.trailer_height} m` : undefined)}
-            {renderInfoRow('Hacim', vehicle.trailer_volume ? `${vehicle.trailer_volume} m³` : undefined)}
-            {renderInfoRow('Yan Kapak', vehicle.side_door_count)}
-            {renderInfoRow('XL Sertifikası', vehicle.has_xl_certificate)}
-            {renderInfoRow('Çift Katlı', vehicle.is_double_deck)}
-            {renderInfoRow('P400', vehicle.has_p400)}
-            {renderInfoRow('Kayar Perde', vehicle.has_sliding_curtain)}
-            {renderInfoRow('Hafif Römork', vehicle.is_lightweight)}
-            {renderInfoRow('Tren Uyumlu', vehicle.is_train_compatible)}
-            {renderInfoRow('Brandalı', vehicle.has_tarpaulin)}
-            {renderInfoRow('Rulo', vehicle.has_roller)}
-            {renderInfoRow('Elektronik Kantar', vehicle.has_electronic_scale)}
-          </Card>
+          <View style={styles.section}>
+            <SectionHeader title="Römork Bilgileri" icon="cube-outline" />
+            <View style={styles.sectionContent}>
+              <InfoRow label="En" value={vehicle.trailer_width ? `${vehicle.trailer_width} m` : undefined} />
+              <InfoRow label="Boy" value={vehicle.trailer_length ? `${vehicle.trailer_length} m` : undefined} />
+              <InfoRow label="Yükseklik" value={vehicle.trailer_height ? `${vehicle.trailer_height} m` : undefined} />
+              <InfoRow label="Hacim" value={vehicle.trailer_volume ? `${vehicle.trailer_volume} m³` : undefined} />
+              <InfoRow label="Yan Kapak" value={vehicle.side_door_count} />
+              <InfoRow label="XL Sertifikası" value={vehicle.has_xl_certificate} />
+              <InfoRow label="Çift Katlı" value={vehicle.is_double_deck} />
+              <InfoRow label="P400" value={vehicle.has_p400} />
+              <InfoRow label="Kayar Perde" value={vehicle.has_sliding_curtain} />
+              <InfoRow label="Hafif Römork" value={vehicle.is_lightweight} />
+              <InfoRow label="Tren Uyumlu" value={vehicle.is_train_compatible} />
+              <InfoRow label="Brandalı" value={vehicle.has_tarpaulin} />
+              <InfoRow label="Rulo" value={vehicle.has_roller} />
+              <InfoRow label="Elektronik Kantar" value={vehicle.has_electronic_scale} />
+            </View>
+          </View>
         )}
 
         {/* Sahiplik Bilgileri */}
-        <Card style={styles.sectionCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Sahiplik Bilgileri</Text>
-          {renderInfoRow('Ad Soyad', vehicle.full_name)}
-          {renderInfoRow('Şirket Adı', vehicle.company_name)}
-          {renderInfoRow('TC/Vergi No', vehicle.id_or_tax_no)}
-          {renderInfoRow('Noter Adı', vehicle.notary_name)}
-          {renderInfoRow('Noter Satış Tarihi', formatDate(vehicle.notary_sale_date))}
-          {renderInfoRow('Adres', vehicle.address)}
-        </Card>
+        <View style={styles.section}>
+          <SectionHeader title="Sahiplik Bilgileri" icon="person-outline" />
+          <View style={styles.sectionContent}>
+            <InfoRow label="Ad Soyad" value={vehicle.full_name} />
+            <InfoRow label="Şirket Adı" value={vehicle.company_name} />
+            <InfoRow label="TC/Vergi No" value={vehicle.id_or_tax_no} />
+            <InfoRow label="Noter Adı" value={vehicle.notary_name} />
+            <InfoRow label="Noter Satış Tarihi" value={formatDate(vehicle.notary_sale_date)} />
+            <InfoRow label="Adres" value={vehicle.address} />
+          </View>
+        </View>
 
         {/* Yurtiçi Taşımacılık */}
         {vehicle.domestic_transport_capable && (
-          <Card style={styles.sectionCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Yurtiçi Taşımacılık</Text>
-            {renderInfoRow('Yurtiçi Taşıma', vehicle.domestic_transport_capable)}
-            {renderInfoRow('Yurtiçi Araç Sınıfı', vehicle.domestic_vehicle_class)}
-          </Card>
+          <View style={styles.section}>
+            <SectionHeader title="Yurtiçi Taşımacılık" icon="navigate-outline" />
+            <View style={styles.sectionContent}>
+              <InfoRow label="Yurtiçi Taşıma" value={vehicle.domestic_transport_capable} />
+              <InfoRow label="Yurtiçi Araç Sınıfı" value={vehicle.domestic_vehicle_class} />
+            </View>
+          </View>
         )}
       </View>
-    );
-  };
+    )
+  }
 
   // Render insurance tab
   const renderInsuranceTab = () => {
-    const insurances = vehicle?.insurances || [];
+    const insurances = vehicle?.insurances || []
 
     if (insurances.length === 0) {
       return (
         <View style={styles.emptyTab}>
-          <Shield size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Henüz sigorta kaydı yok
-          </Text>
+          <Ionicons name="shield-outline" size={48} color={DashboardColors.textMuted} />
+          <Text style={styles.emptyText}>Henüz sigorta kaydı yok</Text>
         </View>
-      );
+      )
     }
 
     return (
       <View style={styles.tabContent}>
         {insurances.map((insurance) => (
-          <Card key={insurance.id} style={styles.itemCard}>
+          <View key={insurance.id} style={styles.itemCard}>
             <View style={styles.itemHeader}>
               <View style={styles.itemTitleRow}>
-                <Shield size={18} color={Brand.primary} />
-                <Text style={[styles.itemTitle, { color: colors.text }]}>
+                <Ionicons name="shield-outline" size={18} color={DashboardColors.primary} />
+                <Text style={styles.itemTitle}>
                   {insuranceTypeLabels[insurance.insurance_type] || insurance.insurance_type}
                 </Text>
               </View>
-              <Badge
-                label={insurance.is_active ? 'Aktif' : 'Pasif'}
-                variant={insurance.is_active ? 'success' : 'default'}
-                size="sm"
-              />
+              <View style={[
+                styles.statusBadge,
+                { backgroundColor: insurance.is_active ? DashboardColors.successBg : DashboardColors.dangerBg }
+              ]}>
+                <Text style={[
+                  styles.statusBadgeText,
+                  { color: insurance.is_active ? DashboardColors.success : DashboardColors.danger }
+                ]}>
+                  {insurance.is_active ? 'Aktif' : 'Pasif'}
+                </Text>
+              </View>
             </View>
             <View style={styles.itemDetails}>
-              {renderInfoRow('Poliçe No', insurance.policy_number)}
-              {renderInfoRow('Sigorta Şirketi', insurance.insurance_company)}
-              {renderInfoRow('Başlangıç', formatDate(insurance.start_date))}
-              {renderInfoRow('Bitiş', formatDate(insurance.end_date))}
-              {renderInfoRow('Prim Tutarı', formatCurrency(insurance.premium_amount))}
+              <InfoRow label="Poliçe No" value={insurance.policy_number} />
+              <InfoRow label="Sigorta Şirketi" value={insurance.insurance_company} />
+              <InfoRow label="Başlangıç" value={formatDate(insurance.start_date)} />
+              <InfoRow label="Bitiş" value={formatDate(insurance.end_date)} />
+              <InfoRow label="Prim Tutarı" value={formatCurrency(insurance.premium_amount)} />
             </View>
-          </Card>
+          </View>
         ))}
       </View>
-    );
-  };
+    )
+  }
 
   // Render maintenance tab
   const renderMaintenanceTab = () => {
-    const maintenances = vehicle?.maintenances || [];
+    const maintenances = vehicle?.maintenances || []
 
     if (maintenances.length === 0) {
       return (
         <View style={styles.emptyTab}>
-          <Wrench size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Henüz bakım kaydı yok
-          </Text>
+          <Ionicons name="construct-outline" size={48} color={DashboardColors.textMuted} />
+          <Text style={styles.emptyText}>Henüz bakım kaydı yok</Text>
         </View>
-      );
+      )
     }
 
     return (
       <View style={styles.tabContent}>
         {maintenances.map((maintenance) => (
-          <Card key={maintenance.id} style={styles.itemCard}>
+          <View key={maintenance.id} style={styles.itemCard}>
             <View style={styles.itemHeader}>
               <View style={styles.itemTitleRow}>
-                <Wrench size={18} color={Brand.primary} />
-                <Text style={[styles.itemTitle, { color: colors.text }]}>
-                  {formatDate(maintenance.maintenance_date)}
+                <Ionicons name="construct-outline" size={18} color={DashboardColors.primary} />
+                <Text style={styles.itemTitle}>{formatDate(maintenance.maintenance_date)}</Text>
+              </View>
+              <View style={[
+                styles.statusBadge,
+                { backgroundColor: maintenance.is_active ? DashboardColors.successBg : DashboardColors.dangerBg }
+              ]}>
+                <Text style={[
+                  styles.statusBadgeText,
+                  { color: maintenance.is_active ? DashboardColors.success : DashboardColors.danger }
+                ]}>
+                  {maintenance.is_active ? 'Aktif' : 'Pasif'}
                 </Text>
               </View>
-              <Badge
-                label={maintenance.is_active ? 'Aktif' : 'Pasif'}
-                variant={maintenance.is_active ? 'success' : 'default'}
-                size="sm"
-              />
             </View>
             <View style={styles.itemDetails}>
-              {renderInfoRow('Bakım KM', formatNumber(maintenance.maintenance_km, 'km'))}
-              {renderInfoRow('Sonraki Bakım KM', formatNumber(maintenance.next_maintenance_km, 'km'))}
-              {renderInfoRow('Maliyet', formatCurrency(maintenance.cost, maintenance.currency_type))}
-              {renderInfoRow('Servis', maintenance.service_provider)}
-              {maintenance.oil_change && renderInfoRow('Yağ Değişimi', true)}
-              {maintenance.oil_filter_change && renderInfoRow('Yağ Filtresi', true)}
-              {maintenance.air_filter_change && renderInfoRow('Hava Filtresi', true)}
-              {maintenance.brake_adjustment && renderInfoRow('Fren Ayarı', true)}
-              {maintenance.tire_change && renderInfoRow('Lastik Değişimi', true)}
+              <InfoRow label="Bakım KM" value={formatNumber(maintenance.maintenance_km, 'km')} />
+              <InfoRow label="Sonraki Bakım KM" value={formatNumber(maintenance.next_maintenance_km, 'km')} />
+              <InfoRow label="Maliyet" value={formatCurrency(maintenance.cost, maintenance.currency_type)} />
+              <InfoRow label="Servis" value={maintenance.service_provider} />
+              {maintenance.oil_change && <InfoRow label="Yağ Değişimi" value={true} />}
+              {maintenance.oil_filter_change && <InfoRow label="Yağ Filtresi" value={true} />}
+              {maintenance.air_filter_change && <InfoRow label="Hava Filtresi" value={true} />}
+              {maintenance.brake_adjustment && <InfoRow label="Fren Ayarı" value={true} />}
+              {maintenance.tire_change && <InfoRow label="Lastik Değişimi" value={true} />}
             </View>
-          </Card>
+          </View>
         ))}
       </View>
-    );
-  };
+    )
+  }
 
   // Render inspection tab
   const renderInspectionTab = () => {
-    const inspections = vehicle?.inspections || [];
+    const inspections = vehicle?.inspections || []
 
     if (inspections.length === 0) {
       return (
         <View style={styles.emptyTab}>
-          <ClipboardCheck size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Henüz muayene kaydı yok
-          </Text>
+          <Ionicons name="clipboard-outline" size={48} color={DashboardColors.textMuted} />
+          <Text style={styles.emptyText}>Henüz muayene kaydı yok</Text>
         </View>
-      );
+      )
     }
 
     return (
       <View style={styles.tabContent}>
         {inspections.map((inspection) => (
-          <Card key={inspection.id} style={styles.itemCard}>
+          <View key={inspection.id} style={styles.itemCard}>
             <View style={styles.itemHeader}>
               <View style={styles.itemTitleRow}>
-                <ClipboardCheck size={18} color={Brand.primary} />
-                <Text style={[styles.itemTitle, { color: colors.text }]}>
-                  {formatDate(inspection.inspection_date)}
+                <Ionicons name="clipboard-outline" size={18} color={DashboardColors.primary} />
+                <Text style={styles.itemTitle}>{formatDate(inspection.inspection_date)}</Text>
+              </View>
+              <View style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: inspection.result === 'passed' ? DashboardColors.successBg :
+                    inspection.result === 'failed' ? DashboardColors.dangerBg : DashboardColors.warningBg
+                }
+              ]}>
+                <Text style={[
+                  styles.statusBadgeText,
+                  {
+                    color: inspection.result === 'passed' ? DashboardColors.success :
+                      inspection.result === 'failed' ? DashboardColors.danger : DashboardColors.warning
+                  }
+                ]}>
+                  {inspection.result === 'passed' ? 'Geçti' :
+                    inspection.result === 'failed' ? 'Kaldı' : 'Beklemede'}
                 </Text>
               </View>
-              <Badge
-                label={
-                  inspection.result === 'passed' ? 'Geçti' :
-                  inspection.result === 'failed' ? 'Kaldı' : 'Beklemede'
-                }
-                variant={
-                  inspection.result === 'passed' ? 'success' :
-                  inspection.result === 'failed' ? 'danger' : 'warning'
-                }
-                size="sm"
-              />
             </View>
             <View style={styles.itemDetails}>
-              {renderInfoRow('Sonraki Muayene', formatDate(inspection.next_inspection_date))}
-              {renderInfoRow('İstasyon', inspection.station)}
-              {renderInfoRow('Ücret', formatCurrency(inspection.fee, inspection.currency))}
-              {renderInfoRow('KM', formatNumber(inspection.odometer, 'km'))}
-              {renderInfoRow('Notlar', inspection.notes)}
+              <InfoRow label="Sonraki Muayene" value={formatDate(inspection.next_inspection_date)} />
+              <InfoRow label="İstasyon" value={inspection.station} />
+              <InfoRow label="Ücret" value={formatCurrency(inspection.fee, inspection.currency)} />
+              <InfoRow label="KM" value={formatNumber(inspection.odometer, 'km')} />
+              <InfoRow label="Notlar" value={inspection.notes} />
             </View>
-          </Card>
+          </View>
         ))}
       </View>
-    );
-  };
+    )
+  }
 
   // Render faults tab
   const renderFaultsTab = () => {
-    const faults = vehicle?.faultReports || [];
+    const faults = vehicle?.faultReports || []
 
     if (faults.length === 0) {
       return (
         <View style={styles.emptyTab}>
-          <AlertTriangle size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Henüz arıza bildirimi yok
-          </Text>
+          <Ionicons name="warning-outline" size={48} color={DashboardColors.textMuted} />
+          <Text style={styles.emptyText}>Henüz arıza bildirimi yok</Text>
         </View>
-      );
+      )
+    }
+
+    const getPriorityColor = (priority: string) => {
+      switch (priority) {
+        case 'critical': return DashboardColors.danger
+        case 'high': return DashboardColors.warning
+        case 'medium': return DashboardColors.info
+        default: return DashboardColors.textMuted
+      }
     }
 
     return (
       <View style={styles.tabContent}>
         {faults.map((fault) => (
-          <Card key={fault.id} style={styles.itemCard}>
+          <View key={fault.id} style={styles.itemCard}>
             <View style={styles.itemHeader}>
               <View style={styles.itemTitleRow}>
-                <AlertTriangle
+                <Ionicons
+                  name="warning-outline"
                   size={18}
-                  color={
-                    fault.priority === 'critical' ? colors.danger :
-                    fault.priority === 'high' ? colors.warning :
-                    fault.priority === 'medium' ? colors.info : colors.textMuted
-                  }
+                  color={getPriorityColor(fault.priority)}
                 />
-                <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={1}>
-                  {fault.title}
+                <Text style={styles.itemTitle} numberOfLines={1}>{fault.title}</Text>
+              </View>
+              <View style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: fault.status === 'resolved' ? DashboardColors.successBg :
+                    fault.status === 'in_progress' ? DashboardColors.infoBg :
+                      fault.status === 'cancelled' ? DashboardColors.dangerBg : DashboardColors.warningBg
+                }
+              ]}>
+                <Text style={[
+                  styles.statusBadgeText,
+                  {
+                    color: fault.status === 'resolved' ? DashboardColors.success :
+                      fault.status === 'in_progress' ? DashboardColors.info :
+                        fault.status === 'cancelled' ? DashboardColors.danger : DashboardColors.warning
+                  }
+                ]}>
+                  {faultStatusLabels[fault.status] || fault.status}
                 </Text>
               </View>
-              <Badge
-                label={faultStatusLabels[fault.status] || fault.status}
-                variant={
-                  fault.status === 'resolved' ? 'success' :
-                  fault.status === 'in_progress' ? 'info' :
-                  fault.status === 'cancelled' ? 'default' : 'warning'
-                }
-                size="sm"
-              />
             </View>
             <View style={styles.itemDetails}>
-              {renderInfoRow('Öncelik', faultPriorityLabels[fault.priority])}
-              {renderInfoRow('Açıklama', fault.description)}
-              {renderInfoRow('Bildirme Tarihi', formatDate(fault.reported_at || fault.created_at))}
-              {fault.resolved_at && renderInfoRow('Çözüm Tarihi', formatDate(fault.resolved_at))}
-              {renderInfoRow('Tahmini Maliyet', formatCurrency(fault.estimated_cost, fault.estimated_currency))}
-              {renderInfoRow('Gerçek Maliyet', formatCurrency(fault.actual_cost, fault.actual_currency))}
+              <InfoRow label="Öncelik" value={faultPriorityLabels[fault.priority]} />
+              <InfoRow label="Açıklama" value={fault.description} />
+              <InfoRow label="Bildirme Tarihi" value={formatDate(fault.reported_at || fault.created_at)} />
+              {fault.resolved_at && <InfoRow label="Çözüm Tarihi" value={formatDate(fault.resolved_at)} />}
+              <InfoRow label="Tahmini Maliyet" value={formatCurrency(fault.estimated_cost, fault.estimated_currency)} />
+              <InfoRow label="Gerçek Maliyet" value={formatCurrency(fault.actual_cost, fault.actual_currency)} />
             </View>
-          </Card>
+          </View>
         ))}
       </View>
-    );
-  };
+    )
+  }
 
   // Render tab content
   const renderTabContent = () => {
     switch (activeTab) {
       case 'info':
-        return renderInfoTab();
+        return renderInfoTab()
       case 'insurance':
-        return renderInsuranceTab();
+        return renderInsuranceTab()
       case 'maintenance':
-        return renderMaintenanceTab();
+        return renderMaintenanceTab()
       case 'inspection':
-        return renderInspectionTab();
+        return renderInspectionTab()
       case 'faults':
-        return renderFaultsTab();
+        return renderFaultsTab()
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <FullScreenHeader
-          title="Araç Detayı"
-          showBackButton
-          onBackPress={() => router.back()}
-        />
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Araç Detayı</Text>
+              </View>
+              <View style={{ width: 44 }} />
+            </View>
+          </View>
+          <View style={styles.bottomCurve} />
+        </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Araç bilgileri yükleniyor...
-          </Text>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Araç bilgileri yükleniyor...</Text>
         </View>
       </View>
-    );
+    )
   }
 
   // Error state
   if (error || !vehicle) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <FullScreenHeader
-          title="Araç Detayı"
-          showBackButton
-          onBackPress={() => router.back()}
-        />
+      <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Araç Detayı</Text>
+              </View>
+              <View style={{ width: 44 }} />
+            </View>
+          </View>
+          <View style={styles.bottomCurve} />
+        </View>
         <View style={styles.errorContainer}>
-          <AlertTriangle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
-            {error || 'Araç bulunamadı'}
-          </Text>
+          <Ionicons name="warning-outline" size={64} color={DashboardColors.danger} />
+          <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+          <Text style={styles.errorText}>{error || 'Araç bulunamadı'}</Text>
           <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchVehicle}
+            style={styles.retryButton}
+            onPress={() => fetchData(true)}
           >
             <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
       </View>
-    );
+    )
   }
 
-  const TypeIcon = getTypeIcon();
+  const statusColors = STATUS_COLORS[vehicle.status] || STATUS_COLORS.available
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <FullScreenHeader
-        title={vehicle.plate}
-        showBackButton
-        onBackPress={() => router.back()}
-        rightIcons={
-          <>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => router.push(`/fleet/vehicle/${vehicle.id}/edit` as any)}
-            >
-              <Edit size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Trash2 size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </>
-        }
-      />
+    <View style={styles.container}>
+      {/* Header with gradient and static glow orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
 
-      {/* Vehicle Summary Card */}
-      <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={styles.summaryHeader}>
-          <View style={[styles.typeIconLarge, { backgroundColor: Brand.primary + '15' }]}>
-            <TypeIcon size={32} color={Brand.primary} />
-          </View>
-          <View style={styles.summaryInfo}>
-            <Text style={[styles.summaryPlate, { color: colors.text }]}>{vehicle.plate}</Text>
-            <Text style={[styles.summaryBrandModel, { color: colors.textSecondary }]}>
-              {vehicle.brand || '-'} {vehicle.model || ''}
-              {(vehicle.model_year || vehicle.year) ? ` (${vehicle.model_year || vehicle.year})` : ''}
-            </Text>
+        {/* Statik glow orb'lar (detay sayfası için) */}
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Orta: Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>{vehicle.plate}</Text>
+              <Text style={styles.headerSubtitle}>
+                {vehicleTypeLabels[vehicle.vehicle_type] || vehicle.vehicle_type}
+              </Text>
+            </View>
+
+            {/* Sağ: Düzenle ve Sil */}
+            <View style={styles.headerActions}>
+              <TouchableOpacity onPress={handleEdit} style={styles.headerButton}>
+                <Ionicons name="create-outline" size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleDelete}
+                style={styles.headerButton}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="trash-outline" size={22} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-        <View style={styles.badgeRow}>
-          <Badge
-            label={vehicleTypeLabels[vehicle.vehicle_type] || vehicle.vehicle_type}
-            variant="info"
-            size="sm"
-          />
-          <Badge
-            label={ownershipLabels[vehicle.ownership_type] || vehicle.ownership_type}
-            variant={vehicle.ownership_type === 'owned' ? 'success' : 'warning'}
-            size="sm"
-          />
-          <Badge
-            label={statusLabels[vehicle.status] || vehicle.status}
-            variant={
-              vehicle.status === 'available' ? 'success' :
-              vehicle.status === 'in_use' ? 'info' :
-              (vehicle.status === 'maintenance' || vehicle.status === 'in_maintenance') ? 'danger' : 'default'
-            }
-            size="sm"
-          />
-        </View>
-        {(vehicle.total_km || vehicle.km_counter) && (
-          <View style={[styles.kmBadge, { backgroundColor: colors.surface }]}>
-            <Gauge size={16} color={colors.textMuted} />
-            <Text style={[styles.kmText, { color: colors.text }]}>
-              {formatNumber(vehicle.total_km || vehicle.km_counter, 'km')}
-            </Text>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* Vehicle Summary Card - Content alanında */}
+      <View style={styles.summaryCardContainer}>
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryHeader}>
+            <View style={styles.summaryIcon}>
+              <Ionicons name="car-sport-outline" size={28} color={DashboardColors.primary} />
+            </View>
+            <View style={styles.summaryInfo}>
+              <Text style={styles.summaryPlate}>{vehicle.plate}</Text>
+              <Text style={styles.summaryBrandModel}>
+                {vehicle.brand || '-'} {vehicle.model || ''}
+                {(vehicle.model_year || vehicle.year) ? ` (${vehicle.model_year || vehicle.year})` : ''}
+              </Text>
+            </View>
           </View>
-        )}
+          <View style={styles.badgeRow}>
+            <View style={[styles.badge, { backgroundColor: DashboardColors.infoBg }]}>
+              <Text style={[styles.badgeText, { color: DashboardColors.info }]}>
+                {vehicleTypeLabels[vehicle.vehicle_type] || vehicle.vehicle_type}
+              </Text>
+            </View>
+            <View style={[styles.badge, { backgroundColor: vehicle.ownership_type === 'owned' ? DashboardColors.successBg : DashboardColors.warningBg }]}>
+              <Text style={[styles.badgeText, { color: vehicle.ownership_type === 'owned' ? DashboardColors.success : DashboardColors.warning }]}>
+                {ownershipLabels[vehicle.ownership_type] || vehicle.ownership_type}
+              </Text>
+            </View>
+            <View style={[styles.badge, { backgroundColor: statusColors.bg }]}>
+              <Text style={[styles.badgeText, { color: statusColors.primary }]}>
+                {statusLabels[vehicle.status] || vehicle.status}
+              </Text>
+            </View>
+          </View>
+          {(vehicle.total_km || vehicle.km_counter) && (
+            <View style={styles.kmBadge}>
+              <Ionicons name="speedometer-outline" size={16} color={DashboardColors.textMuted} />
+              <Text style={styles.kmText}>
+                {formatNumber(vehicle.total_km || vehicle.km_counter, 'km')}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {/* Tabs */}
-      <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
+      <View style={styles.tabsContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContent}
+        >
           {TABS.map((tab) => {
-            const TabIcon = tab.icon;
-            const isActive = activeTab === tab.id;
+            const isActive = activeTab === tab.id
             // Count items for badge
-            let count = 0;
-            if (tab.id === 'insurance') count = vehicle.insurances?.length || 0;
-            else if (tab.id === 'maintenance') count = vehicle.maintenances?.length || 0;
-            else if (tab.id === 'inspection') count = vehicle.inspections?.length || 0;
-            else if (tab.id === 'faults') count = vehicle.faultReports?.length || 0;
+            let count = 0
+            if (tab.id === 'insurance') count = vehicle.insurances?.length || 0
+            else if (tab.id === 'maintenance') count = vehicle.maintenances?.length || 0
+            else if (tab.id === 'inspection') count = vehicle.inspections?.length || 0
+            else if (tab.id === 'faults') count = vehicle.faultReports?.length || 0
 
             return (
               <TouchableOpacity
                 key={tab.id}
                 style={[
                   styles.tab,
-                  isActive && { borderBottomColor: Brand.primary },
+                  isActive && styles.tabActive
                 ]}
-                onPress={() => setActiveTab(tab.id)}
+                onPress={() => {
+                  Haptics.selectionAsync()
+                  setActiveTab(tab.id)
+                }}
               >
                 <View style={styles.tabIconRow}>
-                  <TabIcon size={18} color={isActive ? Brand.primary : colors.textMuted} />
+                  <Ionicons
+                    name={tab.icon}
+                    size={18}
+                    color={isActive ? DashboardColors.primary : DashboardColors.textMuted}
+                  />
                   {count > 0 && (
-                    <View style={[styles.tabBadge, { backgroundColor: isActive ? Brand.primary : colors.textMuted }]}>
+                    <View style={[
+                      styles.tabBadge,
+                      { backgroundColor: isActive ? DashboardColors.primary : DashboardColors.textMuted }
+                    ]}>
                       <Text style={styles.tabBadgeText}>{count}</Text>
                     </View>
                   )}
                 </View>
-                <Text
-                  style={[
-                    styles.tabText,
-                    { color: isActive ? Brand.primary : colors.textSecondary },
-                  ]}
-                >
+                <Text style={[
+                  styles.tabText,
+                  { color: isActive ? DashboardColors.primary : DashboardColors.textSecondary }
+                ]}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
-            );
+            )
           })}
         </ScrollView>
       </View>
@@ -719,7 +844,11 @@ export default function VehicleDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={DashboardColors.primary}
+          />
         }
       >
         {renderTabContent()}
@@ -738,116 +867,182 @@ export default function VehicleDetailScreen() {
         onCancel={() => setShowDeleteConfirm(false)}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.background
+  },
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 16,
+    overflow: 'hidden'
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: DashboardSpacing.lg
   },
   headerButton: {
-    padding: Spacing.sm,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
-  loadingContainer: {
+  headerTitleContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.md,
+    paddingHorizontal: DashboardSpacing.md
   },
-  loadingText: {
-    ...Typography.bodyMD,
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
   },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing['2xl'],
-    gap: Spacing.md,
-  },
-  errorTitle: {
-    ...Typography.headingMD,
-  },
-  errorText: {
-    ...Typography.bodyMD,
+  headerSubtitle: {
+    fontSize: DashboardFontSizes.sm,
+    color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
+    marginTop: 2
   },
-  retryButton: {
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+  headerActions: {
+    flexDirection: 'row',
+    gap: DashboardSpacing.sm
   },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+
+  // Summary Card Container - content alanında
+  summaryCardContainer: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing.md,
+    backgroundColor: DashboardColors.background
   },
   summaryCard: {
-    margin: Spacing.lg,
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    gap: Spacing.md,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md,
+    ...DashboardShadows.md
   },
   summaryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
-  typeIconLarge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  summaryIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: DashboardColors.primaryGlow,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   summaryInfo: {
-    flex: 1,
+    flex: 1
   },
   summaryPlate: {
-    ...Typography.headingLG,
+    fontSize: DashboardFontSizes['2xl'],
+    fontWeight: '700',
+    color: DashboardColors.textPrimary
   },
   summaryBrandModel: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.xs,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    marginTop: 2
   },
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm
+  },
+  badge: {
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.md
+  },
+  badgeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '700'
   },
   kmBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
+    gap: DashboardSpacing.xs,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.xs,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: DashboardColors.background
   },
   kmText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
+    color: DashboardColors.textPrimary
   },
+
+  // Tabs
   tabsContainer: {
     borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    backgroundColor: DashboardColors.surface
   },
   tabsContent: {
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.xs,
+    paddingHorizontal: DashboardSpacing.md,
+    gap: DashboardSpacing.xs
   },
   tab: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
     alignItems: 'center',
-    minWidth: 70,
+    minWidth: 70
+  },
+  tabActive: {
+    borderBottomColor: DashboardColors.primary
   },
   tabIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: DashboardSpacing.xs
   },
   tabBadge: {
     minWidth: 16,
@@ -855,82 +1050,175 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 4,
+    marginLeft: 4
   },
   tabBadgeText: {
-    color: '#FFFFFF',
+    color: '#fff',
     fontSize: 10,
     fontWeight: '600',
-    paddingHorizontal: 4,
+    paddingHorizontal: 4
   },
   tabText: {
-    ...Typography.bodyXS,
-    fontWeight: '500',
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '500'
   },
+
+  // Content
   scrollView: {
-    flex: 1,
+    flex: 1
   },
   scrollContent: {
-    paddingBottom: Spacing['2xl'],
+    paddingBottom: DashboardSpacing['2xl']
   },
   tabContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
   },
-  sectionCard: {
-    padding: Spacing.md,
+
+  // Sections
+  section: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    overflow: 'hidden',
+    ...DashboardShadows.sm
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingSM,
-    marginBottom: Spacing.md,
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.xs
+  },
+
+  // Info Row
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.xs,
-    gap: Spacing.sm,
+    paddingVertical: DashboardSpacing.xs,
+    gap: DashboardSpacing.sm
   },
   infoLabel: {
-    ...Typography.bodySM,
-    minWidth: 100,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    minWidth: 120
   },
   infoValue: {
-    ...Typography.bodySM,
     flex: 1,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
+    color: DashboardColors.textPrimary
   },
-  emptyTab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-    gap: Spacing.md,
-  },
-  emptyText: {
-    ...Typography.bodyMD,
-  },
+
+  // Item Cards (for tabs)
   itemCard: {
-    padding: Spacing.md,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    ...DashboardShadows.sm
   },
   itemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+    marginBottom: DashboardSpacing.md
   },
   itemTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
     flex: 1,
-    marginRight: Spacing.sm,
+    marginRight: DashboardSpacing.sm
   },
   itemTitle: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
-    flex: 1,
+    color: DashboardColors.textPrimary,
+    flex: 1
   },
   itemDetails: {
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
-});
+  statusBadge: {
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.md
+  },
+  statusBadgeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '700'
+  },
+
+  // Empty State
+  emptyTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: DashboardSpacing['4xl'],
+    gap: DashboardSpacing.md
+  },
+  emptyText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.md
+  },
+  loadingText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary
+  },
+
+  // Error
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: DashboardSpacing['2xl'],
+    gap: DashboardSpacing.md
+  },
+  errorTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center'
+  },
+  retryButton: {
+    marginTop: DashboardSpacing.md,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600'
+  }
+})

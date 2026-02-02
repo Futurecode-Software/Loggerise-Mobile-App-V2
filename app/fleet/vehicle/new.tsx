@@ -1,4 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react';
+/**
+ * Yeni Araç Oluşturma Sayfası
+ *
+ * CLAUDE.md form sayfası standardına uygun modern tasarım
+ * LinearGradient header, animasyonlu glow orbs, KeyboardAwareScrollView
+ */
+
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
@@ -6,30 +13,33 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { router } from 'expo-router';
-import { Save, AlertCircle, Truck, Link2 } from 'lucide-react-native';
-import { Input, Card, Badge, Checkbox, DateInput } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import api from '@/services/api';
-import { getErrorMessage, getValidationErrors } from '@/services/api';
-import { useToast } from '@/hooks/use-toast';
+  TextInput
+} from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
+import api from '@/services/api'
+import { getErrorMessage, getValidationErrors } from '@/services/api'
 
-// Assignment vehicle interface
-interface AssignmentVehicle {
-  id: number;
-  plate: string;
-  brand?: string;
-  model?: string;
-  model_year?: number;
-  vehicle_type: string;
-}
-
-// Vehicle type constants matching web
+// Vehicle type constants
 const VEHICLE_TYPES = {
   TRAILER: 'trailer',
   CAR: 'car',
@@ -41,48 +51,9 @@ const VEHICLE_TYPES = {
   TRACTOR: 'tractor',
   MOTORCYCLE: 'motorcycle',
   CONSTRUCTION_MACHINE: 'construction_machine',
-};
+}
 
-// Document type options
-const DOCUMENT_TYPE_OPTIONS = [
-  { label: 'A1', value: 'A1' },
-  { label: 'A2', value: 'A2' },
-  { label: 'A', value: 'A' },
-  { label: 'B1', value: 'B1' },
-  { label: 'B', value: 'B' },
-  { label: 'C1', value: 'C1' },
-  { label: 'C', value: 'C' },
-  { label: 'D1', value: 'D1' },
-  { label: 'D', value: 'D' },
-  { label: 'BE', value: 'BE' },
-  { label: 'C1E', value: 'C1E' },
-  { label: 'CE', value: 'CE' },
-  { label: 'D1E', value: 'D1E' },
-  { label: 'DE', value: 'DE' },
-  { label: 'F', value: 'F' },
-  { label: 'G', value: 'G' },
-];
-
-// Gear type options
-const GEAR_TYPE_OPTIONS = [
-  { label: 'Manuel', value: 'manual' },
-  { label: 'Otomatik', value: 'automatic' },
-];
-
-// Ownership type options
-const OWNERSHIP_TYPE_OPTIONS = [
-  { label: 'Kiralık', value: 'rented' },
-  { label: 'Özmal', value: 'owned' },
-];
-
-// Status options
-const STATUS_OPTIONS = [
-  { label: 'Müsait', value: 'available' },
-  { label: 'Kullanımda', value: 'in_use' },
-  { label: 'Bakımda', value: 'in_maintenance' },
-];
-
-// Vehicle type options
+// Options
 const VEHICLE_TYPE_OPTIONS = [
   { label: 'Çekici', value: VEHICLE_TYPES.TRUCK_TRACTOR },
   { label: 'Römork', value: VEHICLE_TYPES.TRAILER },
@@ -94,9 +65,24 @@ const VEHICLE_TYPE_OPTIONS = [
   { label: 'Traktör', value: VEHICLE_TYPES.TRACTOR },
   { label: 'Motosiklet', value: VEHICLE_TYPES.MOTORCYCLE },
   { label: 'İş Makinesi', value: VEHICLE_TYPES.CONSTRUCTION_MACHINE },
-];
+]
 
-// Euro norm options
+const GEAR_TYPE_OPTIONS = [
+  { label: 'Manuel', value: 'manual' },
+  { label: 'Otomatik', value: 'automatic' },
+]
+
+const OWNERSHIP_TYPE_OPTIONS = [
+  { label: 'Özmal', value: 'owned' },
+  { label: 'Kiralık', value: 'rented' },
+]
+
+const STATUS_OPTIONS = [
+  { label: 'Müsait', value: 'available' },
+  { label: 'Kullanımda', value: 'in_use' },
+  { label: 'Bakımda', value: 'in_maintenance' },
+]
+
 const EURO_NORM_OPTIONS = [
   { label: 'Euro 3', value: 'euro_3' },
   { label: 'Euro 4', value: 'euro_4' },
@@ -105,45 +91,77 @@ const EURO_NORM_OPTIONS = [
   { label: 'Euro 6d', value: 'euro_6d' },
   { label: 'Euro 6e', value: 'euro_6e' },
   { label: 'Elektrikli', value: 'electric' },
-];
+]
 
-// Side door options
 const SIDE_DOOR_OPTIONS = [
   { label: 'Kapaksız', value: 'none' },
   { label: '4 Kapak', value: '4_doors' },
   { label: '6 Kapak', value: '6_doors' },
   { label: '8 Kapak', value: '8_doors' },
-];
+]
 
-// Domestic vehicle class options
-const DOMESTIC_VEHICLE_CLASS_OPTIONS = [
-  { label: 'Seçiniz...', value: '' },
-  { label: 'Panelvan', value: 'panel_van' },
-  { label: 'Pikap', value: 'pickup' },
-  { label: 'Sprinter', value: 'sprinter' },
-  { label: 'Kamyon', value: 'truck' },
-  { label: 'Çekici', value: 'truck_tractor' },
-];
-
-// Tabs matching web version
+// Tabs
 const TABS = [
-  { id: 'basic', label: 'Temel Bilgiler', icon: '🚛' },
-  { id: 'license', label: 'Ruhsat Bilgileri', icon: '📝' },
-  { id: 'tractor', label: 'Çekici Bilgileri', icon: '⚙️' },
-  { id: 'trailer', label: 'Römork Bilgileri', icon: '📦' },
-  { id: 'ownership', label: 'Sahiplik', icon: '👤' },
-  { id: 'assignment', label: 'Eşleştirme', icon: '🔗' },
-];
+  { id: 'basic', label: 'Temel Bilgiler', icon: 'car-sport-outline' as keyof typeof Ionicons.glyphMap },
+  { id: 'license', label: 'Ruhsat Bilgileri', icon: 'document-text-outline' as keyof typeof Ionicons.glyphMap },
+  { id: 'tractor', label: 'Çekici Bilgileri', icon: 'settings-outline' as keyof typeof Ionicons.glyphMap },
+  { id: 'trailer', label: 'Römork Bilgileri', icon: 'cube-outline' as keyof typeof Ionicons.glyphMap },
+  { id: 'ownership', label: 'Sahiplik', icon: 'person-outline' as keyof typeof Ionicons.glyphMap },
+]
 
 export default function NewVehicleScreen() {
-  const colors = Colors.light;
-  const currentYear = new Date().getFullYear();
-  const { success, error } = useToast();
+  const insets = useSafeAreaInsets()
+  const currentYear = new Date().getFullYear()
 
-  // Form state
-  const [activeTab, setActiveTab] = useState('basic');
+  // Animasyonlu orb'lar için shared values
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
+
+  useEffect(() => {
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
+
+  const [activeTab, setActiveTab] = useState('basic')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
   const [formData, setFormData] = useState({
-    // Temel Bilgiler (Basic Information) - Tab 1
+    // Temel Bilgiler
     vehicle_type: '',
     plate: '',
     brand: '',
@@ -160,8 +178,10 @@ export default function NewVehicleScreen() {
     total_km: '',
     net_weight: '',
     max_loaded_weight: '',
+    domestic_transport_capable: false,
+    domestic_vehicle_class: '',
 
-    // Ruhsat Bilgileri (License Information) - Tab 2
+    // Ruhsat Bilgileri
     registration_serial_no: '',
     first_registration_date: '',
     registration_date: '',
@@ -169,15 +189,16 @@ export default function NewVehicleScreen() {
     engine_power: '',
     wheel_formula: '',
     chassis_number: '',
+    license_info: '',
 
-    // Çekici Bilgileri (Tractor Information) - Tab 3
+    // Çekici Bilgileri
     euro_norm: '',
     fuel_capacity: '',
     has_gps_tracker: false,
     gps_identity_no: '',
     battery_capacity: '',
 
-    // Römork Bilgileri (Trailer Information) - Tab 4
+    // Römork Bilgileri
     trailer_width: '',
     trailer_length: '',
     trailer_height: '',
@@ -193,7 +214,7 @@ export default function NewVehicleScreen() {
     has_roller: false,
     has_electronic_scale: false,
 
-    // Sahiplik Bilgileri (Ownership Information) - Tab 5
+    // Sahiplik Bilgileri
     full_name: '',
     company_name: '',
     id_or_tax_no: '',
@@ -201,1040 +222,980 @@ export default function NewVehicleScreen() {
     notary_sale_date: '',
     address: '',
 
-    // Eşleştirme (Assignment) - Tab 6
-    assignment_vehicle_id: '',
-
-    // Yurtiçi Taşımacılık
-    domestic_transport_capable: false,
-    domestic_vehicle_class: '',
-
-    // Other
-    license_info: '',
-    sort_order: '0',
     is_active: true,
-  });
+  })
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Assignment vehicles state
-  const [tractors, setTractors] = useState<AssignmentVehicle[]>([]);
-  const [trailers, setTrailers] = useState<AssignmentVehicle[]>([]);
-  const [loadingVehicles, setLoadingVehicles] = useState(false);
-
-  // Load tractors and trailers for assignment
-  useEffect(() => {
-    const loadAssignmentVehicles = async () => {
-      setLoadingVehicles(true);
-      try {
-        // Load all vehicles and filter
-        const response = await api.get('/vehicles', {
-          params: { per_page: 1000, is_active: true }
-        });
-
-        // Handle response structure safely
-        let vehicles = [];
-        if (response.data) {
-          // If response.data is an array, use it directly
-          if (Array.isArray(response.data)) {
-            vehicles = response.data;
-          }
-          // If response.data has a 'data' property (paginated response)
-          else if (Array.isArray(response.data.data)) {
-            vehicles = response.data.data;
-          }
-        }
-
-        // Filter tractors (truck_tractor) and trailers
-        const tractorList = vehicles.filter((v: AssignmentVehicle) => v.vehicle_type === 'truck_tractor');
-        const trailerList = vehicles.filter((v: AssignmentVehicle) => v.vehicle_type === 'trailer');
-
-        setTractors(tractorList);
-        setTrailers(trailerList);
-      } catch (error) {
-        console.error('Failed to load vehicles for assignment:', error);
-        // Set empty arrays on error to prevent crashes
-        setTractors([]);
-        setTrailers([]);
-      } finally {
-        setLoadingVehicles(false);
-      }
-    };
-
-    loadAssignmentVehicles();
-  }, []);
-
-  // Determine which tabs to show based on vehicle type
-  const isTruckTractor = formData.vehicle_type === VEHICLE_TYPES.TRUCK_TRACTOR;
-  const isTrailer = formData.vehicle_type === VEHICLE_TYPES.TRAILER;
-  const showAssignmentTab = isTruckTractor || isTrailer;
+  const isTruckTractor = formData.vehicle_type === VEHICLE_TYPES.TRUCK_TRACTOR
+  const isTrailer = formData.vehicle_type === VEHICLE_TYPES.TRAILER
+  const isElectric = formData.euro_norm === 'electric'
 
   // Filter tabs based on vehicle type
   const filteredTabs = TABS.filter(tab => {
-    if (tab.id === 'tractor' && !isTruckTractor) return false;
-    if (tab.id === 'trailer' && !isTrailer) return false;
-    if (tab.id === 'assignment' && !showAssignmentTab) return false;
-    return true;
-  });
+    if (tab.id === 'tractor' && !isTruckTractor) return false
+    if (tab.id === 'trailer' && !isTrailer) return false
+    return true
+  })
 
-  // Field to tab mapping for error counting
-  const fieldToTab: Record<string, string> = {
-    // Temel Bilgiler
-    vehicle_type: 'basic', plate: 'basic', brand: 'basic', model: 'basic',
-    model_year: 'basic', color: 'basic', commercial_name: 'basic',
-    vehicle_class: 'basic', vehicle_category: 'basic', gear_type: 'basic',
-    document_type: 'basic', ownership_type: 'basic', status: 'basic',
-    total_km: 'basic', net_weight: 'basic', max_loaded_weight: 'basic',
-    domestic_transport_capable: 'basic', domestic_vehicle_class: 'basic',
-    // Ruhsat Bilgileri
-    registration_serial_no: 'license', first_registration_date: 'license',
-    registration_date: 'license', engine_number: 'license',
-    engine_power: 'license', wheel_formula: 'license', chassis_number: 'license',
-    // Çekici Bilgileri
-    euro_norm: 'tractor', fuel_capacity: 'tractor', battery_capacity: 'tractor',
-    gps_identity_no: 'tractor', has_gps_tracker: 'tractor',
-    // Römork Bilgileri
-    trailer_width: 'trailer', trailer_length: 'trailer', trailer_height: 'trailer',
-    trailer_volume: 'trailer', side_door_count: 'trailer',
-    // Sahiplik Bilgileri
-    full_name: 'ownership', company_name: 'ownership', id_or_tax_no: 'ownership',
-    notary_name: 'ownership', notary_sale_date: 'ownership', address: 'ownership',
-    // Eşleştirme
-    assignment_vehicle_id: 'assignment',
-  };
-
-  // Count errors per tab
-  const getTabErrorCount = useCallback((tabId: string) => {
-    return Object.keys(errors).filter(field => fieldToTab[field] === tabId).length;
-  }, [errors]);
-
-  // Handle input change
-  const handleInputChange = useCallback((field: string, value: any) => {
+  const handleInputChange = useCallback((key: string, value: any) => {
     setFormData(prev => {
-      const updated = { ...prev, [field]: value };
-      
+      const updated = { ...prev, [key]: value }
+
       // Clear error for this field
-      if (errors[field]) {
+      if (errors[key]) {
         setErrors(prevErrors => {
-          const newErrors = { ...prevErrors };
-          delete newErrors[field];
-          return newErrors;
-        });
+          const newErrors = { ...prevErrors }
+          delete newErrors[key]
+          return newErrors
+        })
       }
 
-      // Reset tractor/trailer specific fields when vehicle type changes
-      if (field === 'vehicle_type') {
+      // Reset fields when vehicle type changes
+      if (key === 'vehicle_type') {
         if (value !== VEHICLE_TYPES.TRUCK_TRACTOR) {
-          updated.euro_norm = '';
-          updated.fuel_capacity = '';
-          updated.has_gps_tracker = false;
-          updated.gps_identity_no = '';
-          updated.battery_capacity = '';
+          updated.euro_norm = ''
+          updated.fuel_capacity = ''
+          updated.has_gps_tracker = false
+          updated.gps_identity_no = ''
+          updated.battery_capacity = ''
         }
         if (value !== VEHICLE_TYPES.TRAILER) {
-          updated.trailer_width = '';
-          updated.trailer_length = '';
-          updated.trailer_height = '';
-          updated.trailer_volume = '';
-          updated.side_door_count = '';
-          updated.has_xl_certificate = false;
-          updated.is_double_deck = false;
-          updated.has_p400 = false;
-          updated.has_sliding_curtain = false;
-          updated.is_lightweight = false;
-          updated.is_train_compatible = false;
-          updated.has_tarpaulin = false;
-          updated.has_roller = false;
-          updated.has_electronic_scale = false;
-        }
-        if (value !== VEHICLE_TYPES.TRUCK_TRACTOR && value !== VEHICLE_TYPES.TRAILER) {
-          updated.assignment_vehicle_id = '';
+          updated.trailer_width = ''
+          updated.trailer_length = ''
+          updated.trailer_height = ''
+          updated.trailer_volume = ''
+          updated.side_door_count = ''
+          updated.has_xl_certificate = false
+          updated.is_double_deck = false
+          updated.has_p400 = false
+          updated.has_sliding_curtain = false
+          updated.is_lightweight = false
+          updated.is_train_compatible = false
+          updated.has_tarpaulin = false
+          updated.has_roller = false
+          updated.has_electronic_scale = false
         }
       }
 
-      // Handle electric vehicle - hide fuel capacity
-      if (field === 'euro_norm' && value === 'electric') {
-        updated.fuel_capacity = '';
+      // Handle electric vehicle
+      if (key === 'euro_norm' && value === 'electric') {
+        updated.fuel_capacity = ''
       }
 
-      return updated;
-    });
-  }, [errors]);
+      return updated
+    })
+  }, [errors])
 
-  // Validation function matching web rules exactly
-  const validateForm = useCallback(() => {
-    const newErrors: Record<string, string> = {};
+  const validateForm = useCallback((): boolean => {
+    const newErrors: Record<string, string> = {}
 
-    // Required fields validation (matching StoreVehicleRequest)
-    if (!formData.vehicle_type) {
-      newErrors.vehicle_type = 'Araç tipi zorunludur.';
-    }
-    if (!formData.plate) {
-      newErrors.plate = 'Plaka zorunludur.';
-    }
-    if (!formData.brand) {
-      newErrors.brand = 'Marka zorunludur.';
-    }
-    if (!formData.model) {
-      newErrors.model = 'Model zorunludur.';
-    }
+    if (!formData.vehicle_type) newErrors.vehicle_type = 'Araç tipi zorunludur'
+    if (!formData.plate) newErrors.plate = 'Plaka zorunludur'
+    if (!formData.brand) newErrors.brand = 'Marka zorunludur'
+    if (!formData.model) newErrors.model = 'Model zorunludur'
     if (!formData.model_year) {
-      newErrors.model_year = 'Model yılı zorunludur.';
+      newErrors.model_year = 'Model yılı zorunludur'
     } else {
-      const year = parseInt(formData.model_year);
-      if (isNaN(year)) {
-        newErrors.model_year = 'Model yılı sayı olmalıdır.';
-      } else if (year < 1900) {
-        newErrors.model_year = 'Model yılı 1900\'den küçük olamaz.';
-      } else if (year > currentYear + 1) {
-        newErrors.model_year = 'Model yılı gelecek yıldan büyük olamaz.';
+      const year = parseInt(formData.model_year)
+      if (isNaN(year) || year < 1900 || year > currentYear + 1) {
+        newErrors.model_year = 'Geçerli bir model yılı giriniz'
       }
     }
-    if (!formData.color) {
-      newErrors.color = 'Renk zorunludur.';
-    }
-    if (!formData.gear_type) {
-      newErrors.gear_type = 'Vites tipi zorunludur.';
-    }
-    if (!formData.document_type) {
-      newErrors.document_type = 'Ehliyet sınıfı zorunludur.';
-    }
-    if (!formData.ownership_type) {
-      newErrors.ownership_type = 'Sahiplik tipi zorunludur.';
-    }
-    if (!formData.status) {
-      newErrors.status = 'Durum zorunludur.';
-    }
+    if (!formData.color) newErrors.color = 'Renk zorunludur'
 
-    // Numeric validations
-    if (formData.total_km && isNaN(parseInt(formData.total_km))) {
-      newErrors.total_km = 'Toplam km sayı olmalıdır.';
-    }
-    if (formData.net_weight && isNaN(parseInt(formData.net_weight))) {
-      newErrors.net_weight = 'Net ağırlık sayı olmalıdır.';
-    }
-    if (formData.max_loaded_weight && isNaN(parseInt(formData.max_loaded_weight))) {
-      newErrors.max_loaded_weight = 'Azami yüklü ağırlık sayı olmalıdır.';
-    }
-    if (formData.engine_power && isNaN(parseInt(formData.engine_power))) {
-      newErrors.engine_power = 'Motor gücü sayı olmalıdır.';
-    }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [formData, currentYear])
 
-    // Wheel formula validation
-    if (formData.wheel_formula && !/^\d+x\d+$/.test(formData.wheel_formula)) {
-      newErrors.wheel_formula = 'Tekerlek düzeni 4x2, 6x4 gibi bir format olmalıdır.';
-    }
-
-    // Tractor-specific validations
-    if (isTruckTractor) {
-      if (formData.fuel_capacity && isNaN(parseInt(formData.fuel_capacity))) {
-        newErrors.fuel_capacity = 'Yakıt kapasitesi sayı olmalıdır.';
-      }
-      if (formData.battery_capacity && isNaN(parseInt(formData.battery_capacity))) {
-        newErrors.battery_capacity = 'Batarya kapasitesi sayı olmalıdır.';
-      }
-    }
-
-    // Trailer-specific validations
-    if (isTrailer) {
-      if (formData.trailer_width && isNaN(parseFloat(formData.trailer_width))) {
-        newErrors.trailer_width = 'Römork eni sayı olmalıdır.';
-      }
-      if (formData.trailer_length && isNaN(parseFloat(formData.trailer_length))) {
-        newErrors.trailer_length = 'Römork boyu sayı olmalıdır.';
-      }
-      if (formData.trailer_height && isNaN(parseFloat(formData.trailer_height))) {
-        newErrors.trailer_height = 'Römork yüksekliği sayı olmalıdır.';
-      }
-      if (formData.trailer_volume && isNaN(parseFloat(formData.trailer_volume))) {
-        newErrors.trailer_volume = 'Römork hacmi sayı olmalıdır.';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData, isTruckTractor, isTrailer, currentYear]);
-
-  // Submit handler
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
-      // Find first error and switch to its tab
-      const firstErrorField = Object.keys(errors)[0];
-      if (firstErrorField) {
-        // Determine which tab has the error
-        if (['vehicle_type', 'plate', 'brand', 'model', 'model_year', 'color', 'commercial_name', 'vehicle_class', 'vehicle_category', 'gear_type', 'document_type', 'ownership_type', 'status', 'total_km', 'net_weight', 'max_loaded_weight'].includes(firstErrorField)) {
-          setActiveTab('basic');
-        } else if (['registration_serial_no', 'first_registration_date', 'registration_date', 'engine_number', 'engine_power', 'wheel_formula', 'chassis_number'].includes(firstErrorField)) {
-          setActiveTab('license');
-        } else if (['euro_norm', 'fuel_capacity', 'has_gps_tracker', 'gps_identity_no', 'battery_capacity'].includes(firstErrorField)) {
-          setActiveTab('tractor');
-        } else if (['trailer_width', 'trailer_length', 'trailer_height', 'trailer_volume', 'side_door_count', 'has_xl_certificate', 'is_double_deck', 'has_p400', 'has_sliding_curtain', 'is_lightweight', 'is_train_compatible', 'has_tarpaulin', 'has_roller', 'has_electronic_scale'].includes(firstErrorField)) {
-          setActiveTab('trailer');
-        } else if (['full_name', 'company_name', 'id_or_tax_no', 'notary_name', 'notary_sale_date', 'address'].includes(firstErrorField)) {
-          setActiveTab('ownership');
-        } else if (['assignment_vehicle_id'].includes(firstErrorField)) {
-          setActiveTab('assignment');
-        }
+      Toast.show({
+        type: 'error',
+        text1: 'Lütfen formu eksiksiz doldurunuz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      // Switch to tab with errors
+      if (errors.vehicle_type || errors.plate || errors.brand || errors.model || errors.model_year || errors.color) {
+        setActiveTab('basic')
       }
-      return;
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      // Prepare data - only send non-empty values
-      const data: Record<string, any> = {};
+      const data: Record<string, any> = {}
       Object.entries(formData).forEach(([key, value]) => {
         if (value !== '' && value !== null && value !== undefined) {
-          // Convert boolean strings to actual booleans for checkboxes
           if (typeof value === 'boolean') {
-            data[key] = value ? '1' : '0';
+            data[key] = value ? '1' : '0'
           } else {
-            data[key] = value;
+            data[key] = value
           }
         }
-      });
+      })
 
-      // Use mobile API endpoint
-      await api.post('/vehicles', data);
+      await api.post('/vehicles', data)
 
-      // Success - show toast message and redirect
-      success('Başarılı', 'Araç başarıyla oluşturuldu.');
-      router.back();
+      Toast.show({
+        type: 'success',
+        text1: 'Araç başarıyla oluşturuldu',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      router.back()
     } catch (error: any) {
-      const validationErrors = getValidationErrors(error);
+      const validationErrors = getValidationErrors(error)
       if (validationErrors) {
-        // Convert Laravel errors to flat object
-        const flatErrors: Record<string, string> = {};
+        const flatErrors: Record<string, string> = {}
         Object.entries(validationErrors).forEach(([field, messages]) => {
           if (Array.isArray(messages) && messages.length > 0) {
-            flatErrors[field] = messages[0];
+            flatErrors[field] = messages[0]
           }
-        });
-        setErrors(flatErrors);
-        
-        // Auto-focus to first error
-        const firstErrorField = Object.keys(flatErrors)[0];
-        if (firstErrorField) {
-          if (['vehicle_type', 'plate', 'brand', 'model', 'model_year', 'color', 'commercial_name', 'vehicle_class', 'vehicle_category', 'gear_type', 'document_type', 'ownership_type', 'status', 'total_km', 'net_weight', 'max_loaded_weight'].includes(firstErrorField)) {
-            setActiveTab('basic');
-          } else if (['registration_serial_no', 'first_registration_date', 'registration_date', 'engine_number', 'engine_power', 'wheel_formula', 'chassis_number'].includes(firstErrorField)) {
-            setActiveTab('license');
-          } else if (['euro_norm', 'fuel_capacity', 'has_gps_tracker', 'gps_identity_no', 'battery_capacity'].includes(firstErrorField)) {
-            setActiveTab('tractor');
-          } else if (['trailer_width', 'trailer_length', 'trailer_height', 'trailer_volume', 'side_door_count', 'has_xl_certificate', 'is_double_deck', 'has_p400', 'has_sliding_curtain', 'is_lightweight', 'is_train_compatible', 'has_tarpaulin', 'has_roller', 'has_electronic_scale'].includes(firstErrorField)) {
-            setActiveTab('trailer');
-          } else if (['full_name', 'company_name', 'id_or_tax_no', 'notary_name', 'notary_sale_date', 'address'].includes(firstErrorField)) {
-            setActiveTab('ownership');
-          } else if (['assignment_vehicle_id'].includes(firstErrorField)) {
-            setActiveTab('assignment');
-          }
-        }
+        })
+        setErrors(flatErrors)
       } else {
-        error('Hata', getErrorMessage(error));
+        Toast.show({
+          type: 'error',
+          text1: getErrorMessage(error),
+          position: 'top',
+          visibilityTime: 1500
+        })
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  }, [formData, validateForm, errors]);
+  }, [formData, validateForm, errors])
+
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
+
+  // Section Header Component
+  const renderSectionHeader = (title: string, icon: keyof typeof Ionicons.glyphMap) => (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionIcon}>
+        <Ionicons name={icon} size={18} color={DashboardColors.primary} />
+      </View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  )
+
+  // Option chips render
+  const renderOptionChips = (
+    options: { label: string; value: string }[],
+    selectedValue: string,
+    onSelect: (value: string) => void
+  ) => (
+    <View style={styles.chipGroup}>
+      {options.map((option) => (
+        <TouchableOpacity
+          key={option.value}
+          style={[
+            styles.chip,
+            selectedValue === option.value && styles.chipActive
+          ]}
+          onPress={() => onSelect(option.value)}
+        >
+          <Text style={[
+            styles.chipText,
+            selectedValue === option.value && styles.chipTextActive
+          ]}>
+            {option.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  )
+
+  // Checkbox render
+  const renderCheckbox = (label: string, value: boolean, onChange: (val: boolean) => void) => (
+    <TouchableOpacity
+      style={styles.checkboxRow}
+      onPress={() => onChange(!value)}
+    >
+      <View style={[styles.checkbox, value && styles.checkboxChecked]}>
+        {value && <Ionicons name="checkmark" size={14} color="#fff" />}
+      </View>
+      <Text style={styles.checkboxLabel}>{label}</Text>
+    </TouchableOpacity>
+  )
 
   // Render tab content
   const renderTabContent = () => {
     switch (activeTab) {
       case 'basic':
         return (
-          <>
-            <SelectInput
-              label="Araç Tipi *"
-              options={VEHICLE_TYPE_OPTIONS}
-              selectedValue={formData.vehicle_type}
-              onValueChange={(value) => handleInputChange('vehicle_type', value)}
-              error={errors.vehicle_type}
-            />
-            <Input
-              label="Plaka *"
-              placeholder="Örn: 34 ABC 123"
-              value={formData.plate}
-              onChangeText={(text) => handleInputChange('plate', text.toUpperCase())}
-              error={errors.plate}
-              autoCapitalize="characters"
-            />
-            <Input
-              label="Marka *"
-              placeholder="Örn: Mercedes-Benz"
-              value={formData.brand}
-              onChangeText={(text) => handleInputChange('brand', text)}
-              error={errors.brand}
-            />
-            <Input
-              label="Model *"
-              placeholder="Örn: Actros"
-              value={formData.model}
-              onChangeText={(text) => handleInputChange('model', text)}
-              error={errors.model}
-            />
-            <Input
-              label="Model Yılı *"
-              placeholder={String(currentYear)}
-              value={formData.model_year}
-              onChangeText={(text) => handleInputChange('model_year', text)}
-              error={errors.model_year}
-              keyboardType="numeric"
-              maxLength={4}
-            />
-            <Input
-              label="Renk *"
-              placeholder="Örn: Beyaz"
-              value={formData.color}
-              onChangeText={(text) => handleInputChange('color', text)}
-              error={errors.color}
-            />
-            <Input
-              label="Ticari Adı"
-              placeholder="Opsiyonel"
-              value={formData.commercial_name}
-              onChangeText={(text) => handleInputChange('commercial_name', text)}
-              error={errors.commercial_name}
-            />
-            <Input
-              label="Araç Cinsi"
-              placeholder="Opsiyonel"
-              value={formData.vehicle_class}
-              onChangeText={(text) => handleInputChange('vehicle_class', text)}
-              error={errors.vehicle_class}
-            />
-            <Input
-              label="Araç Sınıfı"
-              placeholder="Opsiyonel"
-              value={formData.vehicle_category}
-              onChangeText={(text) => handleInputChange('vehicle_category', text)}
-              error={errors.vehicle_category}
-            />
-            <SelectInput
-              label="Vites Tipi *"
-              options={GEAR_TYPE_OPTIONS}
-              selectedValue={formData.gear_type}
-              onValueChange={(value) => handleInputChange('gear_type', value)}
-              error={errors.gear_type}
-            />
-            <SelectInput
-              label="Ehliyet Sınıfı *"
-              options={DOCUMENT_TYPE_OPTIONS}
-              selectedValue={formData.document_type}
-              onValueChange={(value) => handleInputChange('document_type', value)}
-              error={errors.document_type}
-            />
-            <SelectInput
-              label="Sahiplik Tipi *"
-              options={OWNERSHIP_TYPE_OPTIONS}
-              selectedValue={formData.ownership_type}
-              onValueChange={(value) => handleInputChange('ownership_type', value)}
-              error={errors.ownership_type}
-            />
-            <SelectInput
-              label="Durum *"
-              options={STATUS_OPTIONS}
-              selectedValue={formData.status}
-              onValueChange={(value) => handleInputChange('status', value)}
-              error={errors.status}
-            />
-            <Input
-              label="Toplam KM"
-              placeholder="Opsiyonel"
-              value={formData.total_km}
-              onChangeText={(text) => handleInputChange('total_km', text.replace(/[^0-9]/g, ''))}
-              error={errors.total_km}
-              keyboardType="numeric"
-            />
-            <Input
-              label="Net Ağırlık (Kg)"
-              placeholder="Opsiyonel"
-              value={formData.net_weight}
-              onChangeText={(text) => handleInputChange('net_weight', text.replace(/[^0-9]/g, ''))}
-              error={errors.net_weight}
-              keyboardType="numeric"
-            />
-            <Input
-              label="Azami Yüklü Ağırlık (Kg)"
-              placeholder="Opsiyonel"
-              value={formData.max_loaded_weight}
-              onChangeText={(text) => handleInputChange('max_loaded_weight', text.replace(/[^0-9]/g, ''))}
-              error={errors.max_loaded_weight}
-              keyboardType="numeric"
-            />
-
-            {/* Yurtiçi Taşımacılık Bölümü */}
-            <View style={[styles.switchRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={styles.switchContent}>
-                <Text style={[styles.switchLabel, { color: colors.text }]}>
-                  Yurtiçi Taşıma Yapabilir
+          <View style={styles.section}>
+            {renderSectionHeader('Temel Bilgiler', 'car-sport-outline')}
+            <View style={styles.sectionContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Araç Tipi <Text style={styles.required}>*</Text>
                 </Text>
-                <Text style={[styles.switchDescription, { color: colors.textSecondary }]}>
-                  Bu araç yurtiçi taşımacılık için kullanılabilir
-                </Text>
+                {renderOptionChips(VEHICLE_TYPE_OPTIONS.slice(0, 5), formData.vehicle_type, (v) => handleInputChange('vehicle_type', v))}
+                {renderOptionChips(VEHICLE_TYPE_OPTIONS.slice(5), formData.vehicle_type, (v) => handleInputChange('vehicle_type', v))}
+                {errors.vehicle_type && <Text style={styles.errorText}>{errors.vehicle_type}</Text>}
               </View>
-              <Checkbox
-                value={formData.domestic_transport_capable}
-                onValueChange={(val) => {
-                  handleInputChange('domestic_transport_capable', val);
-                  if (!val) {
-                    handleInputChange('domestic_vehicle_class', '');
-                  }
-                }}
-              />
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Plaka <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, errors.plate && styles.inputError]}
+                  value={formData.plate}
+                  onChangeText={(text) => handleInputChange('plate', text.toUpperCase())}
+                  placeholder="Örn: 34 ABC 123"
+                  placeholderTextColor={DashboardColors.textMuted}
+                  autoCapitalize="characters"
+                />
+                {errors.plate && <Text style={styles.errorText}>{errors.plate}</Text>}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Marka <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, errors.brand && styles.inputError]}
+                  value={formData.brand}
+                  onChangeText={(text) => handleInputChange('brand', text)}
+                  placeholder="Örn: Mercedes-Benz"
+                  placeholderTextColor={DashboardColors.textMuted}
+                />
+                {errors.brand && <Text style={styles.errorText}>{errors.brand}</Text>}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Model <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, errors.model && styles.inputError]}
+                  value={formData.model}
+                  onChangeText={(text) => handleInputChange('model', text)}
+                  placeholder="Örn: Actros"
+                  placeholderTextColor={DashboardColors.textMuted}
+                />
+                {errors.model && <Text style={styles.errorText}>{errors.model}</Text>}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Model Yılı <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, errors.model_year && styles.inputError]}
+                  value={formData.model_year}
+                  onChangeText={(text) => handleInputChange('model_year', text)}
+                  placeholder={String(currentYear)}
+                  placeholderTextColor={DashboardColors.textMuted}
+                  keyboardType="numeric"
+                  maxLength={4}
+                />
+                {errors.model_year && <Text style={styles.errorText}>{errors.model_year}</Text>}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Renk <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, errors.color && styles.inputError]}
+                  value={formData.color}
+                  onChangeText={(text) => handleInputChange('color', text)}
+                  placeholder="Örn: Beyaz"
+                  placeholderTextColor={DashboardColors.textMuted}
+                />
+                {errors.color && <Text style={styles.errorText}>{errors.color}</Text>}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Vites Tipi</Text>
+                {renderOptionChips(GEAR_TYPE_OPTIONS, formData.gear_type, (v) => handleInputChange('gear_type', v))}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Sahiplik Tipi</Text>
+                {renderOptionChips(OWNERSHIP_TYPE_OPTIONS, formData.ownership_type, (v) => handleInputChange('ownership_type', v))}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Durum</Text>
+                {renderOptionChips(STATUS_OPTIONS, formData.status, (v) => handleInputChange('status', v))}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Toplam KM</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.total_km}
+                  onChangeText={(text) => handleInputChange('total_km', text.replace(/[^0-9]/g, ''))}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Net Ağırlık (Kg)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.net_weight}
+                  onChangeText={(text) => handleInputChange('net_weight', text.replace(/[^0-9]/g, ''))}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Azami Yüklü Ağırlık (Kg)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.max_loaded_weight}
+                  onChangeText={(text) => handleInputChange('max_loaded_weight', text.replace(/[^0-9]/g, ''))}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              {renderCheckbox('Yurtiçi Taşıma Yapabilir', formData.domestic_transport_capable, (v) => handleInputChange('domestic_transport_capable', v))}
             </View>
-            {formData.domestic_transport_capable && (
-              <SelectInput
-                label="Yurtiçi Araç Sınıfı"
-                options={DOMESTIC_VEHICLE_CLASS_OPTIONS}
-                selectedValue={formData.domestic_vehicle_class}
-                onValueChange={(value) => handleInputChange('domestic_vehicle_class', value)}
-                error={errors.domestic_vehicle_class}
-              />
-            )}
-          </>
-        );
+          </View>
+        )
 
       case 'license':
         return (
-          <>
-            <Input
-              label="Tescil Sıra No"
-              placeholder="Opsiyonel"
-              value={formData.registration_serial_no}
-              onChangeText={(text) => handleInputChange('registration_serial_no', text)}
-              error={errors.registration_serial_no}
-            />
-            <DateInput
-              label="İlk Tescil Tarihi"
-              placeholder="Tarih seçiniz"
-              value={formData.first_registration_date}
-              onChangeText={(text) => handleInputChange('first_registration_date', text)}
-              error={errors.first_registration_date}
-            />
-            <DateInput
-              label="Tescil Tarihi"
-              placeholder="Tarih seçiniz"
-              value={formData.registration_date}
-              onChangeText={(text) => handleInputChange('registration_date', text)}
-              error={errors.registration_date}
-            />
-            <Input
-              label="Motor Numarası"
-              placeholder="Opsiyonel"
-              value={formData.engine_number}
-              onChangeText={(text) => handleInputChange('engine_number', text)}
-              error={errors.engine_number}
-            />
-            <Input
-              label="Motor Gücü (kW)"
-              placeholder="Opsiyonel"
-              value={formData.engine_power}
-              onChangeText={(text) => handleInputChange('engine_power', text.replace(/[^0-9]/g, ''))}
-              error={errors.engine_power}
-              keyboardType="numeric"
-            />
-            <Input
-              label="Tekerlek Düzeni"
-              placeholder="Örn: 4x2, 6x4"
-              value={formData.wheel_formula}
-              onChangeText={(text) => handleInputChange('wheel_formula', text)}
-              error={errors.wheel_formula}
-            />
-            <Input
-              label="Şasi Numarası"
-              placeholder="Opsiyonel"
-              value={formData.chassis_number}
-              onChangeText={(text) => handleInputChange('chassis_number', text)}
-              error={errors.chassis_number}
-            />
-          </>
-        );
+          <View style={styles.section}>
+            {renderSectionHeader('Ruhsat Bilgileri', 'document-text-outline')}
+            <View style={styles.sectionContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Tescil Sıra No</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.registration_serial_no}
+                  onChangeText={(text) => handleInputChange('registration_serial_no', text)}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Motor Numarası</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.engine_number}
+                  onChangeText={(text) => handleInputChange('engine_number', text)}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Motor Gücü (kW)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.engine_power}
+                  onChangeText={(text) => handleInputChange('engine_power', text.replace(/[^0-9]/g, ''))}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Tekerlek Düzeni</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.wheel_formula}
+                  onChangeText={(text) => handleInputChange('wheel_formula', text)}
+                  placeholder="Örn: 4x2, 6x4"
+                  placeholderTextColor={DashboardColors.textMuted}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Şasi Numarası</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.chassis_number}
+                  onChangeText={(text) => handleInputChange('chassis_number', text)}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                />
+              </View>
+            </View>
+          </View>
+        )
 
       case 'tractor':
-        if (!isTruckTractor) return null;
+        if (!isTruckTractor) return null
         return (
-          <>
-            <SelectInput
-              label="Euro Norm"
-              options={EURO_NORM_OPTIONS}
-              selectedValue={formData.euro_norm}
-              onValueChange={(value) => handleInputChange('euro_norm', value)}
-              error={errors.euro_norm}
-            />
-            {formData.euro_norm !== 'electric' && (
-              <Input
-                label="Yakıt Kapasitesi (Lt)"
-                placeholder="Opsiyonel"
-                value={formData.fuel_capacity}
-                onChangeText={(text) => handleInputChange('fuel_capacity', text.replace(/[^0-9]/g, ''))}
-                error={errors.fuel_capacity}
-                keyboardType="numeric"
-              />
-            )}
-            {formData.euro_norm === 'electric' && (
-              <Input
-                label="Batarya Kapasitesi (kWh)"
-                placeholder="Opsiyonel"
-                value={formData.battery_capacity}
-                onChangeText={(text) => handleInputChange('battery_capacity', text.replace(/[^0-9]/g, ''))}
-                error={errors.battery_capacity}
-                keyboardType="numeric"
-              />
-            )}
-            <View style={styles.checkboxRow}>
-              <Checkbox
-                value={formData.has_gps_tracker}
-                onValueChange={(val) => handleInputChange('has_gps_tracker', val)}
-              />
-              <Text style={[styles.checkboxRowLabel, { color: Colors.light.text }]}>
-                Uydu Takip Cihazı Var
-              </Text>
+          <View style={styles.section}>
+            {renderSectionHeader('Çekici Bilgileri', 'settings-outline')}
+            <View style={styles.sectionContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Euro Norm</Text>
+                {renderOptionChips(EURO_NORM_OPTIONS.slice(0, 4), formData.euro_norm, (v) => handleInputChange('euro_norm', v))}
+                {renderOptionChips(EURO_NORM_OPTIONS.slice(4), formData.euro_norm, (v) => handleInputChange('euro_norm', v))}
+              </View>
+
+              {!isElectric && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Yakıt Kapasitesi (Lt)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.fuel_capacity}
+                    onChangeText={(text) => handleInputChange('fuel_capacity', text.replace(/[^0-9]/g, ''))}
+                    placeholder="Opsiyonel"
+                    placeholderTextColor={DashboardColors.textMuted}
+                    keyboardType="numeric"
+                  />
+                </View>
+              )}
+
+              {isElectric && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Batarya Kapasitesi (kWh)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.battery_capacity}
+                    onChangeText={(text) => handleInputChange('battery_capacity', text.replace(/[^0-9]/g, ''))}
+                    placeholder="Opsiyonel"
+                    placeholderTextColor={DashboardColors.textMuted}
+                    keyboardType="numeric"
+                  />
+                </View>
+              )}
+
+              {renderCheckbox('Uydu Takip Cihazı Var', formData.has_gps_tracker, (v) => handleInputChange('has_gps_tracker', v))}
+
+              {formData.has_gps_tracker && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Uydu Kimlik No</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.gps_identity_no}
+                    onChangeText={(text) => handleInputChange('gps_identity_no', text)}
+                    placeholder="Opsiyonel"
+                    placeholderTextColor={DashboardColors.textMuted}
+                  />
+                </View>
+              )}
             </View>
-            <Input
-              label="Uydu Kimlik No"
-              placeholder="Opsiyonel"
-              value={formData.gps_identity_no}
-              onChangeText={(text) => handleInputChange('gps_identity_no', text)}
-              error={errors.gps_identity_no}
-            />
-          </>
-        );
+          </View>
+        )
 
       case 'trailer':
-        if (!isTrailer) return null;
+        if (!isTrailer) return null
         return (
-          <>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Boyut Bilgileri</Text>
-            <Input
-              label="En (m)"
-              placeholder="Örn: 2.5"
-              value={formData.trailer_width}
-              onChangeText={(text) => handleInputChange('trailer_width', text)}
-              error={errors.trailer_width}
-              keyboardType="decimal-pad"
-            />
-            <Input
-              label="Boy (m)"
-              placeholder="Örn: 13.6"
-              value={formData.trailer_length}
-              onChangeText={(text) => handleInputChange('trailer_length', text)}
-              error={errors.trailer_length}
-              keyboardType="decimal-pad"
-            />
-            <Input
-              label="Yükseklik (m)"
-              placeholder="Örn: 3.0"
-              value={formData.trailer_height}
-              onChangeText={(text) => handleInputChange('trailer_height', text)}
-              error={errors.trailer_height}
-              keyboardType="decimal-pad"
-            />
-            <Input
-              label="Hacim (m³)"
-              placeholder="Örn: 90.0"
-              value={formData.trailer_volume}
-              onChangeText={(text) => handleInputChange('trailer_volume', text)}
-              error={errors.trailer_volume}
-              keyboardType="decimal-pad"
-            />
-            <SelectInput
-              label="Yan Kapak"
-              options={SIDE_DOOR_OPTIONS}
-              selectedValue={formData.side_door_count}
-              onValueChange={(value) => handleInputChange('side_door_count', value)}
-              error={errors.side_door_count}
-            />
-
-            <Text style={[styles.sectionTitle, { color: colors.text, marginTop: Spacing.lg }]}>Özellikler</Text>
-            {[
-              { key: 'has_xl_certificate', label: 'XL Sertifikası' },
-              { key: 'is_double_deck', label: 'Çift Katlı' },
-              { key: 'has_p400', label: 'P400 (Tren Taşımacılığı)' },
-              { key: 'has_sliding_curtain', label: 'Kayar Perde' },
-              { key: 'is_lightweight', label: 'Hafif Römork' },
-              { key: 'is_train_compatible', label: 'Tren Uyumlu' },
-              { key: 'has_tarpaulin', label: 'Brandalı' },
-              { key: 'has_roller', label: 'Rulo Sistemi' },
-              { key: 'has_electronic_scale', label: 'Elektronik Kantar' },
-            ].map(({ key, label }) => (
-              <View key={key} style={styles.checkboxRow}>
-                <Checkbox
-                  value={!!formData[key as keyof typeof formData]}
-                  onValueChange={(val) => handleInputChange(key, val)}
+          <View style={styles.section}>
+            {renderSectionHeader('Römork Bilgileri', 'cube-outline')}
+            <View style={styles.sectionContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>En (m)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.trailer_width}
+                  onChangeText={(text) => handleInputChange('trailer_width', text)}
+                  placeholder="Örn: 2.5"
+                  placeholderTextColor={DashboardColors.textMuted}
+                  keyboardType="decimal-pad"
                 />
-                <Text style={[styles.checkboxRowLabel, { color: Colors.light.text }]}>
-                  {label}
-                </Text>
               </View>
-            ))}
-          </>
-        );
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Boy (m)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.trailer_length}
+                  onChangeText={(text) => handleInputChange('trailer_length', text)}
+                  placeholder="Örn: 13.6"
+                  placeholderTextColor={DashboardColors.textMuted}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Yükseklik (m)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.trailer_height}
+                  onChangeText={(text) => handleInputChange('trailer_height', text)}
+                  placeholder="Örn: 3.0"
+                  placeholderTextColor={DashboardColors.textMuted}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Hacim (m³)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.trailer_volume}
+                  onChangeText={(text) => handleInputChange('trailer_volume', text)}
+                  placeholder="Örn: 90.0"
+                  placeholderTextColor={DashboardColors.textMuted}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Yan Kapak</Text>
+                {renderOptionChips(SIDE_DOOR_OPTIONS, formData.side_door_count, (v) => handleInputChange('side_door_count', v))}
+              </View>
+
+              <View style={styles.checkboxGroup}>
+                {renderCheckbox('XL Sertifikası', formData.has_xl_certificate, (v) => handleInputChange('has_xl_certificate', v))}
+                {renderCheckbox('Çift Katlı', formData.is_double_deck, (v) => handleInputChange('is_double_deck', v))}
+                {renderCheckbox('P400', formData.has_p400, (v) => handleInputChange('has_p400', v))}
+                {renderCheckbox('Kayar Perde', formData.has_sliding_curtain, (v) => handleInputChange('has_sliding_curtain', v))}
+                {renderCheckbox('Hafif Römork', formData.is_lightweight, (v) => handleInputChange('is_lightweight', v))}
+                {renderCheckbox('Tren Uyumlu', formData.is_train_compatible, (v) => handleInputChange('is_train_compatible', v))}
+                {renderCheckbox('Brandalı', formData.has_tarpaulin, (v) => handleInputChange('has_tarpaulin', v))}
+                {renderCheckbox('Rulo Sistemi', formData.has_roller, (v) => handleInputChange('has_roller', v))}
+                {renderCheckbox('Elektronik Kantar', formData.has_electronic_scale, (v) => handleInputChange('has_electronic_scale', v))}
+              </View>
+            </View>
+          </View>
+        )
 
       case 'ownership':
         return (
-          <>
-            <Input
-              label="Sahibinin Adı Soyadı"
-              placeholder="Opsiyonel"
-              value={formData.full_name}
-              onChangeText={(text) => handleInputChange('full_name', text)}
-              error={errors.full_name}
-            />
-            <Input
-              label="Firma Adı"
-              placeholder="Opsiyonel"
-              value={formData.company_name}
-              onChangeText={(text) => handleInputChange('company_name', text)}
-              error={errors.company_name}
-            />
-            <Input
-              label="TC/Vergi No"
-              placeholder="Opsiyonel"
-              value={formData.id_or_tax_no}
-              onChangeText={(text) => handleInputChange('id_or_tax_no', text)}
-              error={errors.id_or_tax_no}
-              keyboardType="numeric"
-            />
-            <Input
-              label="Noter Adı"
-              placeholder="Opsiyonel"
-              value={formData.notary_name}
-              onChangeText={(text) => handleInputChange('notary_name', text)}
-              error={errors.notary_name}
-            />
-            <DateInput
-              label="Noter Satış Tarihi"
-              placeholder="Tarih seçiniz"
-              value={formData.notary_sale_date}
-              onChangeText={(text) => handleInputChange('notary_sale_date', text)}
-              error={errors.notary_sale_date}
-            />
-            <Input
-              label="Adres"
-              placeholder="Opsiyonel"
-              value={formData.address}
-              onChangeText={(text) => handleInputChange('address', text)}
-              error={errors.address}
-              multiline
-              numberOfLines={3}
-            />
-          </>
-        );
-
-      case 'assignment':
-        if (!showAssignmentTab) return null;
-
-        // Prepare options for assignment select
-        const assignmentOptions = isTruckTractor
-          ? [
-              { label: 'Römork seçiniz...', value: '' },
-              ...trailers.map(v => ({
-                label: `${v.plate} - ${v.brand || ''} ${v.model || ''}`.trim(),
-                value: String(v.id),
-              })),
-            ]
-          : [
-              { label: 'Çekici seçiniz...', value: '' },
-              ...tractors.map(v => ({
-                label: `${v.plate} - ${v.brand || ''} ${v.model || ''}`.trim(),
-                value: String(v.id),
-              })),
-            ];
-
-        return (
-          <>
-            <View style={styles.infoBox}>
-              <Link2 size={16} color={Brand.primary} />
-              <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                {isTruckTractor
-                  ? 'Bu çekiciye eşleştirilecek römorku seçin. Eşleştirme işlemi araç kaydedildikten sonra yapılır.'
-                  : 'Bu römorka eşleştirilecek çekiciyi seçin. Eşleştirme işlemi araç kaydedildikten sonra yapılır.'}
-              </Text>
-            </View>
-
-            {loadingVehicles ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={Brand.primary} />
-                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-                  Araçlar yükleniyor...
-                </Text>
+          <View style={styles.section}>
+            {renderSectionHeader('Sahiplik Bilgileri', 'person-outline')}
+            <View style={styles.sectionContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Sahibinin Adı Soyadı</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.full_name}
+                  onChangeText={(text) => handleInputChange('full_name', text)}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                />
               </View>
-            ) : (
-              <SelectInput
-                label={isTruckTractor ? 'Eşleştirilecek Römork' : 'Eşleştirilecek Çekici'}
-                options={assignmentOptions}
-                selectedValue={formData.assignment_vehicle_id}
-                onValueChange={(value) => handleInputChange('assignment_vehicle_id', value)}
-                error={errors.assignment_vehicle_id}
-              />
-            )}
 
-            {/* Display current assignment count */}
-            {!loadingVehicles && (
-              <View style={[styles.statsBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.statItem}>
-                  <Truck size={20} color={Brand.primary} />
-                  <Text style={[styles.statValue, { color: colors.text }]}>
-                    {isTruckTractor ? trailers.length : tractors.length}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                    {isTruckTractor ? 'Mevcut Römork' : 'Mevcut Çekici'}
-                  </Text>
-                </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Firma Adı</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.company_name}
+                  onChangeText={(text) => handleInputChange('company_name', text)}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                />
               </View>
-            )}
-          </>
-        );
 
-      default:
-        return null;
-    }
-  };
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>TC/Vergi No</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.id_or_tax_no}
+                  onChangeText={(text) => handleInputChange('id_or_tax_no', text)}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                  keyboardType="numeric"
+                />
+              </View>
 
-  return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-        title="Yeni Araç Ekle"
-        showBackButton
-        onBackPress={() => router.back()}
-        rightIcons={
-          <TouchableOpacity
-            onPress={handleSubmit}
-            style={styles.headerButton}
-            disabled={isSubmitting || !formData.vehicle_type}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Save size={22} color={formData.vehicle_type ? '#FFFFFF' : 'rgba(255, 255, 255, 0.5)'} />
-            )}
-          </TouchableOpacity>
-        }
-      />
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Noter Adı</Text>
+                <TextInput
+                  style={styles.input}
+                  value={formData.notary_name}
+                  onChangeText={(text) => handleInputChange('notary_name', text)}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                />
+              </View>
 
-        {/* Tabs */}
-        <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabsContent}
-          >
-            {filteredTabs.map((tab) => {
-              const errorCount = getTabErrorCount(tab.id);
-              const isActive = activeTab === tab.id;
-
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  style={[
-                    styles.tab,
-                    isActive && { borderBottomColor: Brand.primary },
-                  ]}
-                  onPress={() => setActiveTab(tab.id)}
-                >
-                  <View style={styles.tabHeader}>
-                    <Text style={[styles.tabIcon]}>{tab.icon}</Text>
-                    {errorCount > 0 && (
-                      <View style={styles.errorBadge}>
-                        <Text style={styles.errorBadgeText}>{errorCount}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabText,
-                      { color: isActive ? Brand.primary : colors.textSecondary },
-                      errorCount > 0 && { color: '#DC2626' },
-                    ]}
-                  >
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Form Content */}
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          nestedScrollEnabled={true}
-        >
-          <View style={styles.formWrapper}>
-            <Card style={styles.card}>
-            {renderTabContent()}
-            </Card>
-
-            {/* Hidden fields that are not editable */}
-            <View style={{ display: 'none' }}>
-            <Input
-              value={formData.license_info}
-              onChangeText={(text) => handleInputChange('license_info', text)}
-            />
-            <Input
-              value={formData.sort_order}
-              onChangeText={(text) => handleInputChange('sort_order', text)}
-            />
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Adres</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={formData.address}
+                  onChangeText={(text) => handleInputChange('address', text)}
+                  placeholder="Opsiyonel"
+                  placeholderTextColor={DashboardColors.textMuted}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
             </View>
           </View>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* Header with gradient and animated orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Orta: Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Yeni Araç</Text>
+            </View>
+
+            {/* Sağ: Kaydet Butonu */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting || !formData.vehicle_type}
+              style={[styles.headerButton, (isSubmitting || !formData.vehicle_type) && styles.headerButtonDisabled]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContent}
+        >
+          {filteredTabs.map((tab) => {
+            const isActive = activeTab === tab.id
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                style={[styles.tab, isActive && styles.tabActive]}
+                onPress={() => {
+                  Haptics.selectionAsync()
+                  setActiveTab(tab.id)
+                }}
+              >
+                <Ionicons
+                  name={tab.icon}
+                  size={18}
+                  color={isActive ? DashboardColors.primary : DashboardColors.textMuted}
+                />
+                <Text style={[
+                  styles.tabText,
+                  { color: isActive ? DashboardColors.primary : DashboardColors.textSecondary }
+                ]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            )
+          })}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
+
+      {/* Form Content */}
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        bottomOffset={20}
+      >
+        {renderTabContent()}
+
+        {/* Submit Button */}
+        <TouchableOpacity
+          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={isSubmitting || !formData.vehicle_type}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle-outline" size={22} color="#fff" />
+              <Text style={styles.submitButtonText}>Kaydet</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <View style={{ height: DashboardSpacing['2xl'] }} />
+      </KeyboardAwareScrollView>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
-  keyboardAvoidingView: {
-    flex: 1,
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: DashboardSpacing.lg
   },
   headerButton: {
-    padding: Spacing.sm,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
+  headerButtonDisabled: {
+    opacity: 0.5
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.md
+  },
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+
+  // Tabs
   tabsContainer: {
     borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    backgroundColor: DashboardColors.surface
   },
   tabsContent: {
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.md,
+    gap: DashboardSpacing.xs
   },
   tab: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
     alignItems: 'center',
-    minWidth: 80,
-  },
-  tabHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
-  tabIcon: {
-    fontSize: 18,
+  tabActive: {
+    borderBottomColor: DashboardColors.primary
   },
   tabText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
-    textAlign: 'center',
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500'
   },
-  errorBadge: {
-    backgroundColor: '#DC2626',
-    borderRadius: 10,
-    minWidth: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 4,
-  },
-  errorBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
-    paddingHorizontal: 4,
-  },
+
+  // Content
   content: {
-    flex: 1,
+    flex: 1
   },
   contentContainer: {
-    padding: Spacing.lg,
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
   },
-  formWrapper: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 32,
-    ...Shadows.lg,
+
+  // Section
+  section: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.lg,
     overflow: 'hidden',
-    padding: Spacing.lg,
+    ...DashboardShadows.sm
   },
-  card: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
+  },
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
+  },
+
+  // Input
+  inputGroup: {
+    marginBottom: DashboardSpacing.sm
+  },
+  inputLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.xs
+  },
+  required: {
+    color: DashboardColors.danger
+  },
+  input: {
+    backgroundColor: DashboardColors.background,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
+    borderRadius: DashboardBorderRadius.lg,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.md,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
+    minHeight: 48
+  },
+  inputError: {
+    borderColor: DashboardColors.danger
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top'
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.danger,
+    marginTop: DashboardSpacing.xs
+  },
+
+  // Chips
+  chipGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DashboardSpacing.xs,
+    marginTop: DashboardSpacing.xs
+  },
+  chip: {
+    paddingVertical: DashboardSpacing.xs,
+    paddingHorizontal: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: DashboardColors.background,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight
+  },
+  chipActive: {
+    backgroundColor: DashboardColors.primary,
+    borderColor: DashboardColors.primary
+  },
+  chipText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary
+  },
+  chipTextActive: {
+    color: '#fff'
+  },
+
+  // Checkbox
+  checkboxGroup: {
+    gap: DashboardSpacing.sm
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: Spacing.sm,
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
+    paddingVertical: DashboardSpacing.xs
   },
-  checkboxRowLabel: {
-    ...Typography.bodyMD,
-    flex: 1,
-  },
-  infoBox: {
-    flexDirection: 'row',
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: DashboardBorderRadius.sm,
+    borderWidth: 2,
+    borderColor: DashboardColors.border,
     alignItems: 'center',
-    padding: Spacing.md,
-    backgroundColor: Brand.primary + '15',
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
+    justifyContent: 'center'
   },
-  infoText: {
-    ...Typography.bodySM,
-    flex: 1,
+  checkboxChecked: {
+    backgroundColor: DashboardColors.primary,
+    borderColor: DashboardColors.primary
   },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    marginVertical: Spacing.xs,
+  checkboxLabel: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
   },
-  switchContent: {
-    flex: 1,
-    marginRight: Spacing.md,
-  },
-  switchLabel: {
-    ...Typography.bodyMD,
-    fontWeight: '500',
-  },
-  switchDescription: {
-    ...Typography.bodySM,
-    marginTop: Spacing.xs,
-  },
-  loadingContainer: {
+
+  // Submit
+  submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.lg,
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.primary,
+    paddingVertical: DashboardSpacing.lg,
+    borderRadius: DashboardBorderRadius.xl,
+    ...DashboardShadows.md
   },
-  loadingText: {
-    ...Typography.bodySM,
+  submitButtonDisabled: {
+    opacity: 0.6
   },
-  statsBox: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    marginTop: Spacing.md,
-  },
-  statItem: {
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  statValue: {
-    ...Typography.headingLG,
-    fontWeight: '600',
-  },
-  statLabel: {
-    ...Typography.bodySM,
-  },
-});
+  submitButtonText: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: '#fff'
+  }
+})
