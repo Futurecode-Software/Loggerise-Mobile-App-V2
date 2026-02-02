@@ -1,0 +1,771 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import { useToast } from '@/hooks/use-toast';
+import { FullScreenHeader } from '@/components/header';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Save, AlertCircle } from 'lucide-react-native';
+import { Input, Button, Card, Select } from '@/components/ui';
+import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+import {
+  getCrmCustomer,
+  updateCrmCustomer,
+  CrmCustomerFormData,
+  CrmCustomerStatus,
+} from '@/services/endpoints/crm-customers';
+import {
+  searchCountries,
+  searchStates,
+  searchCities,
+  searchTaxOffices,
+  TURKEY_ID,
+  FOREIGN_DEFAULT_TAX_NUMBER,
+  LocationOption,
+} from '@/services/endpoints/locations';
+
+export default function EditCrmCustomerScreen() {
+  const colors = Colors.light;
+  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const customerId = parseInt(id, 10);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isTurkish, setIsTurkish] = useState(true);
+  const [formData, setFormData] = useState<CrmCustomerFormData>({
+    legal_type: 'company',
+    name: '',
+    short_name: '',
+    email: '',
+    phone: '',
+    category: '',
+    status: 'active',
+    is_active: true,
+    currency_type: 'TRY',
+    country_id: TURKEY_ID,
+    tax_number: '',
+    main_address: '',
+    risk_limit: 0,
+    notes: '',
+  });
+
+  // Location states
+  const [countries, setCountries] = useState<LocationOption[]>([]);
+  const [states, setStates] = useState<LocationOption[]>([]);
+  const [cities, setCities] = useState<LocationOption[]>([]);
+  const [taxOffices, setTaxOffices] = useState<LocationOption[]>([]);
+
+  // Loading states
+  const [loadingCountries, setLoadingCountries] = useState(false);
+  const [loadingStates, setLoadingStates] = useState(false);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingTaxOffices, setLoadingTaxOffices] = useState(false);
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Fetch customer data and initial location data on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Load countries and tax offices in parallel
+        const [customerData, countriesData, taxOfficesData] = await Promise.all([
+          getCrmCustomer(customerId),
+          searchCountries(),
+          searchTaxOffices(),
+        ]);
+
+        setCountries(countriesData);
+        setTaxOffices(taxOfficesData);
+
+        // Determine if customer is domestic (Turkey) or foreign
+        const customerIsTurkish =
+          !customerData.country_id || customerData.country_id === TURKEY_ID;
+        setIsTurkish(customerIsTurkish);
+
+        // Load states for the customer's country
+        const countryIdToUse = customerData.country_id || TURKEY_ID;
+        const statesData = await searchStates(countryIdToUse);
+        setStates(statesData);
+
+        // Load cities if customer has a state
+        if (customerData.main_state_id) {
+          const citiesData = await searchCities(customerData.main_state_id);
+          setCities(citiesData);
+        }
+
+        // Pre-populate form with customer data
+        setFormData({
+          legal_type: customerData.legal_type || 'company',
+          name: customerData.name || '',
+          short_name: customerData.short_name || '',
+          code: customerData.code || '',
+          email: customerData.email || '',
+          phone: customerData.phone || '',
+          fax: customerData.fax || '',
+          category: customerData.category || '',
+          tax_number: customerData.tax_number || '',
+          tax_office_id: customerData.tax_office_id,
+          status: customerData.status || 'active',
+          is_active: customerData.is_active ?? true,
+          currency_type: customerData.currency_type || 'TRY',
+          country_id: customerData.country_id || TURKEY_ID,
+          main_address: customerData.main_address || '',
+          main_state_id: customerData.main_state_id,
+          main_city_id: customerData.main_city_id,
+          risk_limit: customerData.risk_limit,
+          notes: customerData.notes || '',
+        });
+      } catch (err) {
+        console.error('Fetch customer error:', err);
+        setError(err instanceof Error ? err.message : 'Müşteri bilgileri yüklenemedi');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [customerId]);
+
+  // Load states when country changes (after initial load)
+  const handleCountryChange = async (countryId: number | undefined) => {
+    if (countryId) {
+      setFormData((prev) => ({
+        ...prev,
+        country_id: countryId,
+        main_state_id: undefined,
+        main_city_id: undefined,
+      }));
+      setLoadingStates(true);
+      try {
+        const data = await searchStates(countryId);
+        setStates(data);
+        setCities([]);
+      } catch (err) {
+        console.error('Failed to load states:', err);
+      } finally {
+        setLoadingStates(false);
+      }
+    }
+  };
+
+  // Load cities when state changes
+  const handleStateChange = async (stateId: number | undefined) => {
+    if (stateId) {
+      setFormData((prev) => ({ ...prev, main_state_id: stateId, main_city_id: undefined }));
+      setLoadingCities(true);
+      try {
+        const data = await searchCities(stateId);
+        setCities(data);
+      } catch (err) {
+        console.error('Failed to load cities:', err);
+      } finally {
+        setLoadingCities(false);
+      }
+    }
+  };
+
+  const handleLocationToggle = async (isDomestic: boolean) => {
+    setIsTurkish(isDomestic);
+
+    if (isDomestic) {
+      // Domestic: Set Turkey, clear tax number if it was foreign default
+      setFormData((prev) => ({
+        ...prev,
+        country_id: TURKEY_ID,
+        tax_number: prev.tax_number === FOREIGN_DEFAULT_TAX_NUMBER ? '' : prev.tax_number,
+        main_state_id: undefined,
+        main_city_id: undefined,
+      }));
+      // Load Turkey states
+      setLoadingStates(true);
+      try {
+        const data = await searchStates(TURKEY_ID);
+        setStates(data);
+        setCities([]);
+      } catch (err) {
+        console.error('Failed to load states:', err);
+      } finally {
+        setLoadingStates(false);
+      }
+    } else {
+      // Foreign: Clear country, set default tax number, clear tax office, clear state/city
+      setFormData((prev) => ({
+        ...prev,
+        country_id: undefined,
+        tax_number: !prev.tax_number ? FOREIGN_DEFAULT_TAX_NUMBER : prev.tax_number,
+        tax_office_id: undefined,
+        main_state_id: undefined,
+        main_city_id: undefined,
+      }));
+      setStates([]);
+      setCities([]);
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name?.trim()) {
+      newErrors.name = 'Müşteri adı zorunludur';
+    }
+
+    if (!formData.legal_type) {
+      newErrors.legal_type = 'Yasal tip zorunludur';
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Geçerli bir e-posta adresi giriniz';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      showError('Hata', 'Lütfen formu eksiksiz doldurunuz');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await updateCrmCustomer(customerId, formData);
+      success('Başarılı', 'CRM müşterisi başarıyla güncellendi');
+      router.back();
+    } catch (err) {
+      showError('Hata', err instanceof Error ? err.message : 'Müşteri güncellenemedi');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
+        <FullScreenHeader title="CRM Müşterisi Düzenle" showBackButton />
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={Brand.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Müşteri bilgileri yükleniyor...
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
+        <FullScreenHeader title="CRM Müşterisi Düzenle" showBackButton />
+        <View style={styles.errorState}>
+          <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
+            <AlertCircle size={64} color={colors.danger} />
+          </View>
+          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
+          <Text style={[styles.errorSubtitle, { color: colors.textSecondary }]}>{error}</Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.retryButtonText}>Geri Dön</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
+      {/* Header */}
+      <FullScreenHeader
+        title="CRM Müşterisi Düzenle"
+        showBackButton
+        rightIcons={
+          <TouchableOpacity
+            onPress={handleSubmit}
+            activeOpacity={0.7}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Save size={20} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+        }
+      />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Basic Information */}
+          <Card style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
+
+            {/* Legal Type & Location Toggle */}
+            <View style={styles.toggleRow}>
+              {/* Legal Type */}
+              <View style={styles.toggleGroup}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>
+                  Yasal Tip <Text style={{ color: colors.danger }}>*</Text>
+                </Text>
+                <View style={styles.radioGroup}>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      formData.legal_type === 'company' && [
+                        styles.toggleButtonActive,
+                        { backgroundColor: '#2196F3' + '20', borderColor: '#2196F3' },
+                      ],
+                    ]}
+                    onPress={() => setFormData({ ...formData, legal_type: 'company' })}
+                  >
+                    <Text
+                      style={[
+                        styles.toggleText,
+                        { color: formData.legal_type === 'company' ? '#2196F3' : colors.text },
+                      ]}
+                    >
+                      Şirket
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      formData.legal_type === 'individual' && [
+                        styles.toggleButtonActive,
+                        { backgroundColor: '#2196F3' + '20', borderColor: '#2196F3' },
+                      ],
+                    ]}
+                    onPress={() => setFormData({ ...formData, legal_type: 'individual' })}
+                  >
+                    <Text
+                      style={[
+                        styles.toggleText,
+                        { color: formData.legal_type === 'individual' ? '#2196F3' : colors.text },
+                      ]}
+                    >
+                      Bireysel
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Location Toggle */}
+              <View style={styles.toggleGroup}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Konum</Text>
+                <View style={styles.radioGroup}>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      isTurkish && [
+                        styles.toggleButtonActive,
+                        { backgroundColor: '#FF9800' + '20', borderColor: '#FF9800' },
+                      ],
+                    ]}
+                    onPress={() => handleLocationToggle(true)}
+                  >
+                    <Text
+                      style={[styles.toggleText, { color: isTurkish ? '#FF9800' : colors.text }]}
+                    >
+                      Yurtiçi
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      !isTurkish && [
+                        styles.toggleButtonActive,
+                        { backgroundColor: '#FF9800' + '20', borderColor: '#FF9800' },
+                      ],
+                    ]}
+                    onPress={() => handleLocationToggle(false)}
+                  >
+                    <Text
+                      style={[styles.toggleText, { color: !isTurkish ? '#FF9800' : colors.text }]}
+                    >
+                      Yurtdışı
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            <Input
+              label="Müşteri Adı"
+              placeholder="Örn: ABC Lojistik A.Ş."
+              value={formData.name}
+              onChangeText={(value) => setFormData({ ...formData, name: value })}
+              error={errors.name}
+              required
+            />
+
+            <Input
+              label="Kısa Ad"
+              placeholder="Örn: ABC"
+              value={formData.short_name}
+              onChangeText={(value) => setFormData({ ...formData, short_name: value })}
+            />
+
+            <Input
+              label="Kod"
+              placeholder="Otomatik oluşturulmuş"
+              value={formData.code}
+              onChangeText={(value) => setFormData({ ...formData, code: value })}
+              editable={false}
+            />
+
+            <Input
+              label="Kategori"
+              placeholder="Örn: Perakende, Toptan"
+              value={formData.category}
+              onChangeText={(value) => setFormData({ ...formData, category: value })}
+            />
+          </Card>
+
+          {/* Tax & Location Information */}
+          <Card style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Vergi ve Konum Bilgileri
+            </Text>
+
+            {/* Tax Office - Only for domestic */}
+            {isTurkish && (
+              <Select
+                label="Vergi Dairesi"
+                data={taxOffices}
+                value={formData.tax_office_id?.toString()}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, tax_office_id: value ? Number(value) : undefined })
+                }
+                placeholder="Vergi dairesi seçiniz"
+                loading={loadingTaxOffices}
+                onSearch={async (query) => {
+                  const results = await searchTaxOffices(undefined, query);
+                  return results;
+                }}
+              />
+            )}
+
+            <Input
+              label="Vergi Numarası"
+              placeholder="XXXXXXXXXX"
+              value={formData.tax_number}
+              onChangeText={(value) => setFormData({ ...formData, tax_number: value })}
+              keyboardType="numeric"
+            />
+
+            {/* Country - Only for foreign */}
+            {!isTurkish && (
+              <Select
+                label="Ülke"
+                data={countries}
+                value={formData.country_id?.toString()}
+                onValueChange={(value) => handleCountryChange(value ? Number(value) : undefined)}
+                placeholder="Ülke seçiniz"
+                loading={loadingCountries}
+              />
+            )}
+
+            <Input
+              label="Ana Adres"
+              placeholder="Adres giriniz"
+              value={formData.main_address}
+              onChangeText={(value) => setFormData({ ...formData, main_address: value })}
+              multiline
+              numberOfLines={3}
+            />
+
+            <Select
+              label={isTurkish ? 'İl' : 'Eyalet/Bölge'}
+              data={states}
+              value={formData.main_state_id?.toString()}
+              onValueChange={(value) => handleStateChange(value ? Number(value) : undefined)}
+              placeholder={isTurkish ? 'İl seçiniz' : 'Eyalet seçiniz'}
+              loading={loadingStates}
+            />
+
+            <Select
+              label={isTurkish ? 'İlçe' : 'Şehir'}
+              data={cities}
+              value={formData.main_city_id?.toString()}
+              onValueChange={(value) =>
+                setFormData({ ...formData, main_city_id: value ? Number(value) : undefined })
+              }
+              placeholder={isTurkish ? 'İlçe seçiniz' : 'Şehir seçiniz'}
+              loading={loadingCities}
+              disabled={!formData.main_state_id}
+            />
+          </Card>
+
+          {/* Contact Information */}
+          <Card style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>İletişim Bilgileri</Text>
+
+            <Input
+              label="E-posta"
+              placeholder="ornek@sirket.com"
+              value={formData.email}
+              onChangeText={(value) => setFormData({ ...formData, email: value })}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              error={errors.email}
+            />
+
+            <Input
+              label="Telefon"
+              placeholder="+90 XXX XXX XX XX"
+              value={formData.phone}
+              onChangeText={(value) => setFormData({ ...formData, phone: value })}
+              keyboardType="phone-pad"
+            />
+
+            <Input
+              label="Faks"
+              placeholder="+90 XXX XXX XX XX"
+              value={formData.fax}
+              onChangeText={(value) => setFormData({ ...formData, fax: value })}
+              keyboardType="phone-pad"
+            />
+          </Card>
+
+          {/* Financial Information */}
+          <Card style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Finansal Bilgiler</Text>
+
+            <Select
+              label="Para Birimi"
+              data={[
+                { label: 'TRY - Türk Lirası', value: 'TRY' },
+                { label: 'USD - Amerikan Doları', value: 'USD' },
+                { label: 'EUR - Euro', value: 'EUR' },
+                { label: 'GBP - İngiliz Sterlini', value: 'GBP' },
+              ]}
+              value={formData.currency_type || undefined}
+              onValueChange={(value: string | number | undefined) => setFormData({ ...formData, currency_type: (value as string) || 'TRY' })}
+              placeholder="Para birimi seçiniz"
+            />
+
+            <Input
+              label={`Risk Limiti (${formData.currency_type || 'TRY'})`}
+              placeholder="Sınırsız kredi için boş bırakın"
+              value={formData.risk_limit?.toString()}
+              onChangeText={(value) =>
+                setFormData({ ...formData, risk_limit: value ? Number(value) : undefined })
+              }
+              keyboardType="numeric"
+            />
+
+            <Input
+              label="Notlar"
+              placeholder="Bu müşteri hakkında dahili notlar..."
+              value={formData.notes}
+              onChangeText={(value) => setFormData({ ...formData, notes: value })}
+              multiline
+              numberOfLines={4}
+            />
+          </Card>
+
+          {/* Status */}
+          <Card style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Durum</Text>
+
+            <View style={styles.formGroup}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Durum</Text>
+              <View style={styles.statusButtons}>
+                {[
+                  { value: 'active', label: 'Aktif', color: colors.success },
+                  { value: 'passive', label: 'Pasif', color: colors.textMuted },
+                  { value: 'blacklist', label: 'Kara Liste', color: colors.danger },
+                ].map((status) => (
+                  <TouchableOpacity
+                    key={status.value}
+                    style={[
+                      styles.statusButton,
+                      formData.status === status.value && [
+                        styles.statusButtonActive,
+                        { borderColor: status.color },
+                      ],
+                    ]}
+                    onPress={() =>
+                      setFormData({ ...formData, status: status.value as CrmCustomerStatus })
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.statusButtonText,
+                        {
+                          color: formData.status === status.value ? status.color : colors.text,
+                        },
+                      ]}
+                    >
+                      {status.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </Card>
+
+          {/* Submit Button */}
+          <Button
+            title={isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+            variant="primary"
+            style={styles.submitButton}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    ...Shadows.lg,
+  },
+  contentContainer: {
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    paddingBottom: Spacing['4xl'],
+  },
+  section: {
+    padding: Spacing.lg,
+  },
+  sectionTitle: {
+    ...Typography.headingMD,
+    marginBottom: Spacing.lg,
+  },
+  formGroup: {
+    marginBottom: Spacing.lg,
+  },
+  label: {
+    ...Typography.bodySM,
+    fontWeight: '600',
+    marginBottom: Spacing.sm,
+  },
+  toggleRow: {
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  toggleGroup: {
+    flex: 1,
+  },
+  radioGroup: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  toggleButton: {
+    flex: 1,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    borderWidth: 2,
+  },
+  toggleText: {
+    ...Typography.bodySM,
+    fontWeight: '600',
+  },
+  statusButtons: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
+  },
+  statusButton: {
+    flex: 1,
+    minWidth: '30%',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    alignItems: 'center',
+  },
+  statusButtonActive: {
+    borderWidth: 2,
+  },
+  statusButtonText: {
+    ...Typography.bodySM,
+    fontWeight: '600',
+  },
+  submitButton: {
+    marginTop: Spacing.lg,
+  },
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    ...Typography.bodyMD,
+    marginTop: Spacing.md,
+  },
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing['2xl'],
+  },
+  errorIcon: {
+    width: 128,
+    height: 128,
+    borderRadius: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xl,
+  },
+  errorTitle: {
+    ...Typography.headingMD,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  errorSubtitle: {
+    ...Typography.bodyMD,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    ...Typography.bodyMD,
+    fontWeight: '600',
+  },
+});
