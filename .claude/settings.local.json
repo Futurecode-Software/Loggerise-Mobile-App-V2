@@ -57,7 +57,14 @@
       "Bash(else echo \"✗ $path EKSIK\")",
       "Bash(fi)",
       "Bash(npx eslint:*)",
-      "Bash(Remove-Item \"C:\\\\LoggeriseMobile\\\\app\\\\finance\\\\invoices\\\\[id].tsx\" -Force)"
+      "Bash(Remove-Item \"C:\\\\LoggeriseMobile\\\\app\\\\finance\\\\invoices\\\\[id].tsx\" -Force)",
+      "Bash(tree:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nrefactor: app modül yapısı yeniden düzenlendi ve tüm route''lar güncellendi\n\nBREAKING CHANGE: Tüm app dosya yapısı mantıksal gruplara ayrıldı\n\n## Yeni Modül Yapısı\n\n- **accounting/** - Muhasebe modülleri \\(bank, cash-register, check, promissory-note, transactions\\)\n- **crm/** - CRM modülleri \\(customers, quotes\\)  \n- **logistics/** - Lojistik modülleri \\(domestic, exports, imports, load, trip\\)\n- **hr/** - İK modülleri \\(employee, job-postings, job-applications\\)\n- **inventory/** - Envanter modülleri \\(warehouse, stock/*\\)\n- **fleet/** - Filo modülleri \\(vehicle, tire-warehouse, driver-tractor, tractor-trailer, fault-reports\\)\n\n## Root Layout Oluşturuldu\n\n- AuthProvider, DashboardProvider, MessageProvider, NotificationProvider, QuickActionsProvider eklendi\n- Automatic navigation controller ile auth bazlı yönlendirme\n- Splash screen yönetimi eklendi\n- Tüm provider''lar merkezi olarak yapılandırıldı\n\n## Route Güncellemeleri \\(35+ route\\)\n\n### Tab Sayfaları\n- loads.tsx: /load/* → /logistics/load/*\n- positions.tsx: /position/* → /logistics/trip/*\n- contacts.tsx: /contacts/* → /crm/customers/*\n\n### More Menüsü\n- Muhasebe: Tüm route''lar /accounting/* olarak güncellendi\n- CRM: /crm/*, /quotes → /crm/quotes\n- Lojistik: /trip, /exports/*, /imports/*, /domestic → /logistics/*\n- Filo: /vehicle → /fleet/vehicle\n- İK: /employee → /hr/employee\n- Envanter: /stock/*, /warehouse → /inventory/*\n\n### Hooks\n- use-notification-observer.ts\n- use-logistics-quick-actions.ts\n- use-overview-quick-actions.ts\n- contacts/useContactFormCreate.ts\n\n### Tüm Modül Route''ları\n- Employee: /hr/employee/*\n- Warehouse: /inventory/warehouse/*\n- Trip: /logistics/trip/*\n- Stock \\(Products, Brands, Models, Categories, Movements\\): /inventory/stock/*\n- Vehicle: /fleet/vehicle/*\n- Exports/Imports Positions & Loads: /logistics/exports/*, /logistics/imports/*\n\n## Diğer İyileştirmeler\n\n- Eski dosyalar silindi \\(temp/ klasörüne taşındı\\)\n- CLAUDE.md''ye app structure dokümantasyonu eklendi\n- .gitignore güncellendi\n- Bank routing conflict düzeltildi \\([id].tsx → [id]/index.tsx\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(curl:*)",
+      "Bash(if [ -d \"C:/Users/Ufuk/Documents/GitHub/FlsV2\" ])",
+      "Bash(then echo \"exists\")",
+      "Bash(else echo \"not found\")",
+      "Bash(git commit:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
