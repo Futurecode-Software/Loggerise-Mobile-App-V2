@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react'
+import React, { useState, useRef, useMemo, useCallback } from 'react'
 import {
   View,
   Text,
@@ -18,9 +18,12 @@ import Animated, {
   withSpring
 } from 'react-native-reanimated'
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller'
-import { router } from 'expo-router'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -39,7 +42,6 @@ import { QuickSuggestions } from '@/components/loggy/QuickSuggestions'
 import { MessageBubble } from '@/components/loggy/MessageBubble'
 import { LoggyInput } from '@/components/loggy/LoggyInput'
 import { PageHeader } from '@/components/navigation'
-import { ConfirmDialog } from '@/components/ui'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
@@ -49,12 +51,12 @@ function ConversationCardSkeleton() {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Skeleton width={44} height={44} borderRadius={22} />
+        <Skeleton width={48} height={48} borderRadius={12} />
         <View style={{ flex: 1, marginLeft: DashboardSpacing.sm }}>
           <Skeleton width={180} height={18} />
           <Skeleton width={100} height={14} style={{ marginTop: 4 }} />
         </View>
-        <Skeleton width={32} height={32} borderRadius={16} />
+        <Skeleton width={36} height={36} borderRadius={18} />
       </View>
     </View>
   )
@@ -104,7 +106,7 @@ function ConversationCard({ item, isActive, onPress, onDelete }: ConversationCar
           <Text style={styles.cardTime}>{formatConversationTime(item.created_at)}</Text>
         </View>
         <TouchableOpacity
-          style={styles.deleteButton}
+          style={styles.deleteButtonIcon}
           onPress={(e) => {
             e.stopPropagation()
             onDelete()
@@ -167,8 +169,9 @@ export default function LoggyScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [inputValue, setInputValue] = useState('')
   const [isAiConfigured] = useState(true) // TODO: Get from API
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [conversationToDelete, setConversationToDelete] = useState<number | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
 
   // Custom hooks
   const {
@@ -198,6 +201,15 @@ export default function LoggyScreen() {
     setSearchQuery,
     clearSearch
   } = useLoggySearch()
+
+  // Refresh on focus (CLAUDE.md pattern)
+  useFocusEffect(
+    useCallback(() => {
+      if (viewMode === 'list') {
+        refresh()
+      }
+    }, [viewMode, refresh])
+  )
 
   // Inverted messages for FlatList (newest first)
   const invertedMessages = useMemo(() => [...messages].reverse(), [messages])
@@ -263,28 +275,47 @@ export default function LoggyScreen() {
 
   // Handle delete click - show dialog
   const handleDeleteClick = (conversationId: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     setConversationToDelete(conversationId)
-    setShowDeleteDialog(true)
+    deleteDialogRef.current?.present()
   }
 
   // Confirm delete
   const confirmDelete = async () => {
-    if (conversationToDelete) {
-      try {
-        await deleteConversation(conversationToDelete)
-        // If deleted conversation was current, go back to list
-        if (currentConversation?.id === conversationToDelete) {
-          setViewMode('list')
-        }
-        // Refresh the list to reflect the deletion
-        refresh()
-      } catch (err) {
-        console.error('Delete conversation error:', err)
-      } finally {
-        setShowDeleteDialog(false)
-        setConversationToDelete(null)
+    if (!conversationToDelete) return
+
+    setIsDeleting(true)
+    try {
+      await deleteConversation(conversationToDelete)
+      deleteDialogRef.current?.dismiss()
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      Toast.show({
+        type: 'success',
+        text1: 'Konuşma başarıyla silindi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+
+      // If deleted conversation was current, go back to list
+      if (currentConversation?.id === conversationToDelete) {
+        setViewMode('list')
       }
+
+      // Refresh the list to reflect the deletion
+      setTimeout(() => {
+        refresh()
+      }, 300)
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Konuşma silinemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsDeleting(false)
+      setConversationToDelete(null)
     }
   }
 
@@ -293,12 +324,14 @@ export default function LoggyScreen() {
     router.back()
   }
 
-  // ============ LIST VIEW ============
-  if (viewMode === 'list') {
-    const displayConversations = searchQuery.length >= 2 ? searchResults : conversations
+  // ============ RENDER ============
+  const displayConversations = searchQuery.length >= 2 ? searchResults : conversations
 
-    return (
-      <View style={styles.container}>
+  return (
+    <>
+      {viewMode === 'list' ? (
+        // LIST VIEW
+        <View style={styles.container}>
         <PageHeader
           title="Loggy"
           icon="sparkles-outline"
@@ -314,15 +347,17 @@ export default function LoggyScreen() {
         <View style={styles.content}>
           {/* Search */}
           <View style={styles.searchContainer}>
-            <Ionicons name="search" size={18} color={DashboardColors.textMuted} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Sohbetlerde ara..."
-              placeholderTextColor={DashboardColors.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {isSearching && <ActivityIndicator size="small" color={DashboardColors.primary} />}
+            <View style={styles.searchInputWrapper}>
+              <Ionicons name="search" size={20} color={DashboardColors.textMuted} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Sohbetlerde ara..."
+                placeholderTextColor={DashboardColors.textMuted}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {isSearching && <ActivityIndicator size="small" color={DashboardColors.primary} />}
+            </View>
           </View>
 
           {/* Conversations List */}
@@ -359,27 +394,9 @@ export default function LoggyScreen() {
             />
           )}
         </View>
-
-        {/* Delete Confirmation Dialog */}
-        <ConfirmDialog
-          visible={showDeleteDialog}
-          title="Konuşmayı Sil"
-          message="Bu konuşmayı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
-          confirmText="Sil"
-          cancelText="İptal"
-          isDangerous
-          onConfirm={confirmDelete}
-          onCancel={() => {
-            setShowDeleteDialog(false)
-            setConversationToDelete(null)
-          }}
-        />
-      </View>
-    )
-  }
-
-  // ============ CHAT VIEW ============
-  return (
+        </View>
+      ) : (
+        // CHAT VIEW
     <View style={styles.container}>
       <PageHeader
         title={currentConversation?.title || 'Yeni Konuşma'}
@@ -511,21 +528,21 @@ export default function LoggyScreen() {
         </Pressable>
       </View>
 
-      {/* Delete Confirmation Dialog */}
+        </View>
+      )}
+
+      {/* Silme Onay Dialogu */}
       <ConfirmDialog
-        visible={showDeleteDialog}
+        ref={deleteDialogRef}
         title="Konuşmayı Sil"
         message="Bu konuşmayı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        type="danger"
         confirmText="Sil"
         cancelText="İptal"
-        isDangerous
         onConfirm={confirmDelete}
-        onCancel={() => {
-          setShowDeleteDialog(false)
-          setConversationToDelete(null)
-        }}
+        isLoading={isDeleting}
       />
-    </View>
+    </>
   )
 }
 
@@ -541,25 +558,32 @@ const styles = StyleSheet.create({
 
   // Search
   searchContainer: {
+    marginHorizontal: DashboardSpacing.lg,
+    marginTop: DashboardSpacing.md,
+    marginBottom: DashboardSpacing.sm
+  },
+  searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
     paddingHorizontal: DashboardSpacing.lg,
     paddingVertical: DashboardSpacing.md,
     gap: DashboardSpacing.sm,
-    backgroundColor: DashboardColors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight
   },
   searchInput: {
     flex: 1,
     fontSize: DashboardFontSizes.base,
-    color: DashboardColors.textPrimary
+    color: DashboardColors.textPrimary,
+    padding: 0
   },
 
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: DashboardSpacing.sm,
     paddingBottom: DashboardSpacing.xl
   },
 
@@ -569,11 +593,12 @@ const styles = StyleSheet.create({
     borderRadius: DashboardBorderRadius.xl,
     padding: DashboardSpacing.lg,
     marginBottom: DashboardSpacing.md,
-    ...DashboardShadows.md
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight
   },
   cardActive: {
     backgroundColor: DashboardColors.primaryGlow,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: DashboardColors.primary
   },
   cardHeader: {
@@ -581,9 +606,9 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   cardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: DashboardColors.primaryGlow,
     alignItems: 'center',
     justifyContent: 'center'
@@ -595,15 +620,17 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: DashboardFontSizes.lg,
-    fontWeight: '600',
+    fontWeight: '700',
     color: DashboardColors.textPrimary,
+    letterSpacing: 0.3,
     marginBottom: 2
   },
   cardTime: {
     fontSize: DashboardFontSizes.xs,
-    color: DashboardColors.textMuted
+    color: DashboardColors.textMuted,
+    fontWeight: '500'
   },
-  deleteButton: {
+  deleteButtonIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,

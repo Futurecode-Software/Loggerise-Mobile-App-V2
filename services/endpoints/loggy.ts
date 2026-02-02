@@ -289,15 +289,26 @@ export function formatConversationTime(dateString: string): string {
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
+  // Manuel saat formatı (React Native'de locale sorunu için)
+  const formatTime = (d: Date) => {
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
   if (diffDays === 0) {
     // Today - show time
-    return `Bugün ${date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+    return `Bugün ${formatTime(date)}`;
   } else if (diffDays === 1) {
     return 'Dün';
   } else if (diffDays < 7) {
     return `${diffDays} gün önce`;
   } else {
-    return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+    // Manuel tarih formatı
+    const day = date.getDate();
+    const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+    const month = months[date.getMonth()];
+    return `${day} ${month}`;
   }
 }
 
@@ -306,5 +317,7 @@ export function formatConversationTime(dateString: string): string {
  */
 export function formatMessageTime(dateString: string): string {
   const date = new Date(dateString);
-  return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
 }
