@@ -29,7 +29,6 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated'
 import { useAuth } from '@/context/auth-context'
-import { useDashboard } from '@/context/dashboard-context'
 import { checkSetupStatus } from '@/services/endpoints/auth'
 import {
   AuthColors,
@@ -58,7 +57,6 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 export default function SetupStatus() {
   const { logout, isAuthenticated, refreshSetupStatus } = useAuth()
-  const { onRefresh: refreshDashboard } = useDashboard()
 
   const shouldStopPolling = useRef(false)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -211,33 +209,24 @@ export default function SetupStatus() {
     router.replace('/(auth)/login')
   }, [stopPolling, logout])
 
-  // Dashboard verilerini yükle ve yönlendir
-  const loadDashboardAndNavigate = useCallback(async () => {
+  // Auth context'i güncelle ve NavigationController'a bırak
+  const completeSetupAndNavigate = useCallback(async () => {
     setIsLoadingDashboard(true)
-    setStatusMessage('Dashboard verileri yükleniyor...')
+    setStatusMessage('Hesabınız hazırlanıyor...')
 
     try {
-      // Önce auth context'teki setup durumunu güncelle
-      // Bu sayede dashboard context isSetupComplete=true görecek
+      // Auth context'i güncelle - NavigationController otomatik yönlendirecek
+      // Dashboard verileri dashboard ekranında lazy load edilecek
       await refreshSetupStatus()
-
-      // Dashboard verilerini yükle
-      await refreshDashboard()
-
-      // Yönlendir
-      if (!shouldStopPolling.current) {
-        router.replace('/(tabs)')
-      }
     } catch (err) {
-      console.error('Dashboard load error:', err)
-      // Hata olsa bile yönlendir, dashboard kendi hatasını gösterir
-      if (!shouldStopPolling.current) {
-        router.replace('/(tabs)')
-      }
+      console.error('Setup status refresh error:', err)
+      // Hata durumunda kullanıcıya bilgi ver
+      setError('Hesap durumu güncellenemedi. Lütfen tekrar deneyin.')
+      setIsFailed(true)
     } finally {
       setIsLoadingDashboard(false)
     }
-  }, [refreshSetupStatus, refreshDashboard])
+  }, [refreshSetupStatus])
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -267,16 +256,11 @@ export default function SetupStatus() {
         }
 
         if (status.setup_status === 'active') {
+          stopPolling()
           progressStep(3)
           setStatusMessage('Hesabınız hazır!')
           setIsComplete(true)
-
-          // 1.5 saniye göster, sonra dashboard verilerini yükle ve yönlendir
-          setTimeout(() => {
-            if (!shouldStopPolling.current) {
-              loadDashboardAndNavigate()
-            }
-          }, 1500)
+          completeSetupAndNavigate()
           return
         }
 
@@ -332,7 +316,7 @@ export default function SetupStatus() {
     return () => {
       stopPolling()
     }
-  }, [isAuthenticated, goToLogin, stopPolling, loadDashboardAndNavigate])
+  }, [isAuthenticated, goToLogin, stopPolling, completeSetupAndNavigate])
 
   // Animated styles
   const headerContentStyle = useAnimatedStyle(() => ({

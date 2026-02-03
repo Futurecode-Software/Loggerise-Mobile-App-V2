@@ -154,12 +154,8 @@ export default function Register() {
           password: formData.password,
           passwordConfirmation: formData.confirmPassword,
         }
-        const result = await register(registerData)
-        if (!result.isSetupComplete) {
-          router.replace('/(auth)/setup-status')
-        } else {
-          router.replace('/(tabs)')
-        }
+        // NavigationController otomatik yönlendirecek
+        await register(registerData)
       } catch {
         Toast.show({
           type: 'error',
@@ -169,7 +165,7 @@ export default function Register() {
         })
       }
     }
-  }, [currentStep, formData, register, router, validateStep])
+  }, [currentStep, formData, register, validateStep])
 
   const handleButtonPressIn = () => {
     buttonScale.value = withSpring(0.97, { damping: 15, stiffness: 400 })

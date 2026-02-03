@@ -34,31 +34,35 @@ function NavigationController() {
     // Wait for auth to initialize
     if (isInitializing) return
 
-    // Hide splash screen once auth is ready
-    SplashScreen.hideAsync()
-
     const inAuthGroup = segments[0] === '(auth)'
+    const onSplash = segments.length === 0 || segments[0] === 'index' || (segments.length === 1 && segments[0] === undefined)
     const currentPage = segments[1]
 
     if (!isAuthenticated) {
-      // Not authenticated - should be on login or register only
-      if (currentPage !== 'login' && currentPage !== 'register') {
+      // Not authenticated - go to login
+      if (!inAuthGroup || (currentPage !== 'login' && currentPage !== 'register')) {
         router.replace('/(auth)/login')
       }
-    } else if (isAuthenticated && inAuthGroup && currentPage !== 'logging-out') {
-      // Authenticated and in auth group (but not logging out)
-      if (!isSetupComplete && currentPage !== 'setup-status') {
+    } else {
+      // Authenticated
+      if (!isSetupComplete) {
         // Setup not complete - go to setup status screen
-        router.replace('/(auth)/setup-status')
-      } else if (isSetupComplete && currentPage !== 'setup-status') {
+        if (!inAuthGroup || currentPage !== 'setup-status') {
+          router.replace('/(auth)/setup-status')
+        }
+      } else {
         // Setup complete - go to app
-        router.replace('/(tabs)')
+        // Splash, auth group (logging-out hariç) veya başka sayfadaysa tabs'a git
+        if (onSplash || (inAuthGroup && currentPage !== 'logging-out')) {
+          router.replace('/(tabs)')
+        }
       }
     }
   }, [isAuthenticated, isInitializing, isSetupComplete, segments, router])
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="accounting" />
