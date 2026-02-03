@@ -4,8 +4,8 @@
  * Ana navigasyon menüsü - Tüm modüllere erişim
  */
 
-import React, { useState, useMemo } from 'react'
-import { View, Text, StyleSheet, Pressable, ScrollView, LayoutAnimation, Platform, UIManager, TextInput } from 'react-native'
+import React, { useState, useMemo, useRef, useCallback } from 'react'
+import { View, Text, StyleSheet, Pressable, ScrollView, LayoutAnimation, Platform, UIManager, TextInput, NativeScrollEvent, NativeSyntheticEvent } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
@@ -133,11 +133,15 @@ function CollapsibleMenu({ category, isExpanded, onToggle, router }: Collapsible
               ]}
               onPress={() => handleSubItemPress(subItem.route)}
             >
-              <View style={[styles.subItemIconContainer, { backgroundColor: `${subItem.color}15` }]}>
-                <Ionicons name={subItem.icon} size={18} color={subItem.color} />
+              <View style={styles.subItemConnector}>
+                <View style={[
+                  styles.connectorLine,
+                  index === category.subItems!.length - 1 && styles.connectorLineLast
+                ]} />
+                <View style={styles.connectorDot} />
               </View>
               <Text style={styles.subItemLabel}>{subItem.label}</Text>
-              <Ionicons name="chevron-forward" size={16} color={DashboardColors.textMuted} />
+              <Ionicons name="chevron-forward" size={14} color={DashboardColors.textMuted} />
             </Pressable>
           ))}
         </View>
@@ -148,7 +152,7 @@ function CollapsibleMenu({ category, isExpanded, onToggle, router }: Collapsible
 
 export default function MoreScreen() {
   const router = useRouter()
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
 
   const handleLogout = () => {
@@ -157,7 +161,15 @@ export default function MoreScreen() {
   }
 
   const toggleCategory = (categoryId: string) => {
-    setExpandedCategory(expandedCategory === categoryId ? null : categoryId)
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId)
+      } else {
+        newSet.add(categoryId)
+      }
+      return newSet
+    })
   }
 
   const menuCategories = useMemo<MenuCategory[]>(() => [
@@ -368,7 +380,7 @@ export default function MoreScreen() {
               <CollapsibleMenu
                 key={category.id}
                 category={category}
-                isExpanded={searchQuery ? true : expandedCategory === category.id}
+                isExpanded={searchQuery ? true : expandedCategories.has(category.id)}
                 onToggle={() => toggleCategory(category.id)}
                 router={router}
               />
@@ -511,33 +523,51 @@ const styles = StyleSheet.create({
     color: DashboardColors.textMuted
   },
   subItemsContainer: {
-    backgroundColor: DashboardColors.background,
-    paddingVertical: DashboardSpacing.xs
+    backgroundColor: DashboardColors.surface,
+    paddingLeft: DashboardSpacing.xl + 22,
+    paddingBottom: DashboardSpacing.sm
   },
   subItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: DashboardSpacing.md,
-    paddingHorizontal: DashboardSpacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
+    paddingVertical: DashboardSpacing.sm + 2,
+    paddingRight: DashboardSpacing.lg,
+    minHeight: 40
   },
   subItemLast: {
-    borderBottomWidth: 0
+    // Son eleman için özel stil gerekirse
   },
-  subItemIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: DashboardBorderRadius.sm,
+  subItemConnector: {
+    width: 24,
     alignItems: 'center',
-    justifyContent: 'center'
+    alignSelf: 'stretch',
+    marginRight: DashboardSpacing.sm
+  },
+  connectorLine: {
+    position: 'absolute',
+    left: 11,
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: DashboardColors.borderLight
+  },
+  connectorLineLast: {
+    bottom: '50%'
+  },
+  connectorDot: {
+    position: 'absolute',
+    left: 8,
+    top: '50%',
+    marginTop: -3,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: DashboardColors.textMuted
   },
   subItemLabel: {
     flex: 1,
     fontSize: DashboardFontSizes.sm,
-    fontWeight: '500',
-    color: DashboardColors.textPrimary,
-    marginLeft: DashboardSpacing.md
+    color: DashboardColors.textSecondary
   },
   sectionTitle: {
     fontSize: DashboardFontSizes.sm,
