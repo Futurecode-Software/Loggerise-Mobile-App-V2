@@ -137,14 +137,10 @@ export default function ProfileScreen(): React.ReactElement {
       } as any)
 
       // Upload
-      console.log('🔄 Avatar upload başlıyor...')
-      const avatarUrl = await uploadAvatar(formData)
-      console.log('✅ Avatar upload tamamlandı, URL:', avatarUrl)
+      await uploadAvatar(formData)
 
       // Kullanıcı bilgilerini yenile
-      console.log('🔄 Kullanıcı bilgileri yenileniyor...')
       await refreshUser()
-      console.log('✅ Kullanıcı bilgileri yenilendi')
 
       // Avatar cache'ini temizle
       setAvatarTimestamp(Date.now())
@@ -156,7 +152,6 @@ export default function ProfileScreen(): React.ReactElement {
         visibilityTime: 1500
       })
     } catch (error: any) {
-      console.error('❌ Avatar upload hatası:', error)
       Toast.show({
         type: 'error',
         text1: error.message || 'Fotoğraf yüklenirken bir hata oluştu',
@@ -220,9 +215,8 @@ export default function ProfileScreen(): React.ReactElement {
           <View style={styles.avatarContainer}>
             {user?.avatar ? (
               <Image
-                source={{
-                  uri: `${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${avatarTimestamp}`
-                }}
+                key={`avatar-${avatarTimestamp}`}
+                source={{ uri: user.avatar }}
                 style={styles.avatar}
               />
             ) : (
