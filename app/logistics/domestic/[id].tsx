@@ -5,7 +5,7 @@
  * Matches web version at /yurtici-tasimacilik/{id}
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -13,34 +13,24 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+  ActivityIndicator
+} from 'react-native'
+import { router, useLocalSearchParams } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useFocusEffect } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import Toast from 'react-native-toast-message'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import {
-  Edit,
-  Trash2,
-  Truck,
-  User,
-  Calendar,
-  MapPin,
-  Package,
-  FileText,
-  Phone,
-  DollarSign,
-  Receipt,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Play,
-  Square,
-} from 'lucide-react-native';
-import { Card, Badge } from '@/components/ui';
-import type { ViewStyle } from 'react-native';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
+import { formatCurrency } from '@/utils/currency'
 import {
   getDomesticOrder,
   deleteDomesticOrder,
@@ -48,105 +38,264 @@ import {
   DomesticTransportOrder,
   DomesticOrderStatus,
   getOrderStatusLabel,
-  getOrderStatusVariant,
   getOrderTypeLabel,
   getOrderTypeColor,
   getBillingTypeLabel,
-  getDriverFullName,
-  formatDate,
-  formatDateTime,
-  formatCurrency,
-} from '@/services/endpoints/domestic-orders';
+  getDriverFullName
+} from '@/services/endpoints/domestic-orders'
+
+// Tarih formatlama
+const formatDate = (dateString?: string): string => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
+  } catch {
+    return dateString
+  }
+}
+
+const formatDateTime = (dateString?: string): string => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch {
+    return dateString
+  }
+}
+
+// Bölüm başlığı
+interface SectionHeaderProps {
+  title: string
+  icon: keyof typeof Ionicons.glyphMap
+}
+
+function SectionHeader({ title, icon }: SectionHeaderProps) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionIcon}>
+        <Ionicons name={icon} size={16} color={DashboardColors.primary} />
+      </View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  )
+}
+
+// Bilgi satırı
+interface InfoRowProps {
+  label: string
+  value: string
+  icon?: keyof typeof Ionicons.glyphMap
+}
+
+function InfoRow({ label, value, icon }: InfoRowProps) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={styles.infoLabel}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={14}
+            color={DashboardColors.textMuted}
+            style={styles.infoIcon}
+          />
+        )}
+        <Text style={styles.infoLabelText}>{label}</Text>
+      </View>
+      <Text style={styles.infoValue}>
+        {value}
+      </Text>
+    </View>
+  )
+}
+
+// Badge component
+interface BadgeProps {
+  label: string
+  variant: 'success' | 'warning' | 'error' | 'info'
+}
+
+function Badge({ label, variant }: BadgeProps) {
+  const colors: Record<typeof variant, { bg: string; text: string }> = {
+    success: { bg: 'rgba(16, 185, 129, 0.2)', text: DashboardColors.success },
+    warning: { bg: 'rgba(245, 158, 11, 0.2)', text: '#f59e0b' },
+    error: { bg: 'rgba(239, 68, 68, 0.2)', text: DashboardColors.danger },
+    info: { bg: 'rgba(59, 130, 246, 0.2)', text: '#3b82f6' }
+  }
+
+  return (
+    <View style={[styles.badge, { backgroundColor: colors[variant].bg }]}>
+      <Text style={[styles.badgeText, { color: colors[variant].text }]}>
+        {label}
+      </Text>
+    </View>
+  )
+}
+
+// Status variant'ı badge variant'a çevir
+const getStatusVariant = (status: DomesticOrderStatus): 'success' | 'warning' | 'error' | 'info' => {
+  switch (status) {
+    case 'completed':
+      return 'success'
+    case 'cancelled':
+      return 'error'
+    case 'draft':
+      return 'warning'
+    default:
+      return 'info'
+  }
+}
 
 // Tabs
 const TABS = [
   { id: 'info', label: 'Genel Bilgi' },
   { id: 'items', label: 'Kalemler' },
   { id: 'pricing', label: 'Fiyatlandırma' },
-  { id: 'expenses', label: 'Masraflar' },
-];
+  { id: 'expenses', label: 'Masraflar' }
+]
 
 export default function DomesticOrderDetailScreen() {
-  const colors = Colors.light;
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const insets = useSafeAreaInsets()
 
-  const [order, setOrder] = useState<DomesticTransportOrder | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('info');
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [pendingStatus, setPendingStatus] = useState<DomesticOrderStatus | null>(null);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  // State
+  const [order, setOrder] = useState<DomesticTransportOrder | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('info')
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [pendingStatus, setPendingStatus] = useState<DomesticOrderStatus | null>(null)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
 
-  const fetchOrder = useCallback(async () => {
-    if (!id) return;
+  // Refs
+  const isMountedRef = useRef(true)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
+  const statusDialogRef = useRef<BottomSheetModal>(null)
+
+  const fetchOrder = useCallback(async (showLoading = true) => {
+    if (!id) return
 
     try {
-      setError(null);
-      const data = await getDomesticOrder(Number(id));
-      setOrder(data);
-    } catch (err) {
-      console.error('Order fetch error:', err);
-      setError(err instanceof Error ? err.message : 'İş emri yüklenemedi');
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    fetchOrder();
-  }, [fetchOrder]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchOrder();
-  };
-
-  const handleDelete = async () => {
-    if (!order) return;
-
-    setIsDeleting(true);
-    try {
-      await deleteDomesticOrder(order.id);
-      success('Başarılı', 'İş emri silindi');
-      router.back();
-    } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'İş emri silinemedi');
-    } finally {
-      setIsDeleting(false);
-      setDeleteDialogOpen(false);
-    }
-  };
-
-  const handleStatusChange = async () => {
-    if (!order || !pendingStatus) return;
-
-    setIsUpdatingStatus(true);
-    try {
-      const dates: { pickup_actual_date?: string; delivery_actual_date?: string } = {};
-
-      if (pendingStatus === 'in_transit') {
-        dates.pickup_actual_date = new Date().toISOString();
-      } else if (pendingStatus === 'completed') {
-        dates.delivery_actual_date = new Date().toISOString();
+      if (showLoading) {
+        setIsLoading(true)
+        setError(null)
       }
 
-      const updatedOrder = await updateDomesticOrderStatus(order.id, pendingStatus, dates);
-      setOrder(updatedOrder);
-      success('Başarılı', 'Durum güncellendi');
+      const data = await getDomesticOrder(Number(id))
+
+      if (isMountedRef.current) {
+        setOrder(data)
+        setError(null)
+      }
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Durum güncellenemedi');
+      if (isMountedRef.current) {
+        console.error('Order fetch error:', err)
+        setError(err instanceof Error ? err.message : 'İş emri yüklenemedi')
+      }
     } finally {
-      setIsUpdatingStatus(false);
-      setStatusDialogOpen(false);
-      setPendingStatus(null);
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
     }
-  };
+  }, [id])
+
+  useEffect(() => {
+    isMountedRef.current = true
+    fetchOrder()
+
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [fetchOrder])
+
+  // Edit sayfasından dönüşte yenile
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrder(false)
+    }, [fetchOrder])
+  )
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    fetchOrder(false)
+  }, [fetchOrder])
+
+  const handleDelete = async () => {
+    if (!order) return
+
+    setIsDeleting(true)
+    try {
+      await deleteDomesticOrder(order.id)
+      deleteDialogRef.current?.dismiss()
+      Toast.show({
+        type: 'success',
+        text1: 'İş emri silindi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+
+      setTimeout(() => {
+        router.back()
+      }, 300)
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'İş emri silinemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleStatusChange = async () => {
+    if (!order || !pendingStatus) return
+
+    setIsUpdatingStatus(true)
+    try {
+      const dates: { pickup_actual_date?: string; delivery_actual_date?: string } = {}
+
+      if (pendingStatus === 'in_transit') {
+        dates.pickup_actual_date = new Date().toISOString()
+      } else if (pendingStatus === 'completed') {
+        dates.delivery_actual_date = new Date().toISOString()
+      }
+
+      const updatedOrder = await updateDomesticOrderStatus(order.id, pendingStatus, dates)
+      setOrder(updatedOrder)
+      statusDialogRef.current?.dismiss()
+      Toast.show({
+        type: 'success',
+        text1: 'Durum güncellendi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Durum güncellenemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsUpdatingStatus(false)
+      setPendingStatus(null)
+    }
+  }
 
   const getNextStatus = (): DomesticOrderStatus | null => {
     if (!order) return null;
@@ -175,882 +324,1020 @@ export default function DomesticOrderDetailScreen() {
     return labels[status];
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="İş Emri Detayı" onBackPress={() => router.back()} />
-        <View style={[styles.loadingCard, { backgroundColor: '#FFFFFF' }]}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Yükleniyor...
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Error state
-  if (error || !order) {
-    return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="İş Emri Detayı" onBackPress={() => router.back()} />
-        <View style={[styles.errorCard, { backgroundColor: '#FFFFFF' }]}>
-          <AlertTriangle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>
-            {error || 'İş emri bulunamadı'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={fetchOrder}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  const nextStatus = getNextStatus();
+  const nextStatus = getNextStatus()
 
   const renderInfoTab = () => (
     <View style={styles.tabContentWrapper}>
       {/* Status & Type */}
-      <Card style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <FileText size={20} color={Brand.primary} />
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Sipariş Bilgileri</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Durum:</Text>
-          <Badge label={getOrderStatusLabel(order.status)} variant={getOrderStatusVariant(order.status)} size="sm" />
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Sipariş Tipi:</Text>
-          <View style={[styles.typeBadge, { backgroundColor: getOrderTypeColor(order.order_type) + '20' }]}>
-            <Text style={[styles.typeText, { color: getOrderTypeColor(order.order_type) }]}>
-              {getOrderTypeLabel(order.order_type)}
-            </Text>
-          </View>
-        </View>
-
-        {order.billing_type && (
+      <View style={styles.card}>
+        <SectionHeader title="Sipariş Bilgileri" icon="document-text-outline" />
+        <View style={styles.cardContent}>
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Faturalama:</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>
-              {getBillingTypeLabel(order.billing_type)}
-            </Text>
+            <View style={styles.infoLabel}>
+              <Ionicons name="flag-outline" size={14} color={DashboardColors.textMuted} style={styles.infoIcon} />
+              <Text style={styles.infoLabelText}>Durum</Text>
+            </View>
+            <Badge label={getOrderStatusLabel(order.status)} variant={getStatusVariant(order.status)} />
           </View>
-        )}
 
-        {order.notes && (
-          <View style={styles.notesContainer}>
-            <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Notlar:</Text>
-            <Text style={[styles.notesText, { color: colors.textSecondary }]}>{order.notes}</Text>
+          <View style={styles.infoRow}>
+            <View style={styles.infoLabel}>
+              <Ionicons name="layers-outline" size={14} color={DashboardColors.textMuted} style={styles.infoIcon} />
+              <Text style={styles.infoLabelText}>Sipariş Tipi</Text>
+            </View>
+            <View style={[styles.typeBadge, { backgroundColor: getOrderTypeColor(order.order_type) + '20' }]}>
+              <Text style={[styles.typeText, { color: getOrderTypeColor(order.order_type) }]}>
+                {getOrderTypeLabel(order.order_type)}
+              </Text>
+            </View>
           </View>
-        )}
-      </Card>
+
+          {order.billing_type && (
+            <InfoRow
+              label="Faturalama"
+              value={getBillingTypeLabel(order.billing_type)}
+              icon="receipt-outline"
+            />
+          )}
+
+          {order.notes && (
+            <View style={styles.notesContainer}>
+              <Text style={styles.notesLabel}>Notlar:</Text>
+              <Text style={styles.notesText}>{order.notes}</Text>
+            </View>
+          )}
+        </View>
+      </View>
 
       {/* Customer */}
       {order.customer && (
-        <Card style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <User size={20} color={Brand.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Müşteri</Text>
+        <View style={styles.card}>
+          <SectionHeader title="Müşteri" icon="person-outline" />
+          <View style={styles.cardContent}>
+            <InfoRow
+              label="Müşteri Adı"
+              value={order.customer.name}
+              icon="text-outline"
+            />
+            {order.customer.code && (
+              <InfoRow
+                label="Müşteri Kodu"
+                value={order.customer.code}
+                icon="barcode-outline"
+              />
+            )}
+            {order.customer.phone && (
+              <InfoRow
+                label="Telefon"
+                value={order.customer.phone}
+                icon="call-outline"
+              />
+            )}
           </View>
-
-          <Text style={[styles.customerName, { color: colors.text }]}>{order.customer.name}</Text>
-          {order.customer.code && (
-            <Text style={[styles.customerCode, { color: colors.textMuted }]}>
-              Kod: {order.customer.code}
-            </Text>
-          )}
-          {order.customer.phone && (
-            <View style={styles.phoneRow}>
-              <Phone size={14} color={colors.icon} />
-              <Text style={[styles.phoneText, { color: colors.textSecondary }]}>
-                {order.customer.phone}
-              </Text>
-            </View>
-          )}
-        </Card>
+        </View>
       )}
 
       {/* Addresses */}
-      <Card style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <MapPin size={20} color={Brand.primary} />
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Adresler</Text>
+      <View style={styles.card}>
+        <SectionHeader title="Adresler" icon="location-outline" />
+        <View style={styles.cardContent}>
+          {order.pickup_address && (
+            <View style={styles.addressBlock}>
+              <View style={styles.addressHeader}>
+                <View style={[styles.addressDot, { backgroundColor: '#22c55e' }]} />
+                <Text style={styles.addressTitle}>Alım Adresi</Text>
+              </View>
+              {order.pickup_address.title && (
+                <Text style={styles.addressName}>{order.pickup_address.title}</Text>
+              )}
+              <Text style={styles.addressText}>
+                {order.pickup_address.formatted_address || order.pickup_address.address}
+              </Text>
+            </View>
+          )}
+
+          {order.delivery_address && (
+            <View style={[styles.addressBlock, order.pickup_address && { marginTop: DashboardSpacing.md }]}>
+              <View style={styles.addressHeader}>
+                <View style={[styles.addressDot, { backgroundColor: '#ef4444' }]} />
+                <Text style={styles.addressTitle}>Teslimat Adresi</Text>
+              </View>
+              {order.delivery_address.title && (
+                <Text style={styles.addressName}>{order.delivery_address.title}</Text>
+              )}
+              <Text style={styles.addressText}>
+                {order.delivery_address.formatted_address || order.delivery_address.address}
+              </Text>
+            </View>
+          )}
         </View>
-
-        {order.pickup_address && (
-          <View style={styles.addressBlock}>
-            <View style={styles.addressHeader}>
-              <View style={[styles.addressDot, { backgroundColor: '#22c55e' }]} />
-              <Text style={[styles.addressTitle, { color: colors.text }]}>Alım Adresi</Text>
-            </View>
-            {order.pickup_address.title && (
-              <Text style={[styles.addressName, { color: colors.text }]}>{order.pickup_address.title}</Text>
-            )}
-            <Text style={[styles.addressText, { color: colors.textSecondary }]}>
-              {order.pickup_address.formatted_address || order.pickup_address.address}
-            </Text>
-          </View>
-        )}
-
-        {order.delivery_address && (
-          <View style={[styles.addressBlock, { marginTop: Spacing.md }]}>
-            <View style={styles.addressHeader}>
-              <View style={[styles.addressDot, { backgroundColor: '#ef4444' }]} />
-              <Text style={[styles.addressTitle, { color: colors.text }]}>Teslimat Adresi</Text>
-            </View>
-            {order.delivery_address.title && (
-              <Text style={[styles.addressName, { color: colors.text }]}>{order.delivery_address.title}</Text>
-            )}
-            <Text style={[styles.addressText, { color: colors.textSecondary }]}>
-              {order.delivery_address.formatted_address || order.delivery_address.address}
-            </Text>
-          </View>
-        )}
-      </Card>
+      </View>
 
       {/* Dates */}
-      <Card style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Calendar size={20} color={Brand.primary} />
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Tarihler</Text>
-        </View>
-
-        <View style={styles.dateGrid}>
-          <View style={styles.dateBlock}>
-            <Text style={[styles.dateLabel, { color: colors.textMuted }]}>Planlanan Alım</Text>
-            <Text style={[styles.dateValue, { color: colors.text }]}>
-              {formatDate(order.pickup_expected_date)}
-            </Text>
-          </View>
-          <View style={styles.dateBlock}>
-            <Text style={[styles.dateLabel, { color: colors.textMuted }]}>Gerçekleşen Alım</Text>
-            <Text style={[styles.dateValue, { color: order.pickup_actual_date ? '#22c55e' : colors.textMuted }]}>
-              {formatDateTime(order.pickup_actual_date)}
-            </Text>
-          </View>
-          <View style={styles.dateBlock}>
-            <Text style={[styles.dateLabel, { color: colors.textMuted }]}>Planlanan Teslimat</Text>
-            <Text style={[styles.dateValue, { color: colors.text }]}>
-              {formatDate(order.delivery_expected_date)}
-            </Text>
-          </View>
-          <View style={styles.dateBlock}>
-            <Text style={[styles.dateLabel, { color: colors.textMuted }]}>Gerçekleşen Teslimat</Text>
-            <Text style={[styles.dateValue, { color: order.delivery_actual_date ? '#22c55e' : colors.textMuted }]}>
-              {formatDateTime(order.delivery_actual_date)}
-            </Text>
+      <View style={styles.card}>
+        <SectionHeader title="Tarihler" icon="calendar-outline" />
+        <View style={styles.cardContent}>
+          <View style={styles.dateGrid}>
+            <View style={styles.dateBlock}>
+              <Text style={styles.dateLabel}>Planlanan Alım</Text>
+              <Text style={styles.dateValue}>
+                {formatDate(order.pickup_expected_date)}
+              </Text>
+            </View>
+            <View style={styles.dateBlock}>
+              <Text style={styles.dateLabel}>Gerçekleşen Alım</Text>
+              <Text style={[styles.dateValue, order.pickup_actual_date && styles.dateValueActive]}>
+                {formatDateTime(order.pickup_actual_date)}
+              </Text>
+            </View>
+            <View style={styles.dateBlock}>
+              <Text style={styles.dateLabel}>Planlanan Teslimat</Text>
+              <Text style={styles.dateValue}>
+                {formatDate(order.delivery_expected_date)}
+              </Text>
+            </View>
+            <View style={styles.dateBlock}>
+              <Text style={styles.dateLabel}>Gerçekleşen Teslimat</Text>
+              <Text style={[styles.dateValue, order.delivery_actual_date && styles.dateValueActive]}>
+                {formatDateTime(order.delivery_actual_date)}
+              </Text>
+            </View>
           </View>
         </View>
-      </Card>
+      </View>
 
       {/* Assignment */}
-      <Card style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Truck size={20} color={Brand.primary} />
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Atama</Text>
+      <View style={styles.card}>
+        <SectionHeader title="Atama" icon="car-outline" />
+        <View style={styles.cardContent}>
+          <InfoRow
+            label="Araç"
+            value={order.vehicle ? `${order.vehicle.plate} - ${order.vehicle.brand || ''} ${order.vehicle.model || ''}`.trim() : '-'}
+            icon="car-sport-outline"
+          />
+          <InfoRow
+            label="Sürücü"
+            value={getDriverFullName(order.driver)}
+            icon="person-outline"
+          />
+          {order.driver?.phone_1 && (
+            <InfoRow
+              label="Telefon"
+              value={order.driver.phone_1}
+              icon="call-outline"
+            />
+          )}
         </View>
-
-        <View style={styles.assignmentRow}>
-          <Text style={[styles.assignmentLabel, { color: colors.textMuted }]}>Araç:</Text>
-          <Text style={[styles.assignmentValue, { color: colors.text }]}>
-            {order.vehicle ? `${order.vehicle.plate} - ${order.vehicle.brand || ''} ${order.vehicle.model || ''}`.trim() : '-'}
-          </Text>
-        </View>
-
-        <View style={styles.assignmentRow}>
-          <Text style={[styles.assignmentLabel, { color: colors.textMuted }]}>Sürücü:</Text>
-          <Text style={[styles.assignmentValue, { color: colors.text }]}>
-            {getDriverFullName(order.driver)}
-          </Text>
-        </View>
-
-        {order.driver?.phone_1 && (
-          <View style={styles.phoneRow}>
-            <Phone size={14} color={colors.icon} />
-            <Text style={[styles.phoneText, { color: colors.textSecondary }]}>
-              {order.driver.phone_1}
-            </Text>
-          </View>
-        )}
-      </Card>
+      </View>
     </View>
-  );
+  )
 
   const renderItemsTab = () => (
     <View style={styles.tabContentWrapper}>
       {order.items && order.items.length > 0 ? (
         order.items.map((item, index) => (
-          <Card key={item.id} style={styles.itemCard}>
+          <View key={item.id} style={styles.card}>
             <View style={styles.itemHeader}>
-              <Package size={18} color={Brand.primary} />
-              <Text style={[styles.itemTitle, { color: colors.text }]}>
+              <Ionicons name="cube-outline" size={18} color={DashboardColors.primary} />
+              <Text style={styles.itemTitle}>
                 {item.description || `Kalem ${index + 1}`}
               </Text>
             </View>
 
-            <View style={styles.itemDetails}>
-              {item.package_type && (
-                <View style={styles.itemDetail}>
-                  <Text style={[styles.itemLabel, { color: colors.textMuted }]}>Paket Tipi:</Text>
-                  <Text style={[styles.itemValue, { color: colors.text }]}>{item.package_type}</Text>
-                </View>
-              )}
-              {item.package_count && (
-                <View style={styles.itemDetail}>
-                  <Text style={[styles.itemLabel, { color: colors.textMuted }]}>Adet:</Text>
-                  <Text style={[styles.itemValue, { color: colors.text }]}>{item.package_count}</Text>
-                </View>
-              )}
-              {item.gross_weight && (
-                <View style={styles.itemDetail}>
-                  <Text style={[styles.itemLabel, { color: colors.textMuted }]}>Ağırlık:</Text>
-                  <Text style={[styles.itemValue, { color: colors.text }]}>{item.gross_weight} kg</Text>
-                </View>
-              )}
-              {item.volume && (
-                <View style={styles.itemDetail}>
-                  <Text style={[styles.itemLabel, { color: colors.textMuted }]}>Hacim:</Text>
-                  <Text style={[styles.itemValue, { color: colors.text }]}>{item.volume} m³</Text>
-                </View>
+            <View style={styles.cardContent}>
+              <View style={styles.itemDetails}>
+                {item.package_type && (
+                  <View style={styles.itemDetail}>
+                    <Text style={styles.itemLabel}>Paket Tipi:</Text>
+                    <Text style={styles.itemValue}>{item.package_type}</Text>
+                  </View>
+                )}
+                {item.package_count && (
+                  <View style={styles.itemDetail}>
+                    <Text style={styles.itemLabel}>Adet:</Text>
+                    <Text style={styles.itemValue}>{item.package_count}</Text>
+                  </View>
+                )}
+                {item.gross_weight && (
+                  <View style={styles.itemDetail}>
+                    <Text style={styles.itemLabel}>Ağırlık:</Text>
+                    <Text style={styles.itemValue}>{item.gross_weight} kg</Text>
+                  </View>
+                )}
+                {item.volume && (
+                  <View style={styles.itemDetail}>
+                    <Text style={styles.itemLabel}>Hacim:</Text>
+                    <Text style={styles.itemValue}>{item.volume} m³</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Flags */}
+              <View style={styles.itemFlags}>
+                {item.is_fragile && (
+                  <View style={[styles.flagBadge, { backgroundColor: '#f59e0b' + '20' }]}>
+                    <Text style={[styles.flagText, { color: '#f59e0b' }]}>Kırılabilir</Text>
+                  </View>
+                )}
+                {item.requires_temperature_control && (
+                  <View style={[styles.flagBadge, { backgroundColor: '#3b82f6' + '20' }]}>
+                    <Text style={[styles.flagText, { color: '#3b82f6' }]}>
+                      Sıcaklık: {item.min_temperature}°C - {item.max_temperature}°C
+                    </Text>
+                  </View>
+                )}
+                {item.requires_insurance && (
+                  <View style={[styles.flagBadge, { backgroundColor: '#8b5cf6' + '20' }]}>
+                    <Text style={[styles.flagText, { color: '#8b5cf6' }]}>Sigortalı</Text>
+                  </View>
+                )}
+              </View>
+
+              {item.special_instructions && (
+                <Text style={styles.specialInstructions}>
+                  {item.special_instructions}
+                </Text>
               )}
             </View>
-
-            {/* Flags */}
-            <View style={styles.itemFlags}>
-              {item.is_fragile && (
-                <View style={[styles.flagBadge, { backgroundColor: '#f59e0b' + '20' }]}>
-                  <Text style={[styles.flagText, { color: '#f59e0b' }]}>Kırılabilir</Text>
-                </View>
-              )}
-              {item.requires_temperature_control && (
-                <View style={[styles.flagBadge, { backgroundColor: '#3b82f6' + '20' }]}>
-                  <Text style={[styles.flagText, { color: '#3b82f6' }]}>
-                    Sıcaklık: {item.min_temperature}°C - {item.max_temperature}°C
-                  </Text>
-                </View>
-              )}
-              {item.requires_insurance && (
-                <View style={[styles.flagBadge, { backgroundColor: '#8b5cf6' + '20' }]}>
-                  <Text style={[styles.flagText, { color: '#8b5cf6' }]}>Sigortalı</Text>
-                </View>
-              )}
-            </View>
-
-            {item.special_instructions && (
-              <Text style={[styles.specialInstructions, { color: colors.textSecondary }]}>
-                {item.special_instructions}
-              </Text>
-            )}
-          </Card>
+          </View>
         ))
       ) : (
         <View style={styles.emptyTab}>
-          <Package size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyTabText, { color: colors.textMuted }]}>
+          <Ionicons name="cube-outline" size={48} color={DashboardColors.textMuted} />
+          <Text style={styles.emptyTabText}>
             Henüz kalem eklenmemiş
           </Text>
         </View>
       )}
     </View>
-  );
+  )
 
   const renderPricingTab = () => {
-    const totalRevenue = order.pricing_items?.reduce((sum, item) => sum + (item.total_amount || 0), 0) || 0;
+    const totalRevenue = order.pricing_items?.reduce((sum, item) => sum + (item.total_amount || 0), 0) || 0
 
     return (
       <View style={styles.tabContentWrapper}>
         {order.pricing_items && order.pricing_items.length > 0 ? (
           <>
             {order.pricing_items.map((item, index) => (
-              <Card key={item.id} style={styles.pricingCard}>
+              <View key={item.id} style={styles.card}>
                 <View style={styles.pricingHeader}>
-                  <Text style={[styles.pricingType, { color: colors.text }]}>
+                  <Text style={styles.pricingType}>
                     {item.item_type || `Kalem ${index + 1}`}
                   </Text>
-                  <Text style={[styles.pricingAmount, { color: Brand.primary }]}>
+                  <Text style={styles.pricingAmount}>
                     {formatCurrency(item.total_amount, item.currency)}
                   </Text>
                 </View>
                 {item.description && (
-                  <Text style={[styles.pricingDescription, { color: colors.textSecondary }]}>
+                  <Text style={styles.pricingDescription}>
                     {item.description}
                   </Text>
                 )}
                 <View style={styles.pricingDetails}>
-                  <Text style={[styles.pricingDetail, { color: colors.textMuted }]}>
+                  <Text style={styles.pricingDetail}>
                     {item.quantity} {item.unit} x {formatCurrency(item.unit_price, item.currency)}
                   </Text>
                 </View>
-              </Card>
+              </View>
             ))}
 
-            <Card style={[styles.totalCard, { backgroundColor: (Brand.primary + '10') as string }]}>
+            <View style={[styles.totalCard, { backgroundColor: DashboardColors.primaryGlow }]}>
               <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { color: colors.text }]}>Toplam Gelir</Text>
-                <Text style={[styles.totalAmount, { color: Brand.primary }]}>
+                <Text style={styles.totalLabel}>Toplam Gelir</Text>
+                <Text style={styles.totalAmount}>
                   {formatCurrency(totalRevenue, 'TRY')}
                 </Text>
               </View>
-            </Card>
+            </View>
           </>
         ) : (
           <View style={styles.emptyTab}>
-            <DollarSign size={48} color={colors.textMuted} />
-            <Text style={[styles.emptyTabText, { color: colors.textMuted }]}>
+            <Ionicons name="cash-outline" size={48} color={DashboardColors.textMuted} />
+            <Text style={styles.emptyTabText}>
               Henüz fiyatlandırma eklenmemiş
             </Text>
           </View>
         )}
       </View>
-    );
-  };
+    )
+  }
 
   const renderExpensesTab = () => {
-    const totalExpenses = order.expenses?.filter(e => e.status === 'approved').reduce((sum, e) => sum + (e.amount_try || 0), 0) || 0;
+    const totalExpenses = order.expenses?.filter(e => e.status === 'approved').reduce((sum, e) => sum + (e.amount_try || 0), 0) || 0
 
     return (
       <View style={styles.tabContentWrapper}>
         {order.expenses && order.expenses.length > 0 ? (
           <>
             {order.expenses.map((expense) => (
-              <Card key={expense.id} style={styles.expenseCard}>
+              <View key={expense.id} style={styles.card}>
                 <View style={styles.expenseHeader}>
                   <View>
-                    <Text style={[styles.expenseType, { color: colors.text }]}>
+                    <Text style={styles.expenseType}>
                       {expense.expense_type || 'Masraf'}
                     </Text>
                     {expense.expense_date && (
-                      <Text style={[styles.expenseDate, { color: colors.textMuted }]}>
+                      <Text style={styles.expenseDate}>
                         {formatDate(expense.expense_date)}
                       </Text>
                     )}
                   </View>
                   <View style={styles.expenseAmountContainer}>
-                    <Text style={[styles.expenseAmount, { color: colors.text }]}>
+                    <Text style={styles.expenseAmount}>
                       {formatCurrency(expense.amount, expense.currency)}
                     </Text>
                     <Badge
                       label={expense.status === 'approved' ? 'Onaylı' : expense.status === 'rejected' ? 'Reddedildi' : 'Bekliyor'}
                       variant={expense.status === 'approved' ? 'success' : expense.status === 'rejected' ? 'error' : 'warning'}
-                      size="sm"
                     />
                   </View>
                 </View>
                 {expense.description && (
-                  <Text style={[styles.expenseDescription, { color: colors.textSecondary }]}>
+                  <Text style={styles.expenseDescription}>
                     {expense.description}
                   </Text>
                 )}
-              </Card>
+              </View>
             ))}
 
-            <Card style={[styles.totalCard, { backgroundColor: ('#ef4444' + '10') as string }]}>
+            <View style={[styles.totalCard, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
               <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { color: colors.text }]}>Onaylı Masraflar</Text>
+                <Text style={styles.totalLabel}>Onaylı Masraflar</Text>
                 <Text style={[styles.totalAmount, { color: '#ef4444' }]}>
                   {formatCurrency(totalExpenses, 'TRY')}
                 </Text>
               </View>
-            </Card>
+            </View>
           </>
         ) : (
           <View style={styles.emptyTab}>
-            <Receipt size={48} color={colors.textMuted} />
-            <Text style={[styles.emptyTabText, { color: colors.textMuted }]}>
+            <Ionicons name="receipt-outline" size={48} color={DashboardColors.textMuted} />
+            <Text style={styles.emptyTabText}>
               Henüz masraf eklenmemiş
             </Text>
           </View>
         )}
       </View>
-    );
-  };
+    )
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-        title={order.order_number}
-        onBackPress={() => router.back()}
-        rightIcons={
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => router.push(`/logistics/domestic/${order.id}/edit` as any)}
-              style={styles.headerButton}
-            >
-              <Edit size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setDeleteDialogOpen(true)}
-              style={styles.headerButton}
-            >
-              <Trash2 size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        }
-      />
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {/* Statik glow orbs */}
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
 
-      <View style={styles.contentWrapper}>
-        {/* Tabs */}
-        <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
-            {TABS.map((tab) => (
-              <TouchableOpacity
-                key={tab.id}
-                style={[
-                  styles.tab,
-                  activeTab === tab.id && { borderBottomColor: Brand.primary },
-                ]}
-                onPress={() => setActiveTab(tab.id)}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    { color: activeTab === tab.id ? Brand.primary : colors.textSecondary },
-                  ]}
-                >
-                  {tab.label}
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Başlık */}
+            {isLoading ? (
+              <View style={styles.headerTitleSection}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            ) : order ? (
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerName} numberOfLines={1}>
+                  {order.order_number}
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+              </View>
+            ) : (
+              <View style={styles.headerTitleSection} />
+            )}
+
+            {/* Aksiyonlar */}
+            {!isLoading && order ? (
+              <View style={styles.headerActions}>
+                <TouchableOpacity style={styles.headerButton} onPress={() => router.push(`/logistics/domestic/${order.id}/edit` as any)}>
+                  <Ionicons name="create-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.headerButton, styles.deleteButton]}
+                  onPress={() => deleteDialogRef.current?.present()}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={22} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.headerActionsPlaceholder} />
+            )}
+          </View>
         </View>
 
-        {/* Content */}
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />
-          }
-        >
-          {activeTab === 'info' && renderInfoTab()}
-          {activeTab === 'items' && renderItemsTab()}
-          {activeTab === 'pricing' && renderPricingTab()}
-          {activeTab === 'expenses' && renderExpensesTab()}
-        </ScrollView>
+        <View style={styles.bottomCurve} />
       </View>
 
-      {/* Status Action Button */}
-      {nextStatus && order.status !== 'completed' && order.status !== 'cancelled' && (
-        <View style={[styles.actionBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: Brand.primary }]}
-            onPress={() => {
-              setPendingStatus(nextStatus);
-              setStatusDialogOpen(true);
-            }}
-          >
-            {nextStatus === 'in_transit' ? (
-              <Play size={20} color="#FFFFFF" />
-            ) : nextStatus === 'completed' ? (
-              <CheckCircle size={20} color="#FFFFFF" />
-            ) : (
-              <Clock size={20} color="#FFFFFF" />
-            )}
-            <Text style={styles.actionButtonText}>{getStatusActionLabel(nextStatus)}</Text>
+      {/* Loading state */}
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Yükleniyor...</Text>
+        </View>
+      )}
+
+      {/* Error state */}
+      {!isLoading && (error || !order) && (
+        <View style={styles.errorContainer}>
+          <View style={styles.errorIcon}>
+            <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+          </View>
+          <Text style={styles.errorTitle}>{error || 'İş emri bulunamadı'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => fetchOrder()}>
+            <Ionicons name="refresh" size={18} color="#fff" />
+            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
           </TouchableOpacity>
         </View>
       )}
 
+      {/* Normal content */}
+      {!isLoading && order && (
+        <>
+          {/* Tabs */}
+          <View style={styles.tabsContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
+              {TABS.map((tab) => (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[
+                    styles.tab,
+                    activeTab === tab.id && styles.tabActive
+                  ]}
+                  onPress={() => setActiveTab(tab.id)}
+                >
+                  <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Content */}
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={DashboardColors.primary} />
+            }
+          >
+            {activeTab === 'info' && renderInfoTab()}
+            {activeTab === 'items' && renderItemsTab()}
+            {activeTab === 'pricing' && renderPricingTab()}
+            {activeTab === 'expenses' && renderExpensesTab()}
+          </ScrollView>
+
+          {/* Status Action Button */}
+          {nextStatus && order.status !== 'completed' && order.status !== 'cancelled' && (
+            <View style={styles.actionBar}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => {
+                  setPendingStatus(nextStatus)
+                  statusDialogRef.current?.present()
+                }}
+              >
+                {nextStatus === 'in_transit' ? (
+                  <Ionicons name="play" size={20} color="#fff" />
+                ) : nextStatus === 'completed' ? (
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                ) : (
+                  <Ionicons name="time" size={20} color="#fff" />
+                )}
+                <Text style={styles.actionButtonText}>{getStatusActionLabel(nextStatus)}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </>
+      )}
+
       {/* Delete Dialog */}
       <ConfirmDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
+        ref={deleteDialogRef}
         title="İş Emrini Sil"
-        description={`"${order.order_number}" numaralı iş emrini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`}
+        message={order ? `"${order.order_number}" numaralı iş emrini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.` : ''}
+        type="danger"
         confirmText="Sil"
         cancelText="İptal"
-        variant="destructive"
-        loading={isDeleting}
         onConfirm={handleDelete}
-        onCancel={() => setDeleteDialogOpen(false)}
+        isLoading={isDeleting}
       />
 
       {/* Status Change Dialog */}
       <ConfirmDialog
-        open={statusDialogOpen}
-        onOpenChange={setStatusDialogOpen}
+        ref={statusDialogRef}
         title="Durum Değiştir"
-        description={pendingStatus ? `İş emri durumunu "${getStatusActionLabel(pendingStatus)}" olarak güncellemek istediğinize emin misiniz?` : ''}
+        message={pendingStatus ? `İş emri durumunu "${getStatusActionLabel(pendingStatus)}" olarak güncellemek istediğinize emin misiniz?` : ''}
+        type="info"
         confirmText="Onayla"
         cancelText="İptal"
-        loading={isUpdatingStatus}
         onConfirm={handleStatusChange}
-        onCancel={() => setStatusDialogOpen(false)}
+        isLoading={isUpdatingStatus}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary
   },
-  contentWrapper: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+  // Header
+  headerContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingBottom: 24
   },
-  loadingCard: {
-    flex: 1,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadows.lg,
+    justifyContent: 'center'
   },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  errorCard: {
+  headerTitleSection: {
     flex: 1,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.xl,
-    ...Shadows.lg,
+    marginHorizontal: DashboardSpacing.md
   },
-  errorTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.lg,
-    textAlign: 'center',
-  },
-  retryButton: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
+  headerName: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
   },
   headerActions: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
   },
-  headerButton: {
-    padding: Spacing.xs,
+  headerActionsPlaceholder: {
+    width: 96 // 44 + 8 + 44
   },
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)'
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+  // Loading & Error
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: DashboardColors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 100
+  },
+  loadingText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.md
+  },
+  errorContainer: {
+    flex: 1,
+    backgroundColor: DashboardColors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingBottom: 100
+  },
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  errorTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.xl,
+    textAlign: 'center'
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
+  },
+  retryButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  },
+  // Tabs
   tabsContainer: {
     borderBottomWidth: 1,
-    paddingTop: Spacing.md,
+    borderBottomColor: DashboardColors.borderLight,
+    backgroundColor: DashboardColors.background,
+    paddingTop: DashboardSpacing.md
   },
   tabsContent: {
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: DashboardSpacing.md
   },
   tab: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.md,
     borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderBottomColor: 'transparent'
+  },
+  tabActive: {
+    borderBottomColor: DashboardColors.primary
   },
   tabText: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '500',
+    color: DashboardColors.textSecondary
   },
+  tabTextActive: {
+    color: DashboardColors.primary
+  },
+  // Content
   content: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
   contentContainer: {
-    padding: Spacing.lg,
-    paddingBottom: 120,
+    padding: DashboardSpacing.lg,
+    paddingBottom: 120
   },
   tabContentWrapper: {
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
-  section: {
-    padding: Spacing.lg,
-    backgroundColor: Colors.light.card,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+  // Cards
+  card: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    ...DashboardShadows.sm,
+    overflow: 'hidden'
   },
+  cardContent: {
+    padding: DashboardSpacing.lg
+  },
+  // Section Header
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingSM,
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
+  // Info Row
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
+    alignItems: 'center',
+    paddingVertical: DashboardSpacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
   },
   infoLabel: {
-    ...Typography.bodyMD,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  infoIcon: {
+    marginRight: DashboardSpacing.sm
+  },
+  infoLabelText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
   infoValue: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
+    color: DashboardColors.textPrimary,
+    maxWidth: '50%',
+    textAlign: 'right'
+  },
+  // Badge
+  badge: {
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.full
+  },
+  badgeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600'
   },
   typeBadge: {
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.sm,
     paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
+    borderRadius: DashboardBorderRadius.sm
   },
   typeText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500'
   },
   notesContainer: {
-    marginTop: Spacing.sm,
+    marginTop: DashboardSpacing.sm,
+    paddingTop: DashboardSpacing.sm
+  },
+  notesLabel: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textMuted,
+    marginBottom: DashboardSpacing.xs
   },
   notesText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.xs,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    lineHeight: 22
   },
-  customerName: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  customerCode: {
-    ...Typography.bodySM,
-    marginTop: 2,
-  },
-  phoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginTop: Spacing.sm,
-  },
-  phoneText: {
-    ...Typography.bodySM,
-  },
+  // Address
   addressBlock: {
-    paddingLeft: Spacing.md,
+    paddingBottom: DashboardSpacing.md
   },
   addressHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.xs,
+    gap: DashboardSpacing.sm,
+    marginBottom: DashboardSpacing.xs
   },
   addressDot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: 5
   },
   addressTitle: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
   addressName: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '500',
+    color: DashboardColors.textPrimary
   },
   addressText: {
-    ...Typography.bodySM,
-    marginTop: 2,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    marginTop: 2
   },
+  // Date
   dateGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
   dateBlock: {
-    width: '45%',
+    width: '45%'
   },
   dateLabel: {
-    ...Typography.bodySM,
-    marginBottom: 2,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textMuted,
+    marginBottom: 2
   },
   dateValue: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '500',
+    color: DashboardColors.textPrimary
   },
-  assignmentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
+  dateValueActive: {
+    color: '#22c55e'
   },
-  assignmentLabel: {
-    ...Typography.bodyMD,
-  },
-  assignmentValue: {
-    ...Typography.bodyMD,
-    fontWeight: '500',
-  },
-  itemCard: {
-    padding: Spacing.lg,
-    backgroundColor: Colors.light.card,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
+  // Items
   itemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
+    gap: DashboardSpacing.sm,
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
   },
   itemTitle: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
-    flex: 1,
+    color: DashboardColors.textPrimary,
+    flex: 1
   },
   itemDetails: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
   itemDetail: {
     flexDirection: 'row',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
   itemLabel: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textMuted
   },
   itemValue: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
+    color: DashboardColors.textPrimary
   },
   itemFlags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.xs,
-    marginTop: Spacing.sm,
+    gap: DashboardSpacing.xs,
+    marginTop: DashboardSpacing.sm
   },
   flagBadge: {
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.sm,
     paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
+    borderRadius: DashboardBorderRadius.sm
   },
   flagText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500'
   },
   specialInstructions: {
-    ...Typography.bodySM,
-    marginTop: Spacing.sm,
-    fontStyle: 'italic',
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.sm,
+    fontStyle: 'italic'
   },
-  pricingCard: {
-    padding: Spacing.lg,
-    backgroundColor: Colors.light.card,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
+  // Pricing
   pricingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    padding: DashboardSpacing.lg
   },
   pricingType: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
   pricingAmount: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '700',
+    color: DashboardColors.primary
   },
   pricingDescription: {
-    ...Typography.bodySM,
-    marginTop: Spacing.xs,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    paddingHorizontal: DashboardSpacing.lg
   },
   pricingDetails: {
-    marginTop: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.sm
   },
   pricingDetail: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textMuted
   },
-  expenseCard: {
-    padding: Spacing.lg,
-    backgroundColor: Colors.light.card,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
+  // Expense
   expenseHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    padding: DashboardSpacing.lg
   },
   expenseType: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
   expenseDate: {
-    ...Typography.bodySM,
-    marginTop: 2,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textMuted,
+    marginTop: 2
   },
   expenseAmountContainer: {
     alignItems: 'flex-end',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
   expenseAmount: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
   expenseDescription: {
-    ...Typography.bodySM,
-    marginTop: Spacing.sm,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
   },
+  // Total
   totalCard: {
-    padding: Spacing.lg,
-    marginTop: Spacing.sm,
-    borderRadius: BorderRadius.lg,
+    padding: DashboardSpacing.lg,
+    marginTop: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.lg
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   totalLabel: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
   totalAmount: {
-    ...Typography.headingMD,
+    fontSize: DashboardFontSizes['2xl'],
     fontWeight: '700',
+    color: DashboardColors.primary
   },
+  // Empty
   emptyTab: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
+    paddingVertical: DashboardSpacing['4xl']
   },
   emptyTabText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textMuted,
+    marginTop: DashboardSpacing.md
   },
+  // Action Bar
   actionBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: Spacing.lg,
+    padding: DashboardSpacing.lg,
     borderTopWidth: 1,
-    backgroundColor: '#FFFFFF',
+    borderTopColor: DashboardColors.borderLight,
+    backgroundColor: DashboardColors.background
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    gap: DashboardSpacing.sm,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary
   },
   actionButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
+    color: '#fff',
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600'
+  }
 });

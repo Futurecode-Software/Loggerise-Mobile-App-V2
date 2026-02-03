@@ -36,8 +36,7 @@ import {
   DashboardBorderRadius,
   DashboardShadows
 } from '@/constants/dashboard-theme'
-import api from '@/services/api'
-import { getErrorMessage, getValidationErrors } from '@/services/api'
+import api, { getErrorMessage, getValidationErrors } from '@/services/api'
 
 // Vehicle type constants
 const VEHICLE_TYPES = {

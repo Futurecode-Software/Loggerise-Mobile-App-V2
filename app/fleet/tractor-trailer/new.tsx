@@ -34,7 +34,11 @@ import {
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui/input'
 import { DateInput } from '@/components/ui/date-input'
-import SearchableSelectModal, { SearchableSelectModalRef, SelectOption } from '@/components/modals/SearchableSelectModal'
+// eslint-disable-next-line import/no-named-as-default
+import SearchableSelectModal, {
+  SearchableSelectModalRef,
+  SelectOption
+} from '@/components/modals/SearchableSelectModal'
 import {
   createTractorTrailerAssignment,
   TractorTrailerAssignmentFormData
@@ -72,6 +76,7 @@ export default function NewTractorTrailerAssignmentScreen() {
       -1,
       true
     )
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const orb1AnimatedStyle = useAnimatedStyle(() => ({

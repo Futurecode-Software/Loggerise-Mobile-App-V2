@@ -8,8 +8,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Bot, CheckCircle, XCircle } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
-import { AiMessage } from '@/services/endpoints/loggy';
-import { formatMessageTime } from '@/services/endpoints/loggy';
+import { AiMessage , formatMessageTime } from '@/services/endpoints/loggy';
+
 import { useToast } from '@/hooks/use-toast';
 
 interface MessageBubbleProps {

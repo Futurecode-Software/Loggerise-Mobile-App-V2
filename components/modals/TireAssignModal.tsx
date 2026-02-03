@@ -13,7 +13,7 @@ export interface TireAssignModalRef {
 }
 
 interface TireAssignModalProps {
-  vehicles: Array<{ id: number; plate: string }>;
+  vehicles: { id: number; plate: string }[];
   onAssign: (data: { vehicle_id: number; position: string; assigned_at: string }) => Promise<void>;
   onSearchVehicles?: (query: string) => Promise<void>;
 }

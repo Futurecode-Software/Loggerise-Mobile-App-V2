@@ -245,7 +245,7 @@ export default function TireWarehouseScreen() {
 
   // BottomSheet ref
   const filterBottomSheetRef = useRef<BottomSheetModal>(null)
-  const snapPoints = useMemo(() => ['92%'], [])
+  const snapPoints = useMemo(() => ['90%'], []);
 
   // API state
   const [tires, setTires] = useState<Tire[]>([])

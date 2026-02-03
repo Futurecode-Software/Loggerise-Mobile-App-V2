@@ -30,13 +30,13 @@ export interface FullScreenHeaderProps {
   rightIcons?: ReactNode;
   onBackPress?: () => void;
   showBackButton?: boolean;
-  tabs?: Array<{
+  tabs?: {
     id: string;
     label: string;
     icon?: ReactNode;
     isActive?: boolean;
     onPress?: () => void;
-  }>;
+  }[];
   rightAction?: {
     icon: ReactNode;
     onPress: () => void;
@@ -45,10 +45,10 @@ export interface FullScreenHeaderProps {
     backgroundColor?: string;
     iconColor?: string;
   };
-  leftActions?: Array<{
+  leftActions?: {
     icon: ReactNode;
     onPress: () => void;
-  }>;
+  }[];
 }
 
 export function FullScreenHeader({

@@ -59,8 +59,8 @@ function SearchableSelectModalComponent<T = any>(
     dismiss: () => bottomSheetRef.current?.dismiss(),
   }));
 
-  // Tek snap point - direkt %90'da açılır
-  const snapPoints = useMemo(() => ['90%'], []);
+  // Tek snap point - direkt %92'de açılır
+  const snapPoints = useMemo(() => ['92%'], []);
 
   // iOS-like spring animation
   const animationConfigs = useBottomSheetSpringConfigs({

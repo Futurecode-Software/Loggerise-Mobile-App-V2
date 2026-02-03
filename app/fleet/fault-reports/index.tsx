@@ -301,7 +301,7 @@ export default function FaultReportsScreen() {
   // BottomSheet refs
   const severityBottomSheetRef = useRef<BottomSheetModal>(null)
   const statusBottomSheetRef = useRef<BottomSheetModal>(null)
-  const snapPoints = useMemo(() => ['92%'], [])
+  const snapPoints = useMemo(() => ['90%'], []);
 
   // API state
   const [faultReports, setFaultReports] = useState<FaultReport[]>([])

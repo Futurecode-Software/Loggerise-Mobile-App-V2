@@ -294,7 +294,7 @@ export default function ChecksScreen() {
 
   // BottomSheet ref
   const filterBottomSheetRef = useRef<BottomSheetModal>(null)
-  const snapPoints = useMemo(() => ['92%'], [])
+  const snapPoints = useMemo(() => ['90%'], []);
 
   // API state
   const [checks, setChecks] = useState<Check[]>([])

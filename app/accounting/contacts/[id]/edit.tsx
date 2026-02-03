@@ -22,7 +22,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
-import { Input, Button, Card } from '@/components/ui'
+import { Input, Button } from '@/components/ui'
 import { GooglePlacesAutocomplete } from '@/components/ui/GooglePlacesAutocomplete'
 import { CountrySelect, StateSelect, CitySelect } from '@/components/ui/LocationSelects'
 import { TaxOfficeSelect } from '@/components/ui/TaxOfficeSelect'
@@ -606,7 +606,7 @@ export default function EditContactScreen() {
       >
           {/* E-Fatura/E-Arsiv Logo Gosterimi */}
           {efaturaInfo && (efaturaInfo.efatura_kayitli || efaturaInfo.earsiv_kayitli) && (
-            <Card style={styles.efaturaCard}>
+            <View style={styles.efaturaCard}>
               {efaturaInfo.efatura_kayitli && (
                 <View style={styles.efaturaItem}>
                   <Text style={[styles.efaturaText, { color: '#10b981' }]}>
@@ -621,12 +621,19 @@ export default function EditContactScreen() {
                   </Text>
                 </View>
               )}
-            </Card>
+            </View>
           )}
 
           {/* Cari Tipi ve Faaliyet Alanı */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Cari Tipi ve Faaliyet Alanı</Text>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="people-outline" size={18} color={DashboardColors.primary} />
+              </View>
+              <Text style={styles.sectionTitle}>Cari Tipi ve Faaliyet Alanı</Text>
+            </View>
+
+            <View style={styles.sectionContent}>
 
             {/* Cari Tipi */}
             <View style={styles.formGroup}>
@@ -688,11 +695,19 @@ export default function EditContactScreen() {
                 ))}
               </View>
             </View>
-          </Card>
+            </View>
+          </View>
 
           {/* Temel Bilgiler */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Temel Bilgiler</Text>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="information-circle-outline" size={18} color={DashboardColors.primary} />
+              </View>
+              <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
+            </View>
+
+            <View style={styles.sectionContent}>
 
             <Input
               label="Firma/Kişi Adı"
@@ -816,11 +831,19 @@ export default function EditContactScreen() {
               onChangeText={(value) => setFormData({ ...formData, phone: value })}
               keyboardType="phone-pad"
             />
-          </Card>
+            </View>
+          </View>
 
           {/* Adres Bilgileri */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Adres Bilgileri</Text>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="location-outline" size={18} color={DashboardColors.primary} />
+              </View>
+              <Text style={styles.sectionTitle}>Adres Bilgileri</Text>
+            </View>
+
+            <View style={styles.sectionContent}>
 
             {/* Google Places Autocomplete */}
             <GooglePlacesAutocomplete
@@ -883,11 +906,19 @@ export default function EditContactScreen() {
               onChange={(value) => setFormData({ ...formData, main_city_id: value ? Number(value) : null })}
               placeholder={isTurkish ? 'İlçe seçiniz' : 'Şehir seçiniz'}
             />
-          </Card>
+            </View>
+          </View>
 
           {/* Finansal Ayarlar */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Finansal Ayarlar</Text>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="cash-outline" size={18} color={DashboardColors.primary} />
+              </View>
+              <Text style={styles.sectionTitle}>Finansal Ayarlar</Text>
+            </View>
+
+            <View style={styles.sectionContent}>
 
             <View style={styles.formGroup}>
               <Text style={[styles.label, { color: DashboardColors.textSecondary }]}>
@@ -931,12 +962,20 @@ export default function EditContactScreen() {
             <Text style={[styles.noteText, { color: DashboardColors.textMuted }]}>
               * Boş bırakılırsa limitsiz kredi
             </Text>
-          </Card>
+            </View>
+          </View>
 
           {/* Müşteri Segmentasyonu - Sadece customer/both/potential için */}
           {(formData.type === 'customer' || formData.type === 'both' || formData.type === 'potential') && (
-            <Card style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Müşteri Segmentasyonu</Text>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionIcon}>
+                  <Ionicons name="stats-chart-outline" size={18} color={DashboardColors.primary} />
+                </View>
+                <Text style={styles.sectionTitle}>Müşteri Segmentasyonu</Text>
+              </View>
+
+              <View style={styles.sectionContent}>
 
               <View style={styles.formGroup}>
                 <Text style={[styles.label, { color: DashboardColors.textSecondary }]}>Müşteri Segmenti</Text>
@@ -992,12 +1031,20 @@ export default function EditContactScreen() {
               <Text style={[styles.noteText, { color: DashboardColors.textMuted }]}>
                 * Varsayılan fatura vade günü
               </Text>
-            </Card>
+              </View>
+            </View>
           )}
 
           {/* Durum ve Kategori */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: DashboardColors.text }]}>Durum ve Kategori</Text>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIcon}>
+                <Ionicons name="flag-outline" size={18} color={DashboardColors.primary} />
+              </View>
+              <Text style={styles.sectionTitle}>Durum ve Kategori</Text>
+            </View>
+
+            <View style={styles.sectionContent}>
 
             <View style={styles.formGroup}>
               <Text style={[styles.label, { color: DashboardColors.textSecondary }]}>
@@ -1035,7 +1082,8 @@ export default function EditContactScreen() {
               value={formData.category}
               onChangeText={(value) => setFormData({ ...formData, category: value })}
             />
-          </Card>
+            </View>
+          </View>
 
           {/* Submit Button */}
           <Button
@@ -1148,7 +1196,9 @@ const styles = StyleSheet.create({
     padding: DashboardSpacing.md,
     backgroundColor: '#f0fdf4',
     borderWidth: 1,
-    borderColor: '#bbf7d0'
+    borderColor: '#bbf7d0',
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.md
   },
   efaturaItem: {
     marginBottom: DashboardSpacing.xs
@@ -1158,12 +1208,35 @@ const styles = StyleSheet.create({
     fontWeight: '600'
   },
   section: {
-    padding: DashboardSpacing.lg
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.lg,
+    overflow: 'hidden'
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
     fontSize: DashboardFontSizes.lg,
-    fontWeight: '700',
-    marginBottom: DashboardSpacing.lg
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
+  },
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
   },
   formGroup: {
     marginBottom: DashboardSpacing.lg

@@ -274,7 +274,7 @@ export default function CashRegistersScreen() {
 
   // BottomSheet ref
   const filterBottomSheetRef = useRef<BottomSheetModal>(null)
-  const snapPoints = useMemo(() => ['92%'], [])
+  const snapPoints = useMemo(() => ['90%'], []);
 
   // API state
   const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([])

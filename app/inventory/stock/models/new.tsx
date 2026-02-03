@@ -4,126 +4,231 @@
  * Create new product model.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-
-import { router } from 'expo-router';
-import { Save } from 'lucide-react-native';
-import { Input, Card, Checkbox } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
-import { createProductModel, ModelFormData } from '@/services/endpoints/products';
-import { getErrorMessage, getValidationErrors } from '@/services/api';
+  TouchableOpacity,
+  ActivityIndicator
+} from 'react-native'
+import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import Toast from 'react-native-toast-message'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
+import { Input } from '@/components/ui'
+import { createProductModel, ModelFormData } from '@/services/endpoints/products'
+import { getErrorMessage, getValidationErrors } from '@/services/api'
 
 export default function NewModelScreen() {
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const insets = useSafeAreaInsets()
+
+  // Animasyonlu orb'lar için shared values
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
+
+  useEffect(() => {
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
 
   // Form state
   const [formData, setFormData] = useState<ModelFormData>({
     name: '',
     description: '',
     is_active: true,
-  });
+  })
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Handle input change
-  const handleInputChange = useCallback(
-    (field: keyof ModelFormData, value: any) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleInputChange = useCallback((field: keyof ModelFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
 
-      if (errors[field]) {
-        setErrors((prevErrors) => {
-          const newErrors = { ...prevErrors };
-          delete newErrors[field];
-          return newErrors;
-        });
-      }
-    },
-    [errors]
-  );
+    if (errors[field]) {
+      setErrors(prevErrors => {
+        const newErrors = { ...prevErrors }
+        delete newErrors[field]
+        return newErrors
+      })
+    }
+  }, [errors])
 
   // Validation function
   const validateForm = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {}
 
     if (!formData.name?.trim()) {
-      newErrors.name = 'Model adı zorunludur.';
+      newErrors.name = 'Model adı zorunludur.'
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [formData])
+
+  // Geri butonu
+  const handleBack = useCallback(() => {
+    router.back()
+  }, [])
 
   // Submit handler
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
-      return;
+      Toast.show({
+        type: 'error',
+        text1: 'Lütfen zorunlu alanları doldurunuz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await createProductModel(formData);
+      await createProductModel(formData)
 
-      success('Başarılı', 'Model başarıyla oluşturuldu.');
-      router.back();
+      Toast.show({
+        type: 'success',
+        text1: 'Model başarıyla oluşturuldu',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      router.back()
     } catch (error: any) {
-      const validationErrors = getValidationErrors(error);
+      const validationErrors = getValidationErrors(error)
       if (validationErrors) {
-        const flatErrors: Record<string, string> = {};
+        const flatErrors: Record<string, string> = {}
         Object.entries(validationErrors).forEach(([field, messages]) => {
           if (Array.isArray(messages) && messages.length > 0) {
-            flatErrors[field] = messages[0];
+            flatErrors[field] = messages[0]
           }
-        });
-        setErrors(flatErrors);
+        })
+        setErrors(flatErrors)
       } else {
-        showError('Hata', getErrorMessage(error));
+        Toast.show({
+          type: 'error',
+          text1: getErrorMessage(error),
+          position: 'top',
+          visibilityTime: 1500
+        })
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  }, [formData, validateForm, success, showError]);
+  }, [formData, validateForm])
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <FullScreenHeader
-          title="Yeni Model Ekle"
-          onBackPress={() => router.back()}
-          rightAction={{
-            icon: isSubmitting ? undefined : <Save size={22} color="#FFFFFF" />,
-            onPress: handleSubmit,
-            disabled: isSubmitting,
-            loading: isSubmitting,
-          }}
+    <View style={styles.container}>
+      {/* Header with gradient and animated orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
         />
 
-        {/* Form Content */}
-        <View style={styles.contentArea}>
-          <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Card style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Model Bilgileri</Text>
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
 
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Orta: Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Yeni Model</Text>
+            </View>
+
+            {/* Sağ: Kaydet Butonu */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* Form Content */}
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        bottomOffset={20}
+      >
+        {/* Model Bilgileri Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="layers-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Model Bilgileri</Text>
+          </View>
+
+          <View style={styles.sectionContent}>
             <Input
               label="Model Adı *"
               placeholder="Örn: iPhone 15 Pro"
@@ -142,77 +247,190 @@ export default function NewModelScreen() {
               numberOfLines={3}
             />
 
-            {/* Aktif/Pasif */}
-            <View
-              style={[styles.switchRow, { backgroundColor: colors.card, borderColor: colors.border }]}
+            {/* Aktif/Pasif Toggle */}
+            <TouchableOpacity
+              style={styles.toggleRow}
+              onPress={() => handleInputChange('is_active', !formData.is_active)}
+              activeOpacity={0.7}
             >
-              <View style={styles.switchContent}>
-                <Text style={[styles.switchLabel, { color: colors.text }]}>Aktif Model</Text>
-                <Text style={[styles.switchDescription, { color: colors.textSecondary }]}>
-                  Bu model kullanıma açık olacak
-                </Text>
+              <View style={styles.toggleContent}>
+                <Text style={styles.toggleLabel}>Aktif Model</Text>
+                <Text style={styles.toggleDescription}>Bu model kullanıma açık olacak</Text>
               </View>
-              <Checkbox
-                value={formData.is_active ?? true}
-                onValueChange={(val) => handleInputChange('is_active', val)}
-              />
-            </View>
-          </Card>
-        </ScrollView>
+              <View style={[
+                styles.toggleSwitch,
+                formData.is_active && styles.toggleSwitchActive
+              ]}>
+                <View style={[
+                  styles.toggleKnob,
+                  formData.is_active && styles.toggleKnobActive
+                ]} />
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
-  keyboardAvoidingView: {
-    flex: 1,
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
   },
-  contentArea: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
   },
-  content: {
-    flex: 1,
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
   },
-  contentContainer: {
-    padding: Spacing.lg,
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
   },
-  card: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  switchRow: {
+  headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    marginVertical: Spacing.xs,
+    paddingBottom: DashboardSpacing.lg
   },
-  switchContent: {
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleContainer: {
     flex: 1,
-    marginRight: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.md
   },
-  switchLabel: {
-    ...Typography.bodyMD,
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
+  },
+  saveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  saveButtonDisabled: {
+    opacity: 0.5
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+  content: {
+    flex: 1
+  },
+  contentContainer: {
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
+  },
+  section: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.lg,
+    overflow: 'hidden'
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sectionTitle: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
+  },
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: DashboardSpacing.md,
+    paddingHorizontal: DashboardSpacing.lg,
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg
+  },
+  toggleContent: {
+    flex: 1,
+    marginRight: DashboardSpacing.md
+  },
+  toggleLabel: {
+    fontSize: DashboardFontSizes.base,
     fontWeight: '500',
+    color: DashboardColors.textPrimary
   },
-  switchDescription: {
-    ...Typography.bodySM,
-    marginTop: Spacing.xs,
+  toggleDescription: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    marginTop: 2
   },
-});
+  toggleSwitch: {
+    width: 52,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: DashboardColors.borderLight,
+    padding: 2,
+    justifyContent: 'center'
+  },
+  toggleSwitchActive: {
+    backgroundColor: DashboardColors.primary
+  },
+  toggleKnob: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#fff'
+  },
+  toggleKnobActive: {
+    alignSelf: 'flex-end'
+  }
+})

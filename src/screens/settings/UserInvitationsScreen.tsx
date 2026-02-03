@@ -60,7 +60,7 @@ export const UserInvitationsScreen: React.FC = () => {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 
   // Bottom Sheet Configuration
-  const snapPoints = useMemo(() => ['85%'], []);
+  const snapPoints = useMemo(() => ['90%'], []);
 
   const animationConfigs = useBottomSheetSpringConfigs({
     damping: 80,

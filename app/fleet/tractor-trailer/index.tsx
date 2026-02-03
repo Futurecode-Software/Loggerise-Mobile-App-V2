@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   FlatList,
   RefreshControl,
   Pressable
@@ -16,10 +15,8 @@ import Animated, {
   useAnimatedStyle,
   withSpring
 } from 'react-native-reanimated'
-import Toast from 'react-native-toast-message'
 import { PageHeader } from '@/components/navigation'
 import { Skeleton } from '@/components/ui/skeleton'
-import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -32,9 +29,7 @@ import {
   getTractorTrailerAssignments,
   TractorTrailerAssignment,
   TractorTrailerAssignmentFilters,
-  Pagination,
-  deleteTractorTrailerAssignment,
-  toggleTractorTrailerAssignment
+  Pagination
 } from '@/services/endpoints/fleet'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
@@ -198,12 +193,6 @@ export default function TractorTrailerAssignmentsScreen() {
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  // Delete dialog state
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [itemToDelete, setItemToDelete] = useState<TractorTrailerAssignment | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
 
   // Refs
   const isMountedRef = useRef(true)
@@ -236,7 +225,6 @@ export default function TractorTrailerAssignmentsScreen() {
     } catch (err) {
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
         console.error('Assignments fetch error:', err)
-        setError(err instanceof Error ? err.message : 'Eşleştirmeler yüklenemedi')
       }
     } finally {
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
@@ -255,7 +243,7 @@ export default function TractorTrailerAssignmentsScreen() {
     return () => {
       isMountedRef.current = false
     }
-  }, [])
+  }, [executeFetch])
 
   // Ref to store executeFetch to avoid useFocusEffect re-triggering
   const executeFetchRef = useRef(executeFetch)

@@ -244,7 +244,7 @@ Modal yükseklikleri içeriğe göre belirlenmelidir. **ÖNEMLI:** Snap point sa
 
 ```tsx
 // ✅ DOĞRU - Tek snap point (sabit yükseklik)
-const snapPoints = useMemo(() => ['85%'], []);
+const snapPoints = useMemo(() => ['90%'], []);
 
 <BottomSheetModal
   ref={bottomSheetRef}
@@ -300,7 +300,7 @@ const snapPoints = useMemo(() => ['75%', '90%'], []);  // İki yükseklik = Sür
 **✅ DOĞRU KULLANIM:**
 ```tsx
 // ✅ DOĞRU - Form modal'ında tek snap point
-const snapPoints = useMemo(() => ['85%'], []);  // Tek yükseklik = Sabit
+const snapPoints = useMemo(() => ['90%'], []); // Tek yükseklik = Sabit
 
 // Success state için farklı snap point
 const snapPoints = useMemo(() => (isSuccess ? ['30%'] : ['85%']), [isSuccess]);
@@ -369,7 +369,7 @@ enableDynamicSizing={false}  // ✅ Sabit snap point kullan
 
 **Form Modal (Sabit, Scroll İçerikli):**
 ```tsx
-const snapPoints = useMemo(() => ['85%'], []);
+const snapPoints = useMemo(() => ['90%'], []);
 
 <BottomSheetModal
   ref={bottomSheetRef}
@@ -646,7 +646,7 @@ export default function LoginScreen() {
 **Çözüm:**
 ```tsx
 // ✅ Bu değişiklikleri yap
-const snapPoints = useMemo(() => ['85%'], []);  // Tek snap point
+const snapPoints = useMemo(() => ['90%'], []);  // Tek snap point
 
 <BottomSheetModal
   snapPoints={snapPoints}
@@ -683,7 +683,7 @@ const snapPoints = useMemo(() => ['85%'], []);  // Tek snap point
 />
 
 // ✅ Seçenek 2: Tek snap point kullan (ÖNERİLEN)
-const snapPoints = useMemo(() => ['85%'], []);
+const snapPoints = useMemo(() => ['90%'], []);
 <BottomSheetModal
   index={0}
   snapPoints={snapPoints}
@@ -726,7 +726,7 @@ export default function MyScreen() {
 **Çözüm:**
 ```tsx
 // ✅ Tek snap point kullan
-const snapPoints = useMemo(() => ['85%'], []);  // Sadece bir yükseklik
+const snapPoints = useMemo(() => ['90%'], []);  // Sadece bir yükseklik
 ```
 
 ### ⚠️ Önemli Notlar

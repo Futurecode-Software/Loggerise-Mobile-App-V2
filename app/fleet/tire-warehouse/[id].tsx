@@ -245,6 +245,7 @@ export default function TireDetailScreen() {
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
+        {/* Dekoratif ışık efektleri - Statik */}
         <View style={styles.glowOrb1} />
         <View style={styles.glowOrb2} />
 

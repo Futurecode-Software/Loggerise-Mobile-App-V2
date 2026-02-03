@@ -4,31 +4,45 @@
  * Create new domestic transport order with customer, addresses, and items.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { router } from 'expo-router';
-import { Save, Package, User, MapPin, Calendar, FileText } from 'lucide-react-native';
-import { Input, Card, DateInput } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
-import { getErrorMessage, getValidationErrors } from '@/services/api';
+  ActivityIndicator
+} from 'react-native'
+import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import Toast from 'react-native-toast-message'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
+import { Input, DateInput } from '@/components/ui'
+import { SelectInput } from '@/components/ui/select-input'
 import {
   createDomesticOrder,
   DomesticOrderType,
-  DomesticBillingType,
-} from '@/services/endpoints/domestic-orders';
-import api from '@/services/api';
+  DomesticBillingType
+} from '@/services/endpoints/domestic-orders'
+import api, { getErrorMessage, getValidationErrors } from '@/services/api'
+
+
+
 
 // Order type options
 const ORDER_TYPE_OPTIONS = [
@@ -49,27 +63,69 @@ const BILLING_TYPE_OPTIONS = [
 
 // Tabs
 const TABS = [
-  { id: 'general', label: 'Genel', icon: '📋' },
-  { id: 'addresses', label: 'Adresler', icon: '📍' },
-  { id: 'items', label: 'Kalemler', icon: '📦' },
-];
+  { id: 'general', label: 'Genel', icon: 'document-text-outline' as const },
+  { id: 'addresses', label: 'Adresler', icon: 'location-outline' as const },
+  { id: 'items', label: 'Kalemler', icon: 'cube-outline' as const }
+]
 
 interface Customer {
-  id: number;
-  name: string;
-  code?: string;
+  id: number
+  name: string
+  code?: string
 }
 
 interface Address {
-  id: number;
-  title?: string;
-  address?: string;
-  contact_id: number;
+  id: number
+  title?: string
+  address?: string
+  contact_id: number
 }
 
 export default function NewDomesticOrderScreen() {
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const insets = useSafeAreaInsets()
+
+  // Animasyonlu orb'lar için shared values
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
+
+  useEffect(() => {
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
 
   const [activeTab, setActiveTab] = useState('general');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -208,7 +264,12 @@ export default function NewDomesticOrderScreen() {
 
       await createDomesticOrder(data);
 
-      success('Başarılı', 'İş emri oluşturuldu');
+      Toast.show({
+        type: 'success',
+        text1: 'İş emri oluşturuldu',
+        position: 'top',
+        visibilityTime: 1500
+      })
       router.back();
     } catch (err: any) {
       const validationErrors = getValidationErrors(err);
@@ -221,7 +282,12 @@ export default function NewDomesticOrderScreen() {
         });
         setErrors(flatErrors);
       } else {
-        showError('Hata', getErrorMessage(err));
+        Toast.show({
+          type: 'error',
+          text1: getErrorMessage(err),
+          position: 'top',
+          visibilityTime: 1500
+        })
       }
     } finally {
       setIsSubmitting(false);
@@ -277,8 +343,8 @@ export default function NewDomesticOrderScreen() {
 
       {loadingCustomers ? (
         <View style={styles.loadingSelect}>
-          <ActivityIndicator size="small" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textMuted }]}>Müşteriler yükleniyor...</Text>
+          <ActivityIndicator size="small" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Müşteriler yükleniyor...</Text>
         </View>
       ) : (
         <SelectInput
@@ -322,13 +388,13 @@ export default function NewDomesticOrderScreen() {
     <>
       {!formData.customer_id ? (
         <View style={styles.warningBox}>
-          <Text style={[styles.warningText, { color: colors.textMuted }]}>
+          <Text style={styles.warningText}>
             Adres seçimi için önce müşteri seçmeniz gerekmektedir.
           </Text>
         </View>
       ) : addresses.length === 0 ? (
         <View style={styles.warningBox}>
-          <Text style={[styles.warningText, { color: colors.textMuted }]}>
+          <Text style={styles.warningText}>
             Bu müşteriye tanımlı adres bulunmamaktadır.
           </Text>
         </View>
@@ -356,8 +422,8 @@ export default function NewDomesticOrderScreen() {
 
   const renderItemsTab = () => (
     <View style={styles.emptyItems}>
-      <Package size={48} color={colors.textMuted} />
-      <Text style={[styles.emptyItemsText, { color: colors.textMuted }]}>
+      <Ionicons name="cube-outline" size={48} color={DashboardColors.textMuted} />
+      <Text style={styles.emptyItemsText}>
         Kalemler sipariş oluşturulduktan sonra eklenebilir.
       </Text>
     </View>
@@ -377,85 +443,101 @@ export default function NewDomesticOrderScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-        title="Yeni İş Emri"
-        showBackButton
-        onBackPress={() => router.back()}
-        rightIcons={
-          <TouchableOpacity
-            onPress={handleSubmit}
-            style={styles.headerButton}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Save size={22} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
-        }
-      />
+    <View style={styles.container}>
+      {/* Header with gradient and animated orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
 
-      <View style={styles.contentWrapper}>
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoidingView}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          {/* Tabs */}
-          <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tabsContent}
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Orta: Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Yeni İş Emri</Text>
+            </View>
+
+            {/* Sağ: Kaydet Butonu */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
             >
-            {TABS.map((tab) => {
-              const errorCount = getTabErrorCount(tab.id);
-              const isActive = activeTab === tab.id;
-
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  style={[
-                    styles.tab,
-                    isActive && { borderBottomColor: Brand.primary },
-                  ]}
-                  onPress={() => setActiveTab(tab.id)}
-                >
-                  <View style={styles.tabHeader}>
-                    <Text style={styles.tabIcon}>{tab.icon}</Text>
-                    {errorCount > 0 && (
-                      <View style={styles.errorBadge}>
-                        <Text style={styles.errorBadgeText}>{errorCount}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabText,
-                      { color: isActive ? Brand.primary : colors.textSecondary },
-                      errorCount > 0 && { color: '#DC2626' },
-                    ]}
-                  >
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-            </ScrollView>
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
           </View>
+        </View>
 
-          {/* Form Content */}
-          <ScrollView
-            style={styles.content}
-            contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {renderTabContent()}
-          </ScrollView>
-        </KeyboardAvoidingView>
+        <View style={styles.bottomCurve} />
       </View>
+
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContent}
+        >
+          {TABS.map((tab) => {
+            const errorCount = getTabErrorCount(tab.id);
+            const isActive = activeTab === tab.id;
+
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                style={[
+                  styles.tab,
+                  isActive && styles.tabActive
+                ]}
+                onPress={() => setActiveTab(tab.id)}
+              >
+                <View style={styles.tabHeader}>
+                  <Ionicons name={tab.icon} size={18} color={isActive ? DashboardColors.primary : DashboardColors.textSecondary} />
+                  {errorCount > 0 && (
+                    <View style={styles.errorBadge}>
+                      <Text style={styles.errorBadgeText}>{errorCount}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text
+                  style={[
+                    styles.tabText,
+                    isActive && styles.tabTextActive,
+                    errorCount > 0 && styles.tabTextError
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Form Content */}
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        bottomOffset={20}
+      >
+        {renderTabContent()}
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -463,47 +545,118 @@ export default function NewDomesticOrderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
-  contentWrapper: {
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: DashboardSpacing.lg
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.md
   },
-  keyboardAvoidingView: {
-    flex: 1,
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
   },
-  headerButton: {
-    padding: Spacing.sm,
+  saveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  saveButtonDisabled: {
+    opacity: 0.5
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
   },
   tabsContainer: {
     borderBottomWidth: 1,
-    paddingTop: Spacing.md,
+    borderBottomColor: DashboardColors.borderLight,
+    backgroundColor: DashboardColors.background,
+    paddingTop: DashboardSpacing.md
   },
   tabsContent: {
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.sm
   },
   tab: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
     alignItems: 'center',
-    minWidth: 80,
+    minWidth: 80
+  },
+  tabActive: {
+    borderBottomColor: DashboardColors.primary
   },
   tabHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
-  tabIcon: {
-    fontSize: 18,
+    marginBottom: DashboardSpacing.xs,
+    gap: 4
   },
   tabText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
     textAlign: 'center',
+    color: DashboardColors.textSecondary
+  },
+  tabTextActive: {
+    color: DashboardColors.primary
+  },
+  tabTextError: {
+    color: '#DC2626'
   },
   errorBadge: {
     backgroundColor: '#DC2626',
@@ -512,47 +665,51 @@ const styles = StyleSheet.create({
     height: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 4,
+    marginLeft: 4
   },
   errorBadgeText: {
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '600',
-    paddingHorizontal: 4,
+    paddingHorizontal: 4
   },
   content: {
-    flex: 1,
+    flex: 1
   },
   contentContainer: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl'],
+    gap: DashboardSpacing.md
   },
   loadingSelect: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
+    gap: DashboardSpacing.sm,
+    padding: DashboardSpacing.md
   },
   loadingText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textMuted
   },
   warningBox: {
-    padding: Spacing.lg,
+    padding: DashboardSpacing.lg,
     backgroundColor: '#f5a623' + '15',
-    borderRadius: BorderRadius.md,
+    borderRadius: DashboardBorderRadius.md
   },
   warningText: {
-    ...Typography.bodyMD,
-    textAlign: 'center',
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textMuted,
+    textAlign: 'center'
   },
   emptyItems: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing['3xl'],
+    paddingVertical: DashboardSpacing['3xl']
   },
   emptyItemsText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-    textAlign: 'center',
-  },
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textMuted,
+    marginTop: DashboardSpacing.md,
+    textAlign: 'center'
+  }
 });

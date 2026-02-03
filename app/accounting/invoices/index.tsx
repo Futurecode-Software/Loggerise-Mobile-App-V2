@@ -68,7 +68,7 @@ const TYPE_FILTERS = [
 ]
 
 // Durum filtreleri
-const STATUS_FILTERS: Array<{ id: 'all' | InvoiceStatus; label: string; color: string }> = [
+const STATUS_FILTERS: { id: 'all' | InvoiceStatus; label: string; color: string }[] = [
   { id: 'all', label: 'Tümü', color: '#6B7280' },
   { id: 'draft', label: 'Taslak', color: '#6B7280' },
   { id: 'approved', label: 'Onaylı', color: '#10B981' },
@@ -76,7 +76,7 @@ const STATUS_FILTERS: Array<{ id: 'all' | InvoiceStatus; label: string; color: s
 ]
 
 // Ödeme durumu filtreleri
-const PAYMENT_FILTERS: Array<{ id: 'all' | PaymentStatus; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
+const PAYMENT_FILTERS: { id: 'all' | PaymentStatus; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'all', label: 'Tümü', icon: 'layers-outline' },
   { id: 'pending', label: 'Bekliyor', icon: 'time-outline' },
   { id: 'paid', label: 'Ödendi', icon: 'checkmark-circle-outline' },
@@ -323,7 +323,7 @@ export default function InvoicesListScreen() {
 
   // BottomSheet ref
   const filterBottomSheetRef = useRef<BottomSheetModal>(null)
-  const snapPoints = useMemo(() => ['92%'], [])
+  const snapPoints = useMemo(() => ['90%'], []);
 
   // API state
   const [invoices, setInvoices] = useState<Invoice[]>([])

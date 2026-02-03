@@ -1,28 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { useToast } from '@/hooks/use-toast';
-import { ConfirmDialog, Input, Button, Card, Badge } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
-import { router, useLocalSearchParams } from 'expo-router';
+  ActivityIndicator
+} from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import { useFocusEffect } from '@react-navigation/native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { router, useLocalSearchParams } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import Toast from 'react-native-toast-message'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { Input } from '@/components/ui'
 import {
-  Save,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Users,
-  Phone,
-  Mail,
-  Clock,
-} from 'lucide-react-native';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
 import {
   getCustomerInteraction,
   updateInteraction,
@@ -32,28 +31,26 @@ import {
   InteractionFormData,
   InteractionType,
   getInteractionTypeLabel,
-  getInteractionStatusLabel,
-  getInteractionStatusVariant,
-} from '@/services/endpoints/customer-interactions';
+  getInteractionStatusLabel
+} from '@/services/endpoints/customer-interactions'
 
 const INTERACTION_TYPES = [
-  { value: 'meeting', label: 'Toplantı', icon: Users },
-  { value: 'call', label: 'Arama', icon: Phone },
-  { value: 'email', label: 'E-posta', icon: Mail },
-  { value: 'follow_up', label: 'Takip', icon: Clock },
-] as const;
+  { value: 'meeting', label: 'Toplantı', icon: 'people-outline' },
+  { value: 'call', label: 'Arama', icon: 'call-outline' },
+  { value: 'email', label: 'E-posta', icon: 'mail-outline' },
+  { value: 'follow_up', label: 'Takip', icon: 'time-outline' },
+] as const
 
 export default function InteractionDetailScreen() {
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
-  const { id, interactionId } = useLocalSearchParams<{ id: string; interactionId: string }>();
-  const customerId = parseInt(id, 10);
-  const interactionIdNum = parseInt(interactionId, 10);
+  const insets = useSafeAreaInsets()
+  const { id, interactionId } = useLocalSearchParams<{ id: string; interactionId: string }>()
+  const customerId = parseInt(id, 10)
+  const interactionIdNum = parseInt(interactionId, 10)
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState<InteractionFormData>({
     interaction_type: 'meeting',
     subject: '',
@@ -61,24 +58,28 @@ export default function InteractionDetailScreen() {
     interaction_date: '',
     next_followup_date: '',
     status: 'pending',
-  });
+  })
 
-  const [originalData, setOriginalData] = useState<InteractionFormData | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [originalData, setOriginalData] = useState<InteractionFormData | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Dialog states
-  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  // Refs
+  const isMountedRef = useRef(true)
+  const completeDialogRef = useRef<any>(null)
+  const cancelDialogRef = useRef<any>(null)
+  const deleteDialogRef = useRef<any>(null)
 
-  // Fetch interaction data
-  useEffect(() => {
-    const fetchInteraction = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const interaction = await getCustomerInteraction(customerId, interactionIdNum);
+  // Veri çekme
+  const fetchInteraction = useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) {
+        setIsLoading(true)
+        setError(null)
+      }
 
+      const interaction = await getCustomerInteraction(customerId, interactionIdNum)
+
+      if (isMountedRef.current) {
         const data: InteractionFormData = {
           interaction_type: interaction.interaction_type,
           subject: interaction.subject,
@@ -90,171 +91,326 @@ export default function InteractionDetailScreen() {
             ? new Date(interaction.next_followup_date).toISOString().split('T')[0]
             : '',
           status: interaction.status,
-        };
+        }
 
-        setFormData(data);
-        setOriginalData(data);
-      } catch (err) {
-        console.error('Fetch interaction error:', err);
-        setError(err instanceof Error ? err.message : 'Görüşme bilgileri yüklenemedi');
-      } finally {
-        setIsLoading(false);
+        setFormData(data)
+        setOriginalData(data)
+        setError(null)
       }
-    };
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Görüşme bilgileri yüklenemedi')
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false)
+      }
+    }
+  }, [customerId, interactionIdNum])
 
-    fetchInteraction();
-  }, [customerId, interactionIdNum]);
+  useEffect(() => {
+    isMountedRef.current = true
+    fetchInteraction()
+
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [fetchInteraction])
+
+  // Edit sayfasından dönüşte yenile
+  useFocusEffect(
+    useCallback(() => {
+      fetchInteraction(false)
+    }, [fetchInteraction])
+  )
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {}
 
     if (!formData.subject?.trim()) {
-      newErrors.subject = 'Konu zorunludur';
+      newErrors.subject = 'Konu zorunludur'
     }
 
     if (!formData.interaction_date) {
-      newErrors.interaction_date = 'Görüşme tarihi zorunludur';
+      newErrors.interaction_date = 'Görüşme tarihi zorunludur'
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleUpdate = async () => {
     if (!validateForm()) {
-      showError('Hata', 'Lütfen formu eksiksiz doldurunuz');
-      return;
+      Toast.show({
+        type: 'error',
+        text1: 'Lütfen formu eksiksiz doldurunuz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await updateInteraction(customerId, interactionIdNum, formData);
-      success('Başarılı', 'Görüşme başarıyla güncellendi');
-      setIsEditing(false);
-      setOriginalData(formData);
+      await updateInteraction(customerId, interactionIdNum, formData)
+      Toast.show({
+        type: 'success',
+        text1: 'Görüşme başarıyla güncellendi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      setIsEditing(false)
+      setOriginalData(formData)
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Görüşme güncellenemedi');
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Görüşme güncellenemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   // Show complete dialog
   const handleComplete = () => {
-    setShowCompleteDialog(true);
-  };
+    completeDialogRef.current?.present()
+  }
 
   // Confirm complete
   const confirmComplete = async () => {
     try {
-      const updated = await completeInteraction(customerId, interactionIdNum);
-      setFormData((prev) => ({ ...prev, status: updated.status }));
-      setOriginalData((prev) => (prev ? { ...prev, status: updated.status } : null));
-      setShowCompleteDialog(false);
-      success('Başarılı', 'Görüşme tamamlandı olarak işaretlendi');
+      const updated = await completeInteraction(customerId, interactionIdNum)
+      setFormData((prev) => ({ ...prev, status: updated.status }))
+      setOriginalData((prev) => (prev ? { ...prev, status: updated.status } : null))
+      completeDialogRef.current?.dismiss()
+      Toast.show({
+        type: 'success',
+        text1: 'Görüşme tamamlandı olarak işaretlendi',
+        position: 'top',
+        visibilityTime: 1500
+      })
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'İşlem başarısız');
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'İşlem başarısız',
+        position: 'top',
+        visibilityTime: 1500
+      })
     }
-  };
+  }
 
   // Show cancel dialog
-  const handleCancel = () => {
-    setShowCancelDialog(true);
-  };
+  const handleCancelInteraction = () => {
+    cancelDialogRef.current?.present()
+  }
 
   // Confirm cancel interaction
   const confirmCancelInteraction = async () => {
     try {
-      const updated = await cancelInteraction(customerId, interactionIdNum);
-      setFormData((prev) => ({ ...prev, status: updated.status }));
-      setOriginalData((prev) => (prev ? { ...prev, status: updated.status } : null));
-      setShowCancelDialog(false);
-      success('Başarılı', 'Görüşme iptal edildi');
+      const updated = await cancelInteraction(customerId, interactionIdNum)
+      setFormData((prev) => ({ ...prev, status: updated.status }))
+      setOriginalData((prev) => (prev ? { ...prev, status: updated.status } : null))
+      cancelDialogRef.current?.dismiss()
+      Toast.show({
+        type: 'success',
+        text1: 'Görüşme iptal edildi',
+        position: 'top',
+        visibilityTime: 1500
+      })
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'İşlem başarısız');
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'İşlem başarısız',
+        position: 'top',
+        visibilityTime: 1500
+      })
     }
-  };
+  }
 
   // Show delete dialog
   const handleDelete = () => {
-    setShowDeleteDialog(true);
-  };
+    deleteDialogRef.current?.present()
+  }
 
   // Confirm delete
   const confirmDelete = async () => {
     try {
-      await deleteInteraction(customerId, interactionIdNum);
-      setShowDeleteDialog(false);
-      success('Başarılı', 'Görüşme silindi');
-      router.back();
+      await deleteInteraction(customerId, interactionIdNum)
+      deleteDialogRef.current?.dismiss()
+      Toast.show({
+        type: 'success',
+        text1: 'Görüşme silindi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+
+      setTimeout(() => {
+        router.back()
+      }, 300)
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Görüşme silinemedi');
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Görüşme silinemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
     }
-  };
+  }
 
   const cancelEdit = () => {
     if (originalData) {
-      setFormData(originalData);
+      setFormData(originalData)
     }
-    setIsEditing(false);
-    setErrors({});
-  };
+    setIsEditing(false)
+    setErrors({})
+  }
 
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Görüşme Detayı" onBackPress={() => router.back()} />
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Görüşme yükleniyor...
-          </Text>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerName} numberOfLines={1}>Görüşme Detayı</Text>
+              </View>
+              <View style={styles.headerActionsPlaceholder} />
+            </View>
+          </View>
+
+          <View style={styles.bottomCurve} />
+        </View>
+
+        <View style={styles.content}>
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={DashboardColors.primary} />
+            <Text style={styles.loadingText}>Görüşme yükleniyor...</Text>
+          </View>
         </View>
       </View>
-    );
+    )
   }
 
   // Error state
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-        <FullScreenHeader title="Görüşme Detayı" onBackPress={() => router.back()} />
-        <View style={styles.errorState}>
-          <View style={[styles.errorIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerName} numberOfLines={1}>Görüşme Detayı</Text>
+              </View>
+              <View style={styles.headerActionsPlaceholder} />
+            </View>
           </View>
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorSubtitle, { color: colors.textSecondary }]}>{error}</Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.retryButtonText}>Geri Dön</Text>
-          </TouchableOpacity>
+
+          <View style={styles.bottomCurve} />
+        </View>
+
+        <View style={styles.content}>
+          <View style={styles.errorState}>
+            <View style={styles.errorIcon}>
+              <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+            </View>
+            <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => fetchInteraction()}>
+              <Ionicons name="refresh" size={18} color="#fff" />
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    );
+    )
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
+    <View style={styles.container}>
       {/* Header */}
-      <FullScreenHeader
-        title="Görüşme Detayı"
-        onBackPress={() => router.back()}
-        rightIcons={
-          isEditing ? (
-            <TouchableOpacity onPress={handleUpdate} disabled={isSubmitting}>
-              <Save size={20} color="#FFFFFF" />
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
             </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={handleDelete}>
-              <Trash2 size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          )
-        }
-      />
+
+            <View style={styles.headerTitleSection}>
+              <Text style={styles.headerName} numberOfLines={1}>
+                {formData.subject || 'Görüşme Detayı'}
+              </Text>
+            </View>
+
+            <View style={styles.headerActions}>
+              {isEditing ? (
+                <TouchableOpacity
+                  style={styles.headerButton}
+                  onPress={handleUpdate}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="checkmark" size={24} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <TouchableOpacity style={styles.headerButton} onPress={() => setIsEditing(true)}>
+                    <Ionicons name="create-outline" size={22} color="#fff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.headerButton, styles.deleteButton]}
+                    onPress={handleDelete}
+                  >
+                    <Ionicons name="trash-outline" size={22} color="#fff" />
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
 
       <KeyboardAwareScrollView
         style={styles.content}
@@ -262,47 +418,47 @@ export default function InteractionDetailScreen() {
         showsVerticalScrollIndicator={false}
         bottomOffset={20}
       >
-          {/* Status Actions (only if not editing) */}
-          {!isEditing && formData.status === 'pending' && (
-            <View style={styles.actionsRow}>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.success + '15' }]}
-                onPress={handleComplete}
-              >
-                <CheckCircle size={20} color={colors.success} />
-                <Text style={[styles.actionButtonText, { color: colors.success }]}>
-                  Tamamla
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.danger + '15' }]}
-                onPress={handleCancel}
-              >
-                <XCircle size={20} color={colors.danger} />
-                <Text style={[styles.actionButtonText, { color: colors.danger }]}>İptal Et</Text>
-              </TouchableOpacity>
+        {/* Status Actions (only if not editing) */}
+        {!isEditing && formData.status === 'pending' && (
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={styles.actionButtonSuccess}
+              onPress={handleComplete}
+            >
+              <Ionicons name="checkmark-circle-outline" size={20} color={DashboardColors.success} />
+              <Text style={styles.actionButtonTextSuccess}>Tamamla</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButtonDanger}
+              onPress={handleCancelInteraction}
+            >
+              <Ionicons name="close-circle-outline" size={20} color={DashboardColors.danger} />
+              <Text style={styles.actionButtonTextDanger}>İptal Et</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Görüşme Tipi */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="apps-outline" size={18} color={DashboardColors.primary} />
             </View>
-          )}
+            <Text style={styles.sectionTitle}>Görüşme Tipi</Text>
+          </View>
 
-          {/* Interaction Type */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Görüşme Tipi</Text>
-
+          <View style={styles.cardContent}>
             {isEditing ? (
               <View style={styles.typeGrid}>
                 {INTERACTION_TYPES.map((type) => {
-                  const Icon = type.icon;
-                  const isActive = formData.interaction_type === type.value;
+                  const isActive = formData.interaction_type === type.value
 
                   return (
                     <TouchableOpacity
                       key={type.value}
                       style={[
                         styles.typeCard,
-                        {
-                          backgroundColor: isActive ? Brand.primary + '15' : colors.surface,
-                          borderColor: isActive ? Brand.primary : colors.border,
-                        },
+                        isActive && styles.typeCardActive
                       ]}
                       onPress={() =>
                         setFormData({
@@ -311,274 +467,471 @@ export default function InteractionDetailScreen() {
                         })
                       }
                     >
-                      <Icon size={24} color={isActive ? Brand.primary : colors.textSecondary} />
+                      <Ionicons
+                        name={type.icon as any}
+                        size={24}
+                        color={isActive ? DashboardColors.primary : DashboardColors.textSecondary}
+                      />
                       <Text
                         style={[
                           styles.typeLabel,
-                          { color: isActive ? Brand.primary : colors.text },
+                          isActive && styles.typeLabelActive
                         ]}
                       >
                         {type.label}
                       </Text>
                     </TouchableOpacity>
-                  );
+                  )
                 })}
               </View>
             ) : (
-              <Badge
-                label={getInteractionTypeLabel(formData.interaction_type)}
-                variant="info"
-                size="md"
-              />
+              <View style={styles.badgeContainer}>
+                <Text style={styles.badgeText}>{getInteractionTypeLabel(formData.interaction_type)}</Text>
+              </View>
             )}
-          </Card>
+          </View>
+        </View>
 
-          {/* Details */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Görüşme Detayları</Text>
+        {/* Görüşme Detayları */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="document-text-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Görüşme Detayları</Text>
+          </View>
 
+          <View style={styles.cardContent}>
             <Input
-              label="Konu"
+              label="Konu *"
               placeholder="Görüşme konusu"
               value={formData.subject}
               onChangeText={(value) => setFormData({ ...formData, subject: value })}
               error={errors.subject}
               editable={isEditing}
-              required
             />
 
-            <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Açıklama</Text>
-              <Input
-                placeholder="Görüşme notları..."
-                value={formData.description}
-                onChangeText={(value) => setFormData({ ...formData, description: value })}
-                multiline
-                numberOfLines={4}
-                editable={isEditing}
-                inputStyle={styles.textArea}
-              />
-            </View>
-          </Card>
-
-          {/* Dates */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Tarihler</Text>
-
             <Input
-              label="Görüşme Tarihi"
+              label="Açıklama"
+              placeholder="Görüşme notları..."
+              value={formData.description}
+              onChangeText={(value) => setFormData({ ...formData, description: value })}
+              multiline
+              numberOfLines={4}
+              editable={isEditing}
+            />
+          </View>
+        </View>
+
+        {/* Tarihler */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="calendar-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Tarihler</Text>
+          </View>
+
+          <View style={styles.cardContent}>
+            <Input
+              label="Görüşme Tarihi *"
+              placeholder="YYYY-MM-DD"
               value={formData.interaction_date}
               onChangeText={(value) => setFormData({ ...formData, interaction_date: value })}
               error={errors.interaction_date}
               editable={isEditing}
-              required
             />
 
             <Input
               label="Sonraki Takip Tarihi"
+              placeholder="YYYY-MM-DD"
               value={formData.next_followup_date}
               onChangeText={(value) => setFormData({ ...formData, next_followup_date: value })}
               editable={isEditing}
             />
-          </Card>
+          </View>
+        </View>
 
-          {/* Status */}
-          <Card style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Durum</Text>
-            <Badge
-              label={getInteractionStatusLabel(formData.status || 'pending')}
-              variant={getInteractionStatusVariant(formData.status || 'pending')}
-              size="md"
-            />
-          </Card>
-
-          {/* Action Buttons */}
-          {isEditing ? (
-            <View style={styles.buttonRow}>
-              <Button
-                title="İptal"
-                onPress={cancelEdit}
-                variant="secondary"
-                style={styles.halfButton}
-              />
-              <Button
-                title={isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
-                onPress={handleUpdate}
-                disabled={isSubmitting}
-                variant="primary"
-                style={styles.halfButton}
-              />
+        {/* Durum */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="flag-outline" size={18} color={DashboardColors.primary} />
             </View>
-          ) : (
-            <Button
-              title="Düzenle"
-              onPress={() => setIsEditing(true)}
-              variant="primary"
-              style={styles.submitButton}
-            />
-          )}
+            <Text style={styles.sectionTitle}>Durum</Text>
+          </View>
+
+          <View style={styles.cardContent}>
+            <View style={styles.badgeContainer}>
+              <Text style={styles.badgeText}>
+                {getInteractionStatusLabel(formData.status || 'pending')}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        {isEditing && (
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={cancelEdit}
+            >
+              <Text style={styles.cancelButtonText}>İptal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+              onPress={handleUpdate}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.submitButtonText}>
+                {isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Alt boşluk */}
+        <View style={{ height: insets.bottom + DashboardSpacing['3xl'] }} />
       </KeyboardAwareScrollView>
 
       {/* Complete Dialog */}
       <ConfirmDialog
-        visible={showCompleteDialog}
+        ref={completeDialogRef}
         title="Görüşmeyi Tamamla"
         message="Bu görüşmeyi tamamlandı olarak işaretlemek istiyor musunuz?"
+        type="success"
         confirmText="Tamamla"
         cancelText="İptal"
         onConfirm={confirmComplete}
-        onCancel={() => setShowCompleteDialog(false)}
       />
 
       {/* Cancel Interaction Dialog */}
       <ConfirmDialog
-        visible={showCancelDialog}
+        ref={cancelDialogRef}
         title="Görüşmeyi İptal Et"
         message="Bu görüşmeyi iptal etmek istiyor musunuz?"
+        type="danger"
         confirmText="İptal Et"
         cancelText="Hayır"
-        isDangerous
         onConfirm={confirmCancelInteraction}
-        onCancel={() => setShowCancelDialog(false)}
       />
 
       {/* Delete Dialog */}
       <ConfirmDialog
-        visible={showDeleteDialog}
+        ref={deleteDialogRef}
         title="Görüşmeyi Sil"
-        message="Bu görüşmeyi silmek istediğinizden emin misiniz?"
+        message="Bu görüşmeyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        type="danger"
         confirmText="Sil"
         cancelText="İptal"
-        isDangerous
         onConfirm={confirmDelete}
-        onCancel={() => setShowDeleteDialog(false)}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary
   },
+
+  // Header
+  headerContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingBottom: 24
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: DashboardSpacing.md
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    marginHorizontal: DashboardSpacing.md
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  headerActionsPlaceholder: {
+    width: 96
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)'
+  },
+  headerName: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3,
+    flex: 1
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+
+  // İçerik
   content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    backgroundColor: DashboardColors.background
   },
   contentContainer: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    paddingBottom: Spacing['4xl'],
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
+    gap: DashboardSpacing.md
   },
+
+  // Actions Row
   actionsRow: {
     flexDirection: 'row',
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
-  actionButton: {
+  actionButtonSuccess: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+    gap: DashboardSpacing.sm,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)'
   },
-  actionButtonText: {
-    ...Typography.bodyMD,
+  actionButtonTextSuccess: {
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: DashboardColors.success
   },
-  section: {
-    padding: Spacing.lg,
+  actionButtonDanger: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.sm,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)'
+  },
+  actionButtonTextDanger: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.danger
+  },
+
+  // Kartlar
+  card: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    ...DashboardShadows.sm
+  },
+  cardContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
+  },
+
+  // Bölüm Başlığı
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.lg,
-  },
-  formGroup: {
-    marginBottom: Spacing.lg,
-  },
-  label: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '600',
-    marginBottom: Spacing.sm,
+    color: DashboardColors.textPrimary
   },
+
+  // Type Grid
   typeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
   typeCard: {
     flex: 1,
     minWidth: '45%',
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    paddingVertical: DashboardSpacing.lg,
+    paddingHorizontal: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
     borderWidth: 2,
+    borderColor: DashboardColors.borderLight,
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.background
+  },
+  typeCardActive: {
+    borderColor: DashboardColors.primary,
+    backgroundColor: DashboardColors.primaryGlow
   },
   typeLabel: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: DashboardColors.textSecondary
   },
-  textArea: {
-    minHeight: 100,
-    textAlignVertical: 'top',
+  typeLabelActive: {
+    color: DashboardColors.primary
   },
+
+  // Badge
+  badgeContainer: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: DashboardColors.primaryGlow
+  },
+  badgeText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600',
+    color: DashboardColors.primary
+  },
+
+  // Buttons
   buttonRow: {
     flexDirection: 'row',
-    gap: Spacing.md,
-    marginTop: Spacing.lg,
+    gap: DashboardSpacing.md
   },
-  halfButton: {
+  cancelButton: {
     flex: 1,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  cancelButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textSecondary
   },
   submitButton: {
-    marginTop: Spacing.lg,
+    flex: 1,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
+  submitButtonDisabled: {
+    opacity: 0.5
+  },
+  submitButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  },
+
+  // Loading
   loadingState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
   },
   loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.md
   },
+
+  // Hata durumu
   errorState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
   },
   errorIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: DashboardSpacing.xl
   },
   errorTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
   },
-  errorSubtitle: {
-    ...Typography.bodyMD,
+  errorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
     textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
   },
   retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
   },
   retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
-  },
-});
+    color: '#fff'
+  }
+})

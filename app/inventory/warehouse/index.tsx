@@ -184,7 +184,7 @@ export default function WarehouseScreen() {
 
   // BottomSheet ref
   const filterBottomSheetRef = useRef<BottomSheetModal>(null)
-  const snapPoints = useMemo(() => ['50%'], [])
+  const snapPoints = useMemo(() => ['90%'], []);
 
   // API state
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])

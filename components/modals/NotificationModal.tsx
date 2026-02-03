@@ -75,7 +75,7 @@ const NotificationModal = forwardRef<NotificationModalRef, NotificationModalProp
     const { hapticLight } = useHaptics();
 
     // ✅ CRITICAL: Single snap point for stable modal
-    const snapPoints = useMemo(() => ['85%'], []);
+    const snapPoints = useMemo(() => ['90%'], []);
 
     // iOS-like spring animation config
     const animationConfigs = useBottomSheetSpringConfigs({

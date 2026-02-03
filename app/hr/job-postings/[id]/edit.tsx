@@ -1,65 +1,120 @@
 /**
- * Edit Job Posting Screen
+ * İş İlanı Düzenleme Sayfası
  *
- * Update existing job posting.
+ * Mevcut iş ilanını güncelleme - CLAUDE.md tasarım ilkeleri ile uyumlu
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   TouchableOpacity,
-  Switch,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Save } from 'lucide-react-native';
-import { Input, Card } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { DateInput } from '@/components/ui/date-input';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  Switch
+} from 'react-native'
+import { router, useLocalSearchParams } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import Toast from 'react-native-toast-message'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
+import { Input } from '@/components/ui'
+import { SelectInput } from '@/components/ui/select-input'
+import { DateInput } from '@/components/ui/date-input'
 import {
   getJobPosting,
   updateJobPosting,
   JobPostingFormData,
   EmploymentType,
-  ExperienceLevel,
-} from '@/services/endpoints/job-postings';
-import { getErrorMessage, getValidationErrors } from '@/services/api';
+  ExperienceLevel
+} from '@/services/endpoints/job-postings'
+import { getErrorMessage, getValidationErrors } from '@/services/api'
 
 const EMPLOYMENT_TYPE_OPTIONS = [
   { label: 'Tam Zamanlı', value: 'full_time' },
   { label: 'Yarı Zamanlı', value: 'part_time' },
   { label: 'Sözleşmeli', value: 'contract' },
   { label: 'Staj', value: 'internship' },
-  { label: 'Uzaktan', value: 'remote' },
-];
+  { label: 'Uzaktan', value: 'remote' }
+]
 
 const EXPERIENCE_LEVEL_OPTIONS = [
   { label: 'Giriş Seviyesi', value: 'entry' },
   { label: 'Junior', value: 'junior' },
   { label: 'Mid-Level', value: 'mid' },
   { label: 'Senior', value: 'senior' },
-  { label: 'Uzman', value: 'expert' },
-];
+  { label: 'Uzman', value: 'expert' }
+]
 
 const CURRENCY_OPTIONS = [
   { label: 'Türk Lirası (TRY)', value: 'TRY' },
   { label: 'Amerikan Doları (USD)', value: 'USD' },
-  { label: 'Euro (EUR)', value: 'EUR' },
-];
+  { label: 'Euro (EUR)', value: 'EUR' }
+]
 
 export default function EditJobPostingScreen() {
-  const colors = Colors.light;
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const insets = useSafeAreaInsets()
 
+  // Animasyonlu orb'lar için shared values
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
+
+  useEffect(() => {
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
+
+  // Form state
   const [formData, setFormData] = useState<JobPostingFormData>({
     title: '',
     description: '',
@@ -74,21 +129,21 @@ export default function EditJobPostingScreen() {
     salary_currency: 'TRY',
     application_deadline: undefined,
     is_public: false,
-    is_active: true,
-  });
+    is_active: true
+  })
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Fetch job posting
   useEffect(() => {
     const fetchData = async () => {
-      if (!id) return;
+      if (!id) return
 
-      setIsLoading(true);
+      setIsLoading(true)
       try {
-        const data = await getJobPosting(parseInt(id, 10));
+        const data = await getJobPosting(parseInt(id, 10))
         setFormData({
           title: data.title,
           description: data.description,
@@ -103,134 +158,199 @@ export default function EditJobPostingScreen() {
           salary_currency: data.salary_currency,
           application_deadline: data.application_deadline || undefined,
           is_public: data.is_public,
-          is_active: data.is_active,
-        });
+          is_active: data.is_active
+        })
       } catch (err) {
-        showError('Hata', getErrorMessage(err));
-        router.back();
+        Toast.show({
+          type: 'error',
+          text1: getErrorMessage(err),
+          position: 'top',
+          visibilityTime: 1500
+        })
+        router.back()
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    fetchData()
+   
+  }, [id])
 
-  const handleInputChange = useCallback(
-    (field: keyof JobPostingFormData, value: any) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+  // Input değişiklik handler'ı
+  const handleInputChange = useCallback((field: keyof JobPostingFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
 
-      if (errors[field]) {
-        setErrors((prevErrors) => {
-          const newErrors = { ...prevErrors };
-          delete newErrors[field];
-          return newErrors;
-        });
-      }
-    },
-    [errors]
-  );
+    // Bu alan için hatayı temizle
+    if (errors[field]) {
+      setErrors(prevErrors => {
+        const newErrors = { ...prevErrors }
+        delete newErrors[field]
+        return newErrors
+      })
+    }
+  }, [errors])
 
+  // Doğrulama
   const validateForm = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {}
 
     if (!formData.title?.trim()) {
-      newErrors.title = 'İlan başlığı zorunludur.';
+      newErrors.title = 'İlan başlığı zorunludur.'
     }
     if (!formData.description?.trim()) {
-      newErrors.description = 'İlan açıklaması zorunludur.';
+      newErrors.description = 'İlan açıklaması zorunludur.'
     }
     if (!formData.position?.trim()) {
-      newErrors.position = 'Pozisyon zorunludur.';
+      newErrors.position = 'Pozisyon zorunludur.'
     }
     if (!formData.employment_type) {
-      newErrors.employment_type = 'İstihdam türü zorunludur.';
+      newErrors.employment_type = 'İstihdam türü zorunludur.'
     }
     if (!formData.experience_level) {
-      newErrors.experience_level = 'Deneyim seviyesi zorunludur.';
+      newErrors.experience_level = 'Deneyim seviyesi zorunludur.'
     }
 
     if (formData.salary_min && formData.salary_max) {
       if (formData.salary_max < formData.salary_min) {
-        newErrors.salary_max = 'Maksimum maaş, minimum maaştan küçük olamaz.';
+        newErrors.salary_max = 'Maksimum maaş, minimum maaştan küçük olamaz.'
       }
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [formData])
 
+  // Geri butonu
+  const handleBack = useCallback(() => {
+    router.back()
+  }, [])
+
+  // Form gönderimi
   const handleSubmit = useCallback(async () => {
-    if (!id || !validateForm()) {
-      return;
+    if (!validateForm()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Lütfen zorunlu alanları doldurunuz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
     }
 
-    setIsSubmitting(true);
-    try {
-      await updateJobPosting(parseInt(id, 10), formData);
+    if (!id) return
 
-      success('Başarılı', 'İş ilanı başarıyla güncellendi.');
-      router.back();
+    setIsSubmitting(true)
+    try {
+      await updateJobPosting(parseInt(id, 10), formData)
+
+      Toast.show({
+        type: 'success',
+        text1: 'İş ilanı başarıyla güncellendi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      router.back()
     } catch (error: any) {
-      const validationErrors = getValidationErrors(error);
+      const validationErrors = getValidationErrors(error)
       if (validationErrors) {
-        const flatErrors: Record<string, string> = {};
+        // Laravel hatalarını düz objeye çevir
+        const flatErrors: Record<string, string> = {}
         Object.entries(validationErrors).forEach(([field, messages]) => {
           if (Array.isArray(messages) && messages.length > 0) {
-            flatErrors[field] = messages[0];
+            flatErrors[field] = messages[0]
           }
-        });
-        setErrors(flatErrors);
+        })
+        setErrors(flatErrors)
       } else {
-        showError('Hata', getErrorMessage(error));
+        Toast.show({
+          type: 'error',
+          text1: getErrorMessage(error),
+          position: 'top',
+          visibilityTime: 1500
+        })
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  }, [id, formData, validateForm, success, showError]);
+  }, [id, formData, validateForm])
 
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color={Brand.primary} />
+        <ActivityIndicator size="large" color={DashboardColors.primary} />
       </View>
-    );
+    )
   }
 
   return (
     <View style={styles.container}>
-      <FullScreenHeader
-        title="İş İlanı Düzenle"
-        subtitle="İlan bilgilerini güncelleyin"
-        rightIcons={
-          <TouchableOpacity onPress={handleSubmit} activeOpacity={0.7} disabled={isSubmitting}>
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Save size={22} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
-        }
-      />
+      {/* Header with gradient and animated orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
 
-      <KeyboardAvoidingView
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Orta: Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>İlan Düzenle</Text>
+            </View>
+
+            {/* Sağ: Kaydet Butonu */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* Form Content */}
+      <KeyboardAwareScrollView
         style={styles.content}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        contentContainerStyle={styles.contentContainer}
+        bottomOffset={20}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
+        {/* Temel Bilgiler Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="information-circle-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
+          </View>
+
+          <View style={styles.sectionContent}>
 
             <Input
               label="İlan Başlığı *"
               value={formData.title}
               onChangeText={(value) => handleInputChange('title', value)}
               error={errors.title}
+              placeholder="Örn: Senior React Developer"
             />
 
             <Input
@@ -238,6 +358,7 @@ export default function EditJobPostingScreen() {
               value={formData.position}
               onChangeText={(value) => handleInputChange('position', value)}
               error={errors.position}
+              placeholder="Örn: Yazılım Geliştirici"
             />
 
             <Input
@@ -245,30 +366,37 @@ export default function EditJobPostingScreen() {
               value={formData.location}
               onChangeText={(value) => handleInputChange('location', value)}
               error={errors.location}
+              placeholder="Örn: İstanbul"
             />
 
             <SelectInput
               label="İstihdam Türü *"
-              value={formData.employment_type}
-              onValueChange={(value) => handleInputChange('employment_type', value as EmploymentType)}
               options={EMPLOYMENT_TYPE_OPTIONS}
+              selectedValue={formData.employment_type}
+              onValueChange={(value) => handleInputChange('employment_type', value as EmploymentType)}
               error={errors.employment_type}
             />
 
             <SelectInput
               label="Deneyim Seviyesi *"
-              value={formData.experience_level}
-              onValueChange={(value) =>
-                handleInputChange('experience_level', value as ExperienceLevel)
-              }
               options={EXPERIENCE_LEVEL_OPTIONS}
+              selectedValue={formData.experience_level}
+              onValueChange={(value) => handleInputChange('experience_level', value as ExperienceLevel)}
               error={errors.experience_level}
             />
-          </Card>
+          </View>
+        </View>
 
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Açıklama</Text>
+        {/* Açıklama Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="document-text-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Açıklama</Text>
+          </View>
 
+          <View style={styles.sectionContent}>
             <Input
               label="İlan Açıklaması *"
               value={formData.description}
@@ -276,6 +404,7 @@ export default function EditJobPostingScreen() {
               multiline
               numberOfLines={6}
               error={errors.description}
+              placeholder="İlan hakkında detaylı açıklama..."
             />
 
             <Input
@@ -285,6 +414,7 @@ export default function EditJobPostingScreen() {
               multiline
               numberOfLines={4}
               error={errors.requirements}
+              placeholder="Adayda aranılan nitelikler..."
             />
 
             <Input
@@ -294,17 +424,26 @@ export default function EditJobPostingScreen() {
               multiline
               numberOfLines={4}
               error={errors.responsibilities}
+              placeholder="Pozisyon sorumlulukları..."
             />
-          </Card>
+          </View>
+        </View>
 
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Maaş Bilgileri</Text>
+        {/* Maaş Bilgileri Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="cash-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Maaş Bilgileri</Text>
+          </View>
 
+          <View style={styles.sectionContent}>
             <SelectInput
               label="Para Birimi"
-              value={formData.salary_currency || 'TRY'}
-              onValueChange={(value) => handleInputChange('salary_currency', value)}
               options={CURRENCY_OPTIONS}
+              selectedValue={formData.salary_currency || 'TRY'}
+              onValueChange={(value) => handleInputChange('salary_currency', value)}
             />
 
             <Input
@@ -313,8 +452,9 @@ export default function EditJobPostingScreen() {
               onChangeText={(value) =>
                 handleInputChange('salary_min', value ? parseFloat(value) : undefined)
               }
-              keyboardType="numeric"
+              keyboardType="decimal-pad"
               error={errors.salary_min}
+              placeholder="0.00"
             />
 
             <Input
@@ -323,14 +463,23 @@ export default function EditJobPostingScreen() {
               onChangeText={(value) =>
                 handleInputChange('salary_max', value ? parseFloat(value) : undefined)
               }
-              keyboardType="numeric"
+              keyboardType="decimal-pad"
               error={errors.salary_max}
+              placeholder="0.00"
             />
-          </Card>
+          </View>
+        </View>
 
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Başvuru Ayarları</Text>
+        {/* Başvuru Ayarları Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="settings-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Başvuru Ayarları</Text>
+          </View>
 
+          <View style={styles.sectionContent}>
             <DateInput
               label="Başvuru Son Tarihi"
               value={formData.application_deadline || ''}
@@ -338,90 +487,215 @@ export default function EditJobPostingScreen() {
               error={errors.application_deadline}
             />
 
-            <View style={styles.switchRow}>
-              <View style={styles.switchLabel}>
-                <Text style={[styles.switchText, { color: colors.text }]}>Herkese Açık</Text>
-                <Text style={[styles.switchSubtext, { color: colors.textSecondary }]}>
-                  İlan herkese görünür olsun
-                </Text>
+            {/* Herkese Açık Toggle */}
+            <TouchableOpacity
+              style={styles.toggleRow}
+              onPress={() => handleInputChange('is_public', !formData.is_public)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.toggleContent}>
+                <Text style={styles.toggleLabel}>Herkese Açık</Text>
+                <Text style={styles.toggleDescription}>İlan herkese görünür olacak</Text>
               </View>
-              <Switch
-                value={formData.is_public}
-                onValueChange={(value) => handleInputChange('is_public', value)}
-                trackColor={{ false: colors.border, true: Brand.primaryLight }}
-                thumbColor={formData.is_public ? Brand.primary : colors.surface}
-              />
-            </View>
+              <View style={[
+                styles.toggleSwitch,
+                formData.is_public && styles.toggleSwitchActive
+              ]}>
+                <View style={[
+                  styles.toggleKnob,
+                  formData.is_public && styles.toggleKnobActive
+                ]} />
+              </View>
+            </TouchableOpacity>
 
-            <View style={styles.switchRow}>
-              <View style={styles.switchLabel}>
-                <Text style={[styles.switchText, { color: colors.text }]}>Aktif</Text>
-                <Text style={[styles.switchSubtext, { color: colors.textSecondary }]}>
-                  İlan aktif olsun
-                </Text>
+            {/* Aktif Toggle */}
+            <TouchableOpacity
+              style={styles.toggleRow}
+              onPress={() => handleInputChange('is_active', !formData.is_active)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.toggleContent}>
+                <Text style={styles.toggleLabel}>Aktif İlan</Text>
+                <Text style={styles.toggleDescription}>İlan aktif olacak</Text>
               </View>
-              <Switch
-                value={formData.is_active}
-                onValueChange={(value) => handleInputChange('is_active', value)}
-                trackColor={{ false: colors.border, true: Brand.primaryLight }}
-                thumbColor={formData.is_active ? Brand.primary : colors.surface}
-              />
-            </View>
-          </Card>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              <View style={[
+                styles.toggleSwitch,
+                formData.is_active && styles.toggleSwitchActive
+              ]}>
+                <View style={[
+                  styles.toggleKnob,
+                  formData.is_active && styles.toggleKnobActive
+                ]} />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAwareScrollView>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.background
   },
   centerContent: {
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
-  content: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
   },
-  scrollView: {
-    flex: 1,
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
   },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing['3xl'],
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
   },
-  card: {
-    marginBottom: Spacing.lg,
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
   },
-  sectionTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.md,
-  },
-  switchRow: {
+  headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
+    paddingBottom: DashboardSpacing.lg
   },
-  switchLabel: {
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleContainer: {
     flex: 1,
-    marginRight: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.md
   },
-  switchText: {
-    ...Typography.bodyMD,
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
+  },
+  saveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  saveButtonDisabled: {
+    opacity: 0.5
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+  content: {
+    flex: 1
+  },
+  contentContainer: {
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
+  },
+  section: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.lg,
+    overflow: 'hidden'
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sectionTitle: {
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '600',
-    marginBottom: Spacing.xs,
+    color: DashboardColors.textPrimary
   },
-  switchSubtext: {
-    ...Typography.bodySM,
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
   },
-});
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: DashboardSpacing.md,
+    paddingHorizontal: DashboardSpacing.lg,
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg
+  },
+  toggleContent: {
+    flex: 1,
+    marginRight: DashboardSpacing.md
+  },
+  toggleLabel: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '500',
+    color: DashboardColors.textPrimary
+  },
+  toggleDescription: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    marginTop: 2
+  },
+  toggleSwitch: {
+    width: 52,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: DashboardColors.borderLight,
+    padding: 2,
+    justifyContent: 'center'
+  },
+  toggleSwitchActive: {
+    backgroundColor: DashboardColors.primary
+  },
+  toggleKnob: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#fff'
+  },
+  toggleKnobActive: {
+    alignSelf: 'flex-end'
+  }
+})

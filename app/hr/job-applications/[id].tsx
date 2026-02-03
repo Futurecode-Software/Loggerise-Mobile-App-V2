@@ -1,398 +1,825 @@
 /**
  * Job Application Detail Screen
  *
- * View and manage job application details.
+ * Başvuru detay sayfası - CLAUDE.md tasarım ilkeleri ile uyumlu
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  RefreshControl,
   ActivityIndicator,
-  Alert,
-  Linking,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Edit, Trash2, Download, CheckCircle, Calendar, MessageCircle } from 'lucide-react-native';
-import { Card, Badge, Button } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Colors, Typography, Spacing, Brand, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  Pressable
+} from 'react-native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useFocusEffect } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
 import {
   getJobApplication,
   deleteJobApplication,
-  approveJobApplication,
-  downloadCV,
   JobApplication,
   getApplicationStatusLabel,
-  getApplicationStatusColor,
   getFullName,
   formatDate,
   formatTime,
   getInterviewTypeLabel,
-  getInterviewResultLabel,
-  getInterviewResultColor,
-} from '@/services/endpoints/job-applications';
-import { formatDate as formatDateUtil } from '@/utils/formatters';
-import { getErrorMessage } from '@/services/api';
+  getInterviewResultLabel
+} from '@/services/endpoints/job-applications'
+
+// Tarih formatlama
+const formatDateDetail = (dateString?: string): string => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
+  } catch {
+    return dateString
+  }
+}
+
+// Bölüm başlığı
+interface SectionHeaderProps {
+  title: string
+  icon: keyof typeof Ionicons.glyphMap
+  count?: number
+}
+
+function SectionHeader({ title, icon, count }: SectionHeaderProps) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionHeaderLeft}>
+        <View style={styles.sectionIcon}>
+          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
+        </View>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {count !== undefined && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{count}</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  )
+}
+
+// Bilgi satırı
+interface InfoRowProps {
+  label: string
+  value: string
+  icon?: keyof typeof Ionicons.glyphMap
+  highlight?: boolean
+}
+
+function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={styles.infoLabel}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={14}
+            color={DashboardColors.textMuted}
+            style={styles.infoIcon}
+          />
+        )}
+        <Text style={styles.infoLabelText}>{label}</Text>
+      </View>
+      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
+        {value}
+      </Text>
+    </View>
+  )
+}
 
 export default function JobApplicationDetailScreen() {
-  const colors = Colors.light;
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { success, error: showError } = useToast();
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const applicationId = id ? parseInt(id, 10) : null
 
-  const [jobApplication, setJobApplication] = useState<JobApplication | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isApproving, setIsApproving] = useState(false);
-  const [isDownloadingCV, setIsDownloadingCV] = useState(false);
+  // State
+  const [jobApplication, setJobApplication] = useState<JobApplication | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  // Fetch job application
-  const fetchJobApplication = useCallback(async () => {
-    if (!id) return;
+  // Refs
+  const isMountedRef = useRef(true)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
 
-    setIsLoading(true);
-    try {
-      const data = await getJobApplication(parseInt(id, 10));
-      setJobApplication(data);
-    } catch (err) {
-      showError('Hata', getErrorMessage(err));
-      router.back();
-    } finally {
-      setIsLoading(false);
+  // Veri çekme
+  const fetchJobApplication = useCallback(async (showLoading = true) => {
+    if (!applicationId) {
+      setError('Geçersiz başvuru ID')
+      setIsLoading(false)
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+
+    try {
+      if (showLoading) {
+        setIsLoading(true)
+        setError(null)
+      }
+
+      const data = await getJobApplication(applicationId)
+
+      if (isMountedRef.current) {
+        setJobApplication(data)
+        setError(null)
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Başvuru bilgileri yüklenemedi')
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
+    }
+  }, [applicationId])
 
   useEffect(() => {
-    fetchJobApplication();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    isMountedRef.current = true
+    fetchJobApplication()
 
-  // Handle delete
-  const handleDelete = useCallback(() => {
-    Alert.alert('Başvuruyu Sil', 'Bu başvuruyu silmek istediğinizden emin misiniz?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          if (!id) return;
-          setIsDeleting(true);
-          try {
-            await deleteJobApplication(parseInt(id, 10));
-            success('Başarılı', 'Başvuru silindi.');
-            router.back();
-          } catch (err) {
-            showError('Hata', getErrorMessage(err));
-            setIsDeleting(false);
-          }
-        },
-      },
-    ]);
-  }, [id, success, showError]);
-
-  // Handle approve
-  const handleApprove = useCallback(() => {
-    Alert.alert(
-      'Başvuruyu Onayla',
-      'Bu başvuruyu onaylamak ve personel kaydı oluşturmak istediğinizden emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Onayla',
-          onPress: async () => {
-            if (!id) return;
-            setIsApproving(true);
-            try {
-              await approveJobApplication(parseInt(id, 10));
-              success('Başarılı', 'Başvuru onaylandı ve personel kaydı oluşturuldu.');
-              fetchJobApplication();
-            } catch (err) {
-              showError('Hata', getErrorMessage(err));
-            } finally {
-              setIsApproving(false);
-            }
-          },
-        },
-      ]
-    );
-  }, [id, success, showError, fetchJobApplication]);
-
-  // Handle download CV
-  const handleDownloadCV = useCallback(async () => {
-    if (!id || !jobApplication?.cv_file_path) return;
-
-    setIsDownloadingCV(true);
-    try {
-      const url = await downloadCV(parseInt(id, 10));
-      await Linking.openURL(url);
-      success('Başarılı', 'CV dosyası indiriliyor...');
-    } catch (err) {
-      showError('Hata', getErrorMessage(err));
-    } finally {
-      setIsDownloadingCV(false);
+    return () => {
+      isMountedRef.current = false
     }
-  }, [id, jobApplication, success, showError]);
+  }, [fetchJobApplication])
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color={Brand.primary} />
-      </View>
-    );
+  // Edit sayfasından dönüşte yenile
+  useFocusEffect(
+    useCallback(() => {
+      fetchJobApplication(false)
+    }, [fetchJobApplication])
+  )
+
+  // Yenileme
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    fetchJobApplication(false)
+  }, [fetchJobApplication])
+
+  // Düzenleme
+  const handleEdit = () => {
+    if (!applicationId) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/hr/job-applications/${applicationId}/edit`)
   }
 
-  if (!jobApplication) {
-    return null;
+  // Silme dialogunu aç
+  const handleDelete = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    deleteDialogRef.current?.present()
   }
 
-  const isApproved = jobApplication.status === 'onaylandı';
+  // Silme işlemini gerçekleştir
+  const confirmDelete = async () => {
+    if (!applicationId) return
+
+    setIsDeleting(true)
+    try {
+      await deleteJobApplication(applicationId)
+      deleteDialogRef.current?.dismiss()
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      Toast.show({
+        type: 'success',
+        text1: 'Başvuru başarıyla silindi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+
+      setTimeout(() => {
+        router.back()
+      }, 300)
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Başvuru silinemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Geri
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
+
+  const statusColors: Record<string, { primary: string; bg: string }> = {
+    başvuru_alındı: { primary: DashboardColors.info, bg: DashboardColors.infoBg },
+    değerlendiriliyor: { primary: DashboardColors.warning, bg: DashboardColors.warningBg },
+    mülakat_planlandı: { primary: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.12)' },
+    onaylandı: { primary: DashboardColors.success, bg: DashboardColors.successBg },
+    reddedildi: { primary: DashboardColors.danger, bg: DashboardColors.dangerBg },
+    iptal_edildi: { primary: DashboardColors.textMuted, bg: DashboardColors.background }
+  }
+
+  const statusColor = jobApplication ? (statusColors[jobApplication.status] || statusColors.başvuru_alındı) : null
 
   return (
     <View style={styles.container}>
-      <FullScreenHeader
-        title={getFullName(jobApplication)}
-        showBackButton
-        rightIcons={
-          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-            <TouchableOpacity
-              onPress={() => router.push(`/hr/job-applications/${id}/edit`)}
-              activeOpacity={0.7}
-            >
-              <Edit size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDelete} activeOpacity={0.7} disabled={isDeleting}>
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Trash2 size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </View>
-        }
-      />
-
-      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-        {/* Status Badge */}
-        <Badge
-          label={getApplicationStatusLabel(jobApplication.status)}
-          variant={getApplicationStatusColor(jobApplication.status)}
-          style={styles.statusBadge}
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
         />
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
 
-        {/* Approve Button */}
-        {!isApproved && (
-          <Button
-            title="Başvuruyu Onayla ve Personel Kaydı Oluştur"
-            onPress={handleApprove}
-            variant="primary"
-            loading={isApproving}
-            icon={<CheckCircle size={18} color="#FFFFFF" />}
-            style={styles.approveButton}
-          />
-        )}
-
-        {/* Download CV Button */}
-        {jobApplication.cv_file_path && (
-          <Button
-            title="CV İndir"
-            onPress={handleDownloadCV}
-            variant="secondary"
-            loading={isDownloadingCV}
-            icon={<Download size={18} color={colors.text} />}
-            style={styles.downloadButton}
-          />
-        )}
-
-        {/* Basic Info */}
-        <Card variant="outlined" style={styles.card}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Başvurucu Bilgileri</Text>
-          <DetailRow label="Ad Soyad" value={getFullName(jobApplication)} />
-          <DetailRow label="E-posta" value={jobApplication.email} />
-          <DetailRow label="Telefon" value={jobApplication.phone} />
-          <DetailRow label="Pozisyon" value={jobApplication.position} />
-          <DetailRow label="Başvuru Tarihi" value={formatDate(jobApplication.application_date)} />
-        </Card>
-
-        {/* Job Posting Info */}
-        {jobApplication.job_posting && (
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>İlgili İş İlanı</Text>
-            <TouchableOpacity
-              onPress={() => router.push(`/hr/job-postings/${jobApplication.job_posting!.id}`)}
-            >
-              <DetailRow label="İlan" value={jobApplication.job_posting.title} />
-              <DetailRow label="Pozisyon" value={jobApplication.job_posting.position} />
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          {/* Üst Bar */}
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
             </TouchableOpacity>
-          </Card>
-        )}
 
-        {/* Notes */}
-        {jobApplication.notes && (
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Notlar</Text>
-            <Text style={[styles.notes, { color: colors.text }]}>{jobApplication.notes}</Text>
-          </Card>
-        )}
+            {isLoading ? (
+              <View style={styles.headerTitleSection}>
+                <Skeleton width={140} height={22} />
+              </View>
+            ) : jobApplication ? (
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerName} numberOfLines={1}>
+                  {getFullName(jobApplication)}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.headerTitleSection} />
+            )}
 
-        {/* Interviews */}
-        {jobApplication.interviews && jobApplication.interviews.length > 0 && (
-          <Card variant="outlined" style={styles.card}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              Görüşmeler ({jobApplication.interviews.length})
-            </Text>
-            {jobApplication.interviews.map((interview) => (
-              <View key={interview.id} style={styles.interviewItem}>
-                <View style={styles.interviewHeader}>
-                  <Text style={[styles.interviewTitle, { color: colors.text }]}>
-                    {interview.title}
-                  </Text>
-                  {interview.interview_result && (
-                    <Badge
-                      label={getInterviewResultLabel(interview.interview_result)}
-                      variant={getInterviewResultColor(interview.interview_result)}
-                      size="sm"
-                    />
+            {!isLoading && jobApplication ? (
+              <View style={styles.headerActions}>
+                <TouchableOpacity style={styles.headerButton} onPress={handleEdit}>
+                  <Ionicons name="create-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.headerButton, styles.deleteButton]}
+                  onPress={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={22} color="#fff" />
                   )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.headerActionsPlaceholder} />
+            )}
+          </View>
+
+          {/* İsim ve Durum */}
+          {isLoading ? (
+            <View style={styles.balanceRow}>
+              <View style={styles.balanceSummary}>
+                <Skeleton width={100} height={14} style={{ marginBottom: DashboardSpacing.xs }} />
+                <Skeleton width={160} height={24} />
+              </View>
+              <Skeleton width={100} height={32} borderRadius={16} />
+            </View>
+          ) : jobApplication && statusColor ? (
+            <View style={styles.balanceRow}>
+              <View style={styles.balanceSummary}>
+                <Text style={styles.balanceLabel}>{jobApplication.position}</Text>
+                <Text style={styles.balanceAmount}>{jobApplication.email}</Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
+                <View style={[styles.statusDot, { backgroundColor: statusColor.primary }]} />
+                <Text style={[styles.statusBadgeText, { color: statusColor.primary }]}>
+                  {getApplicationStatusLabel(jobApplication.status)}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* İçerik */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={DashboardColors.primary}
+          />
+        }
+      >
+        {/* Loading */}
+        {isLoading && (
+          <View style={styles.skeletonContainer}>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={styles.card}>
+                <View style={styles.sectionHeader}>
+                  <Skeleton width={140} height={20} />
                 </View>
-                <View style={styles.interviewDetails}>
-                  <View style={styles.interviewRow}>
-                    <Calendar size={14} color={colors.textSecondary} />
-                    <Text style={[styles.interviewText, { color: colors.textSecondary }]}>
-                      {formatDate(interview.interview_date)} • {formatTime(interview.interview_time)}
-                    </Text>
-                  </View>
-                  <View style={styles.interviewRow}>
-                    <MessageCircle size={14} color={colors.textSecondary} />
-                    <Text style={[styles.interviewText, { color: colors.textSecondary }]}>
-                      {getInterviewTypeLabel(interview.interview_type)}
-                    </Text>
-                  </View>
-                  {interview.notes && (
-                    <Text style={[styles.interviewNotes, { color: colors.textSecondary }]}>
-                      {interview.notes}
-                    </Text>
-                  )}
+                <View style={styles.cardContent}>
+                  <Skeleton width="100%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="80%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="60%" height={16} />
                 </View>
               </View>
             ))}
-          </Card>
+          </View>
         )}
 
-        {/* Dates */}
-        <Card variant="outlined" style={styles.card}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Tarihler</Text>
-          <DetailRow label="Oluşturulma" value={formatDateUtil(jobApplication.created_at, 'dd.MM.yyyy HH:mm')} />
-          <DetailRow label="Güncellenme" value={formatDateUtil(jobApplication.updated_at, 'dd.MM.yyyy HH:mm')} />
-        </Card>
-      </ScrollView>
-    </View>
-  );
-}
+        {/* Hata */}
+        {!isLoading && (error || !jobApplication) && (
+          <View style={styles.errorState}>
+            <View style={styles.errorIcon}>
+              <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+            </View>
+            <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+            <Text style={styles.errorText}>{error || 'Başvuru bulunamadı'}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => fetchJobApplication()}>
+              <Ionicons name="refresh" size={18} color="#fff" />
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-// Detail row component
-function DetailRow({ label, value }: { label: string; value: string }) {
-  const colors = Colors.light;
-  return (
-    <View style={styles.detailRow}>
-      <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{label}</Text>
-      <Text style={[styles.detailValue, { color: colors.text }]}>{value}</Text>
+        {/* Normal içerik */}
+        {!isLoading && jobApplication && (
+          <>
+            {/* Başvurucu Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Başvurucu Bilgileri" icon="person-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Ad Soyad"
+                  value={getFullName(jobApplication)}
+                  icon="text-outline"
+                  highlight
+                />
+                <InfoRow
+                  label="E-posta"
+                  value={jobApplication.email}
+                  icon="mail-outline"
+                />
+                <InfoRow
+                  label="Telefon"
+                  value={jobApplication.phone}
+                  icon="call-outline"
+                />
+                <InfoRow
+                  label="Pozisyon"
+                  value={jobApplication.position}
+                  icon="briefcase-outline"
+                />
+                <InfoRow
+                  label="Başvuru Tarihi"
+                  value={formatDate(jobApplication.application_date)}
+                  icon="calendar-outline"
+                />
+              </View>
+            </View>
+
+            {/* İş İlanı */}
+            {jobApplication.job_posting && (
+              <View style={styles.card}>
+                <SectionHeader title="İlgili İş İlanı" icon="document-text-outline" />
+                <View style={styles.cardContent}>
+                  <Pressable onPress={() => router.push(`/hr/job-postings/${jobApplication.job_posting!.id}`)}>
+                    <InfoRow
+                      label="İlan"
+                      value={jobApplication.job_posting.title}
+                      icon="document-outline"
+                      highlight
+                    />
+                    <InfoRow
+                      label="Pozisyon"
+                      value={jobApplication.job_posting.position}
+                      icon="briefcase-outline"
+                    />
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {/* Notlar */}
+            {jobApplication.notes && (
+              <View style={styles.card}>
+                <SectionHeader title="Notlar" icon="document-text-outline" />
+                <View style={styles.cardContent}>
+                  <Text style={styles.descriptionText}>{jobApplication.notes}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Görüşmeler */}
+            {jobApplication.interviews && jobApplication.interviews.length > 0 && (
+              <View style={styles.card}>
+                <SectionHeader title="Görüşmeler" icon="calendar-outline" count={jobApplication.interviews.length} />
+                <View style={styles.cardContent}>
+                  {jobApplication.interviews.map((interview, index) => (
+                    <View key={interview.id} style={[styles.interviewItem, index > 0 && styles.interviewItemBorder]}>
+                      <Text style={styles.interviewTitle}>{interview.title}</Text>
+                      <View style={styles.interviewDetails}>
+                        <View style={styles.interviewRow}>
+                          <Ionicons name="calendar-outline" size={14} color={DashboardColors.textMuted} />
+                          <Text style={styles.interviewText}>
+                            {formatDate(interview.interview_date)} • {formatTime(interview.interview_time)}
+                          </Text>
+                        </View>
+                        <View style={styles.interviewRow}>
+                          <Ionicons name="videocam-outline" size={14} color={DashboardColors.textMuted} />
+                          <Text style={styles.interviewText}>
+                            {getInterviewTypeLabel(interview.interview_type)}
+                          </Text>
+                        </View>
+                        {interview.interview_result && (
+                          <View style={styles.interviewRow}>
+                            <Ionicons name="checkmark-circle-outline" size={14} color={DashboardColors.textMuted} />
+                            <Text style={styles.interviewText}>
+                              {getInterviewResultLabel(interview.interview_result)}
+                            </Text>
+                          </View>
+                        )}
+                        {interview.notes && (
+                          <Text style={styles.interviewNotes}>{interview.notes}</Text>
+                        )}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Sistem Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Sistem Bilgileri" icon="time-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Oluşturulma"
+                  value={formatDateDetail(jobApplication.created_at)}
+                  icon="add-circle-outline"
+                />
+                <InfoRow
+                  label="Son Güncelleme"
+                  value={formatDateDetail(jobApplication.updated_at)}
+                  icon="refresh-outline"
+                />
+              </View>
+            </View>
+
+            <View style={{ height: insets.bottom + DashboardSpacing['3xl'] }} />
+          </>
+        )}
+      </ScrollView>
+
+      {/* Silme Onay Dialogu */}
+      <ConfirmDialog
+        ref={deleteDialogRef}
+        title="Başvuruyu Sil"
+        message="Bu başvuruyu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        type="danger"
+        confirmText="Sil"
+        cancelText="İptal"
+        onConfirm={confirmDelete}
+        isLoading={isDeleting}
+      />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.primary
   },
-  centerContent: {
-    justifyContent: 'center',
+
+  // Header
+  headerContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingBottom: 24
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: DashboardSpacing.md
   },
-  content: {
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleSection: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    marginHorizontal: DashboardSpacing.md
   },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing['3xl'],
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  headerActionsPlaceholder: {
+    width: 96
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)'
+  },
+  headerName: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3,
+    flex: 1
+  },
+  balanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: DashboardSpacing.md
+  },
+  balanceSummary: {
+    flex: 1
   },
   statusBadge: {
-    alignSelf: 'flex-start',
-    marginBottom: Spacing.md,
-  },
-  approveButton: {
-    marginBottom: Spacing.md,
-  },
-  downloadButton: {
-    marginBottom: Spacing.lg,
-  },
-  card: {
-    marginBottom: Spacing.lg,
-  },
-  cardTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.md,
-  },
-  detailRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
+    alignItems: 'center',
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.full,
+    gap: 6
   },
-  detailLabel: {
-    ...Typography.bodyMD,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
+  },
+  statusBadgeText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600'
+  },
+  balanceLabel: {
+    fontSize: DashboardFontSizes.sm,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: DashboardSpacing.xs
+  },
+  balanceAmount: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+
+  // İçerik
+  content: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
-  detailValue: {
-    ...Typography.bodyMD,
-    fontWeight: '600',
-    flex: 1,
-    textAlign: 'right',
+  contentContainer: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md
   },
-  notes: {
-    ...Typography.bodyMD,
-    lineHeight: 22,
+
+  // Kartlar
+  card: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.sm
   },
-  interviewItem: {
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
+  cardContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
   },
-  interviewHeader: {
+
+  // Bölüm Başlığı
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sectionTitle: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
+  },
+  countBadge: {
+    backgroundColor: DashboardColors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10
+  },
+  countText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600',
+    color: '#fff'
+  },
+
+  // Bilgi Satırı
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: DashboardSpacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  infoLabel: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  infoIcon: {
+    marginRight: DashboardSpacing.sm
+  },
+  infoLabelText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
+  },
+  infoValue: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textPrimary,
+    maxWidth: '50%',
+    textAlign: 'right'
+  },
+  infoValueHighlight: {
+    color: DashboardColors.primary,
+    fontWeight: '600'
+  },
+
+  // Açıklama
+  descriptionText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    lineHeight: 22
+  },
+
+  // Görüşmeler
+  interviewItem: {
+    paddingVertical: DashboardSpacing.md
+  },
+  interviewItemBorder: {
+    borderTopWidth: 1,
+    borderTopColor: DashboardColors.borderLight
   },
   interviewTitle: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
-    flex: 1,
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm
   },
   interviewDetails: {
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
   interviewRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.sm
   },
   interviewText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
   interviewNotes: {
-    ...Typography.bodySM,
-    marginTop: Spacing.xs,
-    fontStyle: 'italic',
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.xs,
+    fontStyle: 'italic'
   },
-});
+
+  // Skeleton
+  skeletonContainer: {
+    gap: DashboardSpacing.md
+  },
+
+  // Hata durumu
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
+  },
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  errorTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
+  },
+  retryButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  }
+})

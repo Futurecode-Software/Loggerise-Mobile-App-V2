@@ -8,7 +8,7 @@
  * - Leave group functionality
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,28 +19,23 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useToast } from '@/hooks/use-toast';
-import { ConfirmDialog } from '@/components/ui';
+import { ConfirmDialog , Avatar, Input, Button } from '@/components/ui';
 import { useLocalSearchParams, router } from 'expo-router';
-import {
-  Users,
-  UserPlus,
-  UserMinus,
-  LogOut,
-  Edit2,
-  Crown,
-  Check,
-  X,
-  Search,
-  Camera,
-  AlertCircle,
-  ChevronRight,
-} from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows, Status } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Toast from 'react-native-toast-message';
 import { useAuth } from '@/context/auth-context';
-import { FullScreenHeader } from '@/components/header';
-import { Avatar, Input, Button } from '@/components/ui';
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme';
+
 import {
   getGroupDetails,
   updateGroup,
@@ -70,9 +65,8 @@ type ViewMode = 'main' | 'edit' | 'addParticipants';
 
 export default function GroupSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { success, error: showError, warning } = useToast();
   const currentUserId = typeof user?.id === 'string' ? parseInt(user.id, 10) : user?.id || 0;
   const conversationId = id ? parseInt(id, 10) : 0;
 
@@ -100,6 +94,9 @@ export default function GroupSettingsScreen() {
   const [participantToRemove, setParticipantToRemove] = useState<Participant | null>(null);
   const [showLeaveGroupDialog, setShowLeaveGroupDialog] = useState(false);
 
+  // Refs
+  const isMountedRef = useRef(true);
+
   // Fetch group details
   const fetchGroupDetails = useCallback(async (showRefresh = false) => {
     if (!conversationId) return;
@@ -113,21 +110,40 @@ export default function GroupSettingsScreen() {
 
     try {
       const data = await getGroupDetails(conversationId);
-      setGroupDetails(data);
-      setEditName(data.conversation.name);
-      setEditDescription(data.conversation.description || '');
+      if (isMountedRef.current) {
+        setGroupDetails(data);
+        setEditName(data.conversation.name);
+        setEditDescription(data.conversation.description || '');
+        setError(null);
+      }
     } catch (err) {
       console.error('Group details fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Grup bilgileri yüklenemedi');
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Grup bilgileri yüklenemedi');
+      }
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
   }, [conversationId]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchGroupDetails();
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [fetchGroupDetails]);
+
+  // Edit sayfasından dönüşte yenile
+  useFocusEffect(
+    useCallback(() => {
+      fetchGroupDetails(false);
+    }, [fetchGroupDetails])
+  );
 
   // Reset add participants state when switching views
   useEffect(() => {
@@ -158,10 +174,20 @@ export default function GroupSettingsScreen() {
         });
       }
       setViewMode('main');
-      success('Başarılı', 'Grup bilgileri güncellendi.');
+      Toast.show({
+        type: 'success',
+        text1: 'Grup bilgileri güncellendi',
+        position: 'top',
+        visibilityTime: 1500
+      });
     } catch (err) {
       console.error('Update group error:', err);
-      showError('Hata', 'Grup güncellenemedi. Lütfen tekrar deneyin.');
+      Toast.show({
+        type: 'error',
+        text1: 'Grup güncellenemedi',
+        position: 'top',
+        visibilityTime: 1500
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -176,10 +202,20 @@ export default function GroupSettingsScreen() {
       await addParticipants(conversationId, selectedUsersToAdd);
       await fetchGroupDetails();
       setViewMode('main');
-      success('Başarılı', 'Katılımcılar eklendi.');
+      Toast.show({
+        type: 'success',
+        text1: 'Katılımcılar eklendi',
+        position: 'top',
+        visibilityTime: 1500
+      });
     } catch (err) {
       console.error('Add participants error:', err);
-      showError('Hata', 'Katılımcılar eklenemedi. Lütfen tekrar deneyin.');
+      Toast.show({
+        type: 'error',
+        text1: 'Katılımcılar eklenemedi',
+        position: 'top',
+        visibilityTime: 1500
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -201,10 +237,20 @@ export default function GroupSettingsScreen() {
       await fetchGroupDetails();
       setShowRemoveParticipantDialog(false);
       setParticipantToRemove(null);
-      success('Başarılı', 'Katılımcı gruptan çıkarıldı.');
+      Toast.show({
+        type: 'success',
+        text1: 'Katılımcı gruptan çıkarıldı',
+        position: 'top',
+        visibilityTime: 1500
+      });
     } catch (err) {
       console.error('Remove participant error:', err);
-      showError('Hata', 'Katılımcı çıkarılamadı. Lütfen tekrar deneyin.');
+      Toast.show({
+        type: 'error',
+        text1: 'Katılımcı çıkarılamadı',
+        position: 'top',
+        visibilityTime: 1500
+      });
     }
   };
 
@@ -213,7 +259,12 @@ export default function GroupSettingsScreen() {
     if (!conversationId) return;
 
     if (groupDetails?.isCreator) {
-      warning('Uyarı', 'Grup oluşturucusu gruptan ayrılamaz.');
+      Toast.show({
+        type: 'warning',
+        text1: 'Grup oluşturucusu gruptan ayrılamaz',
+        position: 'top',
+        visibilityTime: 1500
+      });
       return;
     }
 
@@ -230,7 +281,12 @@ export default function GroupSettingsScreen() {
       router.replace('/messages' as any);
     } catch (err) {
       console.error('Leave group error:', err);
-      showError('Hata', 'Gruptan ayrılırken bir hata oluştu.');
+      Toast.show({
+        type: 'error',
+        text1: 'Gruptan ayrılırken bir hata oluştu',
+        position: 'top',
+        visibilityTime: 1500
+      });
     }
   };
 
@@ -248,7 +304,12 @@ export default function GroupSettingsScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        warning('İzin Gerekli', 'Fotoğraf seçmek için galeri erişim izni gereklidir.');
+        Toast.show({
+          type: 'warning',
+          text1: 'Fotoğraf seçmek için galeri erişim izni gereklidir',
+          position: 'top',
+          visibilityTime: 1500
+        });
         return;
       }
 
@@ -263,7 +324,12 @@ export default function GroupSettingsScreen() {
         const asset = result.assets[0];
 
         if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-          showError('Hata', 'Dosya boyutu maksimum 5MB olabilir');
+          Toast.show({
+            type: 'error',
+            text1: 'Dosya boyutu maksimum 5MB olabilir',
+            position: 'top',
+            visibilityTime: 1500
+          });
           return;
         }
 
@@ -273,7 +339,12 @@ export default function GroupSettingsScreen() {
       }
     } catch (err) {
       console.error('Image picker error:', err);
-      showError('Hata', 'Fotoğraf seçilirken bir hata oluştu');
+      Toast.show({
+        type: 'error',
+        text1: 'Fotoğraf seçilirken bir hata oluştu',
+        position: 'top',
+        visibilityTime: 1500
+      });
     }
   };
 
@@ -296,11 +367,21 @@ export default function GroupSettingsScreen() {
 
       await updateGroupAvatar(conversationId, formData);
 
-      success('Başarılı', 'Grup fotoğrafı güncellendi');
+      Toast.show({
+        type: 'success',
+        text1: 'Grup fotoğrafı güncellendi',
+        position: 'top',
+        visibilityTime: 1500
+      });
       await fetchGroupDetails();
     } catch (err) {
       console.error('Avatar upload error:', err);
-      showError('Hata', 'Fotoğraf yüklenirken bir hata oluştu');
+      Toast.show({
+        type: 'error',
+        text1: 'Fotoğraf yüklenirken bir hata oluştu',
+        position: 'top',
+        visibilityTime: 1500
+      });
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -320,34 +401,34 @@ export default function GroupSettingsScreen() {
     const canRemove = groupDetails?.isAdmin && !item.is_creator && !isMe;
 
     return (
-      <View style={[styles.participantItem, { borderBottomColor: colors.border }]}>
+      <View style={[styles.participantItem, { borderBottomColor: DashboardColors.borderLight }]}>
         <Avatar name={item.name} size="md" source={item.profile_photo_url || undefined} />
         <View style={styles.participantInfo}>
           <View style={styles.participantNameRow}>
-            <Text style={[styles.participantName, { color: colors.text }]}>
+            <Text style={[styles.participantName, { color: DashboardColors.textPrimary }]}>
               {item.name}
               {isMe && ' (Sen)'}
             </Text>
             {item.is_creator && (
-              <View style={[styles.badge, { backgroundColor: Status.warning + '20' }]}>
-                <Crown size={12} color={Status.warning} />
-                <Text style={[styles.badgeText, { color: Status.warning }]}>Kurucu</Text>
+              <View style={[styles.badge, { backgroundColor: DashboardColors.warning + '20' }]}>
+                <Ionicons name="trophy" size={12} color={DashboardColors.warning} />
+                <Text style={[styles.badgeText, { color: DashboardColors.warning }]}>Kurucu</Text>
               </View>
             )}
             {item.role === 'admin' && !item.is_creator && (
-              <View style={[styles.badge, { backgroundColor: Brand.primary + '20' }]}>
-                <Text style={[styles.badgeText, { color: Brand.primary }]}>Admin</Text>
+              <View style={[styles.badge, { backgroundColor: DashboardColors.primary + '20' }]}>
+                <Text style={[styles.badgeText, { color: DashboardColors.primary }]}>Admin</Text>
               </View>
             )}
           </View>
-          <Text style={[styles.participantEmail, { color: colors.textMuted }]}>{item.email}</Text>
+          <Text style={[styles.participantEmail, { color: DashboardColors.textMuted }]}>{item.email}</Text>
         </View>
         {canRemove && (
           <TouchableOpacity
-            style={[styles.removeButton, { backgroundColor: colors.danger + '15' }]}
+            style={[styles.removeButton, { backgroundColor: DashboardColors.danger + '15' }]}
             onPress={() => handleRemoveParticipant(item)}
           >
-            <UserMinus size={18} color={colors.danger} />
+            <Ionicons name="person-remove-outline" size={18} color={DashboardColors.danger} />
           </TouchableOpacity>
         )}
       </View>
@@ -357,11 +438,35 @@ export default function GroupSettingsScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <FullScreenHeader title="Grup Ayarları" showBackButton />
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerTitle}>Grup Ayarları</Text>
+              </View>
+              <View style={styles.headerActionsPlaceholder} />
+            </View>
+          </View>
+          <View style={styles.bottomCurve} />
+        </View>
+
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Yükleniyor...</Text>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={[styles.loadingText, { color: DashboardColors.textSecondary }]}>Yükleniyor...</Text>
         </View>
       </View>
     );
@@ -370,12 +475,36 @@ export default function GroupSettingsScreen() {
   // Error state
   if (error || !groupDetails) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <FullScreenHeader title="Grup Ayarları" showBackButton />
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerTitle}>Grup Ayarları</Text>
+              </View>
+              <View style={styles.headerActionsPlaceholder} />
+            </View>
+          </View>
+          <View style={styles.bottomCurve} />
+        </View>
+
         <View style={styles.centerContainer}>
-          <AlertCircle size={64} color={colors.danger} />
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Bir hata oluştu</Text>
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>
+          <Ionicons name="alert-circle" size={64} color={DashboardColors.danger} />
+          <Text style={[styles.errorTitle, { color: DashboardColors.textPrimary }]}>Bir hata oluştu</Text>
+          <Text style={[styles.errorText, { color: DashboardColors.textSecondary }]}>
             {error || 'Grup bilgileri yüklenemedi'}
           </Text>
           <Button title="Tekrar Dene" onPress={() => fetchGroupDetails()} style={styles.retryButton} />
@@ -387,12 +516,32 @@ export default function GroupSettingsScreen() {
   // Edit view
   if (viewMode === 'edit') {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <FullScreenHeader
-          title="Grubu Düzenle"
-          showBackButton
-          onBackPress={() => setViewMode('main')}
-        />
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity style={styles.headerButton} onPress={() => setViewMode('main')}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerTitle}>Grubu Düzenle</Text>
+              </View>
+              <View style={styles.headerActionsPlaceholder} />
+            </View>
+          </View>
+          <View style={styles.bottomCurve} />
+        </View>
+
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.editContent}>
           <View style={styles.inputGroup}>
             <Input
@@ -428,29 +577,52 @@ export default function GroupSettingsScreen() {
   // Add participants view
   if (viewMode === 'addParticipants') {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <FullScreenHeader
-          title="Katılımcı Ekle"
-          showBackButton
-          onBackPress={() => setViewMode('main')}
-          rightIcons={
-            selectedUsersToAdd.length > 0 ? (
-              <TouchableOpacity onPress={handleAddParticipants} disabled={isUpdating}>
-                {isUpdating ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.headerActionText}>Ekle ({selectedUsersToAdd.length})</Text>
-                )}
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <LinearGradient
+            colors={['#022920', '#044134', '#065f4a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.glowOrb1} />
+          <View style={styles.glowOrb2} />
+
+          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.headerBar}>
+              <TouchableOpacity style={styles.headerButton} onPress={() => setViewMode('main')}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
               </TouchableOpacity>
-            ) : null
-          }
-        />
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerTitle}>Katılımcı Ekle</Text>
+              </View>
+              {selectedUsersToAdd.length > 0 ? (
+                <TouchableOpacity
+                  style={styles.headerButton}
+                  onPress={handleAddParticipants}
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="checkmark" size={24} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.headerActionsPlaceholder} />
+              )}
+            </View>
+          </View>
+          <View style={styles.bottomCurve} />
+        </View>
+
         <View style={styles.searchContainer}>
           <Input
             placeholder="Kullanıcı ara..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            leftIcon={<Search size={20} color={colors.icon} />}
+            leftIcon={<Ionicons name="search" size={20} color={DashboardColors.textMuted} />}
             containerStyle={styles.searchInput}
           />
         </View>
@@ -463,20 +635,20 @@ export default function GroupSettingsScreen() {
               <TouchableOpacity
                 style={[
                   styles.userItem,
-                  { borderBottomColor: colors.border },
-                  isSelected && { backgroundColor: Brand.primary + '10' },
+                  { borderBottomColor: DashboardColors.borderLight },
+                  isSelected && { backgroundColor: DashboardColors.primary + '10' },
                 ]}
                 onPress={() => toggleUserSelection(item.id)}
                 activeOpacity={0.7}
               >
                 <Avatar name={item.name} size="md" />
                 <View style={styles.userInfo}>
-                  <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
-                  <Text style={[styles.userEmail, { color: colors.textMuted }]}>{item.email}</Text>
+                  <Text style={[styles.userName, { color: DashboardColors.textPrimary }]}>{item.name}</Text>
+                  <Text style={[styles.userEmail, { color: DashboardColors.textMuted }]}>{item.email}</Text>
                 </View>
                 {isSelected && (
-                  <View style={[styles.checkBadge, { backgroundColor: Brand.primary }]}>
-                    <Check size={16} color="#FFFFFF" />
+                  <View style={[styles.checkBadge, { backgroundColor: DashboardColors.primary }]}>
+                    <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                   </View>
                 )}
               </TouchableOpacity>
@@ -485,8 +657,8 @@ export default function GroupSettingsScreen() {
           contentContainerStyle={styles.userListContent}
           ListEmptyComponent={
             <View style={styles.emptyList}>
-              <Users size={48} color={colors.textMuted} />
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+              <Ionicons name="people-outline" size={48} color={DashboardColors.textMuted} />
+              <Text style={[styles.emptyText, { color: DashboardColors.textMuted }]}>
                 {searchQuery ? 'Kullanıcı bulunamadı' : 'Eklenecek kullanıcı yok'}
               </Text>
             </View>
@@ -498,8 +670,31 @@ export default function GroupSettingsScreen() {
 
   // Main view
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <FullScreenHeader title="Grup Ayarları" showBackButton />
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.headerTitleSection}>
+              <Text style={styles.headerTitle}>Grup Ayarları</Text>
+            </View>
+            <View style={styles.headerActionsPlaceholder} />
+          </View>
+        </View>
+        <View style={styles.bottomCurve} />
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -507,13 +702,13 @@ export default function GroupSettingsScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => fetchGroupDetails(true)}
-            colors={[Brand.primary]}
-            tintColor={Brand.primary}
+            colors={[DashboardColors.primary]}
+            tintColor={DashboardColors.primary}
           />
         }
       >
         {/* Group Info Section */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <View style={[styles.section, { backgroundColor: DashboardColors.surface }]}>
           <View style={styles.groupHeader}>
             <View style={styles.avatarContainer}>
               {groupDetails.conversation.avatar_url ? (
@@ -523,33 +718,33 @@ export default function GroupSettingsScreen() {
                   source={groupDetails.conversation.avatar_url}
                 />
               ) : (
-                <View style={[styles.groupAvatarLarge, { backgroundColor: Brand.primary }]}>
-                  <Users size={36} color="#FFFFFF" />
+                <View style={[styles.groupAvatarLarge, { backgroundColor: DashboardColors.primary }]}>
+                  <Ionicons name="people" size={36} color="#FFFFFF" />
                 </View>
               )}
               {groupDetails.isAdmin && (
                 <TouchableOpacity
-                  style={[styles.cameraButton, { backgroundColor: Brand.primary }]}
+                  style={[styles.cameraButton, { backgroundColor: DashboardColors.primary }]}
                   onPress={handlePickAvatar}
                   disabled={isUploadingAvatar}
                 >
                   {isUploadingAvatar ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
-                    <Camera size={18} color="#FFFFFF" />
+                    <Ionicons name="camera" size={18} color="#FFFFFF" />
                   )}
                 </TouchableOpacity>
               )}
             </View>
-            <Text style={[styles.groupName, { color: colors.text }]}>
+            <Text style={[styles.groupName, { color: DashboardColors.textPrimary }]}>
               {groupDetails.conversation.name}
             </Text>
             {groupDetails.conversation.description && (
-              <Text style={[styles.groupDescription, { color: colors.textSecondary }]}>
+              <Text style={[styles.groupDescription, { color: DashboardColors.textSecondary }]}>
                 {groupDetails.conversation.description}
               </Text>
             )}
-            <Text style={[styles.participantCount, { color: colors.textMuted }]}>
+            <Text style={[styles.participantCount, { color: DashboardColors.textMuted }]}>
               {groupDetails.participants.length} katılımcı
             </Text>
           </View>
@@ -557,17 +752,17 @@ export default function GroupSettingsScreen() {
 
         {/* Actions Section */}
         {groupDetails.isAdmin && (
-          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <View style={[styles.section, { backgroundColor: DashboardColors.surface }]}>
             <TouchableOpacity
-              style={[styles.actionRow, { borderBottomColor: colors.border }]}
+              style={[styles.actionRow, { borderBottomColor: DashboardColors.borderLight }]}
               onPress={() => setViewMode('edit')}
               activeOpacity={0.7}
             >
-              <View style={[styles.actionIcon, { backgroundColor: Brand.primary + '15' }]}>
-                <Edit2 size={20} color={Brand.primary} />
+              <View style={[styles.actionIcon, { backgroundColor: DashboardColors.primary + '15' }]}>
+                <Ionicons name="create-outline" size={20} color={DashboardColors.primary} />
               </View>
-              <Text style={[styles.actionText, { color: colors.text }]}>Grubu Düzenle</Text>
-              <ChevronRight size={20} color={colors.textMuted} />
+              <Text style={[styles.actionText, { color: DashboardColors.textPrimary }]}>Grubu Düzenle</Text>
+              <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -575,19 +770,19 @@ export default function GroupSettingsScreen() {
               onPress={() => setViewMode('addParticipants')}
               activeOpacity={0.7}
             >
-              <View style={[styles.actionIcon, { backgroundColor: Brand.primary + '15' }]}>
-                <UserPlus size={20} color={Brand.primary} />
+              <View style={[styles.actionIcon, { backgroundColor: DashboardColors.primary + '15' }]}>
+                <Ionicons name="person-add-outline" size={20} color={DashboardColors.primary} />
               </View>
-              <Text style={[styles.actionText, { color: colors.text }]}>Katılımcı Ekle</Text>
-              <ChevronRight size={20} color={colors.textMuted} />
+              <Text style={[styles.actionText, { color: DashboardColors.textPrimary }]}>Katılımcı Ekle</Text>
+              <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
             </TouchableOpacity>
           </View>
         )}
 
         {/* Participants Section */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <View style={[styles.section, { backgroundColor: DashboardColors.surface }]}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            <Text style={[styles.sectionTitle, { color: DashboardColors.textPrimary }]}>
               Katılımcılar ({groupDetails.participants.length})
             </Text>
           </View>
@@ -601,16 +796,16 @@ export default function GroupSettingsScreen() {
 
         {/* Leave Group Section */}
         {!groupDetails.isCreator && (
-          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <View style={[styles.section, { backgroundColor: DashboardColors.surface }]}>
             <TouchableOpacity
               style={styles.dangerRow}
               onPress={handleLeaveGroup}
               activeOpacity={0.7}
             >
-              <View style={[styles.actionIcon, { backgroundColor: colors.danger + '15' }]}>
-                <LogOut size={20} color={colors.danger} />
+              <View style={[styles.actionIcon, { backgroundColor: DashboardColors.danger + '15' }]}>
+                <Ionicons name="log-out-outline" size={20} color={DashboardColors.danger} />
               </View>
-              <Text style={[styles.dangerText, { color: colors.danger }]}>Gruptan Ayrıl</Text>
+              <Text style={[styles.dangerText, { color: DashboardColors.danger }]}>Gruptan Ayrıl</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -651,46 +846,116 @@ export default function GroupSettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary
   },
+
+  // Header
+  headerContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingBottom: 24
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleSection: {
+    flex: 1,
+    marginHorizontal: DashboardSpacing.md,
+    alignItems: 'center'
+  },
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
+  },
+  headerActionsPlaceholder: {
+    width: 44
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+
   scrollView: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
   centerContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
+    paddingHorizontal: DashboardSpacing['2xl'],
+    backgroundColor: DashboardColors.background
   },
   loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
+    fontSize: DashboardFontSizes.base,
+    marginTop: DashboardSpacing.md,
   },
   errorTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.lg,
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    marginTop: DashboardSpacing.lg,
   },
   errorText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     textAlign: 'center',
-    marginTop: Spacing.sm,
+    marginTop: DashboardSpacing.sm,
   },
   retryButton: {
-    marginTop: Spacing.lg,
+    marginTop: DashboardSpacing.lg,
   },
   section: {
-    marginTop: Spacing.md,
-    marginHorizontal: Spacing.md,
-    borderRadius: BorderRadius.lg,
+    marginTop: DashboardSpacing.md,
+    marginHorizontal: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.xl,
     overflow: 'hidden',
-    ...Shadows.sm,
+    ...DashboardShadows.sm,
   },
   groupHeader: {
     alignItems: 'center',
-    padding: Spacing.xl,
+    padding: DashboardSpacing.xl,
   },
   avatarContainer: {
     position: 'relative',
-    marginBottom: Spacing.md,
+    marginBottom: DashboardSpacing.md,
   },
   groupAvatarLarge: {
     width: 88,
@@ -712,30 +977,32 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   groupName: {
-    ...Typography.headingLG,
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
     textAlign: 'center',
   },
   groupDescription: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     textAlign: 'center',
-    marginTop: Spacing.sm,
+    marginTop: DashboardSpacing.sm,
   },
   participantCount: {
-    ...Typography.bodySM,
-    marginTop: Spacing.sm,
+    fontSize: DashboardFontSizes.sm,
+    marginTop: DashboardSpacing.sm,
   },
   sectionHeader: {
-    padding: Spacing.lg,
+    padding: DashboardSpacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: DashboardColors.borderLight,
   },
   sectionTitle: {
-    ...Typography.headingSM,
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600'
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.lg,
+    padding: DashboardSpacing.lg,
     borderBottomWidth: 1,
   },
   actionIcon: {
@@ -744,96 +1011,99 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.md,
+    marginRight: DashboardSpacing.md,
   },
   actionText: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     flex: 1,
   },
   dangerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.lg,
+    padding: DashboardSpacing.lg,
   },
   dangerText: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     flex: 1,
   },
   participantItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.lg,
+    padding: DashboardSpacing.lg,
     borderBottomWidth: 1,
   },
   participantInfo: {
     flex: 1,
-    marginLeft: Spacing.md,
+    marginLeft: DashboardSpacing.md,
   },
   participantNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   participantName: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '500',
   },
   participantEmail: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     marginTop: 2,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.sm,
     paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
+    borderRadius: DashboardBorderRadius.sm,
     gap: 4,
   },
   badgeText: {
-    ...Typography.bodyXS,
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '600',
   },
   removeButton: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
+    padding: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.md,
   },
   editContent: {
-    padding: Spacing.lg,
+    padding: DashboardSpacing.lg,
   },
   inputGroup: {
-    marginBottom: Spacing.lg,
+    marginBottom: DashboardSpacing.lg,
   },
   saveButton: {
-    marginTop: Spacing.md,
+    marginTop: DashboardSpacing.md,
   },
   searchContainer: {
-    padding: Spacing.md,
+    padding: DashboardSpacing.md,
     paddingBottom: 0,
+    backgroundColor: DashboardColors.background
   },
   searchInput: {
     marginBottom: 0,
   },
   userListContent: {
     flexGrow: 1,
+    backgroundColor: DashboardColors.background
   },
   userItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.lg,
+    padding: DashboardSpacing.lg,
     borderBottomWidth: 1,
+    backgroundColor: DashboardColors.surface
   },
   userInfo: {
     flex: 1,
-    marginLeft: Spacing.md,
+    marginLeft: DashboardSpacing.md,
   },
   userName: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '500',
   },
   userEmail: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     marginTop: 2,
   },
   checkBadge: {
@@ -847,18 +1117,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
+    paddingVertical: DashboardSpacing['4xl'],
   },
   emptyText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
-  headerActionText: {
-    ...Typography.bodyMD,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    fontSize: DashboardFontSizes.base,
+    marginTop: DashboardSpacing.md,
   },
   bottomSpacer: {
-    height: Spacing['2xl'],
+    height: DashboardSpacing['2xl'],
   },
 });

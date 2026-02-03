@@ -58,7 +58,7 @@ const GroupCreateModal = forwardRef<GroupCreateModalRef, GroupCreateModalProps>(
     const [error, setError] = useState<string | null>(null);
 
     // ✅ CRITICAL: Single snap point (85%) for scrollable form
-    const snapPoints = useMemo(() => ['85%'], []);
+    const snapPoints = useMemo(() => ['90%'], []);
 
     // iOS-like spring animation config
     const animationConfigs = useBottomSheetSpringConfigs({

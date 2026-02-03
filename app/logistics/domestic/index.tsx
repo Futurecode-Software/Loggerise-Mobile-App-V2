@@ -5,7 +5,7 @@
  * Matches web version at /yurtici-tasimacilik
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -14,31 +14,26 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-} from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+  Pressable
+} from 'react-native'
+import { router, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring
+} from 'react-native-reanimated'
+import { PageHeader } from '@/components/navigation'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Badge, Input } from '@/components/ui'
 import {
-  Search,
-  Filter,
-  Plus,
-  Truck,
-  MapPin,
-  User,
-  Calendar,
-  Package,
-  AlertCircle,
-  Clock,
-  CheckCircle,
-  XCircle,
-  ArrowRight,
-  Layers,
-  FileText,
-  ClipboardList,
-  Activity,
-  Ban,
-} from 'lucide-react-native';
-import { Card, Badge, Input } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardBorderRadius,
+  DashboardFontSizes,
+  DashboardShadows,
+  DashboardAnimations
+} from '@/constants/dashboard-theme'
 import {
   getDomesticOrders,
   DomesticTransportOrder,
@@ -50,188 +45,71 @@ import {
   getOrderTypeLabel,
   getOrderTypeColor,
   getDriverFullName,
-  formatDate,
-} from '@/services/endpoints/domestic-orders';
+  formatDate
+} from '@/services/endpoints/domestic-orders'
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 const STATUS_FILTERS = [
-  { id: 'all', label: 'Tümü', color: undefined, icon: Layers },
-  { id: 'draft', label: 'Taslak', color: '#6B7280', icon: FileText },
-  { id: 'planned', label: 'Planlandı', color: '#f5a623', icon: ClipboardList },
-  { id: 'assigned', label: 'Atandı', color: '#3b82f6', icon: User },
-  { id: 'in_transit', label: 'Yolda', color: '#8b5cf6', icon: Activity },
-  { id: 'completed', label: 'Tamamlandı', color: '#22c55e', icon: CheckCircle },
-  { id: 'cancelled', label: 'İptal', color: '#ef4444', icon: Ban },
-];
+  { id: 'all', label: 'Tümü', icon: 'layers-outline' as const },
+  { id: 'draft', label: 'Taslak', icon: 'document-text-outline' as const },
+  { id: 'planned', label: 'Planlandı', icon: 'clipboard-outline' as const },
+  { id: 'assigned', label: 'Atandı', icon: 'person-outline' as const },
+  { id: 'in_transit', label: 'Yolda', icon: 'car-outline' as const },
+  { id: 'completed', label: 'Tamamlandı', icon: 'checkmark-circle-outline' as const },
+  { id: 'cancelled', label: 'İptal', icon: 'close-circle-outline' as const }
+]
 
-export default function DomesticOrdersScreen() {
-  const colors = Colors.light;
+// Skeleton Component
+function DomesticOrderCardSkeleton() {
+  return (
+    <View style={styles.orderCard}>
+      <View style={styles.orderHeader}>
+        <Skeleton width={120} height={18} />
+        <Skeleton width={60} height={24} borderRadius={12} />
+      </View>
+      <Skeleton width="60%" height={14} style={{ marginBottom: 8 }} />
+      <Skeleton width="80%" height={14} style={{ marginBottom: 8 }} />
+      <View style={styles.cardFooter}>
+        <Skeleton width={100} height={12} />
+        <Skeleton width={100} height={12} />
+      </View>
+    </View>
+  )
+}
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [refreshing, setRefreshing] = useState(false);
+// Card Component
+interface DomesticOrderCardProps {
+  item: DomesticTransportOrder
+  onPress: () => void
+}
 
-  // API state
-  const [orders, setOrders] = useState<DomesticTransportOrder[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function DomesticOrderCard({ item, onPress }: DomesticOrderCardProps) {
+  const scale = useSharedValue(1)
 
-  // Refs
-  const isMountedRef = useRef(true);
-  const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasInitialFetchRef = useRef(false);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }))
 
-  // Core fetch function
-  const executeFetch = useCallback(
-    async (search: string, filter: string, page: number = 1, append: boolean = false) => {
-      const currentFetchId = ++fetchIdRef.current;
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy)
+  }
 
-      try {
-        setError(null);
+  const handlePressOut = () => {
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
 
-        const filters: DomesticOrderFilters = {
-          page,
-          per_page: 20,
-          is_active: true,
-        };
-
-        if (search.trim()) {
-          filters.search = search.trim();
-        }
-
-        if (filter !== 'all') {
-          filters.status = filter as DomesticOrderStatus;
-        }
-
-        const response = await getDomesticOrders(filters);
-
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          if (append) {
-            setOrders((prev) => [...prev, ...response.orders]);
-          } else {
-            setOrders(response.orders);
-          }
-          setPagination(response.pagination);
-          hasInitialFetchRef.current = true;
-        }
-      } catch (err) {
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Domestic orders fetch error:', err);
-          setError(err instanceof Error ? err.message : 'İş emirleri yüklenemedi');
-        }
-      } finally {
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          setIsLoading(false);
-          setIsLoadingMore(false);
-          setRefreshing(false);
-        }
-      }
-    },
-    []
-  );
-
-  // Initial fetch
-  useEffect(() => {
-    isMountedRef.current = true;
-    executeFetch(searchQuery, activeFilter, 1, false);
-
-    return () => {
-      isMountedRef.current = false;
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Filter change
-  useEffect(() => {
-    if (!hasInitialFetchRef.current) return;
-
-    setIsLoading(true);
-    executeFetch(searchQuery, activeFilter, 1, false);
-  }, [activeFilter]);
-
-  // Search with debounce
-  useEffect(() => {
-    if (!hasInitialFetchRef.current) return;
-
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-
-    debounceTimeoutRef.current = setTimeout(() => {
-      setIsLoading(true);
-      executeFetch(searchQuery, activeFilter, 1, false);
-    }, 500);
-
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, [searchQuery]);
-
-  // Refs for useFocusEffect to avoid re-triggering
-  const executeFetchRef = useRef(executeFetch);
-  const searchQueryRef = useRef(searchQuery);
-  const activeFilterRef = useRef(activeFilter);
-  useEffect(() => {
-    executeFetchRef.current = executeFetch;
-    searchQueryRef.current = searchQuery;
-    activeFilterRef.current = activeFilter;
-  }, [executeFetch, searchQuery, activeFilter]);
-
-  // Refresh on screen focus
-  useFocusEffect(
-    useCallback(() => {
-      if (hasInitialFetchRef.current) {
-        executeFetchRef.current(searchQueryRef.current, activeFilterRef.current, 1, false);
-      }
-    }, [])
-  );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await executeFetch(searchQuery, activeFilter, 1, false);
-  };
-
-  const loadMore = () => {
-    if (
-      !isLoadingMore &&
-      pagination &&
-      pagination.current_page < pagination.last_page
-    ) {
-      setIsLoadingMore(true);
-      executeFetch(searchQuery, activeFilter, pagination.current_page + 1, true);
-    }
-  };
-
-  const getStatusIcon = (status?: DomesticOrderStatus) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle size={14} color="#22c55e" />;
-      case 'cancelled':
-        return <XCircle size={14} color="#ef4444" />;
-      case 'in_transit':
-        return <Truck size={14} color="#8b5cf6" />;
-      default:
-        return <Clock size={14} color={colors.icon} />;
-    }
-  };
-
-  const renderOrder = ({ item }: { item: DomesticTransportOrder }) => (
-    <Card
-      style={styles.orderCard}
-      onPress={() => router.push(`/logistics/domestic/${item.id}` as any)}
+  return (
+    <AnimatedPressable
+      style={[styles.orderCard, animStyle]}
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
     >
       {/* Header */}
       <View style={styles.orderHeader}>
         <View style={styles.orderNumberContainer}>
-          <Text style={[styles.orderNumber, { color: colors.text }]}>
-            {item.order_number}
-          </Text>
+          <Text style={styles.orderNumber}>{item.order_number}</Text>
           <View style={[styles.orderTypeBadge, { backgroundColor: getOrderTypeColor(item.order_type) + '20' }]}>
             <Text style={[styles.orderTypeText, { color: getOrderTypeColor(item.order_type) }]}>
               {getOrderTypeLabel(item.order_type)}
@@ -244,14 +122,10 @@ export default function DomesticOrdersScreen() {
       {/* Customer */}
       {item.customer && (
         <View style={styles.customerContainer}>
-          <User size={14} color={colors.icon} />
-          <Text style={[styles.customerText, { color: colors.text }]} numberOfLines={1}>
-            {item.customer.name}
-          </Text>
+          <Ionicons name="person-outline" size={14} color={DashboardColors.textMuted} />
+          <Text style={styles.customerText} numberOfLines={1}>{item.customer.name}</Text>
           {item.customer.code && (
-            <Text style={[styles.customerCode, { color: colors.textMuted }]}>
-              ({item.customer.code})
-            </Text>
+            <Text style={styles.customerCode}>({item.customer.code})</Text>
           )}
         </View>
       )}
@@ -261,7 +135,7 @@ export default function DomesticOrdersScreen() {
         {item.pickup_address && (
           <View style={styles.addressRow}>
             <View style={[styles.addressDot, { backgroundColor: '#22c55e' }]} />
-            <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text style={styles.addressText} numberOfLines={1}>
               {item.pickup_address.title || item.pickup_address.address || 'Alım Adresi'}
             </Text>
           </View>
@@ -269,7 +143,7 @@ export default function DomesticOrdersScreen() {
         {item.delivery_address && (
           <View style={styles.addressRow}>
             <View style={[styles.addressDot, { backgroundColor: '#ef4444' }]} />
-            <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text style={styles.addressText} numberOfLines={1}>
               {item.delivery_address.title || item.delivery_address.address || 'Teslimat Adresi'}
             </Text>
           </View>
@@ -277,366 +151,553 @@ export default function DomesticOrdersScreen() {
       </View>
 
       {/* Vehicle & Driver */}
-      <View style={styles.assignmentContainer}>
-        {item.vehicle && (
-          <View style={styles.assignmentItem}>
-            <Truck size={14} color={colors.icon} />
-            <Text style={[styles.assignmentText, { color: colors.textSecondary }]}>
-              {item.vehicle.plate}
-            </Text>
-          </View>
-        )}
-        {item.driver && (
-          <View style={styles.assignmentItem}>
-            <User size={14} color={colors.icon} />
-            <Text style={[styles.assignmentText, { color: colors.textSecondary }]}>
-              {getDriverFullName(item.driver)}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Dates */}
-      <View style={[styles.footerContainer, { borderTopColor: colors.border }]}>
-        <View style={styles.dateItem}>
-          <Text style={[styles.dateLabel, { color: colors.textMuted }]}>Alım:</Text>
-          <Text style={[styles.dateValue, { color: colors.text }]}>
-            {formatDate(item.pickup_expected_date)}
-          </Text>
+      {(item.vehicle || item.driver) && (
+        <View style={styles.assignmentContainer}>
+          {item.vehicle && (
+            <View style={styles.assignmentItem}>
+              <Ionicons name="car-outline" size={14} color={DashboardColors.textMuted} />
+              <Text style={styles.assignmentText}>{item.vehicle.plate}</Text>
+            </View>
+          )}
+          {item.driver && (
+            <View style={styles.assignmentItem}>
+              <Ionicons name="person-outline" size={14} color={DashboardColors.textMuted} />
+              <Text style={styles.assignmentText}>{getDriverFullName(item.driver)}</Text>
+            </View>
+          )}
         </View>
-        <ArrowRight size={14} color={colors.icon} />
+      )}
+
+      {/* Footer */}
+      <View style={styles.cardFooter}>
         <View style={styles.dateItem}>
-          <Text style={[styles.dateLabel, { color: colors.textMuted }]}>Teslimat:</Text>
-          <Text style={[styles.dateValue, { color: colors.text }]}>
-            {formatDate(item.delivery_expected_date)}
-          </Text>
+          <Text style={styles.dateLabel}>Alım:</Text>
+          <Text style={styles.dateValue}>{formatDate(item.pickup_expected_date)}</Text>
+        </View>
+        <Ionicons name="arrow-forward" size={14} color={DashboardColors.textMuted} />
+        <View style={styles.dateItem}>
+          <Text style={styles.dateLabel}>Teslimat:</Text>
+          <Text style={styles.dateValue}>{formatDate(item.delivery_expected_date)}</Text>
         </View>
         {item.is_delayed && (
-          <View style={[styles.delayedBadge, { backgroundColor: '#ef4444' + '20' }]}>
-            <AlertCircle size={12} color="#ef4444" />
-            <Text style={[styles.delayedText, { color: '#ef4444' }]}>Gecikmiş</Text>
+          <View style={styles.delayedBadge}>
+            <Ionicons name="alert-circle" size={12} color="#ef4444" />
+            <Text style={styles.delayedText}>Gecikmiş</Text>
           </View>
         )}
       </View>
-    </Card>
-  );
 
-  const renderEmptyState = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            İş emirleri yükleniyor...
-          </Text>
-        </View>
-      );
+      {/* Arrow */}
+      <View style={styles.cardArrow}>
+        <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
+      </View>
+    </AnimatedPressable>
+  )
+}
+
+// Empty State
+function EmptyState({ searchQuery }: { searchQuery: string }) {
+  return (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="cube-outline" size={64} color={DashboardColors.textMuted} />
+      </View>
+      <Text style={styles.emptyTitle}>
+        {searchQuery ? 'Sonuç bulunamadı' : 'Henüz iş emri eklenmemiş'}
+      </Text>
+      <Text style={styles.emptyText}>
+        {searchQuery
+          ? 'Farklı bir arama terimi deneyin'
+          : 'Yeni iş emri eklemek için + butonuna tıklayın'}
+      </Text>
+    </View>
+  )
+}
+
+export default function DomesticOrdersScreen() {
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeFilter, setActiveFilter] = useState('all')
+  const [refreshing, setRefreshing] = useState(false)
+
+  // API state
+  const [orders, setOrders] = useState<DomesticTransportOrder[]>([])
+  const [pagination, setPagination] = useState<Pagination | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Refs
+  const isMountedRef = useRef(true)
+  const fetchIdRef = useRef(0)
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hasInitialFetchRef = useRef(false)
+
+  // Core fetch function
+  const executeFetch = useCallback(
+    async (search: string, filter: string, page: number = 1, append: boolean = false) => {
+      const currentFetchId = ++fetchIdRef.current
+
+      try {
+        setError(null)
+
+        const filters: DomesticOrderFilters = {
+          page,
+          per_page: 20,
+          is_active: true
+        }
+
+        if (search.trim()) {
+          filters.search = search.trim()
+        }
+
+        if (filter !== 'all') {
+          filters.status = filter as DomesticOrderStatus
+        }
+
+        const response = await getDomesticOrders(filters)
+
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          if (append) {
+            setOrders((prev) => [...prev, ...response.orders])
+          } else {
+            setOrders(response.orders)
+          }
+          setPagination(response.pagination)
+          hasInitialFetchRef.current = true
+        }
+      } catch (err) {
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          console.error('Domestic orders fetch error:', err)
+          setError(err instanceof Error ? err.message : 'İş emirleri yüklenemedi')
+        }
+      } finally {
+        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+          setIsLoading(false)
+          setIsLoadingMore(false)
+          setRefreshing(false)
+        }
+      }
+    },
+    []
+  )
+
+  // Initial fetch
+  useEffect(() => {
+    isMountedRef.current = true
+    executeFetch(searchQuery, activeFilter, 1, false)
+
+    return () => {
+      isMountedRef.current = false
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Filter change
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return
+
+    setIsLoading(true)
+    executeFetch(searchQuery, activeFilter, 1, false)
+  }, [activeFilter])
+
+  // Search with debounce
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current)
     }
 
-    if (error) {
-      return (
-        <View style={styles.emptyState}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.danger + '15' }]}>
-            <AlertCircle size={64} color={colors.danger} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            Bir hata oluştu
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {error}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryButton, { backgroundColor: Brand.primary }]}
-            onPress={() => {
-              setIsLoading(true);
-              executeFetch(searchQuery, activeFilter, 1, false);
-            }}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      );
+    debounceTimeoutRef.current = setTimeout(() => {
+      setIsLoading(true)
+      executeFetch(searchQuery, activeFilter, 1, false)
+    }, 500)
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current)
+      }
     }
+  }, [searchQuery])
 
-    return (
-      <View style={styles.emptyState}>
-        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
-          <Package size={64} color={colors.textMuted} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {searchQuery ? 'Sonuç bulunamadı' : 'Henüz iş emri eklenmemiş'}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-          {searchQuery
-            ? 'Farklı bir arama terimi deneyin'
-            : 'Yeni iş emri eklemek için + butonuna tıklayın'}
-        </Text>
-      </View>
-    );
-  };
+  // Refs for useFocusEffect to avoid re-triggering
+  const executeFetchRef = useRef(executeFetch)
+  const searchQueryRef = useRef(searchQuery)
+  const activeFilterRef = useRef(activeFilter)
+  useEffect(() => {
+    executeFetchRef.current = executeFetch
+    searchQueryRef.current = searchQuery
+    activeFilterRef.current = activeFilter
+  }, [executeFetch, searchQuery, activeFilter])
 
-  const renderFooter = () => {
-    if (!isLoadingMore) return null;
-    return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={Brand.primary} />
-      </View>
-    );
-  };
+  // Refresh on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (hasInitialFetchRef.current) {
+        executeFetchRef.current(searchQueryRef.current, activeFilterRef.current, 1, false)
+      }
+    }, [])
+  )
 
-  // Prepare tabs for header - similar to position detail and trip pages
-  const headerTabs = STATUS_FILTERS.map((filter) => {
-    const Icon = filter.icon;
-    const isActive = activeFilter === filter.id;
-    return {
-      id: filter.id,
-      label: filter.label,
-      icon: <Icon size={16} color="#FFFFFF" strokeWidth={isActive ? 2.5 : 2} />,
-      isActive,
-      onPress: () => setActiveFilter(filter.id),
-    };
-  });
+  const onRefresh = async () => {
+    setRefreshing(true)
+    await executeFetch(searchQuery, activeFilter, 1, false)
+  }
+
+  const loadMore = () => {
+    if (
+      !isLoadingMore &&
+      pagination &&
+      pagination.current_page < pagination.last_page
+    ) {
+      setIsLoadingMore(true)
+      executeFetch(searchQuery, activeFilter, pagination.current_page + 1, true)
+    }
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
+    <View style={styles.container}>
+      <PageHeader
         title="Yurtiçi İş Emirleri"
+        icon="cube-outline"
+        subtitle={pagination ? `${pagination.total} iş emri` : undefined}
         showBackButton
         onBackPress={() => router.back()}
-        subtitle={pagination ? `${pagination.total} iş emri` : undefined}
-        tabs={headerTabs}
-        rightIcons={
-          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-            <TouchableOpacity
-              onPress={() => router.push('/logistics/domestic/new' as any)}
-              activeOpacity={0.7}
-            >
-              <Plus size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {}}
-              activeOpacity={0.7}
-            >
-              <Filter size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        }
+        rightActions={[
+          {
+            icon: 'add',
+            onPress: () => router.push('/logistics/domestic/new')
+          }
+        ]}
       />
 
-      <View style={styles.contentWrapper}>
+      <View style={styles.content}>
         {/* Search */}
         <View style={styles.searchContainer}>
           <Input
             placeholder="Sipariş no veya müşteri ile ara..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            leftIcon={<Search size={20} color={colors.icon} />}
+            leftIcon={<Ionicons name="search" size={20} color={DashboardColors.textMuted} />}
             containerStyle={styles.searchInput}
           />
         </View>
 
-        {/* Order List */}
-        <FlatList
-          data={orders}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderOrder}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={renderEmptyState}
-          ListFooterComponent={renderFooter}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={Brand.primary}
-            />
-          }
-        />
+        {/* Active Filter Bar */}
+        {activeFilter !== 'all' && (
+          <View style={styles.activeFilterBar}>
+            <View style={styles.activeFilterContent}>
+              <Ionicons name="funnel" size={14} color={DashboardColors.primary} />
+              <Text style={styles.activeFilterText}>
+                Filtre: <Text style={styles.activeFilterValue}>
+                  {STATUS_FILTERS.find(f => f.id === activeFilter)?.label || 'Tümü'}
+                </Text>
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setActiveFilter('all')}
+              style={styles.clearFilterButton}
+            >
+              <Ionicons name="close-circle" size={20} color={DashboardColors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* List */}
+        {isLoading ? (
+          <View style={styles.listContent}>
+            <DomesticOrderCardSkeleton />
+            <DomesticOrderCardSkeleton />
+            <DomesticOrderCardSkeleton />
+          </View>
+        ) : error ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="alert-circle-outline" size={64} color={DashboardColors.danger} />
+            </View>
+            <Text style={styles.emptyTitle}>Bir hata oluştu</Text>
+            <Text style={styles.emptyText}>{error}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => {
+                setIsLoading(true)
+                executeFetch(searchQuery, activeFilter, 1, false)
+              }}
+            >
+              <Ionicons name="refresh" size={18} color="#fff" />
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={orders}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({ item }) => (
+              <DomesticOrderCard
+                item={item}
+                onPress={() => router.push(`/logistics/domestic/${item.id}`)}
+              />
+            )}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={<EmptyState searchQuery={searchQuery} />}
+            ListFooterComponent={
+              isLoadingMore ? (
+                <View style={styles.loadingMore}>
+                  <ActivityIndicator size="small" color={DashboardColors.primary} />
+                </View>
+              ) : null
+            }
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={DashboardColors.primary}
+              />
+            }
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary
   },
-  contentWrapper: {
+  content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    backgroundColor: DashboardColors.background
   },
+
+  // Search
   searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing['2xl'],
-    paddingBottom: Spacing.md,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.background
   },
   searchInput: {
-    marginBottom: 0,
+    marginBottom: 0
   },
+
+  // Active Filter Bar
+  activeFilterBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.primaryGlow,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  activeFilterContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  activeFilterText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
+  },
+  activeFilterValue: {
+    fontWeight: '600',
+    color: DashboardColors.primary
+  },
+  clearFilterButton: {
+    padding: DashboardSpacing.xs
+  },
+
+  // List
   listContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    flexGrow: 1,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing.xl
   },
+
+  // Order Card
   orderCard: {
-    marginBottom: 0,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.md,
+    position: 'relative',
+    ...DashboardShadows.md
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.sm,
+    marginBottom: DashboardSpacing.sm
   },
   orderNumberContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    flexWrap: 'wrap',
+    gap: DashboardSpacing.sm,
+    flexWrap: 'wrap'
   },
   orderNumber: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '700',
+    color: DashboardColors.textPrimary
   },
   orderTypeBadge: {
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.sm,
     paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
+    borderRadius: DashboardBorderRadius.sm
   },
   orderTypeText: {
-    ...Typography.bodySM,
-    fontWeight: '500',
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '500'
   },
   customerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
+    gap: DashboardSpacing.xs,
+    marginBottom: DashboardSpacing.sm
   },
   customerText: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
-    flex: 1,
+    color: DashboardColors.textPrimary,
+    flex: 1
   },
   customerCode: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted
   },
   addressContainer: {
-    marginBottom: Spacing.sm,
-    gap: Spacing.xs,
+    marginBottom: DashboardSpacing.sm,
+    gap: DashboardSpacing.xs
   },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm
   },
   addressDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: 4
   },
   addressText: {
-    ...Typography.bodySM,
-    flex: 1,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    flex: 1
   },
   assignmentContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.md,
-    marginBottom: Spacing.sm,
+    gap: DashboardSpacing.md,
+    marginBottom: DashboardSpacing.sm
   },
   assignmentItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
   assignmentText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
-  footerContainer: {
+  cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    paddingTop: Spacing.md,
+    gap: DashboardSpacing.sm,
+    paddingTop: DashboardSpacing.md,
     borderTopWidth: 1,
+    borderTopColor: DashboardColors.borderLight
   },
   dateItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs
   },
   dateLabel: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted
   },
   dateValue: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
+    color: DashboardColors.textPrimary
   },
   delayedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.sm,
     paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
-    marginLeft: 'auto',
+    borderRadius: DashboardBorderRadius.sm,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    marginLeft: 'auto'
   },
   delayedText: {
-    ...Typography.bodySM,
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '500',
+    color: '#ef4444'
   },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
+  cardArrow: {
+    position: 'absolute',
+    right: DashboardSpacing.md,
+    bottom: DashboardSpacing.lg + 8
   },
-  loadingText: {
-    ...Typography.bodyMD,
-    marginTop: Spacing.md,
-  },
+
+  // Empty State
   emptyState: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing['2xl'],
-    paddingVertical: Spacing['4xl'],
+    paddingVertical: DashboardSpacing['3xl'],
+    paddingHorizontal: DashboardSpacing.xl
   },
   emptyIcon: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: DashboardColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: DashboardSpacing.xl
   },
   emptyTitle: {
-    ...Typography.headingMD,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: DashboardColors.text,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
   },
-  emptySubtitle: {
-    ...Typography.bodyMD,
+  emptyText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textMuted,
     textAlign: 'center',
+    lineHeight: 24
   },
   retryButton: {
-    marginTop: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    marginTop: DashboardSpacing.xl,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.danger
   },
   retryButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: '#FFFFFF'
   },
   loadingMore: {
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
-  },
-});
+    paddingVertical: DashboardSpacing.lg,
+    alignItems: 'center'
+  }
+})

@@ -59,26 +59,26 @@ import { formatCurrency } from '@/utils/currency'
 import { Skeleton } from '@/components/ui/skeleton'
 
 // Type picker options
-const INVOICE_TYPES: Array<{ value: InvoiceType; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
+const INVOICE_TYPES: { value: InvoiceType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { value: 'sale', label: 'Satış', icon: 'arrow-up-circle-outline' },
   { value: 'purchase', label: 'Alış', icon: 'arrow-down-circle-outline' },
   { value: 'service', label: 'Hizmet', icon: 'construct-outline' }
 ]
 
 // Status picker options
-const STATUS_OPTIONS: Array<{ value: InvoiceStatus; label: string }> = [
+const STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
   { value: 'draft', label: 'Taslak' },
   { value: 'approved', label: 'Onaylandı' }
 ]
 
 // Payment status picker options
-const PAYMENT_OPTIONS: Array<{ value: PaymentStatus; label: string }> = [
+const PAYMENT_OPTIONS: { value: PaymentStatus; label: string }[] = [
   { value: 'pending', label: 'Ödeme Bekliyor' },
   { value: 'paid', label: 'Ödendi' }
 ]
 
 // Currency picker options (Tüm dövizler)
-const CURRENCY_OPTIONS: Array<{ value: CurrencyType; label: string }> = [
+const CURRENCY_OPTIONS: { value: CurrencyType; label: string }[] = [
   { value: 'TRY', label: 'Türk Lirası (₺)' },
   { value: 'USD', label: 'ABD Doları ($)' },
   { value: 'EUR', label: 'Euro (€)' },
