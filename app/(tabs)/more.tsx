@@ -4,8 +4,8 @@
  * Ana navigasyon menüsü - Tüm modüllere erişim
  */
 
-import React, { useState, useMemo, useRef, useCallback } from 'react'
-import { View, Text, StyleSheet, Pressable, ScrollView, LayoutAnimation, Platform, UIManager, TextInput, NativeScrollEvent, NativeSyntheticEvent } from 'react-native'
+import React, { useState, useMemo, useRef } from 'react'
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform, TextInput, InteractionManager } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
@@ -25,9 +25,6 @@ import {
   DashboardAnimations
 } from '@/constants/dashboard-theme'
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true)
-}
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -50,13 +47,15 @@ interface MenuCategory {
 interface CollapsibleMenuProps {
   category: MenuCategory
   isExpanded: boolean
-  onToggle: () => void
+  onToggle: (measureAndScroll: () => void) => void
   router: any
+  scrollViewRef: React.RefObject<ScrollView>
 }
 
-function CollapsibleMenu({ category, isExpanded, onToggle, router }: CollapsibleMenuProps) {
+function CollapsibleMenu({ category, isExpanded, onToggle, router, scrollViewRef }: CollapsibleMenuProps) {
   const rotation = useSharedValue(0)
   const scale = useSharedValue(1)
+  const viewRef = useRef<View>(null)
 
   const chevronStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }]
@@ -71,14 +70,26 @@ function CollapsibleMenu({ category, isExpanded, onToggle, router }: Collapsible
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExpanded])
 
+  const measureAndScroll = () => {
+    if (viewRef.current && scrollViewRef.current) {
+      viewRef.current.measureLayout(
+        scrollViewRef.current as any,
+        (_x, y) => {
+          const scrollY = Math.max(0, y - DashboardSpacing.md)
+          scrollViewRef.current?.scrollTo({ y: scrollY, animated: true })
+        },
+        () => {}
+      )
+    }
+  }
+
   const handleHeaderPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
 
     if (category.route && !category.subItems) {
       router.push(category.route)
     } else if (category.subItems) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-      onToggle()
+      onToggle(measureAndScroll)
     }
   }
 
@@ -96,7 +107,7 @@ function CollapsibleMenu({ category, isExpanded, onToggle, router }: Collapsible
   }
 
   return (
-    <View style={styles.categoryContainer}>
+    <View ref={viewRef} style={styles.categoryContainer}>
       <AnimatedPressable
         style={[styles.categoryHeader, headerStyle]}
         onPress={handleHeaderPress}
@@ -152,7 +163,8 @@ function CollapsibleMenu({ category, isExpanded, onToggle, router }: Collapsible
 
 export default function MoreScreen() {
   const router = useRouter()
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const scrollViewRef = useRef<ScrollView>(null)
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
   const handleLogout = () => {
@@ -160,16 +172,19 @@ export default function MoreScreen() {
     router.replace('/(auth)/logging-out')
   }
 
-  const toggleCategory = (categoryId: string) => {
-    setExpandedCategories(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(categoryId)) {
-        newSet.delete(categoryId)
-      } else {
-        newSet.add(categoryId)
-      }
-      return newSet
-    })
+  const toggleCategory = (categoryId: string, measureAndScroll: () => void) => {
+    const isOpening = expandedCategory !== categoryId
+
+    setExpandedCategory(expandedCategory === categoryId ? null : categoryId)
+
+    // Menü açılıyorsa, render tamamlandıktan hemen sonra scroll et
+    if (isOpening) {
+      InteractionManager.runAfterInteractions(() => {
+        requestAnimationFrame(() => {
+          measureAndScroll()
+        })
+      })
+    }
   }
 
   const menuCategories = useMemo<MenuCategory[]>(() => [
@@ -345,6 +360,7 @@ export default function MoreScreen() {
       />
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -380,9 +396,10 @@ export default function MoreScreen() {
               <CollapsibleMenu
                 key={category.id}
                 category={category}
-                isExpanded={searchQuery ? true : expandedCategories.has(category.id)}
-                onToggle={() => toggleCategory(category.id)}
+                isExpanded={searchQuery ? true : expandedCategory === category.id}
+                onToggle={(measureAndScroll) => toggleCategory(category.id, measureAndScroll)}
                 router={router}
+                scrollViewRef={scrollViewRef}
               />
             ))
           ) : (
