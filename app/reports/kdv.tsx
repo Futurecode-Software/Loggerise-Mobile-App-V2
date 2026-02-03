@@ -232,7 +232,7 @@ export default function KdvReportScreen(): React.JSX.Element {
           />
         }
       >
-        {/* Ozet Kartlari */}
+        {/* Özet Kartları */}
         <View style={styles.summaryGrid}>
           <View style={[styles.summaryCard, styles.calculatedCard]}>
             <View style={[styles.summaryIconContainer, styles.successIconBg]}>

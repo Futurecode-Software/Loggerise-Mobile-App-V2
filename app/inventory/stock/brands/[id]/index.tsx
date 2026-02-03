@@ -324,7 +324,7 @@ export default function BrandDetailScreen() {
         <View style={styles.bottomCurve} />
       </View>
 
-      {/* Icerik */}
+      {/* İçerik */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
@@ -361,8 +361,8 @@ export default function BrandDetailScreen() {
             <View style={styles.errorIcon}>
               <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
             </View>
-            <Text style={styles.errorTitle}>Bir hata olustu</Text>
-            <Text style={styles.errorText}>{error || 'Marka bulunamadi'}</Text>
+            <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+            <Text style={styles.errorText}>{error || 'Marka bulunamadı'}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={() => fetchBrand()}>
               <Ionicons name="refresh" size={18} color="#fff" />
               <Text style={styles.retryButtonText}>Tekrar Dene</Text>
@@ -370,7 +370,7 @@ export default function BrandDetailScreen() {
           </View>
         )}
 
-        {/* Normal icerik */}
+        {/* Normal içerik */}
         {!isLoading && brand && (
           <>
             {/* Marka Bilgileri */}
@@ -378,14 +378,14 @@ export default function BrandDetailScreen() {
               <SectionHeader title="Marka Bilgileri" icon="pricetag-outline" />
               <View style={styles.cardContent}>
                 <InfoRow
-                  label="Marka Adi"
+                  label="Marka Adı"
                   value={brand.name}
                   icon="text-outline"
                   highlight
                 />
                 {brand.description && (
                   <InfoRow
-                    label="Aciklama"
+                    label="Açıklama"
                     value={brand.description}
                     icon="document-text-outline"
                   />
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: DashboardBorderRadius['2xl']
   },
 
-  // Icerik
+  // İçerik
   content: {
     flex: 1,
     backgroundColor: DashboardColors.background

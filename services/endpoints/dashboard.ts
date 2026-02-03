@@ -63,7 +63,7 @@ export interface ExpiringDocument {
 }
 
 /**
- * Sefer ozeti
+ * Sefer özeti
  */
 export interface TripSummary {
   id: number
@@ -74,7 +74,7 @@ export interface TripSummary {
 }
 
 /**
- * Surucu konumu
+ * Sürücü konumu
  */
 export interface DriverLocation {
   id: number
@@ -105,7 +105,7 @@ export interface LogisticsStats {
 }
 
 /**
- * Pozisyon hazirlik bilgisi
+ * Pozisyon hazırlık bilgisi
  */
 export interface PositionReadiness {
   id: number
@@ -114,7 +114,7 @@ export interface PositionReadiness {
 }
 
 /**
- * Depo ozet istatistikleri
+ * Depo özet istatistikleri
  */
 export interface WarehouseSummaryStats {
   pending_pre_carriages: number
@@ -124,7 +124,7 @@ export interface WarehouseSummaryStats {
 }
 
 /**
- * Depo Dashboard Istatistikleri
+ * Depo Dashboard İstatistikleri
  */
 export interface WarehouseStats {
   pendingPreCarriages: unknown[]
@@ -136,7 +136,7 @@ export interface WarehouseStats {
 }
 
 /**
- * Yurtici siparis
+ * Yurtiçi sipariş
  */
 export interface DomesticOrder {
   id: number
@@ -160,7 +160,7 @@ export interface DomesticOrder {
 }
 
 /**
- * Yurtici ozet istatistikleri
+ * Yurtiçi özet istatistikleri
  */
 export interface DomesticSummaryStats {
   total_orders: number
@@ -175,7 +175,7 @@ export interface DomesticSummaryStats {
 }
 
 /**
- * Yurtici Dashboard Istatistikleri
+ * Yurtiçi Dashboard İstatistikleri
  */
 export interface DomesticStats {
   activeOrders: DomesticOrder[]
@@ -218,7 +218,7 @@ export interface CashFlowSummary {
 }
 
 /**
- * Gelir istatistikleri veri noktasi
+ * Gelir istatistikleri veri noktası
  */
 export interface IncomeDataPoint {
   month: string
@@ -227,7 +227,7 @@ export interface IncomeDataPoint {
 }
 
 /**
- * Gelir istatistikleri ozeti
+ * Gelir istatistikleri özeti
  */
 export interface IncomeStatsSummary {
   totalIncome: number
@@ -286,7 +286,7 @@ export interface QuoteStatistics {
 }
 
 /**
- * Musteri istatistikleri
+ * Müşteri istatistikleri
  */
 export interface CustomerStatistics {
   total: number
@@ -294,7 +294,7 @@ export interface CustomerStatistics {
 }
 
 /**
- * Teklif ozeti
+ * Teklif özeti
  */
 export interface QuoteSummary {
   id: number
@@ -323,7 +323,7 @@ export interface CRMStats {
 }
 
 /**
- * Arac istatistikleri
+ * Araç istatistikleri
  */
 export interface VehicleStatistics {
   total: number
@@ -333,7 +333,7 @@ export interface VehicleStatistics {
 }
 
 /**
- * Surucu istatistikleri
+ * Sürücü istatistikleri
  */
 export interface DriverStatistics {
   total: number
@@ -341,7 +341,7 @@ export interface DriverStatistics {
 }
 
 /**
- * Arac konumu
+ * Araç konumu
  */
 export interface VehicleLocation {
   id: number
@@ -394,7 +394,7 @@ export interface FleetStats {
 }
 
 /**
- * Urun istatistikleri
+ * Ürün istatistikleri
  */
 export interface ProductStatistics {
   total: number
@@ -457,7 +457,7 @@ export interface LowStockProduct {
 }
 
 /**
- * Stok Dashboard Istatistikleri
+ * Stok Dashboard İstatistikleri
  */
 export interface StockStats {
   totalStockValue: number

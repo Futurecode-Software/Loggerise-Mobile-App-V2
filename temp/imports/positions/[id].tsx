@@ -65,12 +65,12 @@ type PositionDetailTab =
 // Tab configuration with icons
 const TABS: Array<{ id: PositionDetailTab; label: string; icon: React.ElementType }> = [
   { id: 'general', label: 'Genel', icon: Info },
-  { id: 'loads', label: 'Yukler', icon: Package },
-  { id: 'transport', label: 'Tasima', icon: Ship },
-  { id: 'vehicle', label: 'Arac', icon: Truck },
-  { id: 'border', label: 'Sinir', icon: MapPin },
+  { id: 'loads', label: 'Yükler', icon: Package },
+  { id: 'transport', label: 'Taşıma', icon: Ship },
+  { id: 'vehicle', label: 'Araç', icon: Truck },
+  { id: 'border', label: 'Sınır', icon: MapPin },
   { id: 'insurance', label: 'Sigorta', icon: Shield },
-  { id: 'fuel', label: 'Yakit', icon: Fuel },
+  { id: 'fuel', label: 'Yakıt', icon: Fuel },
   { id: 'advances', label: 'Avans', icon: Wallet },
   { id: 'expenses', label: 'Masraf', icon: Receipt },
   { id: 'documents', label: 'Evrak', icon: FileText },

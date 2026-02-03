@@ -438,6 +438,7 @@ export default function EventsScreen() {
         icon="calendar-outline"
         subtitle={pagination ? `${pagination.total} etkinlik` : undefined}
         showBackButton
+        onBackPress={() => router.back()}
         search={{
           value: searchQuery,
           onChange: setSearchQuery,

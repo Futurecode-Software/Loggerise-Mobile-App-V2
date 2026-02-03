@@ -239,7 +239,7 @@ export default function NewBrandScreen() {
             />
 
             <Input
-              label="Aciklama"
+              label="Açıklama"
               placeholder="Opsiyonel"
               value={formData.description}
               onChangeText={(text) => handleInputChange('description', text)}

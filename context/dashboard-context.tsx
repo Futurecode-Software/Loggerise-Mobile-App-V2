@@ -66,15 +66,15 @@ export const ALL_TABS: TabConfig[] = [
   { id: 'overview', label: 'Genel', icon: 'bar-chart-outline' },
   { id: 'logistics', label: 'Lojistik', icon: 'car-outline' },
   { id: 'warehouse', label: 'Depo', icon: 'cube-outline' },
-  { id: 'domestic', label: 'Yurtici', icon: 'location-outline' },
+  { id: 'domestic', label: 'Yurtiçi', icon: 'location-outline' },
   { id: 'finance', label: 'Finans', icon: 'wallet-outline' },
   { id: 'crm', label: 'CRM', icon: 'people-outline' },
   { id: 'fleet', label: 'Filo', icon: 'bus-outline' },
   { id: 'stock', label: 'Stok', icon: 'layers-outline' },
-  { id: 'hr', label: 'IK', icon: 'person-outline' },
+  { id: 'hr', label: 'İK', icon: 'person-outline' },
 ]
 
-// Varsayilan degerler
+// Varsayılan değerler
 const DEFAULT_STATS: DashboardStats = {
   monthly_revenue: 0,
   available_vehicles: 0,

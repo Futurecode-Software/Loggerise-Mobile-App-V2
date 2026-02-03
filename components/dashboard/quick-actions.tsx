@@ -32,9 +32,9 @@ export const DashboardQuickActions: React.FC<DashboardQuickActionsProps> = ({
             <Zap size={16} color={DashboardTheme.accent} strokeWidth={2.5} />
           </View>
           <View>
-            <Text style={styles.headerTitle}>Hizli Islemler</Text>
+            <Text style={styles.headerTitle}>Hızlı İşlemler</Text>
             <Text style={styles.headerSubtitle}>
-              {actions.length} islem mevcut
+              {actions.length} işlem mevcut
             </Text>
           </View>
         </View>

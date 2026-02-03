@@ -261,11 +261,11 @@ export function formatReportTime(dateString: string): string {
 
   if (diffDays === 0) {
     // Today - show time
-    return `Bugun ${date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+    return `Bugün ${date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
   } else if (diffDays === 1) {
-    return 'Dun';
+    return 'Dün';
   } else if (diffDays < 7) {
-    return `${diffDays} gun once`;
+    return `${diffDays} gün önce`;
   } else {
     return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
   }
@@ -310,8 +310,8 @@ export function parseSqlResult(message: AiReportMessage): any[] | null {
  * Example questions for new users
  */
 export const EXAMPLE_QUESTIONS = [
-  'Kac tane aktif arac var?',
-  'Bu ayki toplam fatura tutari ne kadar?',
+  'Kaç tane aktif araç var?',
+  'Bu ayın toplam fatura tutarı ne kadar?',
   'En çok satılan ürünler hangileri?',
   'Son 30 günde eklenen cariler',
   'Depo bazlı stok durumu',

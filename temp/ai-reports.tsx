@@ -50,7 +50,7 @@ type ViewMode = 'list' | 'chat';
 
 const SUGGESTED_QUERIES = [
   { id: '1', icon: '📊', text: 'Son 30 günün satış raporu' },
-  { id: '2', icon: '🚚', text: 'Bu ayki teslim edilen yükler' },
+  { id: '2', icon: '🚚', text: 'Bu ayın teslim edilen yükleri' },
   { id: '3', icon: '💰', text: 'En çok gelir getiren müşteriler' },
   { id: '4', icon: '📦', text: 'Stok durumu özeti' },
 ];

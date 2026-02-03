@@ -177,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsSetupComplete(result.isSetupComplete);
       return { isSetupComplete: result.isSetupComplete };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Giris yapilamadi';
+      const message = err instanceof Error ? err.message : 'Giriş yapılamadı';
       setError(message);
       throw err;
     } finally {

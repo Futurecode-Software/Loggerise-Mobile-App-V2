@@ -196,13 +196,13 @@ export default function DomesticReportScreen(): React.JSX.Element {
           />
         }
       >
-        {/* Ozet Kartlari */}
+        {/* Özet Kartları */}
         <View style={styles.summaryGrid}>
           <View style={[styles.summaryCard, styles.orderCard]}>
             <View style={[styles.summaryIconContainer, { backgroundColor: DashboardColors.primaryGlow }]}>
               <Package size={24} color={DashboardColors.primary} />
             </View>
-            <Text style={styles.summaryLabel}>Toplam Is Emri</Text>
+            <Text style={styles.summaryLabel}>Toplam İş Emri</Text>
             <Text style={styles.summaryValue}>{summary.summary.total_orders}</Text>
           </View>
 
@@ -230,7 +230,7 @@ export default function DomesticReportScreen(): React.JSX.Element {
             <View style={[styles.summaryIconContainer, { backgroundColor: DashboardColors.warningBg }]}>
               <Truck size={24} color={DashboardColors.warning} />
             </View>
-            <Text style={styles.summaryLabel}>Aktif Arac</Text>
+            <Text style={styles.summaryLabel}>Aktif Araç</Text>
             <Text style={styles.summaryValue}>{summary.summary.active_vehicles}</Text>
           </View>
 
@@ -238,7 +238,7 @@ export default function DomesticReportScreen(): React.JSX.Element {
             <View style={[styles.summaryIconContainer, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
               <Users size={24} color="#8B5CF6" />
             </View>
-            <Text style={styles.summaryLabel}>Aktif Surucu</Text>
+            <Text style={styles.summaryLabel}>Aktif Sürücü</Text>
             <Text style={styles.summaryValue}>{summary.summary.active_drivers}</Text>
           </View>
         </View>
@@ -246,7 +246,7 @@ export default function DomesticReportScreen(): React.JSX.Element {
         {/* Durum Dagilimi */}
         {statusData.length > 0 && (
           <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Durum Dagilimi</Text>
+            <Text style={styles.chartTitle}>Durum Dağılımı</Text>
             <PieChart
               data={statusData}
               width={CHART_WIDTH}
@@ -262,10 +262,10 @@ export default function DomesticReportScreen(): React.JSX.Element {
           </View>
         )}
 
-        {/* Arac Performansi */}
+        {/* Araç Performansı */}
         {byVehicle.length > 0 && (
           <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>En Iyi 5 Arac (Gelir)</Text>
+            <Text style={styles.chartTitle}>En İyi 5 Araç (Gelir)</Text>
             <BarChart
               data={vehicleChartData}
               width={CHART_WIDTH}
@@ -296,7 +296,7 @@ export default function DomesticReportScreen(): React.JSX.Element {
                     <View>
                       <Text style={styles.vehiclePlate}>{vehicle.vehicle_plate}</Text>
                       <Text style={styles.vehicleStats}>
-                        {vehicle.order_count} is emri - {formatNumber(vehicle.total_km, 0)} km
+                        {vehicle.order_count} iş emri - {formatNumber(vehicle.total_km, 0)} km
                       </Text>
                     </View>
                   </View>
@@ -314,10 +314,10 @@ export default function DomesticReportScreen(): React.JSX.Element {
           </View>
         )}
 
-        {/* Surucu Performansi */}
+        {/* Sürücü Performansı */}
         {byDriver.length > 0 && (
           <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>En Iyi 5 Surucu (Gelir)</Text>
+            <Text style={styles.chartTitle}>En İyi 5 Sürücü (Gelir)</Text>
             <View style={styles.driverList}>
               {byDriver.map((driver, index) => (
                 <View key={driver.driver_name} style={styles.driverItem}>
@@ -326,7 +326,7 @@ export default function DomesticReportScreen(): React.JSX.Element {
                     <View>
                       <Text style={styles.driverName}>{driver.driver_name}</Text>
                       <Text style={styles.driverStats}>
-                        {driver.order_count} is emri - {formatNumber(driver.total_km, 0)} km
+                        {driver.order_count} iş emri - {formatNumber(driver.total_km, 0)} km
                       </Text>
                     </View>
                   </View>
@@ -351,8 +351,8 @@ export default function DomesticReportScreen(): React.JSX.Element {
             <Text style={styles.infoTitle}>Bilgilendirme</Text>
           </View>
           <Text style={styles.infoText}>
-            Yurtiçi raporlar son 30 gunluk is emirleri uzerinden hesaplanmaktadir. Arac ve surucu
-            performans verileri gelir bazli siralanmistir.
+            Yurtiçi raporlar son 30 günlük iş emirleri üzerinden hesaplanmaktadır. Araç ve sürücü
+            performans verileri gelir bazlı sıralanmıştır.
           </Text>
         </View>
       </ScrollView>

@@ -328,7 +328,7 @@ export default function ProfitLossReportScreen(): React.JSX.Element {
             />
           }
         >
-          {/* Ozet Kartlari */}
+          {/* Özet Kartları */}
           <View style={styles.summaryGrid}>
             <SummaryCard
               icon="trending-up-outline"
@@ -429,11 +429,11 @@ export default function ProfitLossReportScreen(): React.JSX.Element {
               value={`${formatCurrency(summary.revenue_per_km, 'TRY')}/km`}
             />
             <StatRow
-              label="KM Basina Maliyet"
+              label="KM Başına Maliyet"
               value={`${formatCurrency(summary.cost_per_km, 'TRY')}/km`}
             />
             <StatRow
-              label="Yakit Gideri"
+              label="Yakıt Gideri"
               value={formatCurrency(summary.total_fuel, 'TRY')}
             />
             <StatRow
@@ -441,7 +441,7 @@ export default function ProfitLossReportScreen(): React.JSX.Element {
               value={formatCurrency(summary.total_advance, 'TRY')}
             />
             <StatRow
-              label="Diger Masraflar"
+              label="Diğer Masraflar"
               value={formatCurrency(summary.total_expense, 'TRY')}
               isLast
             />

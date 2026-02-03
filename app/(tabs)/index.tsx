@@ -68,7 +68,7 @@ function getMetricsForTab(
         },
         {
           icon: 'location-outline',
-          label: 'Yurtici Is Emri',
+          label: 'Yurtiçi İş Emri',
           value: stats.activeDomesticOrders,
         },
         {
@@ -78,7 +78,7 @@ function getMetricsForTab(
         },
         {
           icon: 'trending-up-outline',
-          label: 'Aylik Gelir',
+          label: 'Aylık Gelir',
           value: formatDashboardCurrency(stats.monthlyRevenue),
         },
       ]
@@ -90,7 +90,7 @@ function getMetricsForTab(
       return [
         {
           icon: 'car-outline',
-          label: 'Aylik Sefer',
+          label: 'Aylık Sefer',
           value: stats.monthlyTripsCount,
           growth: stats.monthlyTripsGrowth,
         },
@@ -119,7 +119,7 @@ function getMetricsForTab(
       return [
         {
           icon: 'time-outline',
-          label: 'On Tasima Bek.',
+          label: 'Ön Taşıma Bek.',
           value: summary.pending_pre_carriages,
         },
         {
@@ -129,7 +129,7 @@ function getMetricsForTab(
         },
         {
           icon: 'checkmark-circle-outline',
-          label: 'Hazir',
+          label: 'Hazır',
           value: summary.ready_for_disposition,
         },
         {
@@ -147,7 +147,7 @@ function getMetricsForTab(
       return [
         {
           icon: 'document-text-outline',
-          label: 'Toplam Siparis',
+          label: 'Toplam Sipariş',
           value: summary.total_orders,
         },
         {
@@ -162,7 +162,7 @@ function getMetricsForTab(
         },
         {
           icon: 'alert-circle-outline',
-          label: 'Gecikmis',
+          label: 'Gecikmiş',
           value: summary.delayed_orders,
           iconColor: DashboardColors.danger,
         },
@@ -181,18 +181,18 @@ function getMetricsForTab(
         },
         {
           icon: 'arrow-down-outline',
-          label: 'Borc',
+          label: 'Borç',
           value: formatDashboardCurrency(stats.payables.total),
           iconColor: DashboardColors.danger,
         },
         {
           icon: 'time-outline',
-          label: 'Gecikmis Alacak',
+          label: 'Gecikmiş Alacak',
           value: formatDashboardCurrency(stats.receivables.overdue),
         },
         {
           icon: 'trending-up-outline',
-          label: 'Aylik Gelir',
+          label: 'Aylık Gelir',
           value: formatDashboardCurrency(stats.incomeStats.totalIncome),
           growth: stats.incomeStats.growthPercentage,
         },
@@ -205,7 +205,7 @@ function getMetricsForTab(
       return [
         {
           icon: 'checkmark-circle-outline',
-          label: 'Kazanilan',
+          label: 'Kazanılan',
           value: stats.wonQuotes.count,
           growth: stats.wonQuotes.growthPercentage,
         },
@@ -216,12 +216,12 @@ function getMetricsForTab(
         },
         {
           icon: 'people-outline',
-          label: 'Musteri',
+          label: 'Müşteri',
           value: stats.customerStats.total,
         },
         {
           icon: 'trending-up-outline',
-          label: 'Donusum',
+          label: 'Dönüşüm',
           value: `%${stats.conversionRate.toFixed(1)}`,
         },
       ]
@@ -233,23 +233,23 @@ function getMetricsForTab(
       return [
         {
           icon: 'car-outline',
-          label: 'Aktif Arac',
+          label: 'Aktif Araç',
           value: stats.vehicleStats.active,
         },
         {
           icon: 'warning-outline',
-          label: 'Bakimda',
+          label: 'Bakımda',
           value: stats.vehicleStats.inMaintenance,
           iconColor: DashboardColors.warning,
         },
         {
           icon: 'person-outline',
-          label: 'Aktif Surucu',
+          label: 'Aktif Sürücü',
           value: stats.driverStats.active,
         },
         {
           icon: 'document-outline',
-          label: 'Sigorta Uyarisi',
+          label: 'Sigorta Uyarısı',
           value: stats.expiringInsurances,
           iconColor: stats.expiringInsurances > 0 ? DashboardColors.danger : undefined,
         },
@@ -262,24 +262,24 @@ function getMetricsForTab(
       return [
         {
           icon: 'wallet-outline',
-          label: 'Stok Degeri',
+          label: 'Stok Değeri',
           value: formatDashboardCurrency(stats.totalStockValue),
           growth: stats.stockValueGrowth,
         },
         {
           icon: 'cube-outline',
-          label: 'Aktif Urun',
+          label: 'Aktif Ürün',
           value: stats.productStats.active,
         },
         {
           icon: 'alert-circle-outline',
-          label: 'Dusuk Stok',
+          label: 'Düşük Stok',
           value: stats.productStats.lowStock,
           iconColor: stats.productStats.lowStock > 0 ? DashboardColors.warning : undefined,
         },
         {
           icon: 'swap-horizontal-outline',
-          label: 'Bugunki Hareket',
+          label: 'Bugünkü Hareket',
           value: stats.movementStats.today,
         },
       ]
@@ -291,22 +291,22 @@ function getMetricsForTab(
       return [
         {
           icon: 'people-outline',
-          label: 'Toplam Calisan',
+          label: 'Toplam Çalışan',
           value: stats.totalEmployees,
         },
         {
           icon: 'person-add-outline',
-          label: 'Bu Ay Ise Alim',
+          label: 'Bu Ay İşe Alım',
           value: stats.hiredThisMonth,
         },
         {
           icon: 'document-text-outline',
-          label: 'Bekleyen Basvuru',
+          label: 'Bekleyen Başvuru',
           value: stats.pendingApplications,
         },
         {
           icon: 'calendar-outline',
-          label: 'Mulakat',
+          label: 'Mülakat',
           value: stats.interviewScheduled,
         },
       ]
@@ -325,15 +325,15 @@ function getQuickActionsForTab(tab: DashboardTab): QuickAction[] {
     case 'overview':
       return [
         { id: '1', icon: 'add-circle-outline', label: 'Yeni Sefer', badge: 0 },
-        { id: '2', icon: 'cube-outline', label: 'Yuk Ekle', badge: 0 },
-        { id: '3', icon: 'document-text-outline', label: 'Teklif Olustur', badge: 0 },
+        { id: '2', icon: 'cube-outline', label: 'Yük Ekle', badge: 0 },
+        { id: '3', icon: 'document-text-outline', label: 'Teklif Oluştur', badge: 0 },
         { id: '4', icon: 'scan-outline', label: 'QR Tara', badge: 0 },
       ]
     case 'logistics':
       return [
         { id: '1', icon: 'add-circle-outline', label: 'Yeni Sefer', badge: 0 },
-        { id: '2', icon: 'cube-outline', label: 'Yuk Ekle', badge: 0 },
-        { id: '3', icon: 'location-outline', label: 'Arac Takip', badge: 0 },
+        { id: '2', icon: 'cube-outline', label: 'Yük Ekle', badge: 0 },
+        { id: '3', icon: 'location-outline', label: 'Araç Takip', badge: 0 },
         { id: '4', icon: 'document-outline', label: 'Belgeler', badge: 0 },
       ]
     case 'warehouse':
@@ -345,45 +345,45 @@ function getQuickActionsForTab(tab: DashboardTab): QuickAction[] {
       ]
     case 'domestic':
       return [
-        { id: '1', icon: 'add-circle-outline', label: 'Yeni Siparis', badge: 0 },
-        { id: '2', icon: 'car-outline', label: 'Arac Ata', badge: 0 },
+        { id: '1', icon: 'add-circle-outline', label: 'Yeni Sipariş', badge: 0 },
+        { id: '2', icon: 'car-outline', label: 'Araç Ata', badge: 0 },
         { id: '3', icon: 'location-outline', label: 'Teslimat Takip', badge: 0 },
         { id: '4', icon: 'document-outline', label: 'Raporlar', badge: 0 },
       ]
     case 'finance':
       return [
-        { id: '1', icon: 'add-circle-outline', label: 'Yeni Islem', badge: 0 },
+        { id: '1', icon: 'add-circle-outline', label: 'Yeni İşlem', badge: 0 },
         { id: '2', icon: 'receipt-outline', label: 'Fatura Kes', badge: 0 },
-        { id: '3', icon: 'wallet-outline', label: 'Odeme Al', badge: 0 },
+        { id: '3', icon: 'wallet-outline', label: 'Ödeme Al', badge: 0 },
         { id: '4', icon: 'document-outline', label: 'Raporlar', badge: 0 },
       ]
     case 'crm':
       return [
         { id: '1', icon: 'add-circle-outline', label: 'Yeni Teklif', badge: 0 },
-        { id: '2', icon: 'person-add-outline', label: 'Musteri Ekle', badge: 0 },
+        { id: '2', icon: 'person-add-outline', label: 'Müşteri Ekle', badge: 0 },
         { id: '3', icon: 'call-outline', label: 'Arama Yap', badge: 0 },
-        { id: '4', icon: 'mail-outline', label: 'Mail Gonder', badge: 0 },
+        { id: '4', icon: 'mail-outline', label: 'Mail Gönder', badge: 0 },
       ]
     case 'fleet':
       return [
-        { id: '1', icon: 'add-circle-outline', label: 'Arac Ekle', badge: 0 },
-        { id: '2', icon: 'build-outline', label: 'Bakim Planla', badge: 0 },
-        { id: '3', icon: 'water-outline', label: 'Yakit Girisi', badge: 0 },
+        { id: '1', icon: 'add-circle-outline', label: 'Araç Ekle', badge: 0 },
+        { id: '2', icon: 'build-outline', label: 'Bakım Planla', badge: 0 },
+        { id: '3', icon: 'water-outline', label: 'Yakıt Girişi', badge: 0 },
         { id: '4', icon: 'document-outline', label: 'Belgeler', badge: 0 },
       ]
     case 'stock':
       return [
-        { id: '1', icon: 'add-circle-outline', label: 'Urun Ekle', badge: 0 },
-        { id: '2', icon: 'download-outline', label: 'Stok Girisi', badge: 0 },
-        { id: '3', icon: 'upload-outline', label: 'Stok Cikisi', badge: 0 },
-        { id: '4', icon: 'document-outline', label: 'Sayim', badge: 0 },
+        { id: '1', icon: 'add-circle-outline', label: 'Ürün Ekle', badge: 0 },
+        { id: '2', icon: 'download-outline', label: 'Stok Girişi', badge: 0 },
+        { id: '3', icon: 'upload-outline', label: 'Stok Çıkışı', badge: 0 },
+        { id: '4', icon: 'document-outline', label: 'Sayım', badge: 0 },
       ]
     case 'hr':
       return [
-        { id: '1', icon: 'person-add-outline', label: 'Calisan Ekle', badge: 0 },
-        { id: '2', icon: 'briefcase-outline', label: 'Ilan Ver', badge: 0 },
-        { id: '3', icon: 'document-outline', label: 'Izin Talebi', badge: 0 },
-        { id: '4', icon: 'calendar-outline', label: 'Mulakat Planla', badge: 0 },
+        { id: '1', icon: 'person-add-outline', label: 'Çalışan Ekle', badge: 0 },
+        { id: '2', icon: 'briefcase-outline', label: 'İlan Ver', badge: 0 },
+        { id: '3', icon: 'document-outline', label: 'İzin Talebi', badge: 0 },
+        { id: '4', icon: 'calendar-outline', label: 'Mülakat Planla', badge: 0 },
       ]
     default:
       return []
@@ -488,32 +488,32 @@ export default function Dashboard() {
         {isLoadingAvailable ? (
           <View style={styles.stateContainer}>
             <ActivityIndicator size="large" color={DashboardColors.primary} />
-            <Text style={styles.stateText}>Dashboard yukleniyor...</Text>
+            <Text style={styles.stateText}>Dashboard yükleniyor...</Text>
           </View>
         ) : error && visibleTabs.length === 0 ? (
           // Hata durumu
           <View style={styles.stateContainer}>
             <Ionicons name="alert-circle-outline" size={48} color={DashboardColors.danger} />
             <Text style={styles.errorText}>{error}</Text>
-            <Text style={styles.stateSubText}>Lutfen daha sonra tekrar deneyin</Text>
+            <Text style={styles.stateSubText}>Lütfen daha sonra tekrar deneyin</Text>
           </View>
         ) : visibleTabs.length === 0 ? (
-          // Erisebilir dashboard yok
+          // Erişebilir dashboard yok
           <View style={styles.stateContainer}>
             <Ionicons name="lock-closed-outline" size={48} color={DashboardColors.textSecondary} />
-            <Text style={styles.stateText}>Erisebilir dashboard bulunamadi</Text>
-            <Text style={styles.stateSubText}>Yetki tanimlari icin yoneticinizle iletisime gecin</Text>
+            <Text style={styles.stateText}>Erişebilir dashboard bulunamadı</Text>
+            <Text style={styles.stateSubText}>Yetki tanımları için yöneticinizle iletişime geçin</Text>
           </View>
         ) : (
           <>
-            {/* Metrikler Bolumu */}
+            {/* Metrikler Bölümü */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Ozet</Text>
+              <Text style={styles.sectionTitle}>Özet</Text>
 
               {isTabLoading && currentMetrics.length === 0 ? (
                 <View style={styles.tabLoadingContainer}>
                   <ActivityIndicator size="small" color={DashboardColors.primary} />
-                  <Text style={styles.tabLoadingText}>Veriler yukleniyor...</Text>
+                  <Text style={styles.tabLoadingText}>Veriler yükleniyor...</Text>
                 </View>
               ) : currentMetrics.length > 0 ? (
                 <View style={styles.metricsGrid}>
@@ -531,12 +531,12 @@ export default function Dashboard() {
                 </View>
               ) : (
                 <View style={styles.noDataContainer}>
-                  <Text style={styles.noDataText}>Bu dashboard icin veri bulunamadi</Text>
+                  <Text style={styles.noDataText}>Bu dashboard için veri bulunamadı</Text>
                 </View>
               )}
             </View>
 
-            {/* Hizli Islemler Bolumu */}
+            {/* Hızlı İşlemler Bölümü */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Ionicons
@@ -544,7 +544,7 @@ export default function Dashboard() {
                   size={18}
                   color={DashboardColors.primary}
                 />
-                <Text style={styles.sectionTitle}>Hizli Islemler</Text>
+                <Text style={styles.sectionTitle}>Hızlı İşlemler</Text>
               </View>
               <View style={styles.actionsGrid}>
                 {quickActions.map((action, index) => (
