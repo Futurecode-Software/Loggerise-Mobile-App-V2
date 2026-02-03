@@ -1,225 +1,431 @@
 /**
  * New Driver-Tractor Assignment Screen
  *
- * Create new driver-tractor assignment (sürücü-çekici eşleştirme).
- * Matches backend Mobile API endpoint: POST /api/v1/mobile/filo-yonetimi/surucu-cekici-eslestirme
+ * Yeni sürücü-çekici eşleştirmesi oluşturma ekranı.
+ * Backend: POST /api/v1/mobile/filo-yonetimi/surucu-cekici-eslestirme
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { router } from 'expo-router';
-import { Save } from 'lucide-react-native';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Input, Card } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { DateInput } from '@/components/ui/date-input';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+  ActivityIndicator
+} from 'react-native'
+import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing
+} from 'react-native-reanimated'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import Toast from 'react-native-toast-message'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
+import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
+import SearchableSelectModal, { SearchableSelectModalRef, SelectOption } from '@/components/modals/SearchableSelectModal'
 import {
   createDriverTractorAssignment,
-  DriverTractorAssignmentFormData,
-} from '@/services/endpoints/fleet';
-import { getVehicles, Vehicle } from '@/services/endpoints/vehicles';
-import { getEmployees, Employee } from '@/services/endpoints/employees';
-import { getErrorMessage, getValidationErrors } from '@/services/api';
+  DriverTractorAssignmentFormData
+} from '@/services/endpoints/fleet'
+import { getVehicles, Vehicle } from '@/services/endpoints/vehicles'
+import { getEmployees, Employee } from '@/services/endpoints/employees'
+import { getErrorMessage, getValidationErrors } from '@/services/api'
 
 export default function NewDriverTractorAssignmentScreen() {
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
+  const insets = useSafeAreaInsets()
+
+  // Animasyonlu orb'lar için shared values
+  const orb1TranslateY = useSharedValue(0)
+  const orb2TranslateX = useSharedValue(0)
+  const orb1Scale = useSharedValue(1)
+  const orb2Scale = useSharedValue(1)
+
+  useEffect(() => {
+    orb1TranslateY.value = withRepeat(
+      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb1Scale.value = withRepeat(
+      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2TranslateX.value = withRepeat(
+      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    orb2Scale.value = withRepeat(
+      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const orb1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orb1TranslateY.value },
+      { scale: orb1Scale.value }
+    ]
+  }))
+
+  const orb2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: orb2TranslateX.value },
+      { scale: orb2Scale.value }
+    ]
+  }))
 
   // Form state
   const [formData, setFormData] = useState<Partial<DriverTractorAssignmentFormData>>({
     assigned_at: new Date().toISOString().split('T')[0],
-    notes: '',
-  });
+    notes: ''
+  })
 
-  // Search state
-  const [drivers, setDrivers] = useState<Employee[]>([]);
-  const [tractors, setTractors] = useState<Vehicle[]>([]);
-  const [loadingDrivers, setLoadingDrivers] = useState(false);
-  const [loadingTractors, setLoadingTractors] = useState(false);
+  // Data state
+  const [drivers, setDrivers] = useState<Employee[]>([])
+  const [tractors, setTractors] = useState<Vehicle[]>([])
+  const [selectedDriver, setSelectedDriver] = useState<Employee | null>(null)
+  const [selectedTractor, setSelectedTractor] = useState<Vehicle | null>(null)
+  const [isLoadingDrivers, setIsLoadingDrivers] = useState(false)
+  const [isLoadingTractors, setIsLoadingTractors] = useState(false)
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Refs
+  const driverModalRef = useRef<SearchableSelectModalRef>(null)
+  const tractorModalRef = useRef<SearchableSelectModalRef>(null)
 
-  // Handle input change
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Load initial data
+  useEffect(() => {
+    loadInitialData()
+  }, [])
+
+  const loadInitialData = async () => {
+    try {
+      setIsLoadingDrivers(true)
+      setIsLoadingTractors(true)
+
+      const [driversRes, tractorsRes] = await Promise.all([
+        getEmployees({ per_page: 100 }),
+        getVehicles({ vehicle_type: 'truck_tractor', per_page: 100 })
+      ])
+
+      setDrivers(driversRes.employees)
+      setTractors(tractorsRes.vehicles)
+    } catch (error) {
+      console.error('Failed to load initial data:', error)
+      Toast.show({
+        type: 'error',
+        text1: 'Veriler yüklenemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsLoadingDrivers(false)
+      setIsLoadingTractors(false)
+    }
+  }
+
+  // Handle driver selection
+  const handleDriverSelect = useCallback((option: SelectOption) => {
+    const driver = drivers.find(d => d.id === option.value)
+    if (driver) {
+      setSelectedDriver(driver)
+      setFormData(prev => ({ ...prev, employee_id: driver.id }))
+
+      if (errors.employee_id) {
+        setErrors(prevErrors => {
+          const newErrors = { ...prevErrors }
+          delete newErrors.employee_id
+          return newErrors
+        })
+      }
+    }
+  }, [drivers, errors])
+
+  // Handle tractor selection
+  const handleTractorSelect = useCallback((option: SelectOption) => {
+    const tractor = tractors.find(t => t.id === option.value)
+    if (tractor) {
+      setSelectedTractor(tractor)
+      setFormData(prev => ({ ...prev, tractor_id: tractor.id }))
+
+      if (errors.tractor_id) {
+        setErrors(prevErrors => {
+          const newErrors = { ...prevErrors }
+          delete newErrors.tractor_id
+          return newErrors
+        })
+      }
+    }
+  }, [tractors, errors])
+
+  // Options for modals
+  const driverOptions: SelectOption[] = drivers.map(d => ({
+    value: d.id,
+    label: `${d.first_name} ${d.last_name}${d.phone_1 ? ` • ${d.phone_1}` : ''}`,
+    data: d
+  }))
+
+  const tractorOptions: SelectOption[] = tractors.map(t => ({
+    value: t.id,
+    label: `${t.plate}${t.brand || t.model ? ` • ${[t.brand, t.model].filter(Boolean).join(' ')}` : ''}`,
+    data: t
+  }))
+
+  // Input değişiklik handler'ı
   const handleInputChange = useCallback((field: keyof DriverTractorAssignmentFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }))
 
-    // Clear error for this field
+    // Bu alan için hatayı temizle
     if (errors[field]) {
       setErrors(prevErrors => {
-        const newErrors = { ...prevErrors };
-        delete newErrors[field];
-        return newErrors;
-      });
+        const newErrors = { ...prevErrors }
+        delete newErrors[field]
+        return newErrors
+      })
     }
-  }, [errors]);
+  }, [errors])
 
-  // Search drivers
-  const searchDrivers = useCallback(async (query: string) => {
-    if (loadingDrivers) return drivers.map(d => ({
-      label: `${d.first_name} ${d.last_name}`,
-      value: d.id.toString()
-    }));
-
-    setLoadingDrivers(true);
-    try {
-      const response = await getEmployees({
-        search: query,
-        position: 'driver',
-        per_page: 20,
-      });
-      setDrivers(response.employees);
-      return response.employees.map(d => ({
-        label: `${d.first_name} ${d.last_name}`,
-        value: d.id.toString()
-      }));
-    } catch (error) {
-      console.error('Failed to search drivers:', error);
-      return [];
-    } finally {
-      setLoadingDrivers(false);
-    }
-  }, [loadingDrivers, drivers]);
-
-  // Search tractors
-  const searchTractors = useCallback(async (query: string) => {
-    if (loadingTractors) return tractors.map(v => ({ label: v.plate, value: v.id.toString() }));
-
-    setLoadingTractors(true);
-    try {
-      const response = await getVehicles({
-        search: query,
-        vehicle_type: 'truck_tractor',
-        per_page: 20,
-      });
-      setTractors(response.vehicles);
-      return response.vehicles.map(v => ({ label: v.plate, value: v.id.toString() }));
-    } catch (error) {
-      console.error('Failed to search tractors:', error);
-      return [];
-    } finally {
-      setLoadingTractors(false);
-    }
-  }, [loadingTractors, tractors]);
-
-  // Validation function
+  // Validation
   const validateForm = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {}
 
     if (!formData.employee_id) {
-      newErrors.employee_id = 'Sürücü seçimi zorunludur.';
+      newErrors.employee_id = 'Sürücü seçimi zorunludur.'
     }
 
     if (!formData.tractor_id) {
-      newErrors.tractor_id = 'Çekici seçimi zorunludur.';
+      newErrors.tractor_id = 'Çekici seçimi zorunludur.'
     }
 
     if (!formData.assigned_at) {
-      newErrors.assigned_at = 'Atanma tarihi zorunludur.';
+      newErrors.assigned_at = 'Atanma tarihi zorunludur.'
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [formData])
 
-  // Submit handler
+  // Geri butonu
+  const handleBack = useCallback(() => {
+    router.back()
+  }, [])
+
+  // Form gönderimi
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
-      return;
+      Toast.show({
+        type: 'error',
+        text1: 'Lütfen zorunlu alanları doldurunuz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await createDriverTractorAssignment(formData as DriverTractorAssignmentFormData);
+      await createDriverTractorAssignment(formData as DriverTractorAssignmentFormData)
 
-      success('Başarılı', 'Eşleştirme başarıyla oluşturuldu.');
-      router.back();
+      Toast.show({
+        type: 'success',
+        text1: 'Eşleştirme başarıyla oluşturuldu',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      router.back()
     } catch (error: any) {
-      const validationErrors = getValidationErrors(error);
+      const validationErrors = getValidationErrors(error)
       if (validationErrors) {
-        const flatErrors: Record<string, string> = {};
+        const flatErrors: Record<string, string> = {}
         Object.entries(validationErrors).forEach(([field, messages]) => {
           if (Array.isArray(messages) && messages.length > 0) {
-            flatErrors[field] = messages[0];
+            flatErrors[field] = messages[0]
           }
-        });
-        setErrors(flatErrors);
+        })
+        setErrors(flatErrors)
       } else {
-        showError('Hata', getErrorMessage(error));
+        Toast.show({
+          type: 'error',
+          text1: getErrorMessage(error),
+          position: 'top',
+          visibilityTime: 1500
+        })
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  }, [formData, validateForm, success, showError]);
+  }, [formData, validateForm])
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-        title="Yeni Sürücü-Çekici Eşleştirme"
-        showBackButton
-        onBackPress={() => router.back()}
-        rightIcons={
-          <TouchableOpacity
-            onPress={handleSubmit}
-            style={styles.headerButton}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Save size={22} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
-        }
-      />
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <View style={styles.container}>
+      {/* Header with gradient and animated orbs */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {/* Dekoratif ışık efektleri - Animasyonlu */}
+        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
+        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.headerBar}>
+            {/* Sol: Geri Butonu */}
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Orta: Başlık */}
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Yeni Eşleştirme</Text>
+            </View>
+
+            {/* Sağ: Kaydet Butonu */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* Form Content */}
+      <KeyboardAwareScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        bottomOffset={20}
       >
-        {/* Form Content */}
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.formWrapper}>
-            <Card style={styles.card}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Eşleştirme Bilgileri</Text>
+        {/* Temel Bilgiler Bölümü */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="person-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Eşleştirme Bilgileri</Text>
+          </View>
 
-            <SelectInput
-              label="Sürücü *"
-              options={drivers.map(d => ({
-                label: `${d.first_name} ${d.last_name}`,
-                value: d.id.toString()
-              }))}
-              selectedValue={formData.employee_id?.toString()}
-              onValueChange={(val) => handleInputChange('employee_id', parseInt(val?.toString() || ''))}
-              error={errors.employee_id}
-              placeholder="Sürücü adı ile ara..."
-              searchable
-            />
+          <View style={styles.sectionContent}>
+            {/* Sürücü Seçimi */}
+            <View style={styles.fieldContainer}>
+              <Text style={styles.inputLabel}>Sürücü *</Text>
+              {selectedDriver ? (
+                <View style={styles.selectedItem}>
+                  <View style={styles.selectedItemIcon}>
+                    <Ionicons name="person" size={18} color={DashboardColors.primary} />
+                  </View>
+                  <View style={styles.selectedItemInfo}>
+                    <Text style={styles.selectedItemName}>
+                      {selectedDriver.first_name} {selectedDriver.last_name}
+                    </Text>
+                    {selectedDriver.phone_1 && (
+                      <Text style={styles.selectedItemCode}>{selectedDriver.phone_1}</Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedDriver(null)
+                      setFormData(prev => ({ ...prev, employee_id: undefined }))
+                    }}
+                    style={styles.removeButton}
+                  >
+                    <Ionicons name="close-circle" size={20} color={DashboardColors.danger} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.selectButton}
+                  onPress={() => driverModalRef.current?.present()}
+                  disabled={isLoadingDrivers}
+                >
+                  {isLoadingDrivers ? (
+                    <ActivityIndicator size="small" color={DashboardColors.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="person-outline" size={18} color={DashboardColors.textSecondary} />
+                      <Text style={styles.selectButtonText}>Sürücü seçiniz</Text>
+                      <Ionicons name="chevron-forward" size={18} color={DashboardColors.textMuted} />
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+              {errors.employee_id && <Text style={styles.errorText}>{errors.employee_id}</Text>}
+            </View>
 
-            <SelectInput
-              label="Çekici *"
-              options={tractors.map(v => ({ label: v.plate, value: v.id.toString() }))}
-              selectedValue={formData.tractor_id?.toString()}
-              onValueChange={(val) => handleInputChange('tractor_id', parseInt(val?.toString() || ''))}
-              error={errors.tractor_id}
-              placeholder="Çekici plakası ile ara..."
-              searchable
-            />
+            {/* Çekici Seçimi */}
+            <View style={styles.fieldContainer}>
+              <Text style={styles.inputLabel}>Çekici *</Text>
+              {selectedTractor ? (
+                <View style={styles.selectedItem}>
+                  <View style={styles.selectedItemIcon}>
+                    <Ionicons name="car" size={18} color={DashboardColors.primary} />
+                  </View>
+                  <View style={styles.selectedItemInfo}>
+                    <Text style={styles.selectedItemName}>{selectedTractor.plate}</Text>
+                    {(selectedTractor.brand || selectedTractor.model) && (
+                      <Text style={styles.selectedItemCode}>
+                        {[selectedTractor.brand, selectedTractor.model].filter(Boolean).join(' ')}
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedTractor(null)
+                      setFormData(prev => ({ ...prev, tractor_id: undefined }))
+                    }}
+                    style={styles.removeButton}
+                  >
+                    <Ionicons name="close-circle" size={20} color={DashboardColors.danger} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.selectButton}
+                  onPress={() => tractorModalRef.current?.present()}
+                  disabled={isLoadingTractors}
+                >
+                  {isLoadingTractors ? (
+                    <ActivityIndicator size="small" color={DashboardColors.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="car-outline" size={18} color={DashboardColors.textSecondary} />
+                      <Text style={styles.selectButtonText}>Çekici seçiniz</Text>
+                      <Ionicons name="chevron-forward" size={18} color={DashboardColors.textMuted} />
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+              {errors.tractor_id && <Text style={styles.errorText}>{errors.tractor_id}</Text>}
+            </View>
 
             <DateInput
               label="Atanma Tarihi *"
@@ -238,43 +444,213 @@ export default function NewDriverTractorAssignmentScreen() {
               multiline
               numberOfLines={3}
             />
-            </Card>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+      </KeyboardAwareScrollView>
+
+      {/* Modals */}
+      <SearchableSelectModal
+        ref={driverModalRef}
+        title="Sürücü Seçin"
+        options={driverOptions}
+        selectedValue={selectedDriver?.id}
+        onSelect={handleDriverSelect}
+        searchPlaceholder="Sürücü ara..."
+        emptyMessage="Sürücü bulunamadı"
+        loading={isLoadingDrivers}
+      />
+
+      <SearchableSelectModal
+        ref={tractorModalRef}
+        title="Çekici Seçin"
+        options={tractorOptions}
+        selectedValue={selectedTractor?.id}
+        onSelect={handleTractorSelect}
+        searchPlaceholder="Çekici ara..."
+        emptyMessage="Çekici bulunamadı"
+        loading={isLoadingTractors}
+      />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
-  keyboardAvoidingView: {
+  headerContainer: {
+    position: 'relative',
+    paddingBottom: 24,
+    overflow: 'hidden'
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: DashboardSpacing.lg
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitleContainer: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.md
   },
-  headerButton: {
-    padding: Spacing.sm,
+  headerTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center'
+  },
+  saveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  saveButtonDisabled: {
+    opacity: 0.5
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
   },
   content: {
-    flex: 1,
+    flex: 1
   },
   contentContainer: {
-    padding: Spacing.lg,
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
   },
-  formWrapper: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 32,
-    ...Shadows.lg,
-    overflow: 'hidden',
+  section: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.lg,
+    overflow: 'hidden'
   },
-  card: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
-});
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
+  },
+  fieldContainer: {
+    gap: DashboardSpacing.xs
+  },
+  inputLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
+    marginBottom: 4
+  },
+  selectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: DashboardColors.background,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  selectButtonText: {
+    flex: 1,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary
+  },
+  selectedItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: DashboardColors.primaryGlow,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    gap: DashboardSpacing.sm
+  },
+  selectedItemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.md,
+    backgroundColor: DashboardColors.surface,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  selectedItemInfo: {
+    flex: 1
+  },
+  selectedItemName: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: 2
+  },
+  selectedItemCode: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
+  },
+  removeButton: {
+    padding: 4
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.danger,
+    marginTop: 4
+  }
+})

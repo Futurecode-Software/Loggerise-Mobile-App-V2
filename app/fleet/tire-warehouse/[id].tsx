@@ -1,615 +1,811 @@
 /**
- * Edit Tire Screen
+ * Tire Detail Screen
  *
- * Edit existing tire with assign to vehicle and maintenance features.
- * Matches backend Mobile API endpoints:
+ * Lastik detay sayfası - CLAUDE.md standartlarına uyumlu
+ * Backend endpoints:
  * - GET /api/v1/mobile/filo-yonetimi/lastik-deposu/{id}
- * - PUT /api/v1/mobile/filo-yonetimi/lastik-deposu/{id}
  * - DELETE /api/v1/mobile/filo-yonetimi/lastik-deposu/{id}
- * - POST /api/v1/mobile/filo-yonetimi/lastik-deposu/{id}/ata (assign)
- * - POST /api/v1/mobile/filo-yonetimi/lastik-deposu/{id}/bakimlar (maintenance)
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Save, Trash2, Car, Wrench } from 'lucide-react-native';
-import { FullScreenHeader } from '@/components/header/FullScreenHeader';
-import { Input, Card } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { DateInput } from '@/components/ui/date-input';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import TireAssignModal, { TireAssignModalRef } from '@/components/modals/TireAssignModal';
-import TireMaintenanceModal, { TireMaintenanceModalRef } from '@/components/modals/TireMaintenanceModal';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
-import api, { getErrorMessage, getValidationErrors } from '@/services/api';
-import { getVehicles, Vehicle } from '@/services/endpoints/vehicles';
+  RefreshControl,
+  ActivityIndicator
+} from 'react-native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useFocusEffect } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardShadows
+} from '@/constants/dashboard-theme'
+import {
+  getTireById,
+  deleteTire,
+  Tire,
+  getTireStatusLabel,
+  getTireConditionLabel,
+  getTireTypeLabel
+} from '@/services/endpoints/tires'
+import { formatCurrency } from '@/utils/currency'
 
-// Tire type options
-const TIRE_TYPE_OPTIONS = [
-  { label: 'Yaz Lastiği', value: 'summer' },
-  { label: 'Kış Lastiği', value: 'winter' },
-  { label: 'Dört Mevsim', value: 'all_season' },
-];
+// Tarih formatlama
+const formatDate = (dateString?: string): string => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
+  } catch {
+    return dateString
+  }
+}
 
-// Condition options
-const CONDITION_OPTIONS = [
-  { label: 'Yeni', value: 'new' },
-  { label: 'İyi', value: 'good' },
-  { label: 'Orta', value: 'fair' },
-  { label: 'Kötü', value: 'poor' },
-  { label: 'Eskimiş', value: 'worn_out' },
-];
+// Bölüm başlığı
+interface SectionHeaderProps {
+  title: string
+  icon: keyof typeof Ionicons.glyphMap
+  count?: number
+}
 
-export default function EditTireScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = Colors.light;
-  const { success, error: showError } = useToast();
-
-  // Tire state
-  const [tire, setTire] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Form state
-  const [formData, setFormData] = useState<any>({
-    serial_number: '',
-    brand: '',
-    model: '',
-    size: '',
-    tire_type: 'summer',
-    condition: 'new',
-  });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Delete dialog state
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Modal refs
-  const assignModalRef = useRef<TireAssignModalRef>(null);
-  const maintenanceModalRef = useRef<TireMaintenanceModalRef>(null);
-
-  // Vehicle list for assign modal
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-
-  // Fetch tire data
-  const fetchTire = useCallback(async () => {
-    if (!id) return;
-
-    setIsLoading(true);
-    try {
-      const response = await api.get(`/filo-yonetimi/lastik-deposu/${id}`);
-      const tireData = response.data.data.tire;
-
-      setTire(tireData);
-
-      // Initialize form with tire data
-      setFormData({
-        serial_number: tireData.serial_number || '',
-        brand: tireData.brand || '',
-        model: tireData.model || '',
-        size: tireData.size || '',
-        dot_code: tireData.dot_code || '',
-        tire_type: tireData.tire_type || 'summer',
-        tread_depth: tireData.tread_depth?.toString() || '',
-        purchase_date: tireData.purchase_date
-          ? new Date(tireData.purchase_date).toISOString().split('T')[0]
-          : '',
-        purchase_price: tireData.purchase_price?.toString() || '',
-        supplier: tireData.supplier || '',
-        condition: tireData.condition || 'new',
-        warehouse_location: tireData.warehouse_location || '',
-        notes: tireData.notes || '',
-      });
-    } catch (error) {
-      console.error('Failed to fetch tire:', error);
-      showError('Hata', getErrorMessage(error));
-      router.back();
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id, showError]);
-
-  useEffect(() => {
-    fetchTire();
-  }, [fetchTire]);
-
-  // Handle input change
-  const handleInputChange = useCallback((field: string, value: any) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }));
-
-    // Clear error for this field
-    if (errors[field]) {
-      setErrors(prevErrors => {
-        const newErrors = { ...prevErrors };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
-  }, [errors]);
-
-  // Search vehicles
-  const searchVehicles = useCallback(async (query: string) => {
-    try {
-      const response = await getVehicles({
-        search: query,
-        per_page: 20,
-      });
-      setVehicles(response.vehicles);
-      return response.vehicles.map(v => ({ label: v.plate, value: v.id.toString() }));
-    } catch (error) {
-      console.error('Failed to search vehicles:', error);
-      return [];
-    }
-  }, []);
-
-  // Validation function
-  const validateForm = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.serial_number?.trim()) {
-      newErrors.serial_number = 'Seri numarası zorunludur.';
-    }
-
-    if (!formData.brand?.trim()) {
-      newErrors.brand = 'Marka zorunludur.';
-    }
-
-    if (!formData.model?.trim()) {
-      newErrors.model = 'Model zorunludur.';
-    }
-
-    if (!formData.size?.trim()) {
-      newErrors.size = 'Ebat zorunludur.';
-    }
-
-    if (!formData.tire_type) {
-      newErrors.tire_type = 'Lastik tipi zorunludur.';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
-
-  // Submit handler
-  const handleSubmit = useCallback(async () => {
-    if (!validateForm() || !id) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      // Prepare data - convert string numbers to actual numbers
-      const submitData: any = { ...formData };
-      if (submitData.tread_depth) {
-        submitData.tread_depth = parseFloat(submitData.tread_depth);
-      }
-      if (submitData.purchase_price) {
-        submitData.purchase_price = parseFloat(submitData.purchase_price);
-      }
-
-      const response = await api.put(`/filo-yonetimi/lastik-deposu/${id}`, submitData);
-
-      success('Başarılı', response.data.message || 'Lastik başarıyla güncellendi.');
-      router.back();
-    } catch (error: any) {
-      const validationErrors = getValidationErrors(error);
-      if (validationErrors) {
-        const flatErrors: Record<string, string> = {};
-        Object.entries(validationErrors).forEach(([field, messages]) => {
-          if (Array.isArray(messages) && messages.length > 0) {
-            flatErrors[field] = messages[0];
-          }
-        });
-        setErrors(flatErrors);
-      } else {
-        showError('Hata', getErrorMessage(error));
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [formData, validateForm, id, success, showError]);
-
-  // Delete handler
-  const handleDelete = () => {
-    setShowDeleteDialog(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!id) return;
-
-    setIsDeleting(true);
-    try {
-      await api.delete(`/filo-yonetimi/lastik-deposu/${id}`);
-      success('Başarılı', 'Lastik başarıyla silindi.');
-      router.back();
-    } catch (error) {
-      showError('Hata', getErrorMessage(error));
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteDialog(false);
-    }
-  };
-
-  // Fetch vehicles for assign modal
-  useEffect(() => {
-    const fetchVehicles = async () => {
-      try {
-        const response = await getVehicles({ per_page: 100 });
-        setVehicles(response.vehicles);
-      } catch (error) {
-        console.error('Failed to fetch vehicles:', error);
-      }
-    };
-    fetchVehicles();
-  }, []);
-
-  // Open assign modal
-  const handleOpenAssignModal = () => {
-    assignModalRef.current?.present();
-  };
-
-  // Open maintenance modal
-  const handleOpenMaintenanceModal = () => {
-    maintenanceModalRef.current?.present();
-  };
-
-  // Assign to vehicle handler
-  const handleAssignToVehicle = async (data: {
-    vehicle_id: number;
-    position: string;
-    assigned_at: string;
-  }) => {
-    if (!id) return;
-
-    try {
-      const response = await api.post(`/filo-yonetimi/lastik-deposu/${id}/ata`, data);
-      success('Başarılı', response.data.message || 'Lastik araca atandı.');
-      fetchTire(); // Refresh tire data
-    } catch (error) {
-      showError('Hata', getErrorMessage(error));
-      throw error; // Re-throw to let modal handle it
-    }
-  };
-
-  // Add maintenance record handler
-  const handleAddMaintenance = async (data: {
-    maintenance_date: string;
-    description: string;
-    cost?: string;
-  }) => {
-    if (!id) return;
-
-    try {
-      const submitData: any = { ...data };
-      if (submitData.cost) {
-        submitData.cost = parseFloat(submitData.cost);
-      }
-
-      const response = await api.post(`/filo-yonetimi/lastik-deposu/${id}/bakimlar`, submitData);
-      success('Başarılı', response.data.message || 'Bakım kaydı eklendi.');
-      fetchTire(); // Refresh tire data
-    } catch (error) {
-      showError('Hata', getErrorMessage(error));
-      throw error; // Re-throw to let modal handle it
-    }
-  };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <FullScreenHeader
-          title="Lastik Düzenle"
-          showBackButton
-          onBackPress={() => router.back()}
-        />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Brand.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Lastik yükleniyor...
-          </Text>
+function SectionHeader({ title, icon, count }: SectionHeaderProps) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionHeaderLeft}>
+        <View style={styles.sectionIcon}>
+          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
         </View>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {count !== undefined && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{count}</Text>
+          </View>
+        )}
       </View>
-    );
+    </View>
+  )
+}
+
+// Bilgi satırı
+interface InfoRowProps {
+  label: string
+  value: string
+  icon?: keyof typeof Ionicons.glyphMap
+  highlight?: boolean
+}
+
+function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={styles.infoLabel}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={14}
+            color={DashboardColors.textMuted}
+            style={styles.infoIcon}
+          />
+        )}
+        <Text style={styles.infoLabelText}>{label}</Text>
+      </View>
+      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
+        {value}
+      </Text>
+    </View>
+  )
+}
+
+export default function TireDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const tireId = id ? parseInt(id, 10) : null
+
+  // State
+  const [tire, setTire] = useState<Tire | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Refs
+  const isMountedRef = useRef(true)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
+
+  // Veri çekme
+  const fetchTire = useCallback(async (showLoading = true) => {
+    if (!tireId) {
+      setError('Geçersiz lastik ID')
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      if (showLoading) {
+        setIsLoading(true)
+        setError(null)
+      }
+
+      const data = await getTireById(tireId)
+
+      if (isMountedRef.current) {
+        setTire(data)
+        setError(null)
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Lastik bilgileri yüklenemedi')
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
+    }
+  }, [tireId])
+
+  useEffect(() => {
+    isMountedRef.current = true
+    fetchTire()
+
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [fetchTire])
+
+  // Edit sayfasından dönüşte yenile
+  useFocusEffect(
+    useCallback(() => {
+      fetchTire(false)
+    }, [fetchTire])
+  )
+
+  // Yenileme
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    fetchTire(false)
+  }, [fetchTire])
+
+  // Düzenleme
+  const handleEdit = () => {
+    if (!tireId) return
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/fleet/tire-warehouse/${tireId}/edit`)
+  }
+
+  // Silme dialogunu aç
+  const handleDelete = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    deleteDialogRef.current?.present()
+  }
+
+  // Silme işlemini gerçekleştir
+  const confirmDelete = async () => {
+    if (!tireId) return
+
+    setIsDeleting(true)
+    try {
+      await deleteTire(tireId)
+      deleteDialogRef.current?.dismiss()
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      Toast.show({
+        type: 'success',
+        text1: 'Lastik başarıyla silindi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+
+      setTimeout(() => {
+        router.back()
+      }, 300)
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'Lastik silinemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Geri
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: Brand.primary }]}>
-      <FullScreenHeader
-        title="Lastik Düzenle"
-        showBackButton
-        onBackPress={() => router.back()}
-        rightIcons={
-          <>
-            <TouchableOpacity
-              onPress={handleSubmit}
-              style={styles.headerButton}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Save size={22} color="#FFFFFF" />
-              )}
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#065f4a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.glowOrb1} />
+        <View style={styles.glowOrb2} />
+
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
+          {/* Üst Bar: Geri + Başlık + Aksiyonlar */}
+          <View style={styles.headerBar}>
+            <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleDelete}
-              style={styles.headerButton}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Trash2 size={22} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </>
+
+            {/* Başlık - Orta */}
+            {isLoading ? (
+              <View style={styles.headerTitleSection}>
+                <Skeleton width={140} height={22} />
+              </View>
+            ) : tire ? (
+              <View style={styles.headerTitleSection}>
+                <Text style={styles.headerName} numberOfLines={1}>
+                  {tire.serial_number}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.headerTitleSection} />
+            )}
+
+            {/* Aksiyonlar - Sağ */}
+            {!isLoading && tire ? (
+              <View style={styles.headerActions}>
+                <TouchableOpacity style={styles.headerButton} onPress={handleEdit}>
+                  <Ionicons name="create-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.headerButton, styles.deleteButton]}
+                  onPress={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={22} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.headerActionsPlaceholder} />
+            )}
+          </View>
+
+          {/* Lastik Özeti */}
+          {isLoading ? (
+            <View style={styles.summaryRow}>
+              <View style={styles.summary}>
+                <Skeleton width={100} height={14} style={{ marginBottom: DashboardSpacing.xs }} />
+                <Skeleton width={160} height={28} />
+              </View>
+              <Skeleton width={70} height={28} borderRadius={14} />
+            </View>
+          ) : tire ? (
+            <View style={styles.summaryRow}>
+              <View style={styles.summary}>
+                <Text style={styles.summaryLabel}>{tire.brand} {tire.model}</Text>
+                <Text style={styles.summaryValue}>{tire.size}</Text>
+              </View>
+              <View style={styles.statusBadge}>
+                <View style={[
+                  styles.statusDot,
+                  { backgroundColor: tire.status === 'in_stock' ? DashboardColors.success : DashboardColors.warning }
+                ]} />
+                <Text style={styles.statusBadgeText}>{getTireStatusLabel(tire.status)}</Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.bottomCurve} />
+      </View>
+
+      {/* İçerik */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={DashboardColors.primary}
+          />
         }
-      />
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Form Content */}
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.formWrapper}>
-            {/* Action Buttons */}
-            {tire?.status === 'in_stock' && (
-              <View style={styles.actionButtonsRow}>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: Brand.primary }]}
-                onPress={handleOpenAssignModal}
-              >
-                <Car size={20} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Araca Ata</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: '#f59e0b' }]}
-                onPress={handleOpenMaintenanceModal}
-              >
-                <Wrench size={20} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Bakım Ekle</Text>
-              </TouchableOpacity>
+        {/* Loading */}
+        {isLoading && (
+          <View style={styles.skeletonContainer}>
+            {[1, 2, 3].map(i => (
+              <View key={i} style={styles.card}>
+                <View style={styles.sectionHeader}>
+                  <Skeleton width={140} height={20} />
+                </View>
+                <View style={styles.cardContent}>
+                  <Skeleton width="100%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="80%" height={16} style={{ marginBottom: 8 }} />
+                  <Skeleton width="60%" height={16} />
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Hata */}
+        {!isLoading && (error || !tire) && (
+          <View style={styles.errorState}>
+            <View style={styles.errorIcon}>
+              <Ionicons name="alert-circle" size={48} color={DashboardColors.danger} />
+            </View>
+            <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+            <Text style={styles.errorText}>{error || 'Lastik bulunamadı'}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => fetchTire()}>
+              <Ionicons name="refresh" size={18} color="#fff" />
+              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Normal içerik */}
+        {!isLoading && tire && (
+          <>
+            {/* Lastik Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Lastik Bilgileri" icon="disc-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Seri Numarası"
+                  value={tire.serial_number}
+                  icon="barcode-outline"
+                  highlight
+                />
+                <InfoRow
+                  label="Marka"
+                  value={tire.brand}
+                  icon="business-outline"
+                />
+                <InfoRow
+                  label="Model"
+                  value={tire.model}
+                  icon="pricetag-outline"
+                />
+                <InfoRow
+                  label="Ebat"
+                  value={tire.size}
+                  icon="resize-outline"
+                />
+                <InfoRow
+                  label="Lastik Tipi"
+                  value={getTireTypeLabel(tire.tire_type)}
+                  icon="snow-outline"
+                />
+                <InfoRow
+                  label="Durum"
+                  value={getTireConditionLabel(tire.condition)}
+                  icon="checkmark-circle-outline"
+                />
+                {tire.tread_depth !== null && (
+                  <InfoRow
+                    label="Diş Derinliği"
+                    value={`${tire.tread_depth} mm${tire.tread_depth <= 3.0 ? ' ⚠️' : ''}`}
+                    icon="speedometer-outline"
+                    highlight={tire.tread_depth <= 3.0}
+                  />
+                )}
+                {tire.dot_code && (
+                  <InfoRow
+                    label="DOT Kodu"
+                    value={tire.dot_code}
+                    icon="qr-code-outline"
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* Satın Alma Bilgileri */}
+            {(tire.purchase_date || tire.purchase_price || tire.supplier) && (
+              <View style={styles.card}>
+                <SectionHeader title="Satın Alma Bilgileri" icon="cash-outline" />
+                <View style={styles.cardContent}>
+                  {tire.purchase_date && (
+                    <InfoRow
+                      label="Satın Alma Tarihi"
+                      value={formatDate(tire.purchase_date)}
+                      icon="calendar-outline"
+                    />
+                  )}
+                  {tire.purchase_price && (
+                    <InfoRow
+                      label="Satın Alma Fiyatı"
+                      value={formatCurrency(tire.purchase_price, 'TRY')}
+                      icon="wallet-outline"
+                    />
+                  )}
+                  {tire.supplier && (
+                    <InfoRow
+                      label="Tedarikçi"
+                      value={tire.supplier}
+                      icon="people-outline"
+                    />
+                  )}
+                </View>
               </View>
             )}
 
-            <Card style={styles.card}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Temel Bilgiler</Text>
+            {/* Depo Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Depo Bilgileri" icon="location-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Durum"
+                  value={getTireStatusLabel(tire.status)}
+                  icon="git-branch-outline"
+                />
+                {tire.warehouse_location && (
+                  <InfoRow
+                    label="Depo Konumu"
+                    value={tire.warehouse_location}
+                    icon="navigate-outline"
+                  />
+                )}
+                {tire.current_assignment?.vehicle && (
+                  <>
+                    <InfoRow
+                      label="Atandığı Araç"
+                      value={tire.current_assignment.vehicle.plate}
+                      icon="car-outline"
+                    />
+                    {tire.current_assignment.position && (
+                      <InfoRow
+                        label="Pozisyon"
+                        value={tire.current_assignment.position}
+                        icon="locate-outline"
+                      />
+                    )}
+                  </>
+                )}
+              </View>
+            </View>
 
-            <Input
-              label="Seri Numarası *"
-              placeholder="Örn: TIRE-2024-001"
-              value={formData.serial_number}
-              onChangeText={(text) => handleInputChange('serial_number', text)}
-              error={errors.serial_number}
-              maxLength={255}
-            />
+            {/* Notlar */}
+            {tire.notes && (
+              <View style={styles.card}>
+                <SectionHeader title="Notlar" icon="document-text-outline" />
+                <View style={styles.cardContent}>
+                  <Text style={styles.descriptionText}>{tire.notes}</Text>
+                </View>
+              </View>
+            )}
 
-            <Input
-              label="Marka *"
-              placeholder="Örn: Michelin, Bridgestone"
-              value={formData.brand}
-              onChangeText={(text) => handleInputChange('brand', text)}
-              error={errors.brand}
-              maxLength={255}
-            />
+            {/* Sistem Bilgileri */}
+            <View style={styles.card}>
+              <SectionHeader title="Sistem Bilgileri" icon="time-outline" />
+              <View style={styles.cardContent}>
+                <InfoRow
+                  label="Oluşturulma"
+                  value={formatDate(tire.created_at)}
+                  icon="add-circle-outline"
+                />
+                <InfoRow
+                  label="Son Güncelleme"
+                  value={formatDate(tire.updated_at)}
+                  icon="refresh-outline"
+                />
+              </View>
+            </View>
 
-            <Input
-              label="Model *"
-              placeholder="Örn: XZE2+"
-              value={formData.model}
-              onChangeText={(text) => handleInputChange('model', text)}
-              error={errors.model}
-              maxLength={255}
-            />
+            {/* Alt boşluk */}
+            <View style={{ height: insets.bottom + DashboardSpacing['3xl'] }} />
+          </>
+        )}
+      </ScrollView>
 
-            <Input
-              label="Ebat *"
-              placeholder="Örn: 315/80 R 22.5"
-              value={formData.size}
-              onChangeText={(text) => handleInputChange('size', text)}
-              error={errors.size}
-              maxLength={255}
-            />
-
-            <SelectInput
-              label="Lastik Tipi *"
-              options={TIRE_TYPE_OPTIONS}
-              selectedValue={formData.tire_type}
-              onValueChange={(val) => handleInputChange('tire_type', val)}
-              error={errors.tire_type}
-            />
-
-            <SelectInput
-              label="Durum"
-              options={CONDITION_OPTIONS}
-              selectedValue={formData.condition}
-              onValueChange={(val) => handleInputChange('condition', val)}
-              error={errors.condition}
-            />
-
-            <Input
-              label="Diş Derinliği (mm)"
-              placeholder="Örn: 15.5"
-              value={formData.tread_depth || ''}
-              onChangeText={(text) => handleInputChange('tread_depth', text)}
-              error={errors.tread_depth}
-              keyboardType="decimal-pad"
-            />
-
-            <Input
-              label="DOT Kodu"
-              placeholder="Üretim kodu (opsiyonel)"
-              value={formData.dot_code || ''}
-              onChangeText={(text) => handleInputChange('dot_code', text)}
-              error={errors.dot_code}
-              maxLength={255}
-            />
-            </Card>
-
-            <Card style={styles.card}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Satın Alma Bilgileri</Text>
-
-            <DateInput
-              label="Satın Alma Tarihi"
-              value={formData.purchase_date || ''}
-              onChangeDate={(date) => handleInputChange('purchase_date', date)}
-              error={errors.purchase_date}
-            />
-
-            <Input
-              label="Satın Alma Fiyatı (TL)"
-              placeholder="Örn: 5000"
-              value={formData.purchase_price || ''}
-              onChangeText={(text) => handleInputChange('purchase_price', text)}
-              error={errors.purchase_price}
-              keyboardType="decimal-pad"
-            />
-
-            <Input
-              label="Tedarikçi"
-              placeholder="Tedarikçi adı (opsiyonel)"
-              value={formData.supplier || ''}
-              onChangeText={(text) => handleInputChange('supplier', text)}
-              error={errors.supplier}
-              maxLength={255}
-            />
-            </Card>
-
-            <Card style={styles.card}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Depo Bilgileri</Text>
-
-            <Input
-              label="Depo Konumu"
-              placeholder="Örn: Raf A1, Bölüm 3"
-              value={formData.warehouse_location || ''}
-              onChangeText={(text) => handleInputChange('warehouse_location', text)}
-              error={errors.warehouse_location}
-              maxLength={255}
-            />
-
-            <Input
-              label="Notlar"
-              placeholder="İsteğe bağlı notlar"
-              value={formData.notes || ''}
-              onChangeText={(text) => handleInputChange('notes', text)}
-              error={errors.notes}
-              multiline
-              numberOfLines={3}
-              maxLength={1000}
-            />
-            </Card>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      {/* Delete Confirm Dialog */}
+      {/* Silme Onay Dialogu */}
       <ConfirmDialog
-        visible={showDeleteDialog}
+        ref={deleteDialogRef}
         title="Lastiği Sil"
-        message={
-          tire
-            ? `${tire.serial_number} seri numaralı lastiği silmek istediğinize emin misiniz?`
-            : 'Bu lastiği silmek istediğinize emin misiniz?'
-        }
+        message={tire ? `${tire.serial_number} seri numaralı lastiği silmek istediğinizden emin misiniz?` : 'Bu lastiği silmek istediğinizden emin misiniz?'}
+        type="danger"
         confirmText="Sil"
         cancelText="İptal"
-        isDangerous
-        isLoading={isDeleting}
         onConfirm={confirmDelete}
-        onCancel={() => setShowDeleteDialog(false)}
+        isLoading={isDeleting}
       />
-
-      {/* Tire Assign Modal */}
-      <TireAssignModal
-        ref={assignModalRef}
-        vehicles={vehicles}
-        onAssign={handleAssignToVehicle}
-      />
-
-      {/* Tire Maintenance Modal */}
-      <TireMaintenanceModal ref={maintenanceModalRef} onAddMaintenance={handleAddMaintenance} />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary
   },
-  keyboardAvoidingView: {
-    flex: 1,
+
+  // Header
+  headerContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    paddingBottom: 24
+  },
+  glowOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
+  },
+  glowOrb2: {
+    position: 'absolute',
+    bottom: 30,
+    left: -50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)'
+  },
+  headerContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: DashboardSpacing.md
   },
   headerButton: {
-    padding: Spacing.sm,
-  },
-  loadingContainer: {
-    flex: 1,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
+    justifyContent: 'center'
   },
-  loadingText: {
-    ...Typography.bodyMD,
+  headerTitleSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    marginHorizontal: DashboardSpacing.md
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm
+  },
+  headerActionsPlaceholder: {
+    width: 96
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)'
+  },
+  headerName: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3,
+    flex: 1
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: DashboardSpacing.md
+  },
+  summary: {
+    flex: 1
+  },
+  summaryLabel: {
+    fontSize: DashboardFontSizes.sm,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: DashboardSpacing.xs
+  },
+  summaryValue: {
+    fontSize: DashboardFontSizes['2xl'],
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    gap: 6
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
+  },
+  statusBadgeText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600',
+    color: '#fff'
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+
+  // İçerik
   content: {
     flex: 1,
+    backgroundColor: DashboardColors.background
   },
   contentContainer: {
-    padding: Spacing.lg,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md
   },
-  formWrapper: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 32,
-    ...Shadows.lg,
-    overflow: 'hidden',
-    padding: Spacing.lg,
+
+  // Kartlar
+  card: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.sm
   },
-  actionButtonsRow: {
+  cardContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg
+  },
+
+  // Bölüm Başlığı
+  sectionHeader: {
     flexDirection: 'row',
-    gap: Spacing.md,
-    marginBottom: Spacing.md,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
   },
-  actionButton: {
-    flex: 1,
+  sectionHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    gap: DashboardSpacing.sm
   },
-  actionButtonText: {
-    color: '#FFFFFF',
-    ...Typography.bodyMD,
-    fontWeight: '600',
-  },
-  card: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    marginBottom: Spacing.md,
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
-    ...Typography.headingMD,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary
   },
-});
+  countBadge: {
+    backgroundColor: DashboardColors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10
+  },
+  countText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600',
+    color: '#fff'
+  },
+
+  // Bilgi Satırı
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: DashboardSpacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight
+  },
+  infoLabel: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  infoIcon: {
+    marginRight: DashboardSpacing.sm
+  },
+  infoLabelText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
+  },
+  infoValue: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textPrimary,
+    maxWidth: '50%',
+    textAlign: 'right'
+  },
+  infoValueHighlight: {
+    color: DashboardColors.primary,
+    fontWeight: '600'
+  },
+
+  // Açıklama
+  descriptionText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    lineHeight: 22
+  },
+
+  // Skeleton
+  skeletonContainer: {
+    gap: DashboardSpacing.md
+  },
+
+  // Hata durumu
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingVertical: DashboardSpacing['3xl']
+  },
+  errorIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: DashboardColors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  errorTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: DashboardSpacing.xl
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.danger,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg
+  },
+  retryButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#fff'
+  }
+})

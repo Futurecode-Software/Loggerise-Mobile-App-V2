@@ -65,7 +65,8 @@
       "Bash(then echo \"exists\")",
       "Bash(else echo \"not found\")",
       "Bash(git commit:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git restore:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

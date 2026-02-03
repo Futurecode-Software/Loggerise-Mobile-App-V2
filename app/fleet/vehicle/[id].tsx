@@ -21,7 +21,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -159,10 +160,10 @@ export default function VehicleDetailScreen() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabId>('info')
   const [isDeleting, setIsDeleting] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Memory leak önleme
   const isMountedRef = useRef(true)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
 
   // Veri çekme fonksiyonu - useCallback ile
   const fetchData = useCallback(async (showLoading = true) => {
@@ -207,7 +208,7 @@ export default function VehicleDetailScreen() {
 
   const handleDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    setShowDeleteConfirm(true)
+    deleteDialogRef.current?.present()
   }
 
   const handleConfirmDelete = async () => {
@@ -215,13 +216,14 @@ export default function VehicleDetailScreen() {
     setIsDeleting(true)
     try {
       await deleteVehicle(parseInt(id, 10))
+      deleteDialogRef.current?.dismiss()
       Toast.show({
         type: 'success',
-        text1: 'Araç silindi',
+        text1: 'Araç başarıyla silindi',
         position: 'top',
         visibilityTime: 1500
       })
-      router.back()
+      setTimeout(() => router.back(), 300)
     } catch (err) {
       Toast.show({
         type: 'error',
@@ -231,7 +233,6 @@ export default function VehicleDetailScreen() {
       })
     } finally {
       setIsDeleting(false)
-      setShowDeleteConfirm(false)
     }
   }
 
@@ -856,15 +857,14 @@ export default function VehicleDetailScreen() {
 
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
-        visible={showDeleteConfirm}
+        ref={deleteDialogRef}
         title="Aracı Sil"
         message="Bu aracı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        type="danger"
         confirmText="Sil"
         cancelText="İptal"
-        isDangerous
         isLoading={isDeleting}
         onConfirm={handleConfirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
       />
     </View>
   )
