@@ -271,18 +271,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     try {
-      console.log('🔄 getCurrentUser API çağrısı yapılıyor...');
       const currentUser = await getCurrentUser();
-      console.log('✅ API yanıtı alındı:', {
-        id: currentUser.id,
-        name: currentUser.name,
-        email: currentUser.email,
-        avatar: currentUser.avatar
-      });
       setUser(transformUser(currentUser));
-      console.log('✅ User state güncellendi');
     } catch (err) {
-      console.error('❌ Refresh user error:', err);
+      console.error('Refresh user error:', err);
     }
   };
 
