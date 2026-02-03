@@ -24,7 +24,7 @@ interface MessageProviderProps {
 }
 
 export function MessageProvider({ children }: MessageProviderProps) {
-  const { isAuthenticated, isInitializing } = useAuth();
+  const { isAuthenticated, isInitializing, isSetupComplete } = useAuth();
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -84,20 +84,22 @@ export function MessageProvider({ children }: MessageProviderProps) {
     setUnreadCount((prev) => Math.max(0, prev - amount));
   }, []);
 
-  // Initialize when user is authenticated - only run once when auth state changes to true
+  // Initialize when user is authenticated AND setup is complete
+  // Only run once when auth state changes to true
   const hasInitializedRef = React.useRef(false);
 
   useEffect(() => {
-    if (isAuthenticated && !isInitializing && !hasInitializedRef.current) {
+    // Only fetch if authenticated, setup complete, and not already initialized
+    if (isAuthenticated && !isInitializing && isSetupComplete && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
       refreshUnreadCount();
     }
-    // Reset flag on logout
+    // Reset flag on logout or when setup is not complete
     if (!isAuthenticated && !isInitializing) {
       hasInitializedRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, isInitializing]);
+  }, [isAuthenticated, isInitializing, isSetupComplete]);
 
   // Clear on logout
   useEffect(() => {

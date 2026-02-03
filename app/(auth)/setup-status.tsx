@@ -57,7 +57,7 @@ interface SetupStep {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 export default function SetupStatus() {
-  const { logout, isAuthenticated } = useAuth()
+  const { logout, isAuthenticated, refreshSetupStatus } = useAuth()
   const { onRefresh: refreshDashboard } = useDashboard()
 
   const shouldStopPolling = useRef(false)
@@ -217,6 +217,10 @@ export default function SetupStatus() {
     setStatusMessage('Dashboard verileri yükleniyor...')
 
     try {
+      // Önce auth context'teki setup durumunu güncelle
+      // Bu sayede dashboard context isSetupComplete=true görecek
+      await refreshSetupStatus()
+
       // Dashboard verilerini yükle
       await refreshDashboard()
 
@@ -233,7 +237,7 @@ export default function SetupStatus() {
     } finally {
       setIsLoadingDashboard(false)
     }
-  }, [refreshDashboard])
+  }, [refreshSetupStatus, refreshDashboard])
 
   useEffect(() => {
     if (!isAuthenticated) {

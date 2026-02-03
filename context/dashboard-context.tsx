@@ -171,7 +171,7 @@ export const useDashboard = () => {
  */
 export const DashboardProvider = ({ children }: { children: ReactNode }) => {
   // Auth state'i al
-  const { isAuthenticated, isInitializing } = useAuth()
+  const { isAuthenticated, isInitializing, isSetupComplete } = useAuth()
 
   // Erisebilir dashboard'lar state'i
   const [availableDashboards, setAvailableDashboards] =
@@ -349,9 +349,9 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     hrStats,
   ])
 
-  // Tum verileri yenile - sadece giris yapilmissa
+  // Tum verileri yenile - sadece giris yapilmis ve setup tamamlanmissa
   const onRefresh = useCallback(async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !isSetupComplete) {
       return
     }
 
@@ -376,7 +376,7 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     await fetchTabData(activeTab, true)
 
     setRefreshing(false)
-  }, [fetchAvailableDashboards, fetchBasicStats, fetchTabData, activeTab, isAuthenticated])
+  }, [fetchAvailableDashboards, fetchBasicStats, fetchTabData, activeTab, isAuthenticated, isSetupComplete])
 
   // Kullanici cikis yaptiginda tum verileri temizle
   useEffect(() => {
@@ -401,24 +401,24 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isAuthenticated, isInitializing])
 
-  // Ilk veri yuklemesi - sadece giris yapilmissa
+  // Ilk veri yuklemesi - sadece giris yapilmis ve setup tamamlanmissa
   useEffect(() => {
-    // Henuz initialize ediliyorsa veya giris yapilmamissa getirme
-    if (isInitializing || !isAuthenticated) {
+    // Henuz initialize ediliyorsa, giris yapilmamissa veya setup tamamlanmamissa getirme
+    if (isInitializing || !isAuthenticated || !isSetupComplete) {
       return
     }
 
     setIsLoadingAvailable(true)
     fetchAvailableDashboards()
     fetchBasicStats()
-  }, [fetchAvailableDashboards, fetchBasicStats, isAuthenticated, isInitializing])
+  }, [fetchAvailableDashboards, fetchBasicStats, isAuthenticated, isInitializing, isSetupComplete])
 
-  // Aktif tab degistiginde tab verisini yukle - sadece giris yapilmissa
+  // Aktif tab degistiginde tab verisini yukle - sadece giris yapilmis ve setup tamamlanmissa
   useEffect(() => {
-    if (!isLoadingAvailable && availableDashboards[activeTab] && isAuthenticated) {
+    if (!isLoadingAvailable && availableDashboards[activeTab] && isAuthenticated && isSetupComplete) {
       fetchTabData(activeTab)
     }
-  }, [activeTab, isLoadingAvailable, availableDashboards, fetchTabData, isAuthenticated])
+  }, [activeTab, isLoadingAvailable, availableDashboards, fetchTabData, isAuthenticated, isSetupComplete])
 
   const value = useMemo(
     () => ({

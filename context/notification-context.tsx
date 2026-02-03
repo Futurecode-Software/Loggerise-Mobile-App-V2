@@ -28,7 +28,7 @@ interface NotificationProviderProps {
 }
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
-  const { isAuthenticated, isInitializing } = useAuth();
+  const { isAuthenticated, isInitializing, isSetupComplete } = useAuth();
   const {
     initialize,
     pushToken,
@@ -50,18 +50,18 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     initializeRef.current = initialize;
   }, [initialize]);
 
-  // Initialize notifications when user is authenticated - only once
+  // Initialize notifications when user is authenticated AND setup is complete - only once
   const hasInitializedRef = useRef(false);
   useEffect(() => {
-    if (isAuthenticated && !isInitializing && !isInitialized && !hasInitializedRef.current) {
+    if (isAuthenticated && !isInitializing && isSetupComplete && !isInitialized && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
       initializeRef.current();
     }
-    // Reset on logout
+    // Reset on logout or when setup is not complete
     if (!isAuthenticated && !isInitializing) {
       hasInitializedRef.current = false;
     }
-  }, [isAuthenticated, isInitializing, isInitialized]);
+  }, [isAuthenticated, isInitializing, isSetupComplete, isInitialized]);
 
   // Ref to store clearNotifications to avoid re-triggering useEffect
   const clearNotificationsRef = useRef(clearNotifications);

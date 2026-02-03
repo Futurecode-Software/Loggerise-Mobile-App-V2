@@ -70,6 +70,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
   refreshUser: () => Promise<void>;
+  refreshSetupStatus: () => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -291,6 +292,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   /**
+   * Refresh setup status from API
+   * Returns true if setup is complete, false otherwise
+   */
+  const refreshSetupStatus = async (): Promise<boolean> => {
+    try {
+      const setupStatus = await checkSetupStatus();
+      const isComplete = setupStatus.is_setup_complete;
+      setIsSetupComplete(isComplete);
+      return isComplete;
+    } catch (err) {
+      console.error('Refresh setup status error:', err);
+      // Hata durumunda true dön (erişime izin ver)
+      setIsSetupComplete(true);
+      return true;
+    }
+  };
+
+  /**
    * Clear error state
    */
   const clearError = () => {
@@ -312,6 +331,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         forgotPassword,
         refreshUser,
+        refreshSetupStatus,
         clearError,
       }}
     >
