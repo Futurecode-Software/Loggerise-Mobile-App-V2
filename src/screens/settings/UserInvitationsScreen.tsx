@@ -1,4 +1,11 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+/**
+ * Kullanıcı Davetleri Ekranı
+ *
+ * CLAUDE.md standartlarına uygun modern tasarım
+ * PageHeader, animasyonlu kartlar, skeleton, ConfirmDialog
+ */
+
+import React, { useState, useCallback, useRef, useMemo } from 'react'
 import {
   View,
   Text,
@@ -8,241 +15,119 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  Alert,
-} from 'react-native';
+  Pressable
+} from 'react-native'
 import {
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
-  useBottomSheetSpringConfigs,
-} from '@gorhom/bottom-sheet';
-import { router, useFocusEffect } from 'expo-router';
+  useBottomSheetSpringConfigs
+} from '@gorhom/bottom-sheet'
+import { router, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring
+} from 'react-native-reanimated'
+import Toast from 'react-native-toast-message'
+import { PageHeader } from '@/components/navigation'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import { userManagementService } from '../../services/api/userManagementService'
 import {
-  ArrowLeft,
-  Plus,
-  Mail,
-  Clock,
-  RefreshCw,
-  X,
-  Check,
-  Info,
-} from 'lucide-react-native';
-import { FullScreenHeader } from '@/components/header';
-import { userManagementService } from '../../services/api/userManagementService';
-import { Colors, Spacing, Typography, BorderRadius, Shadows, Brand } from '@/constants/theme';
-import { Invitation, Role } from '../../types/user';
+  DashboardColors,
+  DashboardSpacing,
+  DashboardBorderRadius,
+  DashboardFontSizes,
+  DashboardShadows,
+  DashboardAnimations
+} from '@/constants/dashboard-theme'
+import { Invitation, Role } from '../../types/user'
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 const ROLE_LABELS: Record<string, string> = {
   'Süper Yönetici': 'Süper Yönetici',
   'İK Müdürü': 'İK Müdürü',
   'Lojistik Müdürü': 'Lojistik Müdürü',
   'Lojistik Operatörü': 'Lojistik Operatörü',
-  'Muhasebeci': 'Muhasebeci',
-};
+  'Muhasebeci': 'Muhasebeci'
+}
 
-// Use colors from theme
-const colors = Colors.light;
+// Skeleton Component
+function InvitationCardSkeleton(): React.ReactElement {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Skeleton width={48} height={48} borderRadius={12} />
+        <View style={{ flex: 1, marginLeft: DashboardSpacing.md }}>
+          <Skeleton width={180} height={18} />
+          <Skeleton width={120} height={14} style={{ marginTop: 4 }} />
+        </View>
+      </View>
+      <View style={styles.rolesContainer}>
+        <Skeleton width={80} height={24} borderRadius={12} />
+        <Skeleton width={100} height={24} borderRadius={12} />
+      </View>
+      <View style={styles.statusContainer}>
+        <Skeleton width={80} height={24} borderRadius={12} />
+        <Skeleton width={120} height={14} />
+      </View>
+      <View style={styles.actionsContainer}>
+        <Skeleton width="48%" height={40} borderRadius={8} />
+        <Skeleton width="48%" height={40} borderRadius={8} />
+      </View>
+    </View>
+  )
+}
 
-export const UserInvitationsScreen: React.FC = () => {
-  // Refs
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
+// Card Component
+interface InvitationCardProps {
+  item: Invitation
+  onResend: () => void
+  onCancel: () => void
+}
 
-  // State
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [sending, setSending] = useState(false);
+function InvitationCard({ item, onResend, onCancel }: InvitationCardProps): React.ReactElement {
+  const scale = useSharedValue(1)
+  const isExpired = item.is_expired
 
-  // Invite form state
-  const [emails, setEmails] = useState('');
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }))
 
-  // Bottom Sheet Configuration
-  const snapPoints = useMemo(() => ['90%'], []);
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy)
+  }
 
-  const animationConfigs = useBottomSheetSpringConfigs({
-    damping: 80,
-    overshootClamping: true,
-    restDisplacementThreshold: 0.1,
-    restSpeedThreshold: 0.1,
-    stiffness: 500,
-  });
+  const handlePressOut = () => {
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
 
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    []
-  );
-
-  // Load invitations
-  const loadInvitations = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await userManagementService.getInvitations();
-      setInvitations(data);
-    } catch (error) {
-      console.error('Error loading invitations:', error);
-      Alert.alert('Hata', 'Davetler yüklenirken bir hata oluştu.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  // Load roles
-  const loadRoles = useCallback(async () => {
-    try {
-      const rolesData = await userManagementService.getRoles();
-      setRoles(rolesData);
-    } catch (error) {
-      console.error('Error loading roles:', error);
-    }
-  }, []);
-
-  // Initial load
-  useFocusEffect(
-    useCallback(() => {
-      loadInvitations();
-      loadRoles();
-    }, [loadInvitations, loadRoles])
-  );
-
-  // Refresh
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadInvitations();
-  }, [loadInvitations]);
-
-  // Resend invitation
-  const handleResend = useCallback(
-    (invitation: Invitation) => {
-      Alert.alert(
-        'Daveti Yeniden Gönder',
-        `${invitation.email} adresine daveti yeniden göndermek istediğinize emin misiniz?`,
-        [
-          { text: 'İptal', style: 'cancel' },
-          {
-            text: 'Gönder',
-            onPress: async () => {
-              try {
-                await userManagementService.resendInvitation(invitation.id);
-                Alert.alert('Başarılı', 'Davet yeniden gönderildi.');
-                loadInvitations();
-              } catch (error: any) {
-                Alert.alert(
-                  'Hata',
-                  error?.response?.data?.message || 'Davet gönderilemedi.'
-                );
-              }
-            },
-          },
-        ]
-      );
-    },
-    [loadInvitations]
-  );
-
-  // Cancel invitation
-  const handleCancel = useCallback(
-    (invitation: Invitation) => {
-      Alert.alert(
-        'Daveti İptal Et',
-        `${invitation.email} adresine gönderilen daveti iptal etmek istediğinize emin misiniz?`,
-        [
-          { text: 'Vazgeç', style: 'cancel' },
-          {
-            text: 'İptal Et',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await userManagementService.cancelInvitation(invitation.id);
-                Alert.alert('Başarılı', 'Davet iptal edildi.');
-                loadInvitations();
-              } catch (error: any) {
-                Alert.alert(
-                  'Hata',
-                  error?.response?.data?.message || 'Davet iptal edilemedi.'
-                );
-              }
-            },
-          },
-        ]
-      );
-    },
-    [loadInvitations]
-  );
-
-  // Toggle role selection
-  const toggleRole = useCallback((roleName: string) => {
-    setSelectedRoles(prev =>
-      prev.includes(roleName)
-        ? prev.filter(r => r !== roleName)
-        : [...prev, roleName]
-    );
-  }, []);
-
-  // Modal dismiss handler
-  const handleDismiss = useCallback(() => {
-    setTimeout(() => {
-      setEmails('');
-      setSelectedRoles([]);
-    }, 200);
-  }, []);
-
-  // Send invitation
-  const handleSendInvitation = useCallback(async () => {
-    if (!emails.trim()) {
-      Alert.alert('Hata', 'En az bir e-posta adresi giriniz.');
-      return;
-    }
-
-    if (selectedRoles.length === 0) {
-      Alert.alert('Hata', 'En az bir rol seçmelisiniz.');
-      return;
-    }
-
-    setSending(true);
-    try {
-      await userManagementService.sendInvitation({
-        emails,
-        roles: selectedRoles,
-      });
-
-      Alert.alert('Başarılı', 'Davet(ler) başarıyla gönderildi.');
-      bottomSheetRef.current?.dismiss();
-      loadInvitations();
-    } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message || 'Davet gönderilemedi.';
-      Alert.alert('Hata', errorMessage);
-    } finally {
-      setSending(false);
-    }
-  }, [emails, selectedRoles, loadInvitations]);
-
-  // Render invitation item
-  const renderInvitationItem = ({ item }: { item: Invitation }) => (
-    <View style={styles.invitationCard}>
-      <View style={styles.invitationHeader}>
-        {item.is_expired ? (
-          <Clock size={24} color={colors.danger} />
-        ) : (
-          <Mail size={24} color={colors.info} />
-        )}
-        <View style={styles.invitationInfo}>
-          <Text style={styles.invitationEmail}>{item.email}</Text>
-          <Text style={styles.invitationMeta}>
-            {item.invited_by} tarafından davet edildi
-          </Text>
+  return (
+    <AnimatedPressable
+      style={[styles.card, animStyle]}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      {/* Header */}
+      <View style={styles.cardHeader}>
+        <View style={[
+          styles.cardIcon,
+          { backgroundColor: isExpired ? DashboardColors.dangerBg : DashboardColors.infoBg }
+        ]}>
+          <Ionicons
+            name={isExpired ? 'time-outline' : 'mail-outline'}
+            size={24}
+            color={isExpired ? DashboardColors.danger : DashboardColors.info}
+          />
+        </View>
+        <View style={styles.cardHeaderContent}>
+          <Text style={styles.cardEmail} numberOfLines={1}>{item.email}</Text>
+          <Text style={styles.cardMeta}>{item.invited_by} tarafından davet edildi</Text>
         </View>
       </View>
 
@@ -257,22 +142,17 @@ export const UserInvitationsScreen: React.FC = () => {
 
       {/* Status */}
       <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusBadge,
-            item.is_expired ? styles.expiredBadge : styles.pendingBadge,
-          ]}
-        >
-          <Text
-            style={[
-              styles.statusText,
-              item.is_expired ? styles.expiredText : styles.pendingText,
-            ]}
-          >
-            {item.is_expired ? 'Süresi Dolmuş' : 'Bekliyor'}
+        <View style={[
+          styles.statusBadge,
+          isExpired ? styles.expiredBadge : styles.pendingBadge
+        ]}>
+          <Text style={[
+            styles.statusText,
+            isExpired ? styles.expiredText : styles.pendingText
+          ]}>
+            {isExpired ? 'Süresi Dolmuş' : 'Bekliyor'}
           </Text>
         </View>
-
         <Text style={styles.expiresText}>
           Son geçerlilik: {new Date(item.expires_at).toLocaleDateString('tr-TR')}
         </Text>
@@ -280,72 +160,369 @@ export const UserInvitationsScreen: React.FC = () => {
 
       {/* Actions */}
       <View style={styles.actionsContainer}>
-        {!item.is_expired && (
+        {!isExpired && (
           <TouchableOpacity
             style={[styles.actionButton, styles.resendButton]}
-            onPress={() => handleResend(item)}
+            onPress={onResend}
+            activeOpacity={0.7}
           >
-            <RefreshCw size={16} color={colors.success} />
+            <Ionicons name="refresh-outline" size={16} color={DashboardColors.success} />
             <Text style={styles.resendButtonText}>Yeniden Gönder</Text>
           </TouchableOpacity>
         )}
-
         <TouchableOpacity
-          style={[styles.actionButton, styles.cancelButton]}
-          onPress={() => handleCancel(item)}
+          style={[
+            styles.actionButton,
+            styles.cancelButton,
+            !isExpired && { flex: 1 }
+          ]}
+          onPress={onCancel}
+          activeOpacity={0.7}
         >
-          <X size={16} color={colors.danger} />
+          <Ionicons name="close-outline" size={16} color={DashboardColors.danger} />
           <Text style={styles.cancelButtonText}>İptal Et</Text>
         </TouchableOpacity>
       </View>
-    </View>
-  );
+    </AnimatedPressable>
+  )
+}
 
-  // Empty state
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Mail size={80} color={colors.textMuted} />
+// Empty State
+function EmptyState(): React.ReactElement {
+  return (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="mail-outline" size={64} color={DashboardColors.textMuted} />
+      </View>
       <Text style={styles.emptyTitle}>Bekleyen davet yok</Text>
-      <Text style={styles.emptyDescription}>
-        Kullanıcı davet ederek başlayın
+      <Text style={styles.emptyText}>
+        Kullanıcı davet etmek için sağ üstteki + butonuna tıklayın.
       </Text>
     </View>
-  );
+  )
+}
+
+export function UserInvitationsScreen(): React.ReactElement {
+  // Refs
+  const bottomSheetRef = useRef<BottomSheetModal>(null)
+  const confirmDialogRef = useRef<BottomSheetModal>(null)
+  const isMountedRef = useRef(true)
+
+  // State
+  const [invitations, setInvitations] = useState<Invitation[]>([])
+  const [roles, setRoles] = useState<Role[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [sending, setSending] = useState(false)
+
+  // Invite form state
+  const [emails, setEmails] = useState('')
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([])
+
+  // Confirm dialog state
+  const [confirmDialogConfig, setConfirmDialogConfig] = useState<{
+    title: string
+    message: string
+    type: 'danger' | 'warning'
+    confirmText: string
+    onConfirm: () => Promise<void>
+  } | null>(null)
+  const [isConfirmLoading, setIsConfirmLoading] = useState(false)
+
+  // Bottom Sheet Configuration
+  const snapPoints = useMemo(() => ['92%'], [])
+
+  const animationConfigs = useBottomSheetSpringConfigs({
+    damping: 80,
+    overshootClamping: true,
+    restDisplacementThreshold: 0.1,
+    restSpeedThreshold: 0.1,
+    stiffness: 500
+  })
+
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    []
+  )
+
+  // Load invitations
+  const loadInvitations = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setIsLoading(true)
+    }
+
+    try {
+      const data = await userManagementService.getInvitations()
+      if (isMountedRef.current) {
+        setInvitations(data)
+      }
+    } catch (error) {
+      console.error('Error loading invitations:', error)
+      if (isMountedRef.current) {
+        Toast.show({
+          type: 'error',
+          text1: 'Hata',
+          text2: 'Davetler yüklenirken bir hata oluştu',
+          position: 'top',
+          visibilityTime: 1500
+        })
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
+    }
+  }, [])
+
+  // Load roles
+  const loadRoles = useCallback(async () => {
+    try {
+      const rolesData = await userManagementService.getRoles()
+      if (isMountedRef.current) {
+        setRoles(rolesData)
+      }
+    } catch (error) {
+      console.error('Error loading roles:', error)
+    }
+  }, [])
+
+  // Initial load and focus effect
+  useFocusEffect(
+    useCallback(() => {
+      isMountedRef.current = true
+      loadInvitations()
+      loadRoles()
+
+      return () => {
+        isMountedRef.current = false
+      }
+    }, [loadInvitations, loadRoles])
+  )
+
+  // Refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    loadInvitations(false)
+  }, [loadInvitations])
+
+  // Resend invitation
+  const handleResend = useCallback((invitation: Invitation) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    setConfirmDialogConfig({
+      title: 'Daveti Yeniden Gönder',
+      message: `${invitation.email} adresine daveti yeniden göndermek istediğinize emin misiniz?`,
+      type: 'warning',
+      confirmText: 'Gönder',
+      onConfirm: async () => {
+        setIsConfirmLoading(true)
+        try {
+          await userManagementService.resendInvitation(invitation.id)
+          confirmDialogRef.current?.dismiss()
+          Toast.show({
+            type: 'success',
+            text1: 'Başarılı',
+            text2: 'Davet yeniden gönderildi',
+            position: 'top',
+            visibilityTime: 1500
+          })
+          loadInvitations(false)
+        } catch (error: unknown) {
+          const errorMessage = error && typeof error === 'object' && 'response' in error
+            ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+            : 'Davet gönderilemedi'
+          Toast.show({
+            type: 'error',
+            text1: 'Hata',
+            text2: errorMessage || 'Davet gönderilemedi',
+            position: 'top',
+            visibilityTime: 1500
+          })
+        } finally {
+          setIsConfirmLoading(false)
+        }
+      }
+    })
+    confirmDialogRef.current?.present()
+  }, [loadInvitations])
+
+  // Cancel invitation
+  const handleCancel = useCallback((invitation: Invitation) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    setConfirmDialogConfig({
+      title: 'Daveti İptal Et',
+      message: `${invitation.email} adresine gönderilen daveti iptal etmek istediğinize emin misiniz?`,
+      type: 'danger',
+      confirmText: 'İptal Et',
+      onConfirm: async () => {
+        setIsConfirmLoading(true)
+        try {
+          await userManagementService.cancelInvitation(invitation.id)
+          confirmDialogRef.current?.dismiss()
+          Toast.show({
+            type: 'success',
+            text1: 'Başarılı',
+            text2: 'Davet iptal edildi',
+            position: 'top',
+            visibilityTime: 1500
+          })
+          loadInvitations(false)
+        } catch (error: unknown) {
+          const errorMessage = error && typeof error === 'object' && 'response' in error
+            ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+            : 'Davet iptal edilemedi'
+          Toast.show({
+            type: 'error',
+            text1: 'Hata',
+            text2: errorMessage || 'Davet iptal edilemedi',
+            position: 'top',
+            visibilityTime: 1500
+          })
+        } finally {
+          setIsConfirmLoading(false)
+        }
+      }
+    })
+    confirmDialogRef.current?.present()
+  }, [loadInvitations])
+
+  // Toggle role selection
+  const toggleRole = useCallback((roleName: string) => {
+    setSelectedRoles(prev =>
+      prev.includes(roleName)
+        ? prev.filter(r => r !== roleName)
+        : [...prev, roleName]
+    )
+  }, [])
+
+  // Modal dismiss handler
+  const handleDismiss = useCallback(() => {
+    setTimeout(() => {
+      setEmails('')
+      setSelectedRoles([])
+    }, 200)
+  }, [])
+
+  // Send invitation
+  const handleSendInvitation = useCallback(async () => {
+    if (!emails.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: 'En az bir e-posta adresi giriniz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
+    }
+
+    if (selectedRoles.length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: 'En az bir rol seçmelisiniz',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
+    }
+
+    setSending(true)
+    try {
+      await userManagementService.sendInvitation({
+        emails,
+        roles: selectedRoles
+      })
+
+      Toast.show({
+        type: 'success',
+        text1: 'Başarılı',
+        text2: 'Davet(ler) başarıyla gönderildi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      bottomSheetRef.current?.dismiss()
+      loadInvitations(false)
+    } catch (error: unknown) {
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : 'Davet gönderilemedi'
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: errorMessage || 'Davet gönderilemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setSending(false)
+    }
+  }, [emails, selectedRoles, loadInvitations])
+
+  // Navigation handlers
+  const handleBackPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
+
+  const handleNewPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    bottomSheetRef.current?.present()
+  }
+
+  // Render invitation item
+  const renderInvitationItem = ({ item }: { item: Invitation }) => (
+    <InvitationCard
+      item={item}
+      onResend={() => handleResend(item)}
+      onCancel={() => handleCancel(item)}
+    />
+  )
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <FullScreenHeader
+      <PageHeader
         title="Kullanıcı Davetleri"
+        icon="mail-outline"
         subtitle={`${invitations.length} bekleyen davet`}
         showBackButton
-        rightIcons={
-          <TouchableOpacity
-            onPress={() => bottomSheetRef.current?.present()}
-            activeOpacity={0.7}
-          >
-            <Plus size={22} color="#FFFFFF" />
-          </TouchableOpacity>
-        }
+        onBackPress={handleBackPress}
+        rightAction={{
+          icon: 'add',
+          onPress: handleNewPress
+        }}
       />
 
-      {/* Content Area */}
+      {/* Content */}
       <View style={styles.content}>
-        {loading && !refreshing ? (
-          <ActivityIndicator
-            size="large"
-            color={colors.primary}
-            style={styles.loader}
-          />
+        {isLoading ? (
+          <View style={styles.listContent}>
+            <InvitationCardSkeleton />
+            <InvitationCardSkeleton />
+            <InvitationCardSkeleton />
+          </View>
         ) : (
           <FlatList
             data={invitations}
             renderItem={renderInvitationItem}
             keyExtractor={item => item.id.toString()}
             contentContainerStyle={styles.listContent}
-            ListEmptyComponent={renderEmpty}
+            ListEmptyComponent={<EmptyState />}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={DashboardColors.primary}
+              />
             }
             showsVerticalScrollIndicator={false}
           />
@@ -357,10 +534,10 @@ export const UserInvitationsScreen: React.FC = () => {
         ref={bottomSheetRef}
         index={0}
         snapPoints={snapPoints}
-        enablePanDownToClose={true}
+        enablePanDownToClose
         enableContentPanningGesture={false}
         enableDynamicSizing={false}
-        animateOnMount={true}
+        animateOnMount
         animationConfigs={animationConfigs}
         backdropComponent={renderBackdrop}
         backgroundStyle={styles.modalBackground}
@@ -373,68 +550,73 @@ export const UserInvitationsScreen: React.FC = () => {
         >
           {/* Header */}
           <View style={styles.modalHeader}>
+            <View style={styles.modalHeaderIcon}>
+              <Ionicons name="person-add" size={20} color={DashboardColors.primary} />
+            </View>
             <Text style={styles.modalTitle}>Kullanıcı Davet Et</Text>
+            <TouchableOpacity
+              onPress={() => bottomSheetRef.current?.dismiss()}
+              style={styles.modalCloseButton}
+            >
+              <Ionicons name="close" size={24} color={DashboardColors.textSecondary} />
+            </TouchableOpacity>
           </View>
 
           {/* Body */}
           <View style={styles.modalBody}>
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  E-posta Adresleri <Text style={styles.required}>*</Text>
-                </Text>
-                <TextInput
-                  style={styles.textArea}
-                  placeholder="ornek1@email.com; ornek2@email.com"
-                  placeholderTextColor={colors.textMuted}
-                  value={emails}
-                  onChangeText={setEmails}
-                  multiline
-                  numberOfLines={4}
-                />
-                <Text style={styles.hint}>
-                  Birden fazla e-posta için <Text style={styles.bold}>;</Text> ile
-                  ayırın
-                </Text>
-              </View>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                E-posta Adresleri <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.textArea}
+                placeholder="ornek1@email.com; ornek2@email.com"
+                placeholderTextColor={DashboardColors.textMuted}
+                value={emails}
+                onChangeText={setEmails}
+                multiline
+                numberOfLines={4}
+              />
+              <Text style={styles.hint}>
+                Birden fazla e-posta için <Text style={styles.bold}>;</Text> ile ayırın
+              </Text>
+            </View>
 
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>
-                  Roller <Text style={styles.required}>*</Text>
-                </Text>
-                <View style={styles.rolesSelectContainer}>
-                  {roles.map(role => (
-                    <TouchableOpacity
-                      key={role.id}
-                      style={styles.roleSelectItem}
-                      onPress={() => toggleRole(role.name)}
-                    >
-                      <View
-                        style={[
-                          styles.checkbox,
-                          selectedRoles.includes(role.name) &&
-                            styles.checkboxChecked,
-                        ]}
-                      >
-                        {selectedRoles.includes(role.name) && (
-                          <Check size={16} color="#fff" />
-                        )}
-                      </View>
-                      <Text style={styles.roleSelectText}>
-                        {ROLE_LABELS[role.name] || role.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.infoBox}>
-                <Info size={20} color={colors.info} />
-                <Text style={styles.infoText}>
-                  Davet e-postası 7 gün geçerli olacaktır. Kullanıcı bu süre içinde
-                  kayıt olmalıdır.
-                </Text>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                Roller <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.rolesSelectContainer}>
+                {roles.map(role => (
+                  <TouchableOpacity
+                    key={role.id}
+                    style={styles.roleSelectItem}
+                    onPress={() => toggleRole(role.name)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[
+                      styles.checkbox,
+                      selectedRoles.includes(role.name) && styles.checkboxChecked
+                    ]}>
+                      {selectedRoles.includes(role.name) && (
+                        <Ionicons name="checkmark" size={16} color="#fff" />
+                      )}
+                    </View>
+                    <Text style={styles.roleSelectText}>
+                      {ROLE_LABELS[role.name] || role.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
+
+            <View style={styles.infoBox}>
+              <Ionicons name="information-circle-outline" size={20} color={DashboardColors.info} />
+              <Text style={styles.infoText}>
+                Davet e-postası 7 gün geçerli olacaktır. Kullanıcı bu süre içinde kayıt olmalıdır.
+              </Text>
+            </View>
+          </View>
 
           {/* Footer */}
           <View style={styles.modalFooter}>
@@ -442,6 +624,7 @@ export const UserInvitationsScreen: React.FC = () => {
               style={styles.modalCancelButton}
               onPress={() => bottomSheetRef.current?.dismiss()}
               disabled={sending}
+              activeOpacity={0.7}
             >
               <Text style={styles.modalCancelButtonText}>İptal</Text>
             </TouchableOpacity>
@@ -449,10 +632,11 @@ export const UserInvitationsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.modalSendButton,
-                sending && styles.modalSendButtonDisabled,
+                sending && styles.modalSendButtonDisabled
               ]}
               onPress={handleSendInvitation}
               disabled={sending}
+              activeOpacity={0.7}
             >
               {sending ? (
                 <ActivityIndicator size="small" color="#fff" />
@@ -463,287 +647,341 @@ export const UserInvitationsScreen: React.FC = () => {
           </View>
         </BottomSheetScrollView>
       </BottomSheetModal>
+
+      {/* Confirm Dialog */}
+      {confirmDialogConfig && (
+        <ConfirmDialog
+          ref={confirmDialogRef}
+          title={confirmDialogConfig.title}
+          message={confirmDialogConfig.message}
+          type={confirmDialogConfig.type}
+          confirmText={confirmDialogConfig.confirmText}
+          cancelText="Vazgeç"
+          onConfirm={confirmDialogConfig.onConfirm}
+          onCancel={() => confirmDialogRef.current?.dismiss()}
+          isLoading={isConfirmLoading}
+        />
+      )}
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Brand.primary,
+    backgroundColor: DashboardColors.primary
   },
   content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    ...Shadows.lg,
+    backgroundColor: DashboardColors.background
   },
   listContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing['3xl'],
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing['3xl']
   },
-  invitationCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+
+  // Card
+  card: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    padding: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.md,
+    ...DashboardShadows.md
   },
-  invitationHeader: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: DashboardSpacing.md
   },
-  invitationInfo: {
+  cardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  cardHeaderContent: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: DashboardSpacing.md
   },
-  invitationEmail: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
+  cardEmail: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary,
+    marginBottom: 2
   },
-  invitationMeta: {
-    fontSize: 13,
-    color: colors.textSecondary,
+  cardMeta: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary
   },
+
+  // Roles
   rolesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 12,
+    gap: DashboardSpacing.xs,
+    marginBottom: DashboardSpacing.md
   },
   roleBadge: {
-    backgroundColor: colors.infoLight,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: DashboardColors.infoBg,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.xs,
+    borderRadius: DashboardBorderRadius.full
   },
   roleText: {
-    fontSize: 12,
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '600',
-    color: colors.info,
+    color: DashboardColors.info
   },
+
+  // Status
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: DashboardSpacing.md,
+    paddingTop: DashboardSpacing.md,
+    borderTopWidth: 1,
+    borderTopColor: DashboardColors.borderLight
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.xs,
+    borderRadius: DashboardBorderRadius.full
   },
   pendingBadge: {
-    borderColor: colors.warning,
-    backgroundColor: colors.warningLight,
+    backgroundColor: DashboardColors.warningBg
   },
   expiredBadge: {
-    borderColor: colors.danger,
-    backgroundColor: colors.dangerLight,
+    backgroundColor: DashboardColors.dangerBg
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600'
   },
   pendingText: {
-    color: colors.warning,
+    color: DashboardColors.warning
   },
   expiredText: {
-    color: colors.danger,
+    color: DashboardColors.danger
   },
   expiresText: {
-    fontSize: 12,
-    color: colors.textSecondary,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted
   },
+
+  // Actions
   actionsContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: DashboardSpacing.sm
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 6,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.md,
+    gap: DashboardSpacing.xs
   },
   resendButton: {
-    backgroundColor: colors.successLight,
+    backgroundColor: DashboardColors.successBg
   },
   resendButtonText: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
-    color: colors.success,
+    color: DashboardColors.success
   },
   cancelButton: {
-    backgroundColor: colors.dangerLight,
+    backgroundColor: DashboardColors.dangerBg
   },
   cancelButtonText: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
-    color: colors.danger,
+    color: DashboardColors.danger
   },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
+
+  // Empty State
+  emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: DashboardSpacing['3xl'],
+    paddingHorizontal: DashboardSpacing.xl
+  },
+  emptyIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: DashboardColors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DashboardSpacing.xl
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: DashboardColors.text,
+    marginBottom: DashboardSpacing.sm,
+    textAlign: 'center'
   },
-  emptyDescription: {
-    fontSize: 14,
-    color: colors.textSecondary,
+  emptyText: {
+    fontSize: DashboardFontSizes.md,
+    color: DashboardColors.textMuted,
     textAlign: 'center',
+    lineHeight: 24
   },
-  // Modal styles
+
+  // Modal
   modalBackground: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
+    backgroundColor: DashboardColors.surface,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
   },
   modalHandleIndicator: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: DashboardColors.borderLight,
     width: 40,
-    height: 4,
+    height: 4
   },
   modalContent: {
-    paddingHorizontal: Spacing['2xl'],
-    paddingBottom: Spacing.lg,
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingBottom: DashboardSpacing.xl
   },
   modalHeader: {
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: DashboardSpacing.md,
+    paddingBottom: DashboardSpacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    marginBottom: Spacing.lg,
+    borderBottomColor: DashboardColors.borderLight,
+    marginBottom: DashboardSpacing.lg
+  },
+  modalHeaderIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   modalTitle: {
-    ...Typography.headingMD,
-    color: colors.text,
-    textAlign: 'center',
+    flex: 1,
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary,
+    marginLeft: DashboardSpacing.md
+  },
+  modalCloseButton: {
+    padding: DashboardSpacing.xs
   },
   modalBody: {
-    marginBottom: Spacing.lg,
+    marginBottom: DashboardSpacing.lg
   },
   formGroup: {
-    marginBottom: Spacing['2xl'],
+    marginBottom: DashboardSpacing.xl
   },
   label: {
-    ...Typography.headingSM,
-    color: colors.text,
-    marginBottom: Spacing.sm,
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.sm
   },
   required: {
-    color: colors.danger,
+    color: DashboardColors.danger
   },
   textArea: {
-    backgroundColor: colors.surface,
+    backgroundColor: DashboardColors.background,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    ...Typography.bodyMD,
-    color: colors.text,
+    borderColor: DashboardColors.border,
+    borderRadius: DashboardBorderRadius.lg,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.md,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
     minHeight: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: 'top'
   },
   hint: {
-    ...Typography.bodyXS,
-    color: colors.textMuted,
-    marginTop: Spacing.xs,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted,
+    marginTop: DashboardSpacing.xs
   },
   bold: {
-    fontWeight: '600',
+    fontWeight: '600'
   },
   rolesSelectContainer: {
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
   roleSelectItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: DashboardSpacing.md
   },
   checkbox: {
     width: 24,
     height: 24,
     borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: BorderRadius.sm,
+    borderColor: DashboardColors.border,
+    borderRadius: DashboardBorderRadius.sm,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   checkboxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: DashboardColors.primary,
+    borderColor: DashboardColors.primary
   },
   roleSelectText: {
-    ...Typography.bodyMD,
-    color: colors.text,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.infoLight,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    gap: Spacing.sm,
+    backgroundColor: DashboardColors.infoBg,
+    padding: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    gap: DashboardSpacing.sm
   },
   infoText: {
     flex: 1,
-    ...Typography.bodySM,
-    color: colors.info,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.info,
+    lineHeight: 20
   },
   modalFooter: {
     flexDirection: 'row',
-    paddingTop: Spacing.lg,
-    gap: Spacing.md,
+    paddingTop: DashboardSpacing.lg,
+    gap: DashboardSpacing.md
   },
   modalCancelButton: {
     flex: 1,
-    height: 44,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: BorderRadius.lg,
+    borderRadius: DashboardBorderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: DashboardColors.border,
+    backgroundColor: DashboardColors.surface
   },
   modalCancelButtonText: {
-    ...Typography.buttonMD,
-    color: colors.text,
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textSecondary
   },
   modalSendButton: {
     flex: 1,
-    height: 44,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: BorderRadius.lg,
-    backgroundColor: colors.primary,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary
   },
   modalSendButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.6
   },
   modalSendButtonText: {
-    ...Typography.buttonMD,
-    color: '#FFFFFF',
-  },
-});
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#FFFFFF'
+  }
+})

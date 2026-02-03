@@ -28,6 +28,8 @@ import {
 } from '@/context/dashboard-context'
 import { useRouter } from 'expo-router'
 import { formatDashboardCurrency } from '@/utils/currency'
+import { useNotificationContext } from '@/context/notification-context'
+import { useMessageContext } from '@/context/message-context'
 
 // Metrik tipi
 interface Metric {
@@ -393,6 +395,8 @@ function getQuickActionsForTab(tab: DashboardTab): QuickAction[] {
 export default function Dashboard() {
   const router = useRouter()
   const dashboard = useDashboard()
+  const { unreadCount: notificationCount } = useNotificationContext()
+  const { unreadCount: messageCount } = useMessageContext()
 
   const {
     activeTab,
@@ -412,8 +416,8 @@ export default function Dashboard() {
 
   // Bildirim tiklamasi
   const handleNotificationPress = useCallback(() => {
-    console.log('Open notifications')
-  }, [])
+    router.push('/notifications')
+  }, [router])
 
   // Mesaj tiklamasi
   const handleMessagePress = useCallback(() => {
@@ -456,8 +460,8 @@ export default function Dashboard() {
         tabs={headerTabs}
         activeTab={activeTab}
         onTabChange={handleTabChange}
-        notificationCount={5}
-        messageCount={3}
+        notificationCount={notificationCount}
+        messageCount={messageCount}
         onNotificationPress={handleNotificationPress}
         onMessagePress={handleMessagePress}
         onAvatarPress={handleAvatarPress}

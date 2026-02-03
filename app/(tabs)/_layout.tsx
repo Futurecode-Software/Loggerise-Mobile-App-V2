@@ -4,14 +4,15 @@
  * Premium bottom navigation with floating message FAB
  */
 
-import React, { useState } from 'react'
+import React from 'react'
 import { Tabs, useRouter } from 'expo-router'
 import { CustomTabBar } from '@/components/navigation'
 import { DashboardColors } from '@/constants/dashboard-theme'
+import { useMessageContext } from '@/context/message-context'
 
 export default function TabLayout() {
   const router = useRouter()
-  const [messageCount] = useState(3)
+  const { unreadCount: messageCount } = useMessageContext()
 
   const handleMessagePress = () => {
     router.push('/(tabs)/messages')

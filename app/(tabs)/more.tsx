@@ -231,8 +231,6 @@ export default function MoreScreen() {
       label: 'Filo Yönetimi',
       color: '#f97316',
       subItems: [
-        { icon: 'clipboard', label: 'İhracat Planlama', route: '/fleet/export-planning', color: '#0ea5e9' },
-        { icon: 'map', label: 'Filo Takip', route: '/fleet/tracking', color: '#22c55e' },
         { icon: 'car', label: 'Araçlar', route: '/fleet/vehicle', color: '#3b82f6' },
         { icon: 'link', label: 'Çekici-Römork Eşleştirme', route: '/fleet/tractor-trailer', color: '#f59e0b' },
         { icon: 'link', label: 'Sürücü-Çekici Eşleştirme', route: '/fleet/driver-tractor', color: '#ec4899' },
@@ -245,22 +243,7 @@ export default function MoreScreen() {
       icon: 'location',
       label: 'Yurtiçi Taşımacılık',
       color: '#10b981',
-      subItems: [
-        { icon: 'clipboard', label: 'İş Emirleri', route: '/logistics/domestic', color: '#10b981' },
-        { icon: 'calendar', label: 'Planlama', route: '/logistics/domestic/planning', color: '#6366f1' }
-      ]
-    },
-    {
-      id: 'ihracat-depo',
-      icon: 'business',
-      label: 'İhracat Deposu',
-      color: '#84cc16',
-      subItems: [
-        { icon: 'home', label: 'Depolar', route: '/export-warehouse/warehouses', color: '#84cc16' },
-        { icon: 'cube-outline', label: 'İhracat Deposu Malları', route: '/export-warehouse/items', color: '#f59e0b' },
-        { icon: 'car', label: 'Beklenen Mallar', route: '/export-warehouse/expected', color: '#0ea5e9' },
-        { icon: 'clipboard', label: 'Pozisyon Durumu', route: '/export-warehouse/positions', color: '#8b5cf6' }
-      ]
+      route: '/logistics/domestic'
     },
     {
       id: 'insan-kaynaklari',

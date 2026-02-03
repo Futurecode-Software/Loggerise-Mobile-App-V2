@@ -9,7 +9,6 @@ export { Checkbox } from './checkbox';
 export { SearchableSelect } from './searchable-select';
 export type { SearchableSelectOption, SearchableSelectProps } from './searchable-select';
 export { SelectInput } from './select-input';
-export { Select } from './select';
 export { AddressSelect } from './address-select';
 export type { AddressOption } from './address-select';
 export { AutocompleteInput } from './autocomplete-input';

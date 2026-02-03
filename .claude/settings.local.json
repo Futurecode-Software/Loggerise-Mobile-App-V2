@@ -67,7 +67,9 @@
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
       "Bash(git restore:*)",
-      "Bash(Select-String -Pattern \"job-postings\")"
+      "Bash(Select-String -Pattern \"job-postings\")",
+      "Bash(settings)",
+      "Bash(export \")"
     ]
   },
   "enableAllProjectMcpServers": true,
