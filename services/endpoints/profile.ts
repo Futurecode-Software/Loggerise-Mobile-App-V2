@@ -75,6 +75,9 @@ export async function changePassword(data: PasswordChangeData): Promise<string> 
  */
 export async function uploadAvatar(formData: FormData): Promise<string> {
   try {
+    console.log('📤 Avatar upload API request başlıyor...');
+    console.log('📤 FormData içeriği:', formData);
+
     const response = await api.post<ApiResponse<{ avatar_url: string; message: string }>>(
       '/profile/avatar',
       formData,
@@ -84,8 +87,17 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
         },
       }
     );
+
+    console.log('📥 Avatar upload API response:', {
+      success: response.data.success,
+      message: response.data.message,
+      avatar_url: response.data.data?.avatar_url,
+      full_response: response.data
+    });
+
     return response.data.data?.avatar_url || '';
   } catch (error) {
+    console.error('❌ Avatar upload API hatası:', error);
     const message = getErrorMessage(error);
     throw new Error(message);
   }
