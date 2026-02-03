@@ -5,7 +5,7 @@
  * Glassmorphism, smooth transitions ve elegant step indicators
  */
 
-import React, { useState, useEffect, useCallback, Fragment } from 'react'
+import React, { useState, useCallback, Fragment, useEffect } from 'react'
 import {
   View,
   StyleSheet,
@@ -61,11 +61,8 @@ export default function Register() {
   const { register, isLoading, isInitializing, isAuthenticated } = useAuth()
   const { height: screenHeight } = useWindowDimensions()
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace('/(tabs)')
-    }
-  }, [isAuthenticated, router])
+  // Navigation is handled by NavigationController in _layout.tsx
+  // No need to manually redirect here
 
   const [currentStep, setCurrentStep] = useState(0)
   const [formData, setFormData] = useState({
@@ -160,6 +157,8 @@ export default function Register() {
         const result = await register(registerData)
         if (!result.isSetupComplete) {
           router.replace('/(auth)/setup-status')
+        } else {
+          router.replace('/(tabs)')
         }
       } catch {
         Toast.show({
@@ -472,7 +471,10 @@ export default function Register() {
             style={styles.footer}
           >
             <Text style={styles.footerText}>Zaten hesabınız var mı? </Text>
-            <Pressable onPress={() => router.replace('/(auth)/login')}>
+            <Pressable
+              onPress={() => router.replace('/(auth)/login')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Text style={styles.footerLink}>Giriş Yap</Text>
             </Pressable>
           </Animated.View>
@@ -704,6 +706,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: AuthSpacing['2xl'],
   },
   footerText: {
     fontSize: AuthFontSizes.base,

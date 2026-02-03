@@ -32,7 +32,12 @@ import {
   DashboardShadows,
   DashboardAnimations
 } from '@/constants/dashboard-theme'
-import { formatConversationTime, AiConversation, deleteConversation } from '@/services/endpoints/loggy'
+import {
+  formatConversationTime,
+  AiConversation,
+  deleteConversation,
+  checkAiConfiguration
+} from '@/services/endpoints/loggy'
 import { useLoggyConversations } from '@/hooks/use-logy-conversations'
 import { useLoggyMessages } from '@/hooks/use-logy-messages'
 import { useLoggySearch } from '@/hooks/use-logy-search'
@@ -168,7 +173,9 @@ export default function LoggyScreen() {
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [inputValue, setInputValue] = useState('')
-  const [isAiConfigured] = useState(true) // TODO: Get from API
+  const [isAiConfigured, setIsAiConfigured] = useState(true)
+  const [isCheckingConfig, setIsCheckingConfig] = useState(true)
+  const [aiConfigMessage, setAiConfigMessage] = useState('')
   const [conversationToDelete, setConversationToDelete] = useState<number | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const deleteDialogRef = useRef<BottomSheetModal>(null)
@@ -201,6 +208,30 @@ export default function LoggyScreen() {
     setSearchQuery,
     clearSearch
   } = useLoggySearch()
+
+  // Check AI configuration on mount
+  React.useEffect(() => {
+    const checkConfig = async () => {
+      setIsCheckingConfig(true)
+      try {
+        const config = await checkAiConfiguration()
+        setIsAiConfigured(config.isConfigured)
+        setAiConfigMessage(config.helpText || config.message)
+      } catch (error) {
+        // Hata durumunda AI'yi kapalı kabul et ve hatayı göster
+        setIsAiConfigured(false)
+        setAiConfigMessage(
+          error instanceof Error
+            ? error.message
+            : 'AI yapılandırması kontrol edilemedi.'
+        )
+      } finally {
+        setIsCheckingConfig(false)
+      }
+    }
+
+    checkConfig()
+  }, [])
 
   // Refresh on focus (CLAUDE.md pattern)
   useFocusEffect(
@@ -420,25 +451,30 @@ export default function LoggyScreen() {
 
       <View style={styles.content}>
         {/* API Not Configured Overlay */}
-        {!isAiConfigured && (
+        {!isAiConfigured && !isCheckingConfig && (
           <View style={styles.overlay}>
             <View style={styles.overlayContent}>
               <View style={styles.overlayIcon}>
                 <Ionicons name="key" size={32} color="#f59e0b" />
               </View>
-              <Text style={styles.overlayTitle}>API Anahtarı Gerekli</Text>
+              <Text style={styles.overlayTitle}>AI Yapılandırması Gerekli</Text>
               <Text style={styles.overlayText}>
-                Loggy AI asistanını kullanabilmek için önce API ayarlarınızı yapılandırmanız
-                gerekiyor. Sistem ayarlarından API anahtarınızı ve model bilgilerinizi girin.
+                {aiConfigMessage || 'Loggy AI asistanını kullanabilmek için web panelinde AI ayarlarınızı yapılandırmanız gerekiyor.'}
               </Text>
-              <TouchableOpacity
-                style={styles.overlayButton}
-                onPress={() => router.push('/settings' as any)}
-              >
-                <Ionicons name="settings" size={18} color="#FFFFFF" />
-                <Text style={styles.overlayButtonText}>Sistem Ayarlarına Git</Text>
-              </TouchableOpacity>
+              <Text style={styles.overlayTextSecondary}>
+                Web panelinde Ayarlar {'>'} Sistem Ayarları bölümünden API anahtarınızı ve model bilgilerinizi girebilirsiniz.
+              </Text>
             </View>
+          </View>
+        )}
+
+        {/* Config Check Loading */}
+        {isCheckingConfig && (
+          <View style={styles.overlay}>
+            <ActivityIndicator size="large" color={DashboardColors.primary} />
+            <Text style={[styles.loadingText, { marginTop: DashboardSpacing.md }]}>
+              AI yapılandırması kontrol ediliyor...
+            </Text>
           </View>
         )}
 
@@ -863,10 +899,16 @@ const styles = StyleSheet.create({
   },
   overlayText: {
     fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
+    textAlign: 'center',
+    marginBottom: DashboardSpacing.md,
+    lineHeight: 22
+  },
+  overlayTextSecondary: {
+    fontSize: DashboardFontSizes.sm,
     color: DashboardColors.textSecondary,
     textAlign: 'center',
-    marginBottom: DashboardSpacing.xl,
-    lineHeight: 22
+    lineHeight: 20
   },
   overlayButton: {
     flexDirection: 'row',

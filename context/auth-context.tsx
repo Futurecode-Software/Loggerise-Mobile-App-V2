@@ -23,6 +23,7 @@ import {
   getCurrentUser,
   getStoredUser,
   hasStoredAuth,
+  checkSetupStatus,
   User as ApiUser,
   RegisterData as ApiRegisterData,
   AuthResult,
@@ -131,10 +132,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const currentUser = await getCurrentUser();
             setUser(transformUser(currentUser));
+
+            // Check setup status for authenticated users
+            try {
+              const setupStatus = await checkSetupStatus();
+              setIsSetupComplete(setupStatus.is_setup_complete);
+            } catch (setupErr) {
+              // If setup status check fails, assume setup is complete to allow access
+              console.log('Setup status check failed:', setupErr);
+              setIsSetupComplete(true);
+            }
           } catch (err) {
             // Token may be invalid, clear auth state
             console.log('Token validation failed:', err);
             setUser(null);
+            setIsSetupComplete(true);
           }
         }
       } catch (err) {

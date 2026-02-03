@@ -89,7 +89,7 @@ export async function login(
     return {
       user,
       setupStatus: setup_status,
-      isSetupComplete: setup_status === 'complete' || !setup_status,
+      isSetupComplete: setup_status === 'active' || !setup_status,
     };
   } catch (error) {
     const message = getErrorMessage(error);
@@ -117,7 +117,7 @@ export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
     return {
       user,
       setupStatus: setup_status,
-      isSetupComplete: setup_status === 'complete' || !setup_status,
+      isSetupComplete: setup_status === 'active' || !setup_status,
     };
   } catch (error) {
     const message = getErrorMessage(error);

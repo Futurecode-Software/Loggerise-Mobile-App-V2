@@ -26,7 +26,7 @@ SplashScreen.preventAutoHideAsync()
  * Handles automatic navigation based on auth state
  */
 function NavigationController() {
-  const { isAuthenticated, isInitializing } = useAuth()
+  const { isAuthenticated, isInitializing, isSetupComplete } = useAuth()
   const segments = useSegments()
   const router = useRouter()
 
@@ -41,15 +41,21 @@ function NavigationController() {
     const currentPage = segments[1]
 
     if (!isAuthenticated) {
-      // Not authenticated - ensure we're on login page
-      if (!inAuthGroup || currentPage !== 'login') {
+      // Not authenticated - should be on login or register only
+      if (currentPage !== 'login' && currentPage !== 'register') {
         router.replace('/(auth)/login')
       }
     } else if (isAuthenticated && inAuthGroup && currentPage !== 'logging-out') {
-      // Authenticated and in auth group (but not logging out) - go to app
-      router.replace('/(tabs)')
+      // Authenticated and in auth group (but not logging out)
+      if (!isSetupComplete && currentPage !== 'setup-status') {
+        // Setup not complete - go to setup status screen
+        router.replace('/(auth)/setup-status')
+      } else if (isSetupComplete && currentPage !== 'setup-status') {
+        // Setup complete - go to app
+        router.replace('/(tabs)')
+      }
     }
-  }, [isAuthenticated, isInitializing, segments, router])
+  }, [isAuthenticated, isInitializing, isSetupComplete, segments, router])
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

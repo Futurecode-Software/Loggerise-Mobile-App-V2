@@ -2,7 +2,7 @@
  * Premium Setup Status Screen
  *
  * Elegant progress tracking ile hesap kurulum durumu
- * Animated indicators ve smooth transitions
+ * Logo, animated indicators ve smooth transitions
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react'
@@ -11,6 +11,7 @@ import {
   Text,
   StyleSheet,
   Pressable,
+  Image,
 } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -25,13 +26,11 @@ import Animated, {
   withSequence,
   withSpring,
   Easing,
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
+  interpolate,
 } from 'react-native-reanimated'
 import { useAuth } from '@/context/auth-context'
+import { useDashboard } from '@/context/dashboard-context'
 import { checkSetupStatus } from '@/services/endpoints/auth'
-import Toast from 'react-native-toast-message'
 import {
   AuthColors,
   AuthSpacing,
@@ -41,6 +40,8 @@ import {
   AuthShadows,
   AuthAnimations,
 } from '@/constants/auth-styles'
+
+const LogoWhite = require('../../assets/images/logo-white.png')
 
 const DEFAULT_POLL_INTERVAL = 5000
 const MAX_POLL_ATTEMPTS = 60
@@ -57,6 +58,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 export default function SetupStatus() {
   const { logout, isAuthenticated } = useAuth()
+  const { onRefresh: refreshDashboard } = useDashboard()
 
   const shouldStopPolling = useRef(false)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -66,6 +68,7 @@ export default function SetupStatus() {
   const [estimatedTime, setEstimatedTime] = useState<string | null>(null)
   const [isFailed, setIsFailed] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
   const [steps, setSteps] = useState<SetupStep[]>([
     {
       id: 'tenant',
@@ -103,6 +106,42 @@ export default function SetupStatus() {
   const progressAnim = useSharedValue(0)
   const successScale = useSharedValue(0)
   const buttonScale = useSharedValue(1)
+  const floatAnim = useSharedValue(0)
+  const headerFadeIn = useSharedValue(0)
+  const headerSlideUp = useSharedValue(30)
+  const glowPulse = useSharedValue(1)
+
+  // Header animations
+  useEffect(() => {
+    headerFadeIn.value = withTiming(1, {
+      duration: AuthAnimations.timing.slow,
+      easing: Easing.out(Easing.cubic),
+    })
+    headerSlideUp.value = withTiming(0, {
+      duration: AuthAnimations.timing.slow,
+      easing: Easing.out(Easing.cubic),
+    })
+
+    // Floating animation for decorative icons
+    floatAnim.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 3000, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      false
+    )
+
+    // Glow pulse
+    glowPulse.value = withRepeat(
+      withSequence(
+        withTiming(1.1, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      false
+    )
+  }, [])
 
   useEffect(() => {
     // Pulse animation
@@ -172,6 +211,30 @@ export default function SetupStatus() {
     router.replace('/(auth)/login')
   }, [stopPolling, logout])
 
+  // Dashboard verilerini yükle ve yönlendir
+  const loadDashboardAndNavigate = useCallback(async () => {
+    setIsLoadingDashboard(true)
+    setStatusMessage('Dashboard verileri yükleniyor...')
+
+    try {
+      // Dashboard verilerini yükle
+      await refreshDashboard()
+
+      // Yönlendir
+      if (!shouldStopPolling.current) {
+        router.replace('/(tabs)')
+      }
+    } catch (err) {
+      console.error('Dashboard load error:', err)
+      // Hata olsa bile yönlendir, dashboard kendi hatasını gösterir
+      if (!shouldStopPolling.current) {
+        router.replace('/(tabs)')
+      }
+    } finally {
+      setIsLoadingDashboard(false)
+    }
+  }, [refreshDashboard])
+
   useEffect(() => {
     if (!isAuthenticated) {
       goToLogin()
@@ -203,18 +266,13 @@ export default function SetupStatus() {
           progressStep(3)
           setStatusMessage('Hesabınız hazır!')
           setIsComplete(true)
-          Toast.show({
-            type: 'success',
-            text1: 'Hesabınız hazır!',
-            position: 'top',
-            visibilityTime: 1500
-          })
 
+          // 1.5 saniye göster, sonra dashboard verilerini yükle ve yönlendir
           setTimeout(() => {
             if (!shouldStopPolling.current) {
-              router.replace('/(tabs)')
+              loadDashboardAndNavigate()
             }
-          }, 2000)
+          }, 1500)
           return
         }
 
@@ -270,7 +328,33 @@ export default function SetupStatus() {
     return () => {
       stopPolling()
     }
-  }, [isAuthenticated, goToLogin, stopPolling])
+  }, [isAuthenticated, goToLogin, stopPolling, loadDashboardAndNavigate])
+
+  // Animated styles
+  const headerContentStyle = useAnimatedStyle(() => ({
+    opacity: headerFadeIn.value,
+    transform: [{ translateY: headerSlideUp.value }],
+  }))
+
+  const glowStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: glowPulse.value }],
+    opacity: interpolate(glowPulse.value, [1, 1.1], [0.3, 0.5]),
+  }))
+
+  const primaryIconStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(floatAnim.value, [0, 1], [0, -12]) },
+      { rotate: `${interpolate(floatAnim.value, [0, 1], [-5, 5])}deg` },
+    ],
+    opacity: interpolate(floatAnim.value, [0, 0.5, 1], [0.15, 0.2, 0.15]),
+  }))
+
+  const secondaryIconStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(floatAnim.value, [0, 1], [0, 8]) },
+    ],
+    opacity: 0.08,
+  }))
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseAnim.value }],
@@ -349,23 +433,68 @@ export default function SetupStatus() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={styles.container} edges={[]}>
+      <StatusBar style="light" />
 
-      {/* Background Gradient */}
-      <LinearGradient
-        colors={['#F8FAFC', '#EFF6FF', '#F0FDF4']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+      {/* Header with Logo */}
+      <View style={styles.header}>
+        <LinearGradient
+          colors={['#022920', '#044134', '#054a3a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
 
+        {/* Decorative Elements */}
+        <Animated.View style={[styles.glowOrb, glowStyle]} />
+
+        <Animated.View style={[styles.decorativePrimary, primaryIconStyle]}>
+          <Ionicons name="rocket-outline" size={100} color={AuthColors.white} />
+        </Animated.View>
+
+        <Animated.View style={[styles.decorativeSecondary, secondaryIconStyle]}>
+          <Ionicons name="sparkles-outline" size={60} color={AuthColors.white} />
+        </Animated.View>
+
+        {/* Glass orbs */}
+        <View style={styles.glassOrb1} />
+        <View style={styles.glassOrb2} />
+
+        {/* Header Content */}
+        <Animated.View style={[styles.headerContent, headerContentStyle]}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={LogoWhite}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+
+          <Text style={styles.headerTitle}>
+            {isComplete
+              ? 'Tebrikler!'
+              : isFailed
+              ? 'Kurulum Başarısız'
+              : 'Hesabınız Hazırlanıyor'}
+          </Text>
+
+          <Text style={styles.headerSubtitle}>
+            {isComplete
+              ? 'Hesabınız başarıyla oluşturuldu'
+              : isFailed
+              ? 'Hesap kurulumu sırasında bir sorun oluştu'
+              : 'Lütfen bekleyin, bu işlem birkaç dakika sürebilir'}
+          </Text>
+        </Animated.View>
+
+        {/* Curve overlay */}
+        <View style={styles.curveOverlay} />
+      </View>
+
+      {/* Content */}
       <View style={styles.content}>
-        {/* Header Icon */}
-        <Animated.View
-          entering={FadeIn.delay(100).duration(400)}
-          style={styles.headerSection}
-        >
+        {/* Status Icon */}
+        <View style={styles.statusSection}>
           <Animated.View
             style={[
               styles.iconContainer,
@@ -380,54 +509,26 @@ export default function SetupStatus() {
               </Animated.View>
             ) : isFailed ? (
               <Ionicons name="alert-circle" size={56} color={AuthColors.error} />
+            ) : isLoadingDashboard ? (
+              <Animated.View style={rotateStyle}>
+                <Ionicons name="sync" size={48} color={AuthColors.primary} />
+              </Animated.View>
             ) : (
               <Ionicons name="rocket-outline" size={48} color={AuthColors.primary} />
             )}
           </Animated.View>
 
-          <Animated.Text
-            entering={FadeInDown.delay(200).duration(400)}
-            style={[
-              styles.title,
-              isFailed && styles.titleError,
-              isComplete && styles.titleSuccess,
-            ]}
-          >
-            {isComplete
-              ? 'Tebrikler!'
-              : isFailed
-              ? 'Kurulum Başarısız'
-              : 'Hesabınız Hazırlanıyor'}
-          </Animated.Text>
-
-          <Animated.Text
-            entering={FadeInDown.delay(300).duration(400)}
-            style={styles.subtitle}
-          >
-            {isComplete
-              ? 'Hesabınız başarıyla oluşturuldu'
-              : isFailed
-              ? 'Hesap kurulumu sırasında bir sorun oluştu'
-              : statusMessage}
-          </Animated.Text>
-
-          {estimatedTime && !isFailed && !isComplete && (
-            <Animated.View
-              entering={FadeInDown.delay(400).duration(400)}
-              style={styles.estimatedContainer}
-            >
+          {estimatedTime && !isFailed && !isComplete && !isLoadingDashboard && (
+            <View style={styles.estimatedContainer}>
               <Ionicons name="time-outline" size={16} color={AuthColors.textMuted} />
               <Text style={styles.estimatedText}>Tahmini: {estimatedTime}</Text>
-            </Animated.View>
+            </View>
           )}
-        </Animated.View>
+        </View>
 
         {/* Progress Bar */}
         {!isFailed && (
-          <Animated.View
-            entering={FadeInDown.delay(400).duration(400)}
-            style={styles.progressSection}
-          >
+          <View style={styles.progressSection}>
             <View style={styles.progressBar}>
               <Animated.View style={[styles.progressFill, progressBarStyle]}>
                 <LinearGradient
@@ -439,27 +540,39 @@ export default function SetupStatus() {
               </Animated.View>
             </View>
             <Text style={styles.progressText}>
-              {Math.round(steps.filter((s) => s.completed).length / steps.length * 100)}% tamamlandı
+              {isLoadingDashboard
+                ? 'Veriler yükleniyor...'
+                : `${Math.round(steps.filter((s) => s.completed).length / steps.length * 100)}% tamamlandı`}
             </Text>
-          </Animated.View>
+          </View>
         )}
 
         {/* Steps */}
-        {!isFailed && (
+        {!isFailed && !isLoadingDashboard && (
           <View style={styles.stepsContainer}>
             {steps.map((step, index) => renderStep(step, index))}
           </View>
         )}
 
+        {/* Loading Dashboard Message */}
+        {isLoadingDashboard && (
+          <View style={styles.loadingDashboardContainer}>
+            <Ionicons name="cloud-download-outline" size={32} color={AuthColors.primary} />
+            <Text style={styles.loadingDashboardText}>
+              Dashboard verileri hazırlanıyor...
+            </Text>
+            <Text style={styles.loadingDashboardSubtext}>
+              Firma bilgileri ve istatistikler yükleniyor
+            </Text>
+          </View>
+        )}
+
         {/* Error Message */}
         {error && (
-          <Animated.View
-            entering={FadeInDown.duration(300)}
-            style={styles.errorContainer}
-          >
+          <View style={styles.errorContainer}>
             <Ionicons name="warning-outline" size={20} color={AuthColors.error} />
             <Text style={styles.errorText}>{error}</Text>
-          </Animated.View>
+          </View>
         )}
 
         {/* Action Button */}
@@ -478,18 +591,15 @@ export default function SetupStatus() {
         )}
 
         {/* Footer Message */}
-        {!isFailed && !error && !isComplete && (
-          <Animated.View
-            entering={FadeInUp.delay(500).duration(400)}
-            style={styles.footerSection}
-          >
+        {!isFailed && !error && !isComplete && !isLoadingDashboard && (
+          <View style={styles.footerSection}>
             <View style={styles.footerIcon}>
               <Ionicons name="information-circle-outline" size={18} color={AuthColors.textMuted} />
             </View>
             <Text style={styles.footerText}>
               Lütfen bu sayfadan ayrılmayın. Kurulum tamamlandığında otomatik olarak yönlendirileceksiniz.
             </Text>
-          </Animated.View>
+          </View>
         )}
       </View>
     </SafeAreaView>
@@ -501,24 +611,110 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AuthColors.white,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: AuthSpacing['2xl'],
-    paddingTop: AuthSpacing['4xl'],
-  },
   // Header
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: AuthSpacing['3xl'],
+  header: {
+    paddingTop: 60,
+    paddingBottom: AuthSpacing['4xl'],
+    paddingHorizontal: AuthSpacing['2xl'],
+    position: 'relative',
+    overflow: 'hidden',
+    minHeight: 240,
   },
-  iconContainer: {
+  headerContent: {
+    zIndex: 10,
+  },
+  logoContainer: {
+    marginBottom: AuthSpacing.xl,
+  },
+  logo: {
+    width: AuthSizes.logoWidth,
+    height: AuthSizes.logoHeight,
+  },
+  headerTitle: {
+    fontSize: AuthFontSizes['5xl'],
+    fontWeight: '700',
+    color: AuthColors.textOnDark,
+    marginBottom: AuthSpacing.sm,
+    letterSpacing: -0.5,
+    lineHeight: 34,
+  },
+  headerSubtitle: {
+    fontSize: AuthFontSizes.lg,
+    color: AuthColors.textOnDarkMuted,
+    lineHeight: 22,
+    maxWidth: '85%',
+  },
+  curveOverlay: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 30,
+    backgroundColor: AuthColors.white,
+    borderTopLeftRadius: AuthSpacing['3xl'],
+    borderTopRightRadius: AuthSpacing['3xl'],
+  },
+  // Decorative elements
+  glowOrb: {
+    position: 'absolute',
+    top: 20,
+    right: -40,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+  },
+  decorativePrimary: {
+    position: 'absolute',
+    top: 30,
+    right: 10,
+  },
+  decorativeSecondary: {
+    position: 'absolute',
+    top: 100,
+    right: 80,
+  },
+  glassOrb1: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
     width: 120,
     height: 120,
     borderRadius: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  glassOrb2: {
+    position: 'absolute',
+    bottom: 50,
+    right: 60,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  // Content
+  content: {
+    flex: 1,
+    paddingHorizontal: AuthSpacing['2xl'],
+    backgroundColor: AuthColors.white,
+  },
+  // Status Section
+  statusSection: {
+    alignItems: 'center',
+    marginBottom: AuthSpacing.xl,
+  },
+  iconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: AuthColors.primaryGlow,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: AuthSpacing.xl,
+    marginBottom: AuthSpacing.md,
   },
   iconContainerError: {
     backgroundColor: AuthColors.errorLight,
@@ -526,31 +722,10 @@ const styles = StyleSheet.create({
   iconContainerSuccess: {
     backgroundColor: AuthColors.successLight,
   },
-  title: {
-    fontSize: AuthFontSizes['5xl'],
-    fontWeight: '700',
-    color: AuthColors.textPrimary,
-    marginBottom: AuthSpacing.sm,
-    textAlign: 'center',
-  },
-  titleError: {
-    color: AuthColors.error,
-  },
-  titleSuccess: {
-    color: AuthColors.success,
-  },
-  subtitle: {
-    fontSize: AuthFontSizes.lg,
-    color: AuthColors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    maxWidth: '90%',
-  },
   estimatedContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: AuthSpacing.xs,
-    marginTop: AuthSpacing.md,
     paddingHorizontal: AuthSpacing.lg,
     paddingVertical: AuthSpacing.sm,
     backgroundColor: AuthColors.inputBackground,
@@ -562,7 +737,7 @@ const styles = StyleSheet.create({
   },
   // Progress
   progressSection: {
-    marginBottom: AuthSpacing['2xl'],
+    marginBottom: AuthSpacing.xl,
   },
   progressBar: {
     height: 8,
@@ -634,6 +809,25 @@ const styles = StyleSheet.create({
   },
   stepCheckmark: {
     marginLeft: AuthSpacing.sm,
+  },
+  // Loading Dashboard
+  loadingDashboardContainer: {
+    alignItems: 'center',
+    padding: AuthSpacing['2xl'],
+    backgroundColor: AuthColors.primaryGlow,
+    borderRadius: AuthBorderRadius.xl,
+    gap: AuthSpacing.md,
+  },
+  loadingDashboardText: {
+    fontSize: AuthFontSizes.lg,
+    fontWeight: '600',
+    color: AuthColors.primary,
+    textAlign: 'center',
+  },
+  loadingDashboardSubtext: {
+    fontSize: AuthFontSizes.sm,
+    color: AuthColors.textSecondary,
+    textAlign: 'center',
   },
   // Error
   errorContainer: {

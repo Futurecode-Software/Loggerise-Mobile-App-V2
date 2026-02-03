@@ -321,3 +321,37 @@ export function formatMessageTime(dateString: string): string {
   const minutes = date.getMinutes().toString().padStart(2, '0');
   return `${hours}:${minutes}`;
 }
+
+/**
+ * AI Configuration Status Response
+ */
+interface AiConfigurationResponse {
+  success: boolean;
+  is_configured: boolean;
+  message: string;
+  help_text?: string | null;
+}
+
+/**
+ * Check AI configuration status
+ *
+ * Checks if AI assistant (Loggy) is configured in the current tenant.
+ * Returns whether user can use AI features or needs to configure API settings.
+ */
+export async function checkAiConfiguration(): Promise<{
+  isConfigured: boolean;
+  message: string;
+  helpText?: string;
+}> {
+  try {
+    const response = await api.get<AiConfigurationResponse>('/loggy/config');
+    return {
+      isConfigured: response.data.is_configured,
+      message: response.data.message,
+      helpText: response.data.help_text || undefined,
+    };
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}

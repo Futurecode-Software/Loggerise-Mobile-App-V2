@@ -5,7 +5,7 @@
  * Glassmorphism, subtle animations ve refined typography
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 import {
   View,
   StyleSheet,
@@ -45,7 +45,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 export default function Login() {
   const router = useRouter()
-  const { login, isLoading, isInitializing, isAuthenticated } = useAuth()
+  const { login, isLoading, isInitializing } = useAuth()
 
   // Form state
   const [formData, setFormData] = useState({
@@ -63,11 +63,8 @@ export default function Login() {
   const buttonScale = useSharedValue(1)
   const checkboxScale = useSharedValue(1)
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace('/(tabs)')
-    }
-  }, [isAuthenticated, router])
+  // Navigation is handled by NavigationController in _layout.tsx
+  // No need to manually redirect here
 
   // Form handlers
   const updateField = (field: string, value: string) => {
@@ -105,14 +102,17 @@ export default function Login() {
       const result = await login(formData.email.trim().toLowerCase(), formData.password, rememberMe)
 
       if (!result.isSetupComplete) {
+        // Setup henüz tamamlanmamış, setup-status ekranına yönlendir
         Toast.show({
           type: 'info',
-          text1: 'Hesabınız hala hazırlanıyor',
-          text2: 'Lütfen bekleyip tekrar deneyin',
+          text1: 'Hesabınız hazırlanıyor',
+          text2: 'Kurulum ekranına yönlendiriliyorsunuz...',
           position: 'top',
           visibilityTime: 1500
         })
+        router.replace('/(auth)/setup-status')
       } else {
+        // Setup tamamlanmış, dashboard'a git
         router.replace('/(tabs)')
       }
     } catch (err) {
@@ -370,7 +370,10 @@ export default function Login() {
             style={styles.footer}
           >
             <Text style={styles.footerText}>Hesabınız yok mu? </Text>
-            <Pressable onPress={() => router.push('/(auth)/register')}>
+            <Pressable
+              onPress={() => router.replace('/(auth)/register')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Text style={styles.footerLink}>Kayıt Ol</Text>
             </Pressable>
           </Animated.View>
@@ -589,6 +592,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: AuthSpacing['2xl'],
   },
   footerText: {
     fontSize: AuthFontSizes.base,
