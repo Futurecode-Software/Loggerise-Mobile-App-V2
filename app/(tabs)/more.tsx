@@ -149,13 +149,12 @@ function CollapsibleMenu({ category, isExpanded, onToggle, router }: Collapsible
 
 export default function MoreScreen() {
   const router = useRouter()
-  const { logout, user } = useAuth()
+  const { user } = useAuth()
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-    await logout()
-    router.replace('/(auth)/login')
+    router.replace('/(auth)/logging-out')
   }
 
   const toggleCategory = (categoryId: string) => {

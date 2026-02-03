@@ -27,15 +27,14 @@ import { useAuth } from '@/context/auth-context'
 import { uploadAvatar, deleteAvatar } from '@/services/endpoints/profile'
 
 export default function ProfileScreen(): React.ReactElement {
-  const { user, logout, refreshUser } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [avatarTimestamp, setAvatarTimestamp] = useState(Date.now())
   const avatarSheetRef = useRef<BottomSheetModal>(null)
 
   const handleLogout = (): void => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-    logout()
-    router.replace('/(auth)/login')
+    router.replace('/(auth)/logging-out')
   }
 
   const handleEditProfile = (): void => {

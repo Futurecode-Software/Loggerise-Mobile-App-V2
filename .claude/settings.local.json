@@ -69,7 +69,8 @@
       "Bash(git restore:*)",
       "Bash(Select-String -Pattern \"job-postings\")",
       "Bash(settings)",
-      "Bash(export \")"
+      "Bash(export \")",
+      "Bash(php artisan tenants:list:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
