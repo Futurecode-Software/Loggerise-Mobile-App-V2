@@ -324,66 +324,66 @@ function getQuickActionsForTab(tab: DashboardTab): QuickAction[] {
   switch (tab) {
     case 'overview':
       return [
-        { id: '1', icon: 'add-circle-outline', label: 'Yeni Sefer', badge: 0 },
-        { id: '2', icon: 'cube-outline', label: 'Yük Ekle', badge: 0 },
-        { id: '3', icon: 'document-text-outline', label: 'Teklif Oluştur', badge: 0 },
-        { id: '4', icon: 'scan-outline', label: 'QR Tara', badge: 0 },
+        { id: '1', icon: 'navigate-outline', label: 'Seferler', badge: 0, route: '/logistics/trip' },
+        { id: '2', icon: 'cube-outline', label: 'Yük Ekle', badge: 0, route: '/logistics/load/new' },
+        { id: '3', icon: 'document-text-outline', label: 'Teklif Oluştur', badge: 0, route: '/crm/quotes/new' },
+        { id: '4', icon: 'location-outline', label: 'Pozisyonlar', badge: 0, route: '/logistics/exports/positions' },
       ]
     case 'logistics':
       return [
-        { id: '1', icon: 'add-circle-outline', label: 'Yeni Sefer', badge: 0 },
-        { id: '2', icon: 'cube-outline', label: 'Yük Ekle', badge: 0 },
-        { id: '3', icon: 'location-outline', label: 'Araç Takip', badge: 0 },
-        { id: '4', icon: 'document-outline', label: 'Belgeler', badge: 0 },
+        { id: '1', icon: 'navigate-outline', label: 'Seferler', badge: 0, route: '/logistics/trip' },
+        { id: '2', icon: 'cube-outline', label: 'Yük Ekle', badge: 0, route: '/logistics/load/new' },
+        { id: '3', icon: 'clipboard-outline', label: 'İhracat Op.', badge: 0, route: '/logistics/exports/operations' },
+        { id: '4', icon: 'enter-outline', label: 'İthalat Op.', badge: 0, route: '/logistics/imports/operations' },
       ]
     case 'warehouse':
       return [
-        { id: '1', icon: 'download-outline', label: 'Kabul', badge: 0 },
-        { id: '2', icon: 'upload-outline', label: 'Sevk', badge: 0 },
-        { id: '3', icon: 'scan-outline', label: 'Barkod Tara', badge: 0 },
-        { id: '4', icon: 'search-outline', label: 'Pozisyon Ara', badge: 0 },
+        { id: '1', icon: 'location-outline', label: 'İhracat Poz.', badge: 0, route: '/logistics/exports/positions' },
+        { id: '2', icon: 'location-outline', label: 'İthalat Poz.', badge: 0, route: '/logistics/imports/positions' },
+        { id: '3', icon: 'list-outline', label: 'İhracat Disp.', badge: 0, route: '/logistics/exports/disposition' },
+        { id: '4', icon: 'list-outline', label: 'İthalat Disp.', badge: 0, route: '/logistics/imports/disposition' },
       ]
     case 'domestic':
       return [
-        { id: '1', icon: 'add-circle-outline', label: 'Yeni Sipariş', badge: 0 },
-        { id: '2', icon: 'car-outline', label: 'Araç Ata', badge: 0 },
-        { id: '3', icon: 'location-outline', label: 'Teslimat Takip', badge: 0 },
-        { id: '4', icon: 'document-outline', label: 'Raporlar', badge: 0 },
+        { id: '1', icon: 'add-circle-outline', label: 'Yeni Sipariş', badge: 0, route: '/logistics/domestic/new' },
+        { id: '2', icon: 'list-outline', label: 'Siparişler', badge: 0, route: '/logistics/domestic' },
+        { id: '3', icon: 'navigate-outline', label: 'Seferler', badge: 0, route: '/logistics/trip' },
+        { id: '4', icon: 'bar-chart-outline', label: 'Raporlar', badge: 0, route: '/reports/domestic' },
       ]
     case 'finance':
       return [
-        { id: '1', icon: 'add-circle-outline', label: 'Yeni İşlem', badge: 0 },
-        { id: '2', icon: 'receipt-outline', label: 'Fatura Kes', badge: 0 },
-        { id: '3', icon: 'wallet-outline', label: 'Ödeme Al', badge: 0 },
-        { id: '4', icon: 'document-outline', label: 'Raporlar', badge: 0 },
+        { id: '1', icon: 'swap-horizontal-outline', label: 'Hareketler', badge: 0, route: '/accounting/transactions' },
+        { id: '2', icon: 'receipt-outline', label: 'Fatura Kes', badge: 0, route: '/accounting/invoices/new' },
+        { id: '3', icon: 'people-outline', label: 'Cariler', badge: 0, route: '/accounting/contacts' },
+        { id: '4', icon: 'wallet-outline', label: 'Kasalar', badge: 0, route: '/accounting/cash-register' },
       ]
     case 'crm':
       return [
-        { id: '1', icon: 'add-circle-outline', label: 'Yeni Teklif', badge: 0 },
-        { id: '2', icon: 'person-add-outline', label: 'Müşteri Ekle', badge: 0 },
-        { id: '3', icon: 'call-outline', label: 'Arama Yap', badge: 0 },
-        { id: '4', icon: 'mail-outline', label: 'Mail Gönder', badge: 0 },
+        { id: '1', icon: 'add-circle-outline', label: 'Yeni Teklif', badge: 0, route: '/crm/quotes/new' },
+        { id: '2', icon: 'person-add-outline', label: 'Müşteri Ekle', badge: 0, route: '/crm/customers/new' },
+        { id: '3', icon: 'people-outline', label: 'Müşteriler', badge: 0, route: '/crm/customers' },
+        { id: '4', icon: 'document-text-outline', label: 'Teklifler', badge: 0, route: '/crm/quotes' },
       ]
     case 'fleet':
       return [
-        { id: '1', icon: 'add-circle-outline', label: 'Araç Ekle', badge: 0 },
-        { id: '2', icon: 'build-outline', label: 'Bakım Planla', badge: 0 },
-        { id: '3', icon: 'water-outline', label: 'Yakıt Girişi', badge: 0 },
-        { id: '4', icon: 'document-outline', label: 'Belgeler', badge: 0 },
+        { id: '1', icon: 'add-circle-outline', label: 'Araç Ekle', badge: 0, route: '/fleet/vehicle/new' },
+        { id: '2', icon: 'car-outline', label: 'Araçlar', badge: 0, route: '/fleet/vehicle' },
+        { id: '3', icon: 'disc-outline', label: 'Lastik Deposu', badge: 0, route: '/fleet/tire-warehouse' },
+        { id: '4', icon: 'warning-outline', label: 'Arıza Bildir.', badge: 0, route: '/fleet/fault-reports' },
       ]
     case 'stock':
       return [
-        { id: '1', icon: 'add-circle-outline', label: 'Ürün Ekle', badge: 0 },
-        { id: '2', icon: 'download-outline', label: 'Stok Girişi', badge: 0 },
-        { id: '3', icon: 'upload-outline', label: 'Stok Çıkışı', badge: 0 },
-        { id: '4', icon: 'document-outline', label: 'Sayım', badge: 0 },
+        { id: '1', icon: 'add-circle-outline', label: 'Ürün Ekle', badge: 0, route: '/inventory/stock/products/new' },
+        { id: '2', icon: 'swap-horizontal-outline', label: 'Stok Hareketi', badge: 0, route: '/inventory/stock/movements/new' },
+        { id: '3', icon: 'cube-outline', label: 'Ürünler', badge: 0, route: '/inventory/stock/products' },
+        { id: '4', icon: 'home-outline', label: 'Depolar', badge: 0, route: '/inventory/warehouse' },
       ]
     case 'hr':
       return [
-        { id: '1', icon: 'person-add-outline', label: 'Çalışan Ekle', badge: 0 },
-        { id: '2', icon: 'briefcase-outline', label: 'İlan Ver', badge: 0 },
-        { id: '3', icon: 'document-outline', label: 'İzin Talebi', badge: 0 },
-        { id: '4', icon: 'calendar-outline', label: 'Mülakat Planla', badge: 0 },
+        { id: '1', icon: 'person-add-outline', label: 'Çalışan Ekle', badge: 0, route: '/hr/employee/new' },
+        { id: '2', icon: 'briefcase-outline', label: 'İlan Ver', badge: 0, route: '/hr/job-postings/new' },
+        { id: '3', icon: 'people-outline', label: 'Personeller', badge: 0, route: '/hr/employee' },
+        { id: '4', icon: 'document-text-outline', label: 'Başvurular', badge: 0, route: '/hr/job-applications' },
       ]
     default:
       return []
@@ -430,9 +430,11 @@ export default function Dashboard() {
   }, [router])
 
   // Hizli islem tiklamasi
-  const handleQuickAction = useCallback((actionId: string) => {
-    console.log('Quick action:', actionId)
-  }, [])
+  const handleQuickAction = useCallback((action: QuickAction) => {
+    if (action.route) {
+      router.push(action.route as any)
+    }
+  }, [router])
 
   // Tab'lar icin header formatina donustur
   const headerTabs = useMemo(() => {
@@ -553,7 +555,7 @@ export default function Dashboard() {
                     icon={action.icon}
                     label={action.label}
                     badge={action.badge}
-                    onPress={() => handleQuickAction(action.id)}
+                    onPress={() => handleQuickAction(action)}
                     delay={300 + index * 50}
                   />
                 ))}

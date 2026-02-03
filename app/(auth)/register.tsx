@@ -5,7 +5,7 @@
  * Glassmorphism, smooth transitions ve elegant step indicators
  */
 
-import React, { useState, useCallback, Fragment, useEffect } from 'react'
+import React, { useState, useCallback, Fragment, useEffect, useRef } from 'react'
 import {
   View,
   StyleSheet,
@@ -73,6 +73,7 @@ export default function Register() {
     companyName: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const inputRefs = useRef<Record<string, TextInput | null>>({})
   const [focusedField, setFocusedField] = useState<string | null>(null)
 
   // Animation values
@@ -263,7 +264,10 @@ export default function Register() {
     } = {}
   ) => (
     <View style={styles.inputContainer}>
-      <View style={[styles.inputWrapper, getInputStyle(field)]}>
+      <Pressable
+        style={[styles.inputWrapper, getInputStyle(field)]}
+        onPress={() => inputRefs.current[field]?.focus()}
+      >
         <View style={styles.inputIconContainer}>
           <Ionicons
             name={icon}
@@ -278,6 +282,7 @@ export default function Register() {
           />
         </View>
         <TextInput
+          ref={(ref) => { inputRefs.current[field] = ref }}
           style={styles.input}
           placeholder={placeholder}
           placeholderTextColor={AuthColors.textPlaceholder}
@@ -290,7 +295,7 @@ export default function Register() {
           autoCapitalize={options.autoCapitalize || 'none'}
           autoComplete={options.autoComplete as any}
         />
-      </View>
+      </Pressable>
       {errors[field] && (
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={14} color={AuthColors.error} />

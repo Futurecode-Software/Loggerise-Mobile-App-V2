@@ -58,6 +58,8 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false)
 
   const forgotPasswordModalRef = useRef<ForgotPasswordModalRef>(null)
+  const emailInputRef = useRef<TextInput>(null)
+  const passwordInputRef = useRef<TextInput>(null)
 
   // Animation values
   const buttonScale = useSharedValue(1)
@@ -218,7 +220,10 @@ export default function Login() {
           {/* Email Input */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>E-posta</Text>
-            <View style={[styles.inputWrapper, getInputStyle('email')]}>
+            <Pressable
+              style={[styles.inputWrapper, getInputStyle('email')]}
+              onPress={() => emailInputRef.current?.focus()}
+            >
               <View style={styles.inputIconContainer}>
                 <Ionicons
                   name="mail-outline"
@@ -227,6 +232,7 @@ export default function Login() {
                 />
               </View>
               <TextInput
+                ref={emailInputRef}
                 style={styles.input}
                 placeholder="ornek@email.com"
                 placeholderTextColor={AuthColors.textPlaceholder}
@@ -238,7 +244,7 @@ export default function Login() {
                 onFocus={() => setFocusedField('email')}
                 onBlur={() => setFocusedField(null)}
               />
-            </View>
+            </Pressable>
             {errors.email && (
               <View style={styles.errorContainer}>
                 <Ionicons name="alert-circle" size={14} color={AuthColors.error} />
@@ -250,7 +256,10 @@ export default function Login() {
           {/* Password Input */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Şifre</Text>
-            <View style={[styles.inputWrapper, getInputStyle('password')]}>
+            <Pressable
+              style={[styles.inputWrapper, getInputStyle('password')]}
+              onPress={() => passwordInputRef.current?.focus()}
+            >
               <View style={styles.inputIconContainer}>
                 <Ionicons
                   name="lock-closed-outline"
@@ -259,6 +268,7 @@ export default function Login() {
                 />
               </View>
               <TextInput
+                ref={passwordInputRef}
                 style={styles.input}
                 placeholder="Şifrenizi girin"
                 placeholderTextColor={AuthColors.textPlaceholder}
@@ -280,7 +290,7 @@ export default function Login() {
                   color={AuthColors.iconDefault}
                 />
               </Pressable>
-            </View>
+            </Pressable>
             {errors.password && (
               <View style={styles.errorContainer}>
                 <Ionicons name="alert-circle" size={14} color={AuthColors.error} />
