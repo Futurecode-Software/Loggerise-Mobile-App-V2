@@ -4,8 +4,8 @@
  * Ana navigasyon menüsü - Tüm modüllere erişim
  */
 
-import React, { useState } from 'react'
-import { View, Text, StyleSheet, Pressable, ScrollView, LayoutAnimation, Platform, UIManager } from 'react-native'
+import React, { useState, useMemo } from 'react'
+import { View, Text, StyleSheet, Pressable, ScrollView, LayoutAnimation, Platform, UIManager, TextInput } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
@@ -15,7 +15,6 @@ import Animated, {
   withTiming
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { useAuth } from '@/context/auth-context'
 import { PageHeader } from '@/components/navigation'
 import {
   DashboardColors,
@@ -149,8 +148,8 @@ function CollapsibleMenu({ category, isExpanded, onToggle, router }: Collapsible
 
 export default function MoreScreen() {
   const router = useRouter()
-  const { user } = useAuth()
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const handleLogout = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
@@ -161,7 +160,7 @@ export default function MoreScreen() {
     setExpandedCategory(expandedCategory === categoryId ? null : categoryId)
   }
 
-  const menuCategories: MenuCategory[] = [
+  const menuCategories = useMemo<MenuCategory[]>(() => [
     {
       id: 'muhasebe',
       icon: 'calculator',
@@ -288,7 +287,42 @@ export default function MoreScreen() {
       color: '#3b82f6',
       route: '/settings/users'
     }
-  ]
+  ], [])
+
+  // Arama filtreleme
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return menuCategories
+    }
+
+    const query = searchQuery.toLowerCase().trim()
+    return menuCategories.filter(category => {
+      // Kategori adı eşleşiyorsa
+      if (category.label.toLowerCase().includes(query)) {
+        return true
+      }
+
+      // Alt öğelerde arama
+      if (category.subItems) {
+        return category.subItems.some(subItem =>
+          subItem.label.toLowerCase().includes(query)
+        )
+      }
+
+      return false
+    }).map(category => {
+      // Alt öğeleri de filtrele
+      if (category.subItems) {
+        return {
+          ...category,
+          subItems: category.subItems.filter(subItem =>
+            subItem.label.toLowerCase().includes(query)
+          )
+        }
+      }
+      return category
+    })
+  }, [searchQuery, menuCategories])
 
   return (
     <View style={styles.container}>
@@ -302,48 +336,52 @@ export default function MoreScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        {/* Kullanıcı Kartı */}
-        <View style={styles.userCard}>
-          <View style={styles.userAvatar}>
-            <Text style={styles.userAvatarText}>
-              {user?.fullName?.charAt(0).toUpperCase() || 'U'}
-            </Text>
-          </View>
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.fullName || 'Kullanıcı'}</Text>
-            <Text style={styles.userEmail}>{user?.email || ''}</Text>
-          </View>
-          <Pressable
-            style={styles.editButton}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-              router.push('/(tabs)/profile')
-            }}
-          >
-            <Ionicons name="create-outline" size={20} color={DashboardColors.primary} />
-          </Pressable>
-        </View>
-
-        {/* Bilgilendirme */}
-        <View style={styles.infoContainer}>
-          <Ionicons name="information-circle" size={16} color={DashboardColors.primary} />
-          <Text style={styles.infoText}>
-            Bir kategori seçerek alt menülere erişebilirsiniz
-          </Text>
+        {/* Arama */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color={DashboardColors.textMuted} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Menüde ara..."
+            placeholderTextColor={DashboardColors.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            clearButtonMode="while-editing"
+            enterKeyHint="search"
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && Platform.OS === 'android' && (
+            <Pressable
+              onPress={() => setSearchQuery('')}
+              style={styles.clearButton}
+            >
+              <Ionicons name="close-circle" size={20} color={DashboardColors.textMuted} />
+            </Pressable>
+          )}
         </View>
 
         {/* Menü Kategorileri */}
         <View style={styles.menuContainer}>
-          {menuCategories.map((category) => (
-            <CollapsibleMenu
-              key={category.id}
-              category={category}
-              isExpanded={expandedCategory === category.id}
-              onToggle={() => toggleCategory(category.id)}
-              router={router}
-            />
-          ))}
+          {filteredCategories.length > 0 ? (
+            filteredCategories.map((category) => (
+              <CollapsibleMenu
+                key={category.id}
+                category={category}
+                isExpanded={searchQuery ? true : expandedCategory === category.id}
+                onToggle={() => toggleCategory(category.id)}
+                router={router}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={48} color={DashboardColors.textMuted} />
+              <Text style={styles.emptyStateText}>Sonuç bulunamadı</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Farklı bir arama terimi deneyin
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Ayarlar Bölümü */}
@@ -412,64 +450,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: DashboardSpacing['2xl'],
     paddingTop: DashboardSpacing.xl
   },
-  userCard: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: DashboardColors.surface,
     borderRadius: DashboardBorderRadius.xl,
-    padding: DashboardSpacing.lg,
+    paddingHorizontal: DashboardSpacing.md,
     marginBottom: DashboardSpacing.md,
     ...DashboardShadows.sm
   },
-  userAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: DashboardColors.primary,
-    alignItems: 'center',
-    justifyContent: 'center'
+  searchIcon: {
+    marginRight: DashboardSpacing.sm
   },
-  userAvatarText: {
-    fontSize: DashboardFontSizes['2xl'],
-    fontWeight: '700',
-    color: DashboardColors.textOnPrimary
-  },
-  userInfo: {
+  searchInput: {
     flex: 1,
-    marginLeft: DashboardSpacing.lg
-  },
-  userName: {
-    fontSize: DashboardFontSizes.lg,
-    fontWeight: '600',
+    height: 48,
+    fontSize: DashboardFontSizes.base,
     color: DashboardColors.textPrimary,
-    marginBottom: 2
+    paddingVertical: DashboardSpacing.sm
   },
-  userEmail: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary
-  },
-  editButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: DashboardColors.primaryGlow,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: `${DashboardColors.primary}10`,
-    borderRadius: DashboardBorderRadius.lg,
-    padding: DashboardSpacing.md,
-    marginBottom: DashboardSpacing.xl,
-    gap: DashboardSpacing.sm
-  },
-  infoText: {
-    flex: 1,
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary,
-    lineHeight: 18
+  clearButton: {
+    padding: DashboardSpacing.xs,
+    marginLeft: DashboardSpacing.xs
   },
   menuContainer: {
     gap: DashboardSpacing.sm,
@@ -600,6 +602,24 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.base,
     fontWeight: '600',
     color: DashboardColors.danger
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: DashboardSpacing['3xl'],
+    paddingHorizontal: DashboardSpacing.xl
+  },
+  emptyStateText: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    marginTop: DashboardSpacing.md,
+    marginBottom: DashboardSpacing.xs
+  },
+  emptyStateSubtext: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    textAlign: 'center'
   },
   bottomSpacer: {
     height: 100
