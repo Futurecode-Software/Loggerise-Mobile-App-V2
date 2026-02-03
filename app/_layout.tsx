@@ -43,12 +43,10 @@ function NavigationController() {
     if (!isAuthenticated) {
       // Not authenticated - ensure we're on login page
       if (!inAuthGroup || currentPage !== 'login') {
-        console.log('NavigationController: Redirecting to login (not authenticated)')
         router.replace('/(auth)/login')
       }
     } else if (isAuthenticated && inAuthGroup && currentPage !== 'logging-out') {
       // Authenticated and in auth group (but not logging out) - go to app
-      console.log('NavigationController: Redirecting to tabs (authenticated)')
       router.replace('/(tabs)')
     }
   }, [isAuthenticated, isInitializing, segments, router])

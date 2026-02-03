@@ -83,17 +83,11 @@ export default function LoggingOutScreen() {
       hasLoggedOut.current = true
 
       try {
-        console.log('Logout başlıyor...')
-
         // Logout işlemini başlat
         await logout()
 
-        console.log('Logout tamamlandı, 2 saniye bekleniyor...')
-
         // 2 saniye göster (UX için)
         await new Promise(resolve => setTimeout(resolve, 2000))
-
-        console.log('Logout tamamlandı, NavigationController devralacak...')
 
         // NavigationController otomatik olarak login'e yönlendirecek
       } catch (error) {
