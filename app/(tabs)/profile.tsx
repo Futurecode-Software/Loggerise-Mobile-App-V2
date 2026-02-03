@@ -1,7 +1,21 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native'
+/**
+ * Profil Sayfası
+ *
+ * Kullanıcı profil bilgileri ve hesap ayarları
+ * %100 Backend uyumlu
+ */
+
+import React, { useState, useRef } from 'react'
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
+import * as Haptics from 'expo-haptics'
+import * as ImagePicker from 'expo-image-picker'
+import Constants from 'expo-constants'
+import Toast from 'react-native-toast-message'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { PageHeader } from '@/components/navigation'
+import CustomBottomSheet from '@/components/modals/CustomBottomSheet'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -10,46 +24,207 @@ import {
   DashboardShadows
 } from '@/constants/dashboard-theme'
 import { useAuth } from '@/context/auth-context'
+import { uploadAvatar, deleteAvatar } from '@/services/endpoints/profile'
 
-export default function ProfileScreen() {
-  const { user, logout } = useAuth()
+export default function ProfileScreen(): React.ReactElement {
+  const { user, logout, refreshUser } = useAuth()
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [avatarTimestamp, setAvatarTimestamp] = useState(Date.now())
+  const avatarSheetRef = useRef<BottomSheetModal>(null)
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
     logout()
     router.replace('/(auth)/login')
   }
 
-  const handleEditProfile = () => {
+  const handleEditProfile = (): void => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     router.push('/profile/edit')
   }
 
-  const stats = [
-    { label: 'Aktif Yükler', value: '12', icon: 'cube-outline' as const },
-    { label: 'Tamamlanan', value: '48', icon: 'checkmark-circle-outline' as const },
-    { label: 'Toplam Kazanç', value: '₺124.5K', icon: 'trending-up-outline' as const }
-  ]
+  const handleChangePassword = (): void => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push('/profile/change-password')
+  }
+
+  const handleNotifications = (): void => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push('/notifications')
+  }
+
+  const handleAbout = (): void => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push('/about')
+  }
+
+  const handleAvatarPress = (): void => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    avatarSheetRef.current?.present()
+  }
+
+  const handlePickImage = async (source: 'camera' | 'gallery'): Promise<void> => {
+    try {
+      // İzin kontrolü
+      if (source === 'camera') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync()
+        if (status !== 'granted') {
+          Toast.show({
+            type: 'error',
+            text1: 'Kamera izni gerekli',
+            text2: 'Lütfen ayarlardan kamera iznini açın',
+            position: 'top',
+            visibilityTime: 2000
+          })
+          return
+        }
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+        if (status !== 'granted') {
+          Toast.show({
+            type: 'error',
+            text1: 'Galeri izni gerekli',
+            text2: 'Lütfen ayarlardan galeri iznini açın',
+            position: 'top',
+            visibilityTime: 2000
+          })
+          return
+        }
+      }
+
+      // Resim seç
+      const result = source === 'camera'
+        ? await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8
+          })
+
+      if (!result.canceled && result.assets[0]) {
+        await handleUploadAvatar(result.assets[0].uri)
+      }
+    } catch (error) {
+      console.error('Image picker error:', error)
+      Toast.show({
+        type: 'error',
+        text1: 'Resim seçilemedi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    }
+  }
+
+  const handleUploadAvatar = async (uri: string): Promise<void> => {
+    setIsUploadingAvatar(true)
+    try {
+      // FormData oluştur
+      const formData = new FormData()
+      const filename = uri.split('/').pop() || 'avatar.jpg'
+      const match = /\.(\w+)$/.exec(filename)
+      const type = match ? `image/${match[1]}` : 'image/jpeg'
+
+      formData.append('avatar', {
+        uri,
+        name: filename,
+        type
+      } as any)
+
+      // Upload
+      console.log('🔄 Avatar upload başlıyor...')
+      const avatarUrl = await uploadAvatar(formData)
+      console.log('✅ Avatar upload tamamlandı, URL:', avatarUrl)
+
+      // Kullanıcı bilgilerini yenile
+      console.log('🔄 Kullanıcı bilgileri yenileniyor...')
+      await refreshUser()
+      console.log('✅ Kullanıcı bilgileri yenilendi')
+
+      // Avatar cache'ini temizle
+      setAvatarTimestamp(Date.now())
+
+      Toast.show({
+        type: 'success',
+        text1: 'Profil fotoğrafınız güncellendi',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } catch (error: any) {
+      console.error('❌ Avatar upload hatası:', error)
+      Toast.show({
+        type: 'error',
+        text1: error.message || 'Fotoğraf yüklenirken bir hata oluştu',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
+
+  const handleDeleteAvatar = async (): Promise<void> => {
+    setIsUploadingAvatar(true)
+    try {
+      await deleteAvatar()
+      await refreshUser()
+
+      // Avatar cache'ini temizle
+      setAvatarTimestamp(Date.now())
+
+      Toast.show({
+        type: 'success',
+        text1: 'Profil fotoğrafınız kaldırıldı',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: error.message || 'Fotoğraf silinirken bir hata oluştu',
+        position: 'top',
+        visibilityTime: 1500
+      })
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
+
+  const appVersion = Constants.expoConfig?.version || '1.0.0'
 
   return (
     <View style={styles.container}>
       <PageHeader
         title="Profil"
-        variant="compact"
-        leftAction={{
-          icon: 'arrow-back',
-          onPress: () => router.back()
+        icon="person-outline"
+        subtitle="Hesap bilgileriniz"
+        showBackButton
+        onBackPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+          router.back()
         }}
       />
 
       <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* User Card */}
         <View style={[styles.userCard, DashboardShadows.md]}>
           <View style={styles.avatarContainer}>
             {user?.avatar ? (
-              <Image source={{ uri: user.avatar }} style={styles.avatar} />
+              <Image
+                source={{
+                  uri: `${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${avatarTimestamp}`
+                }}
+                style={styles.avatar}
+              />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarText}>
@@ -57,25 +232,41 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             )}
-            <TouchableOpacity style={styles.cameraButton} activeOpacity={0.7}>
-              <Ionicons name="camera" size={16} color="#FFFFFF" />
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={handleAvatarPress}
+              disabled={isUploadingAvatar}
+              activeOpacity={0.7}
+            >
+              {isUploadingAvatar ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons name="camera" size={16} color="#FFFFFF" />
+              )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{user?.fullName || 'Kullanıcı'}</Text>
+
             <View style={styles.infoRow}>
               <Ionicons name="mail-outline" size={14} color={DashboardColors.textSecondary} />
               <Text style={styles.infoText}>{user?.email || 'email@example.com'}</Text>
             </View>
-            <View style={styles.infoRow}>
-              <Ionicons name="call-outline" size={14} color={DashboardColors.textSecondary} />
-              <Text style={styles.infoText}>{user?.phone || 'Telefon ekle'}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Ionicons name="business-outline" size={14} color={DashboardColors.textSecondary} />
-              <Text style={styles.infoText}>{user?.tenantName || 'Şirket'}</Text>
-            </View>
+
+            {user?.phone && (
+              <View style={styles.infoRow}>
+                <Ionicons name="call-outline" size={14} color={DashboardColors.textSecondary} />
+                <Text style={styles.infoText}>{user.phone}</Text>
+              </View>
+            )}
+
+            {user?.tenantName && (
+              <View style={styles.infoRow}>
+                <Ionicons name="business-outline" size={14} color={DashboardColors.textSecondary} />
+                <Text style={styles.infoText}>{user.tenantName}</Text>
+              </View>
+            )}
           </View>
 
           <TouchableOpacity
@@ -88,26 +279,13 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Statistics */}
-        <View style={styles.statsContainer}>
-          {stats.map((stat, index) => (
-            <View key={index} style={[styles.statCard, DashboardShadows.sm]}>
-              <View style={[styles.statIconContainer, { backgroundColor: `${DashboardColors.primary}20` }]}>
-                <Ionicons name={stat.icon} size={20} color={DashboardColors.primary} />
-              </View>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
-        </View>
-
         {/* Menu Items */}
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>HESAP</Text>
           <View style={[styles.menuCard, DashboardShadows.md]}>
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => router.push('/profile/change-password')}
+              onPress={handleChangePassword}
               activeOpacity={0.7}
             >
               <View style={styles.menuItemLeft}>
@@ -123,7 +301,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => router.push('/notifications')}
+              onPress={handleNotifications}
               activeOpacity={0.7}
             >
               <View style={styles.menuItemLeft}>
@@ -142,7 +320,7 @@ export default function ProfileScreen() {
           <View style={[styles.menuCard, DashboardShadows.md]}>
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => router.push('/about')}
+              onPress={handleAbout}
               activeOpacity={0.7}
             >
               <View style={styles.menuItemLeft}>
@@ -150,38 +328,6 @@ export default function ProfileScreen() {
                   <Ionicons name="information-circle-outline" size={20} color={DashboardColors.primary} />
                 </View>
                 <Text style={styles.menuItemText}>Hakkında</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={DashboardColors.textSecondary} />
-            </TouchableOpacity>
-
-            <View style={styles.divider} />
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => router.push('/help')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.menuItemLeft}>
-                <View style={styles.menuIconContainer}>
-                  <Ionicons name="help-circle-outline" size={20} color={DashboardColors.primary} />
-                </View>
-                <Text style={styles.menuItemText}>Yardım ve Destek</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={DashboardColors.textSecondary} />
-            </TouchableOpacity>
-
-            <View style={styles.divider} />
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => router.push('/privacy')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.menuItemLeft}>
-                <View style={styles.menuIconContainer}>
-                  <Ionicons name="document-text-outline" size={20} color={DashboardColors.primary} />
-                </View>
-                <Text style={styles.menuItemText}>Gizlilik Politikası</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={DashboardColors.textSecondary} />
             </TouchableOpacity>
@@ -199,8 +345,67 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {/* Version */}
-        <Text style={styles.versionText}>Versiyon 1.0.0</Text>
+        <Text style={styles.versionText}>Versiyon {appVersion}</Text>
       </ScrollView>
+
+      {/* Avatar Bottom Sheet */}
+      <CustomBottomSheet
+        ref={avatarSheetRef}
+        snapPoints={['35%']}
+        enableDynamicSizing={false}
+      >
+        <View style={styles.sheetContainer}>
+          <Text style={styles.sheetTitle}>Profil Fotoğrafı</Text>
+
+          <View style={styles.sheetOptions}>
+            {user?.avatar && (
+              <TouchableOpacity
+                style={styles.sheetOption}
+                onPress={() => {
+                  avatarSheetRef.current?.dismiss()
+                  handleDeleteAvatar()
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.sheetOptionIcon, { backgroundColor: '#FEE2E2' }]}>
+                  <Ionicons name="trash-outline" size={24} color="#EF4444" />
+                </View>
+                <Text style={[styles.sheetOptionText, { color: '#EF4444' }]}>
+                  Fotoğrafı Kaldır
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.sheetOption}
+              onPress={() => {
+                avatarSheetRef.current?.dismiss()
+                handlePickImage('camera')
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.sheetOptionIcon, { backgroundColor: `${DashboardColors.primary}15` }]}>
+                <Ionicons name="camera-outline" size={24} color={DashboardColors.primary} />
+              </View>
+              <Text style={styles.sheetOptionText}>Fotoğraf Çek</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.sheetOption}
+              onPress={() => {
+                avatarSheetRef.current?.dismiss()
+                handlePickImage('gallery')
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.sheetOptionIcon, { backgroundColor: `${DashboardColors.primary}15` }]}>
+                <Ionicons name="images-outline" size={24} color={DashboardColors.primary} />
+              </View>
+              <Text style={styles.sheetOptionText}>Galeriden Seç</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </CustomBottomSheet>
     </View>
   )
 }
@@ -208,17 +413,18 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: DashboardColors.primary
+  },
+  scrollView: {
+    flex: 1,
     backgroundColor: DashboardColors.background
   },
-  content: {
-    flex: 1
-  },
-  contentContainer: {
-    padding: DashboardSpacing.lg,
-    paddingBottom: DashboardSpacing['3xl']
+  scrollContent: {
+    paddingHorizontal: DashboardSpacing['2xl'],
+    paddingTop: DashboardSpacing.xl
   },
   userCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: DashboardColors.surface,
     borderRadius: DashboardBorderRadius.xl,
     padding: DashboardSpacing.xl,
     marginBottom: DashboardSpacing.lg,
@@ -231,7 +437,9 @@ const styles = StyleSheet.create({
   avatar: {
     width: 80,
     height: 80,
-    borderRadius: 40
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: `${DashboardColors.primary}30`
   },
   avatarPlaceholder: {
     width: 80,
@@ -257,7 +465,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF'
+    borderColor: DashboardColors.surface
   },
   userInfo: {
     alignItems: 'center',
@@ -267,7 +475,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: DashboardFontSizes.xl,
     fontWeight: '700',
-    color: DashboardColors.text,
+    color: DashboardColors.textPrimary,
     marginBottom: DashboardSpacing.sm
   },
   infoRow: {
@@ -295,50 +503,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: DashboardColors.primary
   },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: DashboardSpacing.md,
-    marginBottom: DashboardSpacing.lg
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: DashboardBorderRadius.lg,
-    padding: DashboardSpacing.md,
-    alignItems: 'center'
-  },
-  statIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: DashboardSpacing.sm
-  },
-  statValue: {
-    fontSize: DashboardFontSizes.lg,
-    fontWeight: '700',
-    color: DashboardColors.text,
-    marginBottom: DashboardSpacing.xs
-  },
-  statLabel: {
-    fontSize: DashboardFontSizes.xs,
-    color: DashboardColors.textSecondary,
-    textAlign: 'center'
-  },
   menuSection: {
     marginBottom: DashboardSpacing.lg
   },
   sectionTitle: {
     fontSize: DashboardFontSizes.xs,
     fontWeight: '600',
-    color: DashboardColors.textSecondary,
+    color: DashboardColors.textMuted,
     marginBottom: DashboardSpacing.sm,
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
+    paddingHorizontal: DashboardSpacing.xs
   },
   menuCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
     overflow: 'hidden'
   },
   menuItem: {
@@ -361,8 +539,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   menuItemText: {
-    fontSize: DashboardFontSizes.md,
-    color: DashboardColors.text
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '500',
+    color: DashboardColors.textPrimary
   },
   divider: {
     height: 1,
@@ -375,11 +554,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: DashboardSpacing.sm,
     paddingVertical: DashboardSpacing.md,
-    marginTop: DashboardSpacing.lg,
+    marginTop: DashboardSpacing.xl,
     marginBottom: DashboardSpacing.md
   },
   logoutButtonText: {
-    fontSize: DashboardFontSizes.md,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
     color: '#EF4444'
   },
@@ -387,6 +566,43 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.xs,
     color: DashboardColors.textMuted,
     textAlign: 'center',
+    marginBottom: DashboardSpacing['3xl']
+  },
+  sheetContainer: {
+    paddingHorizontal: DashboardSpacing.xl,
+    paddingBottom: DashboardSpacing.xl
+  },
+  sheetTitle: {
+    fontSize: DashboardFontSizes.xl,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary,
     marginBottom: DashboardSpacing.lg
+  },
+  sheetOptions: {
+    gap: DashboardSpacing.sm
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.md,
+    paddingHorizontal: DashboardSpacing.lg,
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight
+  },
+  sheetOptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sheetOptionText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
+    flex: 1
   }
 })

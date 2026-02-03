@@ -368,27 +368,10 @@ export default function MoreScreen() {
           </Pressable>
 
           <Pressable
-            style={styles.settingsItem}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-              console.log('Bildirimler')
-            }}
-          >
-            <View style={[styles.settingsIconContainer, { backgroundColor: '#f59e0b15' }]}>
-              <Ionicons name="notifications" size={20} color="#f59e0b" />
-            </View>
-            <View style={styles.settingsContent}>
-              <Text style={styles.settingsLabel}>Bildirimler</Text>
-              <Text style={styles.settingsDescription}>Bildirim tercihlerinizi yönetin</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
-          </Pressable>
-
-          <Pressable
             style={[styles.settingsItem, styles.settingsItemLast]}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-              console.log('Hakkında')
+              router.push('/about')
             }}
           >
             <View style={[styles.settingsIconContainer, { backgroundColor: '#8b5cf615' }]}>
@@ -396,7 +379,7 @@ export default function MoreScreen() {
             </View>
             <View style={styles.settingsContent}>
               <Text style={styles.settingsLabel}>Hakkında</Text>
-              <Text style={styles.settingsDescription}>Versiyon 1.0.0</Text>
+              <Text style={styles.settingsDescription}>Uygulama hakkında bilgi</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
           </Pressable>
