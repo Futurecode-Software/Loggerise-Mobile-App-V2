@@ -13,8 +13,8 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'loggerise_v2',
-  slug: 'loggerise_v2',
+  name: 'Loggerise - Lojistik ERP',
+  slug: 'loggerise-lojistik-erp',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.loggerise.app',
+    bundleIdentifier: 'com.loggerise.erp',
   },
   android: {
     adaptiveIcon: {
@@ -34,7 +34,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
-    package: 'com.loggerise.app',
+    package: 'com.loggerise.erp',
     // Chat ekranlarında klavye input'u düzgün göstermesi için kritik
     softwareKeyboardLayoutMode: 'resize',
   },
