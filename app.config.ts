@@ -1,14 +1,10 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
 /**
- * Expo Configuration
+ * Expo Configuration - Loggerise Lojistik ERP
  *
- * Environment variables are read from process.env
- * For local development, create a .env file with:
- *
- * EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=your-web-client-id.apps.googleusercontent.com
- * EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=your-ios-client-id.apps.googleusercontent.com
- * EXPO_PUBLIC_API_URL=http://10.0.2.2:8000/api/v1/mobile
+ * Production configuration with hard-coded values
+ * All API endpoints and credentials are configured below
  */
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
@@ -63,23 +59,23 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     reactCompiler: true,
   },
   extra: {
-    // Google OAuth Client IDs (from Google Cloud Console)
-    googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
-    googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '',
-    googleAndroidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '',
-    googleExpoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || '',
+    // Google OAuth Client IDs
+    googleWebClientId: '729255118841-mtgt26tjv5lb0ngbk27ckabr5os0p77n.apps.googleusercontent.com',
+    googleIosClientId: '729255118841-mtgt26tjv5lb0ngbk27ckabr5os0p77n.apps.googleusercontent.com',
+    googleAndroidClientId: '729255118841-339pa5b8nl0mskgrhj8mra1lqh9o2a6t.apps.googleusercontent.com',
+    googleExpoClientId: '729255118841-mtgt26tjv5lb0ngbk27ckabr5os0p77n.apps.googleusercontent.com',
     // Google Maps API Key
-    googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    // API Configuration
-    apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:8000/api/v1/mobile',
+    googleMapsApiKey: '',
+    // API Configuration - Production Backend
+    apiUrl: 'https://erp.loggerise.com/api/v1/mobile',
     // WebSocket/Reverb Configuration (Laravel Reverb - Pusher compatible)
-    reverbAppKey: process.env.EXPO_PUBLIC_REVERB_APP_KEY || 'loggerise-reverb-key',
-    reverbHost: process.env.EXPO_PUBLIC_REVERB_HOST || '10.0.2.2',
-    reverbPort: process.env.EXPO_PUBLIC_REVERB_PORT || '8080',
-    reverbScheme: process.env.EXPO_PUBLIC_REVERB_SCHEME || 'http',
+    reverbAppKey: 'reverb-app-key',
+    reverbHost: 'erp.loggerise.com',
+    reverbPort: '8080',
+    reverbScheme: 'http',
     // EAS Project ID (for push notifications and EAS Build)
     eas: {
-      projectId: 'c8ee4f0f-504a-4177-84ea-c7687843b041',
+      projectId: '21fbcfee-331f-4207-b154-18042a685e95',
     },
   },
 });

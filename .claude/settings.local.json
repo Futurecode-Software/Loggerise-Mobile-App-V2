@@ -70,7 +70,11 @@
       "Bash(Select-String -Pattern \"job-postings\")",
       "Bash(settings)",
       "Bash(export \")",
-      "Bash(php artisan tenants:list:*)"
+      "Bash(php artisan tenants:list:*)",
+      "Bash(eas env:create:*)",
+      "Bash(eas secret:list:*)",
+      "Bash(powershell -Command \"Get-Content ''C:\\\\loggerisemobil\\\\app\\\\\\(tabs\\)\\\\index.tsx'' | Select-Object -Last 10\")",
+      "Bash(powershell:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
