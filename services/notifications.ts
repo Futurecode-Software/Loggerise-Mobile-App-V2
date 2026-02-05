@@ -84,37 +84,48 @@ if (isPushNotificationsSupported()) {
  * Get the Expo push token
  */
 export async function getExpoPushToken(): Promise<string | null> {
+  console.log('[Get Token] Checking push notification support...');
+
   if (!isPushNotificationsSupported()) {
     if (!Device.isDevice) {
-      console.warn('Push notifications require a physical device');
+      console.warn('[Get Token] Push notifications require a physical device');
     } else if (Platform.OS === 'android' && isExpoGo()) {
-      console.warn('Push notifications require a development build on Android (not supported in Expo Go)');
+      console.warn('[Get Token] Push notifications require a development build on Android (not supported in Expo Go)');
     }
     return null;
   }
 
   // Ensure notifications module is loaded
+  console.log('[Get Token] Loading notifications module...');
   const notificationsModule = await ensureNotificationsLoaded();
   if (!notificationsModule) {
+    console.error('[Get Token] Failed to load notifications module');
     return null;
   }
+  console.log('[Get Token] Notifications module loaded');
 
   try {
     // Get project ID from Constants
     const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+    console.log('[Get Token] EAS Project ID:', projectId);
 
     if (!projectId) {
-      console.warn('No project ID found for push notifications');
+      console.warn('[Get Token] No project ID found for push notifications');
       return null;
     }
 
+    console.log('[Get Token] Requesting Expo push token from Expo servers...');
     const token = await notificationsModule.getExpoPushTokenAsync({
       projectId,
     });
 
+    console.log('[Get Token] ✓ Token received:', token.data.substring(0, 30) + '...');
     return token.data;
   } catch (error) {
-    console.error('Error getting push token:', error);
+    console.error('[Get Token] Error getting push token:', error);
+    if (error && typeof error === 'object') {
+      console.error('[Get Token] Error details:', JSON.stringify(error, null, 2));
+    }
     return null;
   }
 }
@@ -123,41 +134,56 @@ export async function getExpoPushToken(): Promise<string | null> {
  * Request notification permissions
  */
 export async function requestNotificationPermissions(): Promise<boolean> {
+  console.log('[Permissions] Checking notification permissions...');
+
   if (!isPushNotificationsSupported()) {
+    console.log('[Permissions] Push notifications not supported on this platform');
     return false;
   }
 
   // Ensure notifications module is loaded
   const notificationsModule = await ensureNotificationsLoaded();
   if (!notificationsModule) {
+    console.error('[Permissions] Failed to load notifications module');
     return false;
   }
 
   try {
     // Check current permissions
+    console.log('[Permissions] Getting current permission status...');
     const { status: existingStatus } = await notificationsModule.getPermissionsAsync();
+    console.log('[Permissions] Current status:', existingStatus);
 
     let finalStatus = existingStatus;
 
     // Request if not already granted
     if (existingStatus !== 'granted') {
+      console.log('[Permissions] Requesting permissions from user...');
       const { status } = await notificationsModule.requestPermissionsAsync();
       finalStatus = status;
+      console.log('[Permissions] User response:', status);
     }
 
     if (finalStatus !== 'granted') {
-      console.warn('Notification permissions not granted');
+      console.warn('[Permissions] Notification permissions not granted. Final status:', finalStatus);
       return false;
     }
 
+    console.log('[Permissions] ✓ Permissions granted');
+
     // Set up Android notification channel
     if (Platform.OS === 'android') {
+      console.log('[Permissions] Setting up Android notification channels...');
       await setupAndroidChannel();
+      console.log('[Permissions] ✓ Android channels configured');
     }
 
     return true;
   } catch (error) {
-    console.error('Error requesting notification permissions:', error);
+    console.error('[Permissions] Error requesting notification permissions:', error);
+    if (error && typeof error === 'object') {
+      console.error('[Permissions] Error details:', JSON.stringify(error, null, 2));
+    }
     return false;
   }
 }
@@ -213,19 +239,33 @@ async function setupAndroidChannel() {
  */
 export async function registerPushToken(token: string): Promise<boolean> {
   try {
-    await api.post('/device-tokens', {
+    const payload = {
       token,
       device_type: Platform.OS,
       device_name: Device.modelName || 'Unknown',
-    });
+    };
+    console.log('[Token Register] Sending to backend:', payload);
+
+    const response = await api.post('/device-tokens', payload);
+    console.log('[Token Register] Backend response:', response.status, response.data);
 
     // Save token locally
     await storage.set(PUSH_TOKEN_KEY, token);
+    console.log('[Token Register] Token saved to local storage');
 
-    console.log('Push token registered successfully');
+    console.log('[Token Register] ✓ Push token registered successfully');
     return true;
   } catch (error) {
-    console.error('Error registering push token:', error);
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as any;
+      console.error('[Token Register] Backend error:', {
+        status: axiosError.response?.status,
+        data: axiosError.response?.data,
+        message: axiosError.message,
+      });
+    } else {
+      console.error('[Token Register] Error:', error);
+    }
     return false;
   }
 }
@@ -257,20 +297,34 @@ export async function unregisterPushToken(): Promise<boolean> {
  * Call this when the app starts and user is logged in
  */
 export async function initializePushNotifications(): Promise<string | null> {
+  console.log('[Push Init] Starting push notification initialization...');
+
   // Request permissions
+  console.log('[Push Init] Requesting notification permissions...');
   const hasPermission = await requestNotificationPermissions();
   if (!hasPermission) {
+    console.warn('[Push Init] Permission denied or unavailable');
     return null;
   }
+  console.log('[Push Init] Permissions granted');
 
   // Get push token
+  console.log('[Push Init] Getting Expo push token...');
   const token = await getExpoPushToken();
   if (!token) {
+    console.warn('[Push Init] Failed to get push token');
     return null;
   }
+  console.log('[Push Init] Token obtained:', token.substring(0, 30) + '...');
 
   // Register with backend
-  await registerPushToken(token);
+  console.log('[Push Init] Registering token with backend...');
+  const registered = await registerPushToken(token);
+  if (registered) {
+    console.log('[Push Init] ✓ Token successfully registered with backend');
+  } else {
+    console.error('[Push Init] ✗ Failed to register token with backend');
+  }
 
   return token;
 }

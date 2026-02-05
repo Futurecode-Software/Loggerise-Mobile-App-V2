@@ -53,12 +53,22 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   // Initialize notifications when user is authenticated AND setup is complete - only once
   const hasInitializedRef = useRef(false);
   useEffect(() => {
+    console.log('[NotificationContext] Effect triggered:', {
+      isAuthenticated,
+      isInitializing,
+      isSetupComplete,
+      isInitialized,
+      hasInitializedRef: hasInitializedRef.current,
+    });
+
     if (isAuthenticated && !isInitializing && isSetupComplete && !isInitialized && !hasInitializedRef.current) {
+      console.log('[NotificationContext] Conditions met, initializing notifications...');
       hasInitializedRef.current = true;
       initializeRef.current();
     }
     // Reset on logout or when setup is not complete
     if (!isAuthenticated && !isInitializing) {
+      console.log('[NotificationContext] User logged out, resetting');
       hasInitializedRef.current = false;
     }
   }, [isAuthenticated, isInitializing, isSetupComplete, isInitialized]);
