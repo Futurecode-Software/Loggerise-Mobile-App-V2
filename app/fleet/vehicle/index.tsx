@@ -161,7 +161,7 @@ function VehicleCard({ item, onPress }: VehicleCardProps) {
             </Text>
           </View>
         )}
-        {item.total_km && (
+        {Number(item.total_km) > 0 && (
           <View style={styles.infoRow}>
             <Ionicons name="speedometer-outline" size={14} color={DashboardColors.textMuted} />
             <Text style={styles.infoText}>

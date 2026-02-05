@@ -8,9 +8,16 @@ import api, { getErrorMessage } from '../api';
 import { formatCurrency, getCurrencySymbol as getSymbol } from '@/utils/formatters';
 
 /**
- * Currency type enum
+ * Currency type enum - Backend ile %100 uyumlu
+ * @see constants/currencies.ts for labels and symbols
  */
-export type CurrencyType = 'TRY' | 'USD' | 'EUR' | 'GBP';
+export type CurrencyType =
+  | 'TRY' | 'USD' | 'EUR' | 'GBP'
+  | 'AUD' | 'DKK' | 'CHF' | 'SEK'
+  | 'CAD' | 'KWD' | 'NOK' | 'SAR'
+  | 'JPY' | 'BGN' | 'RON' | 'RUB'
+  | 'CNY' | 'PKR' | 'QAR' | 'KRW'
+  | 'AZN' | 'AED' | 'XDR';
 
 /**
  * Bank entity

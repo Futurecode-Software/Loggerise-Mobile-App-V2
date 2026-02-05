@@ -1,98 +1,95 @@
 /**
  * Cash Registers API Endpoints
  *
- * Handles cash register management operations.
+ * Kasa yönetimi API işlemleri.
+ * Backend MobileCashRegisterController ile uyumlu.
  */
 
-import api, { getErrorMessage } from '../api';
-import { formatCurrency, getCurrencySymbol as getSymbol } from '@/utils/formatters';
+import api, { getErrorMessage } from '../api'
+import { formatCurrency } from '@/utils/formatters'
+import type { CurrencyCode } from '@/constants/currencies'
 
 /**
- * Currency type enum
- */
-export type CurrencyType = 'TRY' | 'USD' | 'EUR' | 'GBP';
-
-/**
- * Cash register entity
+ * Kasa entity
  */
 export interface CashRegister {
-  id: number;
-  name: string;
-  code?: string;
-  location?: string;
-  currency_type: CurrencyType;
-  balance: number;
-  opening_balance: number;
-  responsible_user_id?: number;
-  responsible_user?: { id: number; name: string; email: string } | null;
-  description?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  id: number
+  name: string
+  code?: string
+  location?: string
+  currency_type: CurrencyCode
+  balance: number
+  opening_balance: number
+  responsible_user_id?: number
+  responsible_user?: { id: number; name: string; email: string } | null
+  description?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 /**
- * Cash register list filters
+ * Kasa liste filtreleri
  */
 export interface CashRegisterFilters {
-  search?: string;
-  currency_type?: CurrencyType;
-  is_active?: boolean;
-  page?: number;
-  per_page?: number;
-  sort_by?: string;
-  sort_order?: 'asc' | 'desc';
+  search?: string
+  currency_type?: CurrencyCode
+  is_active?: boolean
+  page?: number
+  per_page?: number
+  sort_by?: string
+  sort_order?: 'asc' | 'desc'
 }
 
 /**
- * Pagination info
+ * Sayfalama bilgisi
  */
 export interface Pagination {
-  current_page: number;
-  per_page: number;
-  total: number;
-  last_page: number;
-  from: number | null;
-  to: number | null;
+  current_page: number
+  per_page: number
+  total: number
+  last_page: number
+  from: number | null
+  to: number | null
 }
 
 /**
- * Cash registers list response
+ * Kasa liste response
  */
 interface CashRegistersListResponse {
-  success: boolean;
+  success: boolean
   data: {
-    cash_registers: CashRegister[];
-    pagination: Pagination;
-  };
+    cash_registers: CashRegister[]
+    pagination: Pagination
+  }
 }
 
 /**
- * Single cash register response
+ * Tekil kasa response
  */
 interface CashRegisterResponse {
-  success: boolean;
+  success: boolean
   data: {
-    cash_register: CashRegister;
-  };
+    cash_register: CashRegister
+  }
 }
 
 /**
- * Create/Update cash register data
+ * Kasa oluşturma/güncelleme form verisi
  */
 export interface CashRegisterFormData {
-  name: string;
-  code?: string;
-  location?: string;
-  currency_type: CurrencyType;
-  opening_balance?: number;
-  responsible_user_id?: number;
-  description?: string;
-  is_active?: boolean;
+  name: string
+  code?: string
+  location?: string
+  currency_type: CurrencyCode
+  opening_balance?: number
+  responsible_user_id?: number
+  description?: string
+  is_active?: boolean
 }
 
 /**
- * Get cash registers list with optional filters
+ * Kasa listesini getir
  */
 export async function getCashRegisters(
   filters?: CashRegisterFilters
@@ -100,96 +97,74 @@ export async function getCashRegisters(
   try {
     const response = await api.get<CashRegistersListResponse>('/cash-registers', {
       params: filters,
-    });
+    })
     return {
       cashRegisters: response.data.data.cash_registers,
       pagination: response.data.data.pagination,
-    };
+    }
   } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
+    const message = getErrorMessage(error)
+    throw new Error(message)
   }
 }
 
 /**
- * Get single cash register by ID
+ * Tekil kasa getir
  */
 export async function getCashRegister(id: number): Promise<CashRegister> {
   try {
-    const response = await api.get<CashRegisterResponse>(`/cash-registers/${id}`);
-    return response.data.data.cash_register;
+    const response = await api.get<CashRegisterResponse>(`/cash-registers/${id}`)
+    return response.data.data.cash_register
   } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
+    const message = getErrorMessage(error)
+    throw new Error(message)
   }
 }
 
 /**
- * Create new cash register
+ * Yeni kasa oluştur
  */
 export async function createCashRegister(data: CashRegisterFormData): Promise<CashRegister> {
   try {
-    const response = await api.post<CashRegisterResponse>('/cash-registers', data);
-    return response.data.data.cash_register;
+    const response = await api.post<CashRegisterResponse>('/cash-registers', data)
+    return response.data.data.cash_register
   } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
+    const message = getErrorMessage(error)
+    throw new Error(message)
   }
 }
 
 /**
- * Update existing cash register
+ * Kasa güncelle
  */
 export async function updateCashRegister(
   id: number,
   data: Partial<CashRegisterFormData>
 ): Promise<CashRegister> {
   try {
-    const response = await api.put<CashRegisterResponse>(`/cash-registers/${id}`, data);
-    return response.data.data.cash_register;
+    const response = await api.put<CashRegisterResponse>(`/cash-registers/${id}`, data)
+    return response.data.data.cash_register
   } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
+    const message = getErrorMessage(error)
+    throw new Error(message)
   }
 }
 
 /**
- * Delete cash register
+ * Kasa sil
  */
 export async function deleteCashRegister(id: number): Promise<void> {
   try {
-    await api.delete(`/cash-registers/${id}`);
+    await api.delete(`/cash-registers/${id}`)
   } catch (error) {
-    const message = getErrorMessage(error);
-    throw new Error(message);
+    const message = getErrorMessage(error)
+    throw new Error(message)
   }
 }
 
 /**
- * Get currency label in Turkish
+ * Bakiye formatla
  */
-export function getCurrencyLabel(currency: CurrencyType): string {
-  const labels: Record<CurrencyType, string> = {
-    TRY: 'Turk Lirasi',
-    USD: 'Amerikan Dolari',
-    EUR: 'Euro',
-    GBP: 'Ingiliz Sterlini',
-  };
-  return labels[currency] || currency;
-}
-
-/**
- * Get currency symbol
- * @deprecated Use getCurrencySymbol from @/utils/formatters instead
- */
-export function getCurrencySymbol(currency: CurrencyType): string {
-  return getSymbol(currency);
-}
-
-/**
- * Format balance with currency (safe for undefined/null values)
- * @deprecated Use formatCurrency from @/utils/formatters instead
- */
-export function formatBalance(amount: number | undefined | null, currency: CurrencyType): string {
-  return formatCurrency(amount, currency);
+export function formatBalance(amount: number | undefined | null, currency: CurrencyCode): string {
+  return formatCurrency(amount, currency)
 }

@@ -212,7 +212,7 @@ export default function PageHeader({
       <View
         style={[
           styles.content,
-          { paddingTop: insets.top + DashboardSpacing.md },
+          { paddingTop: insets.top + 16 },
           isCompact && styles.contentCompact
         ]}
       >
@@ -298,8 +298,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingBottom: DashboardSpacing.xl,
-    marginBottom:15
+    paddingBottom: 24
   },
   contentCompact: {
     paddingBottom: DashboardSpacing['2xl'],
@@ -326,6 +325,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 70
   },
   leftSection: {
     width: 48,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   titleRow: {
     flexDirection: 'row',

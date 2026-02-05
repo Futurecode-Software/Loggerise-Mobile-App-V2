@@ -2,28 +2,18 @@
  * Yeni Banka Hesabı Ekranı
  *
  * Modern tasarım - CLAUDE.md ilkelerine uygun
- * Referans: cash-register/new.tsx
+ * FormHeader component kullanır
  */
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator
+  TouchableOpacity
 } from 'react-native'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing
-} from 'react-native-reanimated'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import Toast from 'react-native-toast-message'
 import {
@@ -34,81 +24,12 @@ import {
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui'
 import { SelectInput } from '@/components/ui/select-input'
+import { FormHeader } from '@/components/navigation/FormHeader'
+import { CURRENCY_OPTIONS } from '@/constants/currencies'
 import { createBank, BankFormData, CurrencyType } from '@/services/endpoints/banks'
 import { getErrorMessage, getValidationErrors } from '@/services/api'
 
-// Para birimi seçenekleri (CLAUDE.md'deki desteklenen döviz kodları)
-const CURRENCY_OPTIONS = [
-  { label: 'Türk Lirası (TRY)', value: 'TRY' },
-  { label: 'Amerikan Doları (USD)', value: 'USD' },
-  { label: 'Euro (EUR)', value: 'EUR' },
-  { label: 'İngiliz Sterlini (GBP)', value: 'GBP' },
-  { label: 'Avustralya Doları (AUD)', value: 'AUD' },
-  { label: 'Danimarka Kronu (DKK)', value: 'DKK' },
-  { label: 'İsviçre Frangı (CHF)', value: 'CHF' },
-  { label: 'İsveç Kronu (SEK)', value: 'SEK' },
-  { label: 'Kanada Doları (CAD)', value: 'CAD' },
-  { label: 'Kuveyt Dinarı (KWD)', value: 'KWD' },
-  { label: 'Norveç Kronu (NOK)', value: 'NOK' },
-  { label: 'Suudi Arabistan Riyali (SAR)', value: 'SAR' },
-  { label: 'Japon Yeni (JPY)', value: 'JPY' },
-  { label: 'Bulgar Levası (BGN)', value: 'BGN' },
-  { label: 'Rumen Leyi (RON)', value: 'RON' },
-  { label: 'Rus Rublesi (RUB)', value: 'RUB' },
-  { label: 'Çin Yuanı (CNY)', value: 'CNY' },
-  { label: 'Pakistan Rupisi (PKR)', value: 'PKR' },
-  { label: 'Katar Riyali (QAR)', value: 'QAR' },
-  { label: 'Güney Kore Wonu (KRW)', value: 'KRW' },
-  { label: 'Azerbaycan Manatı (AZN)', value: 'AZN' },
-  { label: 'BAE Dirhemi (AED)', value: 'AED' }
-]
-
 export default function NewBankAccountScreen() {
-  const insets = useSafeAreaInsets()
-
-  // Animasyonlu orb'lar için shared values
-  const orb1TranslateY = useSharedValue(0)
-  const orb2TranslateX = useSharedValue(0)
-  const orb1Scale = useSharedValue(1)
-  const orb2Scale = useSharedValue(1)
-
-  useEffect(() => {
-    orb1TranslateY.value = withRepeat(
-      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-    orb1Scale.value = withRepeat(
-      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-    orb2TranslateX.value = withRepeat(
-      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-    orb2Scale.value = withRepeat(
-      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-  }, [])
-
-  const orb1AnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: orb1TranslateY.value },
-      { scale: orb1Scale.value }
-    ]
-  }))
-
-  const orb2AnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: orb2TranslateX.value },
-      { scale: orb2Scale.value }
-    ]
-  }))
-
   // Form state - backend validation kurallarına uygun
   const [formData, setFormData] = useState<BankFormData>({
     name: '',
@@ -127,7 +48,7 @@ export default function NewBankAccountScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Input değişiklik handler'ı
-  const handleInputChange = useCallback((field: keyof BankFormData, value: any) => {
+  const handleInputChange = useCallback((field: keyof BankFormData, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
 
     // Bu alan için hatayı temizle
@@ -144,21 +65,9 @@ export default function NewBankAccountScreen() {
   const validateForm = useCallback((): boolean => {
     const newErrors: Record<string, string> = {}
 
-    // Zorunlu alanlar
+    // Zorunlu alanlar (backend ile uyumlu: sadece name ve currency_type zorunlu)
     if (!formData.name?.trim()) {
       newErrors.name = 'Banka adı zorunludur.'
-    }
-    if (!formData.branch?.trim()) {
-      newErrors.branch = 'Şube adı zorunludur.'
-    }
-    if (!formData.branch_code?.trim()) {
-      newErrors.branch_code = 'Şube kodu zorunludur.'
-    }
-    if (!formData.account_number?.trim()) {
-      newErrors.account_number = 'Hesap numarası zorunludur.'
-    }
-    if (!formData.iban?.trim()) {
-      newErrors.iban = 'IBAN zorunludur.'
     }
     if (!formData.currency_type) {
       newErrors.currency_type = 'Para birimi zorunludur.'
@@ -213,7 +122,7 @@ export default function NewBankAccountScreen() {
         visibilityTime: 1500
       })
       router.back()
-    } catch (error: any) {
+    } catch (error: unknown) {
       const validationErrors = getValidationErrors(error)
       if (validationErrors) {
         // Laravel hatalarını düz objeye çevir
@@ -239,48 +148,13 @@ export default function NewBankAccountScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with gradient and animated orbs */}
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={['#022920', '#044134', '#065f4a']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-
-        {/* Dekoratif ışık efektleri - Animasyonlu */}
-        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
-        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
-
-        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
-          <View style={styles.headerBar}>
-            {/* Sol: Geri Butonu */}
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color="#fff" />
-            </TouchableOpacity>
-
-            {/* Orta: Başlık */}
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Yeni Banka Hesabı</Text>
-            </View>
-
-            {/* Sağ: Kaydet Butonu */}
-            <TouchableOpacity
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Ionicons name="checkmark" size={24} color="#fff" />
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.bottomCurve} />
-      </View>
+      {/* Header */}
+      <FormHeader
+        title="Yeni Banka Hesabı"
+        onBackPress={handleBack}
+        onSavePress={handleSubmit}
+        isSaving={isSubmitting}
+      />
 
       {/* Form Content */}
       <KeyboardAwareScrollView
@@ -317,8 +191,8 @@ export default function NewBankAccountScreen() {
             />
 
             <Input
-              label="Şube Adı *"
-              placeholder="Örn: Kadıköy Şubesi"
+              label="Şube Adı"
+              placeholder="Opsiyonel"
               value={formData.branch}
               onChangeText={(text) => handleInputChange('branch', text)}
               error={errors.branch}
@@ -326,8 +200,8 @@ export default function NewBankAccountScreen() {
             />
 
             <Input
-              label="Şube Kodu *"
-              placeholder="Örn: 1234"
+              label="Şube Kodu"
+              placeholder="Opsiyonel"
               value={formData.branch_code}
               onChangeText={(text) => handleInputChange('branch_code', text)}
               error={errors.branch_code}
@@ -347,8 +221,8 @@ export default function NewBankAccountScreen() {
 
           <View style={styles.sectionContent}>
             <Input
-              label="Hesap Numarası *"
-              placeholder="Örn: 12345678"
+              label="Hesap Numarası"
+              placeholder="Opsiyonel"
               value={formData.account_number}
               onChangeText={(text) => handleInputChange('account_number', text)}
               error={errors.account_number}
@@ -357,8 +231,8 @@ export default function NewBankAccountScreen() {
             />
 
             <Input
-              label="IBAN *"
-              placeholder="Örn: TR330006100519786457841326"
+              label="IBAN"
+              placeholder="Opsiyonel"
               value={formData.iban}
               onChangeText={(text) => handleInputChange('iban', text.toUpperCase())}
               error={errors.iban}
@@ -439,79 +313,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: DashboardColors.background
-  },
-  headerContainer: {
-    position: 'relative',
-    paddingBottom: 24,
-    overflow: 'hidden'
-  },
-  glowOrb1: {
-    position: 'absolute',
-    top: -40,
-    right: -20,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)'
-  },
-  glowOrb2: {
-    position: 'absolute',
-    bottom: 30,
-    left: -50,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)'
-  },
-  headerContent: {
-    paddingHorizontal: DashboardSpacing.lg
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: DashboardSpacing.lg
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: DashboardSpacing.md
-  },
-  headerTitle: {
-    fontSize: DashboardFontSizes.xl,
-    fontWeight: '700',
-    color: '#fff',
-    textAlign: 'center'
-  },
-  saveButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  saveButtonDisabled: {
-    opacity: 0.5
-  },
-  bottomCurve: {
-    position: 'absolute',
-    bottom: -1,
-    left: 0,
-    right: 0,
-    height: 24,
-    backgroundColor: DashboardColors.background,
-    borderTopLeftRadius: DashboardBorderRadius['2xl'],
-    borderTopRightRadius: DashboardBorderRadius['2xl']
   },
   content: {
     flex: 1

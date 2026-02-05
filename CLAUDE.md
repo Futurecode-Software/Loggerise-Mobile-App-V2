@@ -8,7 +8,7 @@ Bu dosya Claude Code'a rehberlik sağlar.
 
 **LoggeriseMobile** - Expo ve React Native ile geliştirilmiş cross-platform mobil uygulama.
 
-- **Backend**: Laravel 12 - `C:\Users\ufukm\Documents\GitHub\FlsV2`
+- **Backend**: Laravel 12 - `C:\Users\Ufuk\Documents\GitHub\FlsV2`
 - **Dil**: Tüm UI, yorum ve dokümantasyon **Türkçe**
 - **Dokümantasyon**: Context7 kullanarak güncel Expo/React Native bilgileri al
 
@@ -25,7 +25,7 @@ Bu dosya Claude Code'a rehberlik sağlar.
 
 ### Kontrol Edilecek Dosyalar
 ```
-C:\Users\ufukm\Documents\GitHub\FlsV2
+C:\Users\Ufuk\Documents\GitHub\FlsV2
 ├── routes\mobile-api.php              # API endpoint'leri
 ├── app\Http\Controllers\Api\Mobile\   # Controller'lar
 ├── database\migrations\               # Tablo yapıları
@@ -183,6 +183,71 @@ import {
   DashboardFontSizes,
   DashboardShadows
 } from '@/constants/dashboard-theme'
+```
+
+---
+
+## 🚨 Layout Standardı (Yükseklik Tutarlılığı)
+
+**KURAL:** Tüm sayfalarda header ve content yükseklikleri AYNI olmalı. Sayfalar bir altta bir üstte başlamamalı.
+
+```typescript
+import { HeaderLayout, ButtonSizes } from '@/constants/layout'
+
+// Header paddingTop HER ZAMAN:
+paddingTop: insets.top + 16  // HeaderLayout.PADDING_TOP
+
+// Header content minHeight HER ZAMAN:
+minHeight: 70  // HeaderLayout.HEADER_CONTENT_MIN_HEIGHT
+
+// Header paddingBottom HER ZAMAN:
+paddingBottom: 24  // HeaderLayout.HEADER_PADDING_BOTTOM
+```
+
+### Header Yapıları
+
+**FormHeader (new.tsx, edit.tsx):**
+```typescript
+headerContainer: { paddingBottom: 24, overflow: 'hidden' }
+headerContent: { paddingTop: insets.top + 16 }
+headerBar: { minHeight: 70, paddingBottom: 16 }  // ← minHeight kritik!
+bottomCurve: { height: 24 }
+```
+
+**PageHeader (index.tsx, [id].tsx):**
+```typescript
+content: { paddingTop: insets.top + 16, paddingBottom: 24 }
+headerRow: { minHeight: 70 }  // ← minHeight kritik!
+bottomCurve: { height: 24 }
+```
+
+### Standart Değerler
+| Özellik | Değer | Açıklama |
+|---------|-------|----------|
+| `PADDING_TOP` | `16` | `insets.top + 16` |
+| `HEADER_CONTENT_MIN_HEIGHT` | `70` | headerBar/headerRow minHeight |
+| `HEADER_PADDING_BOTTOM` | `24` | bottomCurve öncesi padding |
+| `BOTTOM_CURVE_HEIGHT` | `24` | Rounded corner yüksekliği |
+| Form buton | `40x40` | FormHeader butonları |
+| Liste/Detay buton | `44x44` | PageHeader butonları |
+
+---
+
+## 🚨 Para Birimi Standardı (CurrencyType)
+
+**KURAL:** Tüm projede `@/constants/currencies.ts` kullanılmalı. Backend ile %100 uyumlu 23 para birimi.
+
+```typescript
+import {
+  CurrencyCode,
+  CURRENCY_OPTIONS,
+  getCurrencyLabel,
+  getCurrencySymbol
+} from '@/constants/currencies'
+
+// Desteklenen para birimleri (backend ile uyumlu):
+// TRY, USD, EUR, GBP, AUD, DKK, CHF, SEK, CAD, KWD, NOK, SAR,
+// JPY, BGN, RON, RUB, CNY, PKR, QAR, KRW, AZN, AED, XDR
 ```
 
 ---

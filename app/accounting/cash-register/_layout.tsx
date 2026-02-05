@@ -1,5 +1,5 @@
-import { Stack } from 'expo-router';
-import React from 'react';
+import { Stack } from 'expo-router'
+import React from 'react'
 
 export default function CashRegisterLayout() {
   return (
@@ -7,5 +7,5 @@ export default function CashRegisterLayout() {
       <Stack.Screen name="new" />
       <Stack.Screen name="[id]" />
     </Stack>
-  );
+  )
 }

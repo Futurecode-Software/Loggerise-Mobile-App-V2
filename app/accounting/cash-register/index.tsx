@@ -34,12 +34,13 @@ import {
   DashboardShadows,
   DashboardAnimations
 } from '@/constants/dashboard-theme'
+import { getCurrencyColors } from '@/constants/currencies'
+import type { CurrencyCode } from '@/constants/currencies'
 import {
   getCashRegisters,
   CashRegister,
   CashRegisterFilters,
   Pagination,
-  CurrencyType,
   formatBalance
 } from '@/services/endpoints/cash-registers'
 
@@ -53,14 +54,6 @@ const CURRENCY_FILTERS = [
   { id: 'EUR', label: 'EUR', symbol: '€' },
   { id: 'GBP', label: 'GBP', symbol: '£' }
 ]
-
-// Para birimi renkleri
-const CURRENCY_COLORS: Record<string, { primary: string; bg: string }> = {
-  TRY: { primary: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' },
-  USD: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' },
-  EUR: { primary: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.12)' },
-  GBP: { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' }
-}
 
 // Skeleton Component
 function CashRegisterCardSkeleton() {
@@ -96,7 +89,7 @@ interface CashRegisterCardProps {
 
 function CashRegisterCard({ item, onPress }: CashRegisterCardProps) {
   const scale = useSharedValue(1)
-  const colors = CURRENCY_COLORS[item.currency_type] || CURRENCY_COLORS.TRY
+  const colors = getCurrencyColors(item.currency_type)
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }]
@@ -192,7 +185,7 @@ interface SummaryCardProps {
 }
 
 function SummaryCard({ currency, total, count, positiveCount, negativeCount }: SummaryCardProps) {
-  const colors = CURRENCY_COLORS[currency] || CURRENCY_COLORS.TRY
+  const colors = getCurrencyColors(currency)
 
   return (
     <View style={styles.summaryCard}>
@@ -219,7 +212,7 @@ function SummaryCard({ currency, total, count, positiveCount, negativeCount }: S
         styles.summaryTotal,
         { color: total >= 0 ? '#FFFFFF' : '#FCA5A5' }
       ]}>
-        {formatBalance(total, currency as CurrencyType)}
+        {formatBalance(total, currency as CurrencyCode)}
       </Text>
 
       <View style={styles.summaryStats}>
@@ -310,7 +303,7 @@ export default function CashRegistersScreen() {
         }
 
         if (filter !== 'all') {
-          filters.currency_type = filter as CurrencyType
+          filters.currency_type = filter as CurrencyCode
         }
 
         const response = await getCashRegisters(filters)
@@ -617,7 +610,7 @@ export default function CashRegistersScreen() {
           <View style={styles.bottomSheetBody}>
             {CURRENCY_FILTERS.map((filter) => {
               const isActive = activeFilter === filter.id
-              const colors = filter.id !== 'all' ? CURRENCY_COLORS[filter.id] : null
+              const colors = filter.id !== 'all' ? getCurrencyColors(filter.id) : null
 
               return (
                 <TouchableOpacity

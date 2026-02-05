@@ -82,7 +82,9 @@
       "WebSearch",
       "Bash(php artisan:*)",
       "Bash(git reset:*)",
-      "Bash(copy google-services.json androidappgoogle-services.json)"
+      "Bash(copy google-services.json androidappgoogle-services.json)",
+      "Bash(if exist \"C:\\\\Users\\\\Ufuk\\\\AppData\\\\Local\\\\Android\\\\Sdk\" echo \"SDK Found\" else echo \"SDK Not Found\")",
+      "Bash(Select-String \"cash-register\" -Context 0,3)"
     ]
   },
   "enableAllProjectMcpServers": true,

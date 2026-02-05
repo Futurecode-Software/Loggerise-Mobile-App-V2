@@ -217,7 +217,7 @@ function TripCard({ item, onPress }: TripCardProps) {
           <Ionicons name="business-outline" size={14} color={DashboardColors.textMuted} />
           <Text style={styles.statText}>{getVehicleOwnerTypeLabel(item.vehicle_owner_type)}</Text>
         </View>
-        {item.loads && item.loads.length > 0 && (
+        {(item.loads?.length ?? 0) > 0 && (
           <View style={styles.statItem}>
             <Ionicons name="cube-outline" size={14} color={DashboardColors.primary} />
             <Text style={[styles.statText, { color: DashboardColors.primary, fontWeight: '600' }]}>
