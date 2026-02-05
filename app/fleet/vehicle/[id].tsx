@@ -2,6 +2,7 @@
  * Araç Detay Sayfası
  *
  * CLAUDE.md tasarım ilkelerine uygun modern detay sayfası
+ * SectionHeader ve InfoRow component'leri kullanır
  * Statik glow orbs, useFocusEffect ile yenileme, ConfirmDialog ile silme
  */
 
@@ -22,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { SectionHeader, InfoRow as InfoRowBase } from '@/components/detail'
 import { BottomSheetModal } from '@gorhom/bottom-sheet'
 import {
   DashboardColors,
@@ -124,30 +126,19 @@ const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
   out_of_service: { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' }
 }
 
-// Section Header Component
-function SectionHeader({ title, icon }: { title: string; icon: keyof typeof Ionicons.glyphMap }) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionIcon}>
-        <Ionicons name={icon} size={18} color={DashboardColors.primary} />
-      </View>
-      <Text style={styles.sectionTitle}>{title}</Text>
-    </View>
-  )
+// Local InfoRow Wrapper - undefined/null/empty check ile, boolean/number support
+interface LocalInfoRowProps {
+  label: string
+  value?: string | number | boolean | null
+  icon?: keyof typeof Ionicons.glyphMap
+  highlight?: boolean
+  valueColor?: string
 }
 
-// Info Row Component
-function InfoRow({ label, value, icon }: { label: string; value?: string | number | boolean; icon?: keyof typeof Ionicons.glyphMap }) {
+function InfoRowLocal({ label, value, icon, highlight, valueColor }: LocalInfoRowProps) {
   if (value === undefined || value === null || value === '') return null
   const displayValue = typeof value === 'boolean' ? (value ? 'Evet' : 'Hayır') : String(value)
-
-  return (
-    <View style={styles.infoRow}>
-      {icon && <Ionicons name={icon} size={16} color={DashboardColors.textMuted} />}
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{displayValue}</Text>
-    </View>
-  )
+  return <InfoRowBase label={label} value={displayValue} icon={icon} highlight={highlight} valueColor={valueColor} />
 }
 
 export default function VehicleDetailScreen() {
@@ -273,18 +264,18 @@ export default function VehicleDetailScreen() {
         <View style={styles.section}>
           <SectionHeader title="Temel Bilgiler" icon="car-sport-outline" />
           <View style={styles.sectionContent}>
-            <InfoRow label="Marka" value={vehicle.brand} />
-            <InfoRow label="Model" value={vehicle.model} />
-            <InfoRow label="Model Yılı" value={vehicle.model_year || vehicle.year} />
-            <InfoRow label="Renk" value={vehicle.color} />
-            <InfoRow label="Ticari Adı" value={vehicle.commercial_name} />
-            <InfoRow label="Araç Cinsi" value={vehicle.vehicle_class} />
-            <InfoRow label="Araç Sınıfı" value={vehicle.vehicle_category} />
-            <InfoRow label="Vites Tipi" value={vehicle.gear_type ? gearTypeLabels[vehicle.gear_type] : undefined} />
-            <InfoRow label="Ehliyet Sınıfı" value={vehicle.document_type} />
-            <InfoRow label="Toplam KM" value={formatNumber(vehicle.total_km || vehicle.km_counter, 'km')} />
-            <InfoRow label="Net Ağırlık" value={formatNumber(vehicle.net_weight, 'kg')} />
-            <InfoRow label="Azami Yüklü Ağırlık" value={formatNumber(vehicle.max_loaded_weight, 'kg')} />
+            <InfoRowLocal label="Marka" value={vehicle.brand} />
+            <InfoRowLocal label="Model" value={vehicle.model} />
+            <InfoRowLocal label="Model Yılı" value={vehicle.model_year || vehicle.year} />
+            <InfoRowLocal label="Renk" value={vehicle.color} />
+            <InfoRowLocal label="Ticari Adı" value={vehicle.commercial_name} />
+            <InfoRowLocal label="Araç Cinsi" value={vehicle.vehicle_class} />
+            <InfoRowLocal label="Araç Sınıfı" value={vehicle.vehicle_category} />
+            <InfoRowLocal label="Vites Tipi" value={vehicle.gear_type ? gearTypeLabels[vehicle.gear_type] : undefined} />
+            <InfoRowLocal label="Ehliyet Sınıfı" value={vehicle.document_type} />
+            <InfoRowLocal label="Toplam KM" value={formatNumber(vehicle.total_km || vehicle.km_counter, 'km')} />
+            <InfoRowLocal label="Net Ağırlık" value={formatNumber(vehicle.net_weight, 'kg')} />
+            <InfoRowLocal label="Azami Yüklü Ağırlık" value={formatNumber(vehicle.max_loaded_weight, 'kg')} />
           </View>
         </View>
 
@@ -292,14 +283,14 @@ export default function VehicleDetailScreen() {
         <View style={styles.section}>
           <SectionHeader title="Ruhsat Bilgileri" icon="document-outline" />
           <View style={styles.sectionContent}>
-            <InfoRow label="Tescil Sıra No" value={vehicle.registration_serial_no} />
-            <InfoRow label="İlk Tescil Tarihi" value={formatDate(vehicle.first_registration_date)} />
-            <InfoRow label="Tescil Tarihi" value={formatDate(vehicle.registration_date)} />
-            <InfoRow label="Motor No" value={vehicle.engine_number} />
-            <InfoRow label="Şasi No" value={vehicle.chassis_number} />
-            <InfoRow label="Motor Gücü" value={vehicle.engine_power ? `${vehicle.engine_power} kW` : undefined} />
-            <InfoRow label="Tekerlek Düzeni" value={vehicle.wheel_formula} />
-            <InfoRow label="Ruhsat Notu" value={vehicle.license_info} />
+            <InfoRowLocal label="Tescil Sıra No" value={vehicle.registration_serial_no} />
+            <InfoRowLocal label="İlk Tescil Tarihi" value={formatDate(vehicle.first_registration_date)} />
+            <InfoRowLocal label="Tescil Tarihi" value={formatDate(vehicle.registration_date)} />
+            <InfoRowLocal label="Motor No" value={vehicle.engine_number} />
+            <InfoRowLocal label="Şasi No" value={vehicle.chassis_number} />
+            <InfoRowLocal label="Motor Gücü" value={vehicle.engine_power ? `${vehicle.engine_power} kW` : undefined} />
+            <InfoRowLocal label="Tekerlek Düzeni" value={vehicle.wheel_formula} />
+            <InfoRowLocal label="Ruhsat Notu" value={vehicle.license_info} />
           </View>
         </View>
 
@@ -308,14 +299,14 @@ export default function VehicleDetailScreen() {
           <View style={styles.section}>
             <SectionHeader title="Çekici Bilgileri" icon="settings-outline" />
             <View style={styles.sectionContent}>
-              <InfoRow label="Euro Norm" value={vehicle.euro_norm ? euroNormLabels[vehicle.euro_norm] : undefined} />
+              <InfoRowLocal label="Euro Norm" value={vehicle.euro_norm ? euroNormLabels[vehicle.euro_norm] : undefined} />
               {vehicle.euro_norm === 'electric' ? (
-                <InfoRow label="Batarya Kapasitesi" value={vehicle.battery_capacity ? `${vehicle.battery_capacity} kWh` : undefined} />
+                <InfoRowLocal label="Batarya Kapasitesi" value={vehicle.battery_capacity ? `${vehicle.battery_capacity} kWh` : undefined} />
               ) : (
-                <InfoRow label="Yakıt Kapasitesi" value={vehicle.fuel_capacity ? `${vehicle.fuel_capacity} L` : undefined} />
+                <InfoRowLocal label="Yakıt Kapasitesi" value={vehicle.fuel_capacity ? `${vehicle.fuel_capacity} L` : undefined} />
               )}
-              <InfoRow label="GPS Takip" value={vehicle.has_gps_tracker} />
-              <InfoRow label="GPS Kimlik No" value={vehicle.gps_identity_no} />
+              <InfoRowLocal label="GPS Takip" value={vehicle.has_gps_tracker} />
+              <InfoRowLocal label="GPS Kimlik No" value={vehicle.gps_identity_no} />
             </View>
           </View>
         )}
@@ -325,20 +316,20 @@ export default function VehicleDetailScreen() {
           <View style={styles.section}>
             <SectionHeader title="Römork Bilgileri" icon="cube-outline" />
             <View style={styles.sectionContent}>
-              <InfoRow label="En" value={vehicle.trailer_width ? `${vehicle.trailer_width} m` : undefined} />
-              <InfoRow label="Boy" value={vehicle.trailer_length ? `${vehicle.trailer_length} m` : undefined} />
-              <InfoRow label="Yükseklik" value={vehicle.trailer_height ? `${vehicle.trailer_height} m` : undefined} />
-              <InfoRow label="Hacim" value={vehicle.trailer_volume ? `${vehicle.trailer_volume} m³` : undefined} />
-              <InfoRow label="Yan Kapak" value={vehicle.side_door_count} />
-              <InfoRow label="XL Sertifikası" value={vehicle.has_xl_certificate} />
-              <InfoRow label="Çift Katlı" value={vehicle.is_double_deck} />
-              <InfoRow label="P400" value={vehicle.has_p400} />
-              <InfoRow label="Kayar Perde" value={vehicle.has_sliding_curtain} />
-              <InfoRow label="Hafif Römork" value={vehicle.is_lightweight} />
-              <InfoRow label="Tren Uyumlu" value={vehicle.is_train_compatible} />
-              <InfoRow label="Brandalı" value={vehicle.has_tarpaulin} />
-              <InfoRow label="Rulo" value={vehicle.has_roller} />
-              <InfoRow label="Elektronik Kantar" value={vehicle.has_electronic_scale} />
+              <InfoRowLocal label="En" value={vehicle.trailer_width ? `${vehicle.trailer_width} m` : undefined} />
+              <InfoRowLocal label="Boy" value={vehicle.trailer_length ? `${vehicle.trailer_length} m` : undefined} />
+              <InfoRowLocal label="Yükseklik" value={vehicle.trailer_height ? `${vehicle.trailer_height} m` : undefined} />
+              <InfoRowLocal label="Hacim" value={vehicle.trailer_volume ? `${vehicle.trailer_volume} m³` : undefined} />
+              <InfoRowLocal label="Yan Kapak" value={vehicle.side_door_count} />
+              <InfoRowLocal label="XL Sertifikası" value={vehicle.has_xl_certificate} />
+              <InfoRowLocal label="Çift Katlı" value={vehicle.is_double_deck} />
+              <InfoRowLocal label="P400" value={vehicle.has_p400} />
+              <InfoRowLocal label="Kayar Perde" value={vehicle.has_sliding_curtain} />
+              <InfoRowLocal label="Hafif Römork" value={vehicle.is_lightweight} />
+              <InfoRowLocal label="Tren Uyumlu" value={vehicle.is_train_compatible} />
+              <InfoRowLocal label="Brandalı" value={vehicle.has_tarpaulin} />
+              <InfoRowLocal label="Rulo" value={vehicle.has_roller} />
+              <InfoRowLocal label="Elektronik Kantar" value={vehicle.has_electronic_scale} />
             </View>
           </View>
         )}
@@ -347,12 +338,12 @@ export default function VehicleDetailScreen() {
         <View style={styles.section}>
           <SectionHeader title="Sahiplik Bilgileri" icon="person-outline" />
           <View style={styles.sectionContent}>
-            <InfoRow label="Ad Soyad" value={vehicle.full_name} />
-            <InfoRow label="Şirket Adı" value={vehicle.company_name} />
-            <InfoRow label="TC/Vergi No" value={vehicle.id_or_tax_no} />
-            <InfoRow label="Noter Adı" value={vehicle.notary_name} />
-            <InfoRow label="Noter Satış Tarihi" value={formatDate(vehicle.notary_sale_date)} />
-            <InfoRow label="Adres" value={vehicle.address} />
+            <InfoRowLocal label="Ad Soyad" value={vehicle.full_name} />
+            <InfoRowLocal label="Şirket Adı" value={vehicle.company_name} />
+            <InfoRowLocal label="TC/Vergi No" value={vehicle.id_or_tax_no} />
+            <InfoRowLocal label="Noter Adı" value={vehicle.notary_name} />
+            <InfoRowLocal label="Noter Satış Tarihi" value={formatDate(vehicle.notary_sale_date)} />
+            <InfoRowLocal label="Adres" value={vehicle.address} />
           </View>
         </View>
 
@@ -361,8 +352,8 @@ export default function VehicleDetailScreen() {
           <View style={styles.section}>
             <SectionHeader title="Yurtiçi Taşımacılık" icon="navigate-outline" />
             <View style={styles.sectionContent}>
-              <InfoRow label="Yurtiçi Taşıma" value={vehicle.domestic_transport_capable} />
-              <InfoRow label="Yurtiçi Araç Sınıfı" value={vehicle.domestic_vehicle_class} />
+              <InfoRowLocal label="Yurtiçi Taşıma" value={vehicle.domestic_transport_capable} />
+              <InfoRowLocal label="Yurtiçi Araç Sınıfı" value={vehicle.domestic_vehicle_class} />
             </View>
           </View>
         )}
@@ -407,11 +398,11 @@ export default function VehicleDetailScreen() {
               </View>
             </View>
             <View style={styles.itemDetails}>
-              <InfoRow label="Poliçe No" value={insurance.policy_number} />
-              <InfoRow label="Sigorta Şirketi" value={insurance.insurance_company} />
-              <InfoRow label="Başlangıç" value={formatDate(insurance.start_date)} />
-              <InfoRow label="Bitiş" value={formatDate(insurance.end_date)} />
-              <InfoRow label="Prim Tutarı" value={formatCurrency(insurance.premium_amount)} />
+              <InfoRowLocal label="Poliçe No" value={insurance.policy_number} />
+              <InfoRowLocal label="Sigorta Şirketi" value={insurance.insurance_company} />
+              <InfoRowLocal label="Başlangıç" value={formatDate(insurance.start_date)} />
+              <InfoRowLocal label="Bitiş" value={formatDate(insurance.end_date)} />
+              <InfoRowLocal label="Prim Tutarı" value={formatCurrency(insurance.premium_amount)} />
             </View>
           </View>
         ))}
@@ -454,15 +445,15 @@ export default function VehicleDetailScreen() {
               </View>
             </View>
             <View style={styles.itemDetails}>
-              <InfoRow label="Bakım KM" value={formatNumber(maintenance.maintenance_km, 'km')} />
-              <InfoRow label="Sonraki Bakım KM" value={formatNumber(maintenance.next_maintenance_km, 'km')} />
-              <InfoRow label="Maliyet" value={formatCurrency(maintenance.cost, maintenance.currency_type)} />
-              <InfoRow label="Servis" value={maintenance.service_provider} />
-              {maintenance.oil_change && <InfoRow label="Yağ Değişimi" value={true} />}
-              {maintenance.oil_filter_change && <InfoRow label="Yağ Filtresi" value={true} />}
-              {maintenance.air_filter_change && <InfoRow label="Hava Filtresi" value={true} />}
-              {maintenance.brake_adjustment && <InfoRow label="Fren Ayarı" value={true} />}
-              {maintenance.tire_change && <InfoRow label="Lastik Değişimi" value={true} />}
+              <InfoRowLocal label="Bakım KM" value={formatNumber(maintenance.maintenance_km, 'km')} />
+              <InfoRowLocal label="Sonraki Bakım KM" value={formatNumber(maintenance.next_maintenance_km, 'km')} />
+              <InfoRowLocal label="Maliyet" value={formatCurrency(maintenance.cost, maintenance.currency_type)} />
+              <InfoRowLocal label="Servis" value={maintenance.service_provider} />
+              {maintenance.oil_change && <InfoRowLocal label="Yağ Değişimi" value={true} />}
+              {maintenance.oil_filter_change && <InfoRowLocal label="Yağ Filtresi" value={true} />}
+              {maintenance.air_filter_change && <InfoRowLocal label="Hava Filtresi" value={true} />}
+              {maintenance.brake_adjustment && <InfoRowLocal label="Fren Ayarı" value={true} />}
+              {maintenance.tire_change && <InfoRowLocal label="Lastik Değişimi" value={true} />}
             </View>
           </View>
         ))}
@@ -512,11 +503,11 @@ export default function VehicleDetailScreen() {
               </View>
             </View>
             <View style={styles.itemDetails}>
-              <InfoRow label="Sonraki Muayene" value={formatDate(inspection.next_inspection_date)} />
-              <InfoRow label="İstasyon" value={inspection.station} />
-              <InfoRow label="Ücret" value={formatCurrency(inspection.fee, inspection.currency)} />
-              <InfoRow label="KM" value={formatNumber(inspection.odometer, 'km')} />
-              <InfoRow label="Notlar" value={inspection.notes} />
+              <InfoRowLocal label="Sonraki Muayene" value={formatDate(inspection.next_inspection_date)} />
+              <InfoRowLocal label="İstasyon" value={inspection.station} />
+              <InfoRowLocal label="Ücret" value={formatCurrency(inspection.fee, inspection.currency)} />
+              <InfoRowLocal label="KM" value={formatNumber(inspection.odometer, 'km')} />
+              <InfoRowLocal label="Notlar" value={inspection.notes} />
             </View>
           </View>
         ))}
@@ -580,12 +571,12 @@ export default function VehicleDetailScreen() {
               </View>
             </View>
             <View style={styles.itemDetails}>
-              <InfoRow label="Öncelik" value={faultPriorityLabels[fault.priority]} />
-              <InfoRow label="Açıklama" value={fault.description} />
-              <InfoRow label="Bildirme Tarihi" value={formatDate(fault.reported_at || fault.created_at)} />
-              {fault.resolved_at && <InfoRow label="Çözüm Tarihi" value={formatDate(fault.resolved_at)} />}
-              <InfoRow label="Tahmini Maliyet" value={formatCurrency(fault.estimated_cost, fault.estimated_currency)} />
-              <InfoRow label="Gerçek Maliyet" value={formatCurrency(fault.actual_cost, fault.actual_currency)} />
+              <InfoRowLocal label="Öncelik" value={faultPriorityLabels[fault.priority]} />
+              <InfoRowLocal label="Açıklama" value={fault.description} />
+              <InfoRowLocal label="Bildirme Tarihi" value={formatDate(fault.reported_at || fault.created_at)} />
+              {fault.resolved_at && <InfoRowLocal label="Çözüm Tarihi" value={formatDate(fault.resolved_at)} />}
+              <InfoRowLocal label="Tahmini Maliyet" value={formatCurrency(fault.estimated_cost, fault.estimated_currency)} />
+              <InfoRowLocal label="Gerçek Maliyet" value={formatCurrency(fault.actual_cost, fault.actual_currency)} />
             </View>
           </View>
         ))}
@@ -1082,49 +1073,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...DashboardShadows.sm
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: DashboardSpacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight,
-    gap: DashboardSpacing.sm
-  },
-  sectionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: DashboardBorderRadius.lg,
-    backgroundColor: DashboardColors.primaryGlow,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  sectionTitle: {
-    fontSize: DashboardFontSizes.lg,
-    fontWeight: '600',
-    color: DashboardColors.textPrimary
-  },
   sectionContent: {
     padding: DashboardSpacing.lg,
     gap: DashboardSpacing.xs
-  },
-
-  // Info Row
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: DashboardSpacing.xs,
-    gap: DashboardSpacing.sm
-  },
-  infoLabel: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary,
-    minWidth: 120
-  },
-  infoValue: {
-    flex: 1,
-    fontSize: DashboardFontSizes.sm,
-    fontWeight: '500',
-    color: DashboardColors.textPrimary
   },
 
   // Item Cards (for tabs)

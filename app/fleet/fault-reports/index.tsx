@@ -42,7 +42,6 @@ import {
   getFaultTypeLabel,
   getSeverityLabel,
   getFaultStatusLabel,
-  getSeverityColor,
   getFaultStatusColor
 } from '@/services/endpoints/fleet'
 
@@ -300,7 +299,6 @@ export default function FaultReportsScreen() {
 
   // BottomSheet refs
   const severityBottomSheetRef = useRef<BottomSheetModal>(null)
-  const statusBottomSheetRef = useRef<BottomSheetModal>(null)
   const snapPoints = useMemo(() => ['90%'], []);
 
   // API state
@@ -308,6 +306,7 @@ export default function FaultReportsScreen() {
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null)
 
   // Carousel state
@@ -379,6 +378,7 @@ export default function FaultReportsScreen() {
     return () => {
       isMountedRef.current = false
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Filtre değişimi
@@ -387,6 +387,7 @@ export default function FaultReportsScreen() {
 
     setIsLoading(true)
     executeFetch(activeSeverityFilter, activeStatusFilter, 1, false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSeverityFilter, activeStatusFilter])
 
   // Ref to store executeFetch and filters
@@ -455,11 +456,6 @@ export default function FaultReportsScreen() {
     severityBottomSheetRef.current?.present()
   }
 
-  const handleStatusFilterPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    statusBottomSheetRef.current?.present()
-  }
-
   const handleSeverityFilterSelect = (filterId: string) => {
     Haptics.selectionAsync()
     setActiveSeverityFilter(filterId)
@@ -469,7 +465,6 @@ export default function FaultReportsScreen() {
   const handleStatusFilterSelect = (filterId: string) => {
     Haptics.selectionAsync()
     setActiveStatusFilter(filterId)
-    statusBottomSheetRef.current?.dismiss()
   }
 
   const handleBackPress = () => {

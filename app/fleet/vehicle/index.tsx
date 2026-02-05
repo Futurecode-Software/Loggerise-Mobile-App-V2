@@ -41,6 +41,7 @@ import {
   getStatusLabel,
   getStatusColor,
 } from '@/services/endpoints/vehicles'
+import { formatNumber } from '@/utils/formatters'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -165,7 +166,7 @@ function VehicleCard({ item, onPress }: VehicleCardProps) {
           <View style={styles.infoRow}>
             <Ionicons name="speedometer-outline" size={14} color={DashboardColors.textMuted} />
             <Text style={styles.infoText}>
-              {Number(item.total_km).toLocaleString('tr-TR')} km
+              {formatNumber(Number(item.total_km), 'km')}
             </Text>
           </View>
         )}
