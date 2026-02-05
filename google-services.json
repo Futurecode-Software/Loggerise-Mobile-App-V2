@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1039412213943",
+    "project_id": "loggerise-erp",
+    "storage_bucket": "loggerise-erp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1039412213943:android:279c76a39ed4dadfe33532",
+        "android_client_info": {
+          "package_name": "com.loggerise.erp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_CZZyrPy77-XREhqyLymok_AqyPLLNvY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
