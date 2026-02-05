@@ -24,6 +24,7 @@ import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SectionHeader, InfoRow } from '@/components/detail'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -55,52 +56,6 @@ const formatDate = (dateString?: string): string => {
   } catch {
     return dateString
   }
-}
-
-// Bölüm başlığı
-interface SectionHeaderProps {
-  title: string
-  icon: keyof typeof Ionicons.glyphMap
-}
-
-function SectionHeader({ title, icon }: SectionHeaderProps) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionIcon}>
-        <Ionicons name={icon} size={16} color={DashboardColors.primary} />
-      </View>
-      <Text style={styles.sectionTitle}>{title}</Text>
-    </View>
-  )
-}
-
-// Bilgi satırı
-interface InfoRowProps {
-  label: string
-  value: string
-  icon?: keyof typeof Ionicons.glyphMap
-  highlight?: boolean
-}
-
-function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabel}>
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={14}
-            color={DashboardColors.textMuted}
-            style={styles.infoIcon}
-          />
-        )}
-        <Text style={styles.infoLabelText}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
-        {value}
-      </Text>
-    </View>
-  )
 }
 
 export default function EmployeeDetailScreen() {

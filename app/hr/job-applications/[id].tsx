@@ -25,6 +25,7 @@ import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SectionHeader, InfoRow } from '@/components/detail'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -57,60 +58,6 @@ const formatDateDetail = (dateString?: string): string => {
   } catch {
     return dateString
   }
-}
-
-// Bölüm başlığı
-interface SectionHeaderProps {
-  title: string
-  icon: keyof typeof Ionicons.glyphMap
-  count?: number
-}
-
-function SectionHeader({ title, icon, count }: SectionHeaderProps) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionHeaderLeft}>
-        <View style={styles.sectionIcon}>
-          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
-        </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {count !== undefined && (
-          <View style={styles.countBadge}>
-            <Text style={styles.countText}>{count}</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  )
-}
-
-// Bilgi satırı
-interface InfoRowProps {
-  label: string
-  value: string
-  icon?: keyof typeof Ionicons.glyphMap
-  highlight?: boolean
-}
-
-function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabel}>
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={14}
-            color={DashboardColors.textMuted}
-            style={styles.infoIcon}
-          />
-        )}
-        <Text style={styles.infoLabelText}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
-        {value}
-      </Text>
-    </View>
-  )
 }
 
 export default function JobApplicationDetailScreen() {
@@ -660,77 +607,6 @@ const styles = StyleSheet.create({
   cardContent: {
     paddingHorizontal: DashboardSpacing.lg,
     paddingBottom: DashboardSpacing.lg
-  },
-
-  // Bölüm Başlığı
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: DashboardSpacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
-  },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DashboardSpacing.sm
-  },
-  sectionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: DashboardColors.primaryGlow,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  sectionTitle: {
-    fontSize: DashboardFontSizes.base,
-    fontWeight: '600',
-    color: DashboardColors.textPrimary
-  },
-  countBadge: {
-    backgroundColor: DashboardColors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10
-  },
-  countText: {
-    fontSize: DashboardFontSizes.xs,
-    fontWeight: '600',
-    color: '#fff'
-  },
-
-  // Bilgi Satırı
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: DashboardSpacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
-  },
-  infoLabel: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  infoIcon: {
-    marginRight: DashboardSpacing.sm
-  },
-  infoLabelText: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary
-  },
-  infoValue: {
-    fontSize: DashboardFontSizes.sm,
-    fontWeight: '500',
-    color: DashboardColors.textPrimary,
-    maxWidth: '50%',
-    textAlign: 'right'
-  },
-  infoValueHighlight: {
-    color: DashboardColors.primary,
-    fontWeight: '600'
   },
 
   // Açıklama
