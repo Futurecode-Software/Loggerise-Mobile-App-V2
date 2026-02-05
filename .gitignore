@@ -21,6 +21,7 @@ expo-env.d.ts
 # Firebase
 # google-services.json - Committed for EAS Build
 GoogleService-Info.plist
+*firebase-adminsdk*.json
 
 # Metro
 .metro-health-check*
@@ -43,4 +44,9 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Build outputs
+*.aab
+*.apk
+
 nul

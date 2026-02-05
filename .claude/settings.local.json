@@ -75,7 +75,10 @@
       "Bash(eas secret:list:*)",
       "Bash(powershell -Command \"Get-Content ''C:\\\\loggerisemobil\\\\app\\\\\\(tabs\\)\\\\index.tsx'' | Select-Object -Last 10\")",
       "Bash(powershell:*)",
-      "Bash(npx eas credentials:*)"
+      "Bash(npx eas credentials:*)",
+      "Bash(npx expo-doctor)",
+      "WebFetch(domain:docs.expo.dev)",
+      "Bash(npx eas build:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
