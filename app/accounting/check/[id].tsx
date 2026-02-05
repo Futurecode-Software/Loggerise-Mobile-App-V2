@@ -2,7 +2,7 @@
  * Çek Detay Sayfası
  *
  * CLAUDE.md tasarım ilkelerine uygun modern tasarım
- * Referans: cash-register/[id].tsx
+ * SectionHeader ve InfoRow component'leri kullanır
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -25,6 +25,8 @@ import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SectionHeader, InfoRow } from '@/components/detail'
+import { getCurrencyLabel } from '@/constants/currencies'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -38,8 +40,7 @@ import {
   Check,
   getCheckTypeLabel,
   getCheckStatusLabel,
-  formatCheckAmount,
-  getCurrencyLabel
+  formatCheckAmount
 } from '@/services/endpoints/checks'
 import { formatDate } from '@/utils/formatters'
 
@@ -56,54 +57,6 @@ const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
 const TYPE_COLORS: Record<string, { primary: string; bg: string }> = {
   received: { primary: '#10B981', bg: 'rgba(16, 185, 129, 0.12)' },
   issued: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' }
-}
-
-// Bölüm başlığı
-interface SectionHeaderProps {
-  title: string
-  icon: keyof typeof Ionicons.glyphMap
-}
-
-function SectionHeader({ title, icon }: SectionHeaderProps) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionHeaderLeft}>
-        <View style={styles.sectionIcon}>
-          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
-        </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-    </View>
-  )
-}
-
-// Bilgi satırı
-interface InfoRowProps {
-  label: string
-  value: string
-  icon?: keyof typeof Ionicons.glyphMap
-  highlight?: boolean
-}
-
-function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabel}>
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={14}
-            color={DashboardColors.textMuted}
-            style={styles.infoIcon}
-          />
-        )}
-        <Text style={styles.infoLabelText}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
-        {value}
-      </Text>
-    </View>
-  )
 }
 
 export default function CheckDetailScreen() {
@@ -736,66 +689,6 @@ const styles = StyleSheet.create({
   cardContent: {
     paddingHorizontal: DashboardSpacing.lg,
     paddingBottom: DashboardSpacing.lg
-  },
-
-  // Bölüm Başlığı
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: DashboardSpacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
-  },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DashboardSpacing.sm
-  },
-  sectionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: DashboardColors.primaryGlow,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  sectionTitle: {
-    fontSize: DashboardFontSizes.base,
-    fontWeight: '600',
-    color: DashboardColors.textPrimary
-  },
-
-  // Bilgi Satırı
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: DashboardSpacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
-  },
-  infoLabel: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  infoIcon: {
-    marginRight: DashboardSpacing.sm
-  },
-  infoLabelText: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary
-  },
-  infoValue: {
-    fontSize: DashboardFontSizes.sm,
-    fontWeight: '500',
-    color: DashboardColors.textPrimary,
-    maxWidth: '50%',
-    textAlign: 'right'
-  },
-  infoValueHighlight: {
-    color: DashboardColors.primary,
-    fontWeight: '600'
   },
 
   // Açıklama

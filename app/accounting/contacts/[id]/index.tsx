@@ -27,6 +27,8 @@ import type { Contact } from '@/types/contact'
 import { getContact, deleteContact } from '@/services/endpoints/contacts'
 import { Skeleton } from '@/components/ui/skeleton'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { SectionHeader, InfoRow } from '@/components/detail'
+import { formatCurrency } from '@/utils/currency'
 import { getContactTypeLabel, getLegalTypeLabel, getSegmentLabel, getCreditRatingLabel } from '@/utils/contacts/labels'
 import {
   DashboardColors,
@@ -49,74 +51,6 @@ const formatDate = (dateString?: string): string => {
   } catch {
     return dateString
   }
-}
-
-// Bölüm başlığı
-interface SectionHeaderProps {
-  title: string
-  icon: keyof typeof Ionicons.glyphMap
-  count?: number
-  isExpanded?: boolean
-  onToggle?: () => void
-}
-
-function SectionHeader({ title, icon, count, isExpanded, onToggle }: SectionHeaderProps) {
-  return (
-    <TouchableOpacity
-      style={styles.sectionHeader}
-      onPress={onToggle}
-      disabled={!onToggle}
-      activeOpacity={onToggle ? 0.7 : 1}
-    >
-      <View style={styles.sectionHeaderLeft}>
-        <View style={styles.sectionIcon}>
-          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
-        </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {count !== undefined && (
-          <View style={styles.countBadge}>
-            <Text style={styles.countText}>{count}</Text>
-          </View>
-        )}
-      </View>
-      {onToggle && (
-        <Ionicons
-          name={isExpanded ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          color={DashboardColors.textMuted}
-        />
-      )}
-    </TouchableOpacity>
-  )
-}
-
-// Bilgi satırı
-interface InfoRowProps {
-  label: string
-  value: string
-  icon?: keyof typeof Ionicons.glyphMap
-  highlight?: boolean
-}
-
-function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabel}>
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={14}
-            color={DashboardColors.textMuted}
-            style={styles.infoIcon}
-          />
-        )}
-        <Text style={styles.infoLabelText}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
-        {value}
-      </Text>
-    </View>
-  )
 }
 
 export default function ContactDetailScreen() {
@@ -539,7 +473,7 @@ export default function ContactDetailScreen() {
                 />
                 <InfoRow
                   label="Risk Limiti"
-                  value={contact.risk_limit ? `${contact.risk_limit.toLocaleString('tr-TR')} ${contact.currency_type}` : 'Limitsiz'}
+                  value={contact.risk_limit ? formatCurrency(contact.risk_limit, contact.currency_type) : 'Limitsiz'}
                   icon="shield-outline"
                   highlight
                 />

@@ -19,9 +19,10 @@ interface InfoRowProps {
   value: string
   icon?: keyof typeof Ionicons.glyphMap
   highlight?: boolean
+  valueColor?: string
 }
 
-export function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
+export function InfoRow({ label, value, icon, highlight, valueColor }: InfoRowProps) {
   return (
     <View style={styles.infoRow}>
       <View style={styles.infoLabel}>
@@ -35,7 +36,11 @@ export function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
         )}
         <Text style={styles.infoLabelText}>{label}</Text>
       </View>
-      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
+      <Text style={[
+        styles.infoValue,
+        highlight && styles.infoValueHighlight,
+        valueColor ? { color: valueColor } : null
+      ]}>
         {value}
       </Text>
     </View>
