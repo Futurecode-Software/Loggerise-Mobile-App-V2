@@ -74,7 +74,7 @@ TaskCreate/TaskUpdate ile ilerleme takibi:
 
 **ASLA tahmin etme!** Önce kontrol et:
 ```
-C:\Users\Ufuk\Documents\GitHub\FlsV2\
+C:\Users\ufukm\Documents\GitHub\FlsV2
 ├── routes\mobile-api.php              # Endpoint URL, HTTP metot
 ├── app\Http\Controllers\Api\Mobile\   # Request/Response, Validation
 ├── database\migrations\               # Alan isimleri, tipler

@@ -8,7 +8,7 @@ Bu dosya Claude Code'a rehberlik sağlar.
 
 **LoggeriseMobile** - Expo ve React Native ile geliştirilmiş cross-platform mobil uygulama.
 
-- **Backend**: Laravel 12 - `C:\Users\Ufuk\Documents\GitHub\FlsV2`
+- **Backend**: Laravel 12 - `C:\Users\ufukm\Documents\GitHub\FlsV2`
 - **Dil**: Tüm UI, yorum ve dokümantasyon **Türkçe**
 - **Dokümantasyon**: Context7 kullanarak güncel Expo/React Native bilgileri al
 
@@ -25,7 +25,7 @@ Bu dosya Claude Code'a rehberlik sağlar.
 
 ### Kontrol Edilecek Dosyalar
 ```
-C:\Users\Ufuk\Documents\GitHub\FlsV2\
+C:\Users\ufukm\Documents\GitHub\FlsV2
 ├── routes\mobile-api.php              # API endpoint'leri
 ├── app\Http\Controllers\Api\Mobile\   # Controller'lar
 ├── database\migrations\               # Tablo yapıları

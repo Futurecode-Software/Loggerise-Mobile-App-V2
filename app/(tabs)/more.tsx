@@ -313,6 +313,15 @@ export default function MoreScreen() {
       label: 'Kullanıcı Yönetimi',
       color: '#3b82f6',
       route: '/settings/users'
+    },
+    {
+      id: 'sistem-yonetimi',
+      icon: 'settings',
+      label: 'Sistem Yönetimi',
+      color: '#6366f1',
+      subItems: [
+        { icon: 'notifications', label: 'Bildirim Yönetimi', route: '/admin/notification-broadcast', color: '#f59e0b' }
+      ]
     }
   ], [])
 

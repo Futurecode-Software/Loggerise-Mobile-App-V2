@@ -78,7 +78,10 @@
       "Bash(npx eas credentials:*)",
       "Bash(npx expo-doctor)",
       "WebFetch(domain:docs.expo.dev)",
-      "Bash(npx eas build:*)"
+      "Bash(npx eas build:*)",
+      "WebSearch",
+      "Bash(php artisan:*)",
+      "Bash(git reset:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
