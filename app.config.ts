@@ -33,6 +33,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'com.loggerise.erp',
     // Chat ekranlarında klavye input'u düzgün göstermesi için kritik
     softwareKeyboardLayoutMode: 'resize',
+    // Firebase Cloud Messaging için google-services.json
+    googleServicesFile: './google-services.json',
   },
   web: {
     output: 'static',
