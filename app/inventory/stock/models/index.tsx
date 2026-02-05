@@ -12,7 +12,8 @@ import {
   TouchableOpacity,
   FlatList,
   RefreshControl,
-  Pressable
+  Pressable,
+  TextInput
 } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -301,11 +302,12 @@ export default function ModelsScreen() {
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
             <Ionicons name="search" size={20} color={DashboardColors.textMuted} />
-            <input
-              style={styles.searchInput as any}
+            <TextInput
+              style={styles.searchInput}
               placeholder="Model adı ile ara..."
+              placeholderTextColor={DashboardColors.textMuted}
               value={searchQuery}
-              onChange={(e: any) => setSearchQuery(e.target.value)}
+              onChangeText={setSearchQuery}
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -380,10 +382,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: DashboardFontSizes.base,
-    color: DashboardColors.textPrimary,
-    border: 'none',
-    outline: 'none',
-    backgroundColor: 'transparent'
+    color: DashboardColors.textPrimary
   },
 
   // List

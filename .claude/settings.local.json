@@ -81,7 +81,8 @@
       "Bash(npx eas build:*)",
       "WebSearch",
       "Bash(php artisan:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(copy google-services.json androidappgoogle-services.json)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -119,7 +119,7 @@ export async function getExpoPushToken(): Promise<string | null> {
       projectId,
     });
 
-    console.log('[Get Token] ✓ Token received:', token.data.substring(0, 30) + '...');
+    console.log('[Get Token] ✓ Token received (FULL):', token.data);
     return token.data;
   } catch (error) {
     console.error('[Get Token] Error getting push token:', error);
@@ -315,7 +315,7 @@ export async function initializePushNotifications(): Promise<string | null> {
     console.warn('[Push Init] Failed to get push token');
     return null;
   }
-  console.log('[Push Init] Token obtained:', token.substring(0, 30) + '...');
+  console.log('[Push Init] Token obtained (FULL):', token);
 
   // Register with backend
   console.log('[Push Init] Registering token with backend...');

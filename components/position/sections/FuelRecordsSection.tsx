@@ -18,8 +18,9 @@ import {
 } from 'react-native';
 import { Fuel, Plus, Pencil, Trash2, X, Calendar, ChevronLeft } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Card, Input, Select, Button, ConfirmDialog } from '@/components/ui';
+import { Card, Input, SelectInput, Button } from '@/components/ui';
 import { DateInput } from '@/components/ui/date-input';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
   Position,

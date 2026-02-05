@@ -18,8 +18,9 @@ import {
 } from 'react-native';
 import { Receipt, Plus, Pencil, Trash2, ChevronLeft, Building2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Card, Input, Select, ConfirmDialog } from '@/components/ui';
+import { Card, Input, SelectInput } from '@/components/ui';
 import { DateInput } from '@/components/ui/date-input';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
   Position,

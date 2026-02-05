@@ -194,7 +194,7 @@ export default function NewNotificationBroadcastScreen() {
         value: route.route
       }))
     } catch (err: any) {
-      console.error('Route'lar yüklenirken hata:', err)
+      console.error('Route\'lar yüklenirken hata:', err)
       return []
     }
   }, [])

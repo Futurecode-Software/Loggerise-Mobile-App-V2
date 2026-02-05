@@ -16,6 +16,7 @@ import { DashboardProvider } from '@/context/dashboard-context'
 import { MessageProvider } from '@/context/message-context'
 import { NotificationProvider } from '@/context/notification-context'
 import { QuickActionsProvider } from '@/contexts/quick-actions-context'
+import { useNotificationObserver } from '@/hooks/use-notification-observer'
 import * as SplashScreen from 'expo-splash-screen'
 
 // Keep splash screen visible while loading
@@ -29,6 +30,9 @@ function NavigationController() {
   const { isAuthenticated, isInitializing, isSetupComplete } = useAuth()
   const segments = useSegments()
   const router = useRouter()
+
+  // Notification observer - handles push notification taps
+  useNotificationObserver()
 
   useEffect(() => {
     // Wait for auth to initialize

@@ -23,7 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -452,7 +452,7 @@ export default function NotificationBroadcastDetailScreen() {
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
         isLoading={isDeleting}
-        isDangerous
+        type="danger"
       />
     </View>
   )

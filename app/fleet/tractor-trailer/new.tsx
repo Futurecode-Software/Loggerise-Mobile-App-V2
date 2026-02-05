@@ -34,8 +34,8 @@ import {
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui/input'
 import { DateInput } from '@/components/ui/date-input'
-// eslint-disable-next-line import/no-named-as-default
-import SearchableSelectModal, {
+import {
+  SearchableSelectModal,
   SearchableSelectModalRef,
   SelectOption
 } from '@/components/modals/SearchableSelectModal'

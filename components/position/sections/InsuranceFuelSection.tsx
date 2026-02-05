@@ -8,7 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Shield, Fuel, RefreshCw } from 'lucide-react-native';
-import { Card, Button, Input, Select, DateInput } from '@/components/ui';
+import { Card, Button, Input, SelectInput, DateInput } from '@/components/ui';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme';
 import {
   Position,

@@ -27,7 +27,7 @@ import Animated, {
 import Toast from 'react-native-toast-message'
 import PageHeader from '@/components/navigation/PageHeader'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -466,7 +466,7 @@ export default function NotificationBroadcastListScreen() {
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
         isLoading={isDeleting}
-        isDangerous
+        type="danger"
       />
     </View>
   )

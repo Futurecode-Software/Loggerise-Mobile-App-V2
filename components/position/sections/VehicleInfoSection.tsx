@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Truck, Users, Building2, Receipt } from 'lucide-react-native';
-import { Card, Button, Input, Select, SearchableSelect } from '@/components/ui';
+import { Card, Button, Input, SelectInput, SearchableSelect } from '@/components/ui';
 import type { SearchableSelectOption } from '@/components/ui';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme';
 import {

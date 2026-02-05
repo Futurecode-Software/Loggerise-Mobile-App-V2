@@ -820,7 +820,7 @@ export default function GroupSettingsScreen() {
         message={`${participantToRemove?.name || ''} adlı kullanıcıyı gruptan çıkarmak istediğinize emin misiniz?`}
         confirmText="Çıkar"
         cancelText="İptal"
-        isDangerous
+        type="danger"
         onConfirm={confirmRemoveParticipant}
         onCancel={() => {
           setShowRemoveParticipantDialog(false);
@@ -835,7 +835,7 @@ export default function GroupSettingsScreen() {
         message="Bu gruptan ayrılmak istediğinize emin misiniz?"
         confirmText="Ayrıl"
         cancelText="İptal"
-        isDangerous
+        type="danger"
         onConfirm={confirmLeaveGroup}
         onCancel={() => setShowLeaveGroupDialog(false)}
       />

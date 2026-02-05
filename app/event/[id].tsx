@@ -21,7 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import {
   DashboardColors,
   DashboardSpacing,

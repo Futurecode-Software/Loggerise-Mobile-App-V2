@@ -34,7 +34,7 @@ import {
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui/input'
 import { DateInput } from '@/components/ui/date-input'
-import SearchableSelectModal, { SearchableSelectModalRef, SelectOption } from '@/components/modals/SearchableSelectModal'
+import { SearchableSelectModal, SearchableSelectModalRef, SelectOption } from '@/components/modals/SearchableSelectModal'
 import {
   createDriverTractorAssignment,
   DriverTractorAssignmentFormData

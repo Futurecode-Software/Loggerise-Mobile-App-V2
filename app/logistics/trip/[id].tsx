@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
 import { PageHeader } from '@/components/navigation'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -816,7 +816,7 @@ export default function TripDetailScreen() {
         message="Bu seferi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
         confirmText="Sil"
         cancelText="İptal"
-        isDangerous
+        type="danger"
         isLoading={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setShowDeleteConfirm(false)}

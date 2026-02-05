@@ -25,7 +25,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { PageHeader } from '@/components/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import LoadPickerModal, { LoadPickerModalRef } from '@/components/modals/LoadPickerModal';
 import {
   DashboardColors,
@@ -583,7 +583,7 @@ export default function DispositionScreen() {
         message="Bu taslak pozisyonu silmek istediğinizden emin misiniz? Pozisyona atanmış yükler serbest kalacaktır."
         confirmText="Sil"
         cancelText="İptal"
-        isDangerous
+        type="danger"
         isLoading={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => {

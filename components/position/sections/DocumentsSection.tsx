@@ -34,7 +34,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as IntentLauncher from 'expo-intent-launcher';
-import { Card, Input, Select, ConfirmDialog } from '@/components/ui';
+import { Card, Input, SelectInput } from '@/components/ui';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
 import {
   Position,
