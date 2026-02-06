@@ -51,8 +51,12 @@ if (isPushNotificationsSupported()) {
  * Notification data structure expected from backend
  */
 interface NotificationData {
-  type?: 'message' | 'load_update' | 'alert' | 'document_expiry' | 'payment_reminder' | 'system';
+  type?: 'message' | 'load_update' | 'alert' | 'document_expiry' | 'payment_reminder' | 'broadcast' | 'system';
   url?: string;
+  route?: string;
+  action?: string;
+  params?: Record<string, unknown>;
+  broadcast_id?: number | string;
   conversation_id?: number | string;
   id?: number | string;
   employee_id?: number | string;
@@ -68,6 +72,12 @@ function handleNotificationNavigation(notification: import('expo-notifications')
   // If there's a direct URL, use it
   if (typeof data?.url === 'string' && data.url) {
     router.push(data.url as any);
+    return;
+  }
+
+  // If there's a route field (used by broadcast notifications), use it
+  if (typeof data?.route === 'string' && data.route) {
+    router.push(data.route as any);
     return;
   }
 
