@@ -602,86 +602,11 @@ export default function VehicleDetailScreen() {
     }
   }
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.headerContainer}>
-          <LinearGradient
-            colors={['#022920', '#044134', '#065f4a']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.glowOrb1} />
-          <View style={styles.glowOrb2} />
-          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
-            <View style={styles.headerBar}>
-              <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
-                <Ionicons name="chevron-back" size={24} color="#fff" />
-              </TouchableOpacity>
-              <View style={styles.headerTitleContainer}>
-                <Text style={styles.headerTitle}>Araç Detayı</Text>
-              </View>
-              <View style={{ width: 44 }} />
-            </View>
-          </View>
-          <View style={styles.bottomCurve} />
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={DashboardColors.primary} />
-          <Text style={styles.loadingText}>Araç bilgileri yükleniyor...</Text>
-        </View>
-      </View>
-    )
-  }
-
-  // Error state
-  if (error || !vehicle) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.headerContainer}>
-          <LinearGradient
-            colors={['#022920', '#044134', '#065f4a']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.glowOrb1} />
-          <View style={styles.glowOrb2} />
-          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
-            <View style={styles.headerBar}>
-              <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
-                <Ionicons name="chevron-back" size={24} color="#fff" />
-              </TouchableOpacity>
-              <View style={styles.headerTitleContainer}>
-                <Text style={styles.headerTitle}>Araç Detayı</Text>
-              </View>
-              <View style={{ width: 44 }} />
-            </View>
-          </View>
-          <View style={styles.bottomCurve} />
-        </View>
-        <View style={styles.errorContainer}>
-          <Ionicons name="warning-outline" size={64} color={DashboardColors.danger} />
-          <Text style={styles.errorTitle}>Bir hata oluştu</Text>
-          <Text style={styles.errorText}>{error || 'Araç bulunamadı'}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => fetchData(true)}
-          >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    )
-  }
-
-  const statusColors = STATUS_COLORS[vehicle.status] || STATUS_COLORS.available
+  const statusColors = vehicle ? (STATUS_COLORS[vehicle.status] || STATUS_COLORS.available) : STATUS_COLORS.available
 
   return (
     <View style={styles.container}>
-      {/* Header with gradient and static glow orbs */}
+      {/* Header - tek sefer render */}
       <View style={styles.headerContainer}>
         <LinearGradient
           colors={['#022920', '#044134', '#065f4a']}
@@ -689,8 +614,6 @@ export default function VehicleDetailScreen() {
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-
-        {/* Statik glow orb'lar (detay sayfası için) */}
         <View style={styles.glowOrb1} />
         <View style={styles.glowOrb2} />
 
@@ -703,75 +626,113 @@ export default function VehicleDetailScreen() {
 
             {/* Orta: Başlık */}
             <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>{vehicle.plate}</Text>
-              <Text style={styles.headerSubtitle}>
-                {vehicleTypeLabels[vehicle.vehicle_type] || vehicle.vehicle_type}
+              <Text style={styles.headerTitle}>
+                {vehicle ? vehicle.plate : 'Araç Detayı'}
               </Text>
+              {vehicle && (
+                <Text style={styles.headerSubtitle}>
+                  {vehicleTypeLabels[vehicle.vehicle_type] || vehicle.vehicle_type}
+                </Text>
+              )}
             </View>
 
             {/* Sağ: Düzenle ve Sil */}
-            <View style={styles.headerActions}>
-              <TouchableOpacity onPress={handleEdit} style={styles.headerButton}>
-                <Ionicons name="create-outline" size={22} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleDelete}
-                style={styles.headerButton}
-                disabled={isDeleting}
-              >
-                {isDeleting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Ionicons name="trash-outline" size={22} color="#fff" />
-                )}
-              </TouchableOpacity>
-            </View>
+            {!isLoading && vehicle ? (
+              <View style={styles.headerActions}>
+                <TouchableOpacity onPress={handleEdit} style={styles.headerButton}>
+                  <Ionicons name="create-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleDelete}
+                  style={[styles.headerButton, styles.deleteButton]}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={22} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.headerActionsPlaceholder} />
+            )}
           </View>
         </View>
 
         <View style={styles.bottomCurve} />
       </View>
 
+      {/* Loading State */}
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Araç bilgileri yükleniyor...</Text>
+        </View>
+      )}
+
+      {/* Error State */}
+      {!isLoading && (error || !vehicle) && (
+        <View style={styles.errorContainer}>
+          <Ionicons name="warning-outline" size={64} color={DashboardColors.danger} />
+          <Text style={styles.errorTitle}>Bir hata oluştu</Text>
+          <Text style={styles.errorText}>{error || 'Araç bulunamadı'}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => fetchData(true)}
+          >
+            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Normal İçerik */}
+      {!isLoading && vehicle && (<>
       {/* Vehicle Summary Card - Content alanında */}
       <View style={styles.summaryCardContainer}>
         <View style={styles.summaryCard}>
-          <View style={styles.summaryHeader}>
-            <View style={styles.summaryIcon}>
-              <Ionicons name="car-sport-outline" size={28} color={DashboardColors.primary} />
+          {/* Header - liste card ile aynı yapı */}
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIcon}>
+              <Ionicons name="car-sport-outline" size={20} color={DashboardColors.primary} />
             </View>
-            <View style={styles.summaryInfo}>
-              <Text style={styles.summaryPlate}>{vehicle.plate}</Text>
-              <Text style={styles.summaryBrandModel}>
-                {vehicle.brand || '-'} {vehicle.model || ''}
-                {(vehicle.model_year || vehicle.year) ? ` (${vehicle.model_year || vehicle.year})` : ''}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.badgeRow}>
-            <View style={[styles.badge, { backgroundColor: DashboardColors.infoBg }]}>
-              <Text style={[styles.badgeText, { color: DashboardColors.info }]}>
+            <View style={styles.cardHeaderContent}>
+              <Text style={styles.cardPlate} numberOfLines={1}>{vehicle.plate}</Text>
+              <Text style={styles.cardType} numberOfLines={1}>
                 {vehicleTypeLabels[vehicle.vehicle_type] || vehicle.vehicle_type}
               </Text>
             </View>
-            <View style={[styles.badge, { backgroundColor: vehicle.ownership_type === 'owned' ? DashboardColors.successBg : DashboardColors.warningBg }]}>
-              <Text style={[styles.badgeText, { color: vehicle.ownership_type === 'owned' ? DashboardColors.success : DashboardColors.warning }]}>
-                {ownershipLabels[vehicle.ownership_type] || vehicle.ownership_type}
-              </Text>
-            </View>
-            <View style={[styles.badge, { backgroundColor: statusColors.bg }]}>
-              <Text style={[styles.badgeText, { color: statusColors.primary }]}>
+            <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
+              <Text style={[styles.statusBadgeText, { color: statusColors.primary }]}>
                 {statusLabels[vehicle.status] || vehicle.status}
               </Text>
             </View>
           </View>
-          {(vehicle.total_km || vehicle.km_counter) && (
-            <View style={styles.kmBadge}>
-              <Ionicons name="speedometer-outline" size={16} color={DashboardColors.textMuted} />
-              <Text style={styles.kmText}>
-                {formatNumber(vehicle.total_km || vehicle.km_counter, 'km')}
+
+          {/* Info rows - liste card ile aynı yapı */}
+          <View style={styles.cardInfo}>
+            <View style={styles.infoRow}>
+              <Ionicons name="business-outline" size={14} color={DashboardColors.textMuted} />
+              <Text style={styles.infoText}>
+                {vehicle.brand || '-'} {vehicle.model || ''}
+                {(vehicle.model_year || vehicle.year) ? ` (${vehicle.model_year || vehicle.year})` : ''}
               </Text>
             </View>
-          )}
+            {(vehicle.total_km || vehicle.km_counter) ? (
+              <View style={styles.infoRow}>
+                <Ionicons name="speedometer-outline" size={14} color={DashboardColors.textMuted} />
+                <Text style={styles.infoText}>
+                  {formatNumber(vehicle.total_km || vehicle.km_counter, 'km')}
+                </Text>
+              </View>
+            ) : null}
+            <View style={styles.infoRow}>
+              <Ionicons name="key-outline" size={14} color={DashboardColors.textMuted} />
+              <Text style={styles.infoText}>
+                {ownershipLabels[vehicle.ownership_type] || vehicle.ownership_type}
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -845,6 +806,7 @@ export default function VehicleDetailScreen() {
       >
         {renderTabContent()}
       </ScrollView>
+      </>)}
 
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
@@ -896,13 +858,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: DashboardSpacing.lg
+    minHeight: 70
   },
   headerButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center'
   },
@@ -920,13 +882,20 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: DashboardFontSizes.sm,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     marginTop: 2
   },
   headerActions: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: DashboardSpacing.sm
+  },
+  headerActionsPlaceholder: {
+    width: 96
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)'
   },
   bottomCurve: {
     position: 'absolute',
@@ -939,10 +908,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: DashboardBorderRadius['2xl']
   },
 
-  // Summary Card Container - content alanında
+  // Summary Card - liste card ile aynı yapı
   summaryCardContainer: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
     paddingBottom: DashboardSpacing.md,
     backgroundColor: DashboardColors.background
   },
@@ -953,60 +921,48 @@ const styles = StyleSheet.create({
     gap: DashboardSpacing.md,
     ...DashboardShadows.md
   },
-  summaryHeader: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DashboardSpacing.md
+    marginBottom: DashboardSpacing.md
   },
-  summaryIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+  cardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: DashboardColors.primaryGlow,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  summaryInfo: {
-    flex: 1
+  cardHeaderContent: {
+    flex: 1,
+    marginLeft: DashboardSpacing.sm,
+    marginRight: DashboardSpacing.md
   },
-  summaryPlate: {
-    fontSize: DashboardFontSizes['2xl'],
+  cardPlate: {
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '700',
-    color: DashboardColors.textPrimary
+    color: DashboardColors.textPrimary,
+    letterSpacing: 0.3,
+    marginBottom: 2
   },
-  summaryBrandModel: {
-    fontSize: DashboardFontSizes.base,
-    color: DashboardColors.textSecondary,
-    marginTop: 2
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DashboardSpacing.sm
-  },
-  badge: {
-    paddingHorizontal: DashboardSpacing.sm,
-    paddingVertical: 4,
-    borderRadius: DashboardBorderRadius.md
-  },
-  badgeText: {
+  cardType: {
     fontSize: DashboardFontSizes.xs,
-    fontWeight: '700'
+    color: DashboardColors.textMuted,
+    fontWeight: '500'
   },
-  kmBadge: {
+  cardInfo: {
+    gap: DashboardSpacing.xs
+  },
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: DashboardSpacing.xs,
-    paddingHorizontal: DashboardSpacing.md,
-    paddingVertical: DashboardSpacing.xs,
-    borderRadius: DashboardBorderRadius.full,
-    backgroundColor: DashboardColors.background
+    gap: DashboardSpacing.sm
   },
-  kmText: {
+  infoText: {
+    flex: 1,
     fontSize: DashboardFontSizes.sm,
-    fontWeight: '500',
-    color: DashboardColors.textPrimary
+    color: DashboardColors.textMuted
   },
 
   // Tabs
@@ -1056,13 +1012,16 @@ const styles = StyleSheet.create({
 
   // Content
   scrollView: {
-    flex: 1
+    flex: 1,
+    backgroundColor: DashboardColors.background
   },
   scrollContent: {
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing['2xl']
   },
   tabContent: {
-    padding: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.lg,
     gap: DashboardSpacing.md
   },
 
@@ -1074,7 +1033,8 @@ const styles = StyleSheet.create({
     ...DashboardShadows.sm
   },
   sectionContent: {
-    padding: DashboardSpacing.lg,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg,
     gap: DashboardSpacing.xs
   },
 
@@ -1135,7 +1095,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: DashboardSpacing.md
+    gap: DashboardSpacing.md,
+    backgroundColor: DashboardColors.background
   },
   loadingText: {
     fontSize: DashboardFontSizes.base,
@@ -1148,7 +1109,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: DashboardSpacing['2xl'],
-    gap: DashboardSpacing.md
+    gap: DashboardSpacing.md,
+    backgroundColor: DashboardColors.background
   },
   errorTitle: {
     fontSize: DashboardFontSizes.xl,

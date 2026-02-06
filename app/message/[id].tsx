@@ -335,8 +335,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(16, 185, 129, 0.06)'
   },
   headerContent: {
-    paddingHorizontal: DashboardSpacing.lg,
-    paddingBottom: DashboardSpacing.md
+    paddingHorizontal: DashboardSpacing.lg
   },
   headerBar: {
     flexDirection: 'row',

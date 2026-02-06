@@ -884,8 +884,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.04)'
   },
   headerContent: {
-    paddingHorizontal: DashboardSpacing.lg,
-    paddingBottom: DashboardSpacing.lg
+    paddingHorizontal: DashboardSpacing.lg
   },
   headerBar: {
     flexDirection: 'row',
@@ -1280,8 +1279,7 @@ const styles = StyleSheet.create({
   expenseDescription: {
     fontSize: DashboardFontSizes.sm,
     color: DashboardColors.textSecondary,
-    paddingHorizontal: DashboardSpacing.lg,
-    paddingBottom: DashboardSpacing.lg
+    paddingHorizontal: DashboardSpacing.lg
   },
   // Total
   totalCard: {

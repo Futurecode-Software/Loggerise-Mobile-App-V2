@@ -111,8 +111,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   headerContent: {
-    paddingHorizontal: DashboardSpacing.lg,
-    paddingBottom: DashboardSpacing.md
+    paddingHorizontal: DashboardSpacing.lg
   },
   headerBar: {
     flexDirection: 'row',

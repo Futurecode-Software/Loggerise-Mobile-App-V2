@@ -87,7 +87,11 @@
       "Bash(Select-String \"cash-register\" -Context 0,3)",
       "Bash(npx expo lint:*)",
       "Bash(Select-String -Pattern \"error\")",
-      "Bash(Select-String -NotMatch \"warning\")"
+      "Bash(Select-String -NotMatch \"warning\")",
+      "Bash(while read file)",
+      "Bash(do grep -n \"paddingBottom\" \"$file\")",
+      "Bash(echo:*)",
+      "Bash(perl:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

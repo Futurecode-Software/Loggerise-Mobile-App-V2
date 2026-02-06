@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: DashboardSpacing.lg
+    minHeight: 70
   },
   headerButton: {
     width: 40,
@@ -471,7 +471,8 @@ const styles = StyleSheet.create({
     flex: 1
   },
   contentContainer: {
-    padding: DashboardSpacing.lg,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing['3xl']
   },
   infoBox: {
