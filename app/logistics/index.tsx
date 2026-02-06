@@ -141,7 +141,8 @@ const styles = StyleSheet.create({
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    minHeight: 70
   },
   backButton: {
     width: 40,

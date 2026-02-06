@@ -4,11 +4,12 @@
  * Yeni stok hareketi oluşturma ekranı - CLAUDE.md tasarım ilkeleri ile uyumlu
  */
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
+  TouchableOpacity,
   ActivityIndicator
 } from 'react-native'
 import { router } from 'expo-router'
@@ -23,7 +24,7 @@ import {
   DashboardBorderRadius
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui'
-import { SelectInput } from '@/components/ui/select-input'
+import { SearchableSelectModal, SearchableSelectModalRef } from '@/components/modals/SearchableSelectModal'
 import {
   createStockMovement,
   StockMovementFormData,
@@ -51,6 +52,10 @@ export default function NewMovementScreen() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const movementTypeModalRef = useRef<SearchableSelectModalRef>(null)
+  const productModalRef = useRef<SearchableSelectModalRef>(null)
+  const warehouseModalRef = useRef<SearchableSelectModalRef>(null)
 
   // Fetch products and warehouses
   useEffect(() => {
@@ -224,33 +229,50 @@ export default function NewMovementScreen() {
           </View>
 
           <View style={styles.sectionContent}>
-            <SelectInput
-              label="Hareket Tipi *"
-              options={movementTypeOptions}
-              selectedValue={formData.movement_type || ''}
-              onValueChange={(value) => handleInputChange('movement_type', value)}
-              error={errors.movement_type}
-            />
+            <View>
+              <Text style={styles.inputLabel}>Hareket Tipi *</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.movement_type && styles.selectTriggerError]}
+                onPress={() => movementTypeModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.selectTriggerText, !formData.movement_type && styles.selectTriggerPlaceholder]}>
+                  {movementTypeOptions.find(opt => opt.value === formData.movement_type)?.label || 'Hareket tipi seçiniz'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.movement_type && <Text style={styles.errorText}>{errors.movement_type}</Text>}
+            </View>
 
-            <SelectInput
-              label="Ürün *"
-              options={productOptions}
-              selectedValue={formData.product_id ? String(formData.product_id) : ''}
-              onValueChange={(value) =>
-                handleInputChange('product_id', value ? Number(value) : undefined)
-              }
-              error={errors.product_id}
-            />
+            <View>
+              <Text style={styles.inputLabel}>Ürün *</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.product_id && styles.selectTriggerError]}
+                onPress={() => productModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.selectTriggerText, !formData.product_id && styles.selectTriggerPlaceholder]}>
+                  {productOptions.find(opt => opt.value === String(formData.product_id))?.label || 'Ürün seçiniz'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.product_id && <Text style={styles.errorText}>{errors.product_id}</Text>}
+            </View>
 
-            <SelectInput
-              label="Depo *"
-              options={warehouseOptions}
-              selectedValue={formData.warehouse_id ? String(formData.warehouse_id) : ''}
-              onValueChange={(value) =>
-                handleInputChange('warehouse_id', value ? Number(value) : undefined)
-              }
-              error={errors.warehouse_id}
-            />
+            <View>
+              <Text style={styles.inputLabel}>Depo *</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.warehouse_id && styles.selectTriggerError]}
+                onPress={() => warehouseModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.selectTriggerText, !formData.warehouse_id && styles.selectTriggerPlaceholder]}>
+                  {warehouseOptions.find(opt => opt.value === String(formData.warehouse_id))?.label || 'Depo seçiniz'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.warehouse_id && <Text style={styles.errorText}>{errors.warehouse_id}</Text>}
+            </View>
 
             <Input
               label="Miktar *"
@@ -286,6 +308,33 @@ export default function NewMovementScreen() {
           </View>
         </View>
       </KeyboardAwareScrollView>
+
+      <SearchableSelectModal
+        ref={movementTypeModalRef}
+        title="Hareket Tipi"
+        options={movementTypeOptions}
+        selectedValue={formData.movement_type || ''}
+        onSelect={(option) => handleInputChange('movement_type', option.value)}
+        searchPlaceholder="Ara..."
+      />
+
+      <SearchableSelectModal
+        ref={productModalRef}
+        title="Ürün"
+        options={productOptions}
+        selectedValue={formData.product_id ? String(formData.product_id) : undefined}
+        onSelect={(option) => handleInputChange('product_id', option.value ? Number(option.value) : undefined)}
+        searchPlaceholder="Ara..."
+      />
+
+      <SearchableSelectModal
+        ref={warehouseModalRef}
+        title="Depo"
+        options={warehouseOptions}
+        selectedValue={formData.warehouse_id ? String(formData.warehouse_id) : undefined}
+        onSelect={(option) => handleInputChange('warehouse_id', option.value ? Number(option.value) : undefined)}
+        searchPlaceholder="Ara..."
+      />
     </View>
   )
 }
@@ -342,5 +391,39 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.base,
     color: DashboardColors.textSecondary,
     marginTop: DashboardSpacing.md
+  },
+  inputLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.xs
+  },
+  selectTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.md,
+    minHeight: 48
+  },
+  selectTriggerError: {
+    borderColor: DashboardColors.danger
+  },
+  selectTriggerText: {
+    flex: 1,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
+  },
+  selectTriggerPlaceholder: {
+    color: DashboardColors.textMuted
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.danger,
+    marginTop: 4
   }
 })

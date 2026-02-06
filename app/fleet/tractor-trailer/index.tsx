@@ -193,6 +193,7 @@ export default function TractorTrailerAssignmentsScreen() {
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Refs
   const isMountedRef = useRef(true)

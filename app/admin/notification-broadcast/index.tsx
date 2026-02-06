@@ -45,7 +45,6 @@ import {
   getStatusColor,
   getTargetTypeLabel
 } from '@/services/endpoints/notification-broadcasts'
-import { formatCurrency } from '@/utils/currency'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -196,6 +195,7 @@ export default function NotificationBroadcastListScreen() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<BroadcastStatus | 'all'>('all')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null)
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false)
   const [deletingBroadcast, setDeletingBroadcast] = useState<NotificationBroadcast | null>(null)

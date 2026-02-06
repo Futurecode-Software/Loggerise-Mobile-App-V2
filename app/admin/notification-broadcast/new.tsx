@@ -11,21 +11,10 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
   Switch
 } from 'react-native'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing
-} from 'react-native-reanimated'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import Toast from 'react-native-toast-message'
 import * as Haptics from 'expo-haptics'
@@ -36,7 +25,8 @@ import {
   DashboardBorderRadius
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui'
-import { SelectInput } from '@/components/ui/select-input'
+import { FormHeader } from '@/components/navigation/FormHeader'
+import { SearchableSelectModal, SearchableSelectModalRef, SelectOption } from '@/components/modals/SearchableSelectModal'
 import { SearchableSelect, SearchableSelectOption } from '@/components/ui/searchable-select'
 import {
   createBroadcast,
@@ -52,58 +42,14 @@ import {
 import { getErrorMessage } from '@/services/api'
 
 // Target type seçenekleri
-const TARGET_TYPE_OPTIONS = [
+const TARGET_TYPE_OPTIONS: SelectOption[] = [
   { label: 'Tüm Kullanıcılar', value: 'all' },
   { label: 'Belirli Kullanıcılar', value: 'specific_users' },
   { label: 'Rol Bazlı', value: 'role' }
 ]
 
 export default function NewNotificationBroadcastScreen() {
-  const insets = useSafeAreaInsets()
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Animasyonlu orb'lar için shared values
-  const orb1TranslateY = useSharedValue(0)
-  const orb2TranslateX = useSharedValue(0)
-  const orb1Scale = useSharedValue(1)
-  const orb2Scale = useSharedValue(1)
-
-  useEffect(() => {
-    orb1TranslateY.value = withRepeat(
-      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-    orb1Scale.value = withRepeat(
-      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-    orb2TranslateX.value = withRepeat(
-      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-    orb2Scale.value = withRepeat(
-      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-  }, [])
-
-  const orb1AnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: orb1TranslateY.value },
-      { scale: orb1Scale.value }
-    ]
-  }))
-
-  const orb2AnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: orb2TranslateX.value },
-      { scale: orb2Scale.value }
-    ]
-  }))
+  const targetTypeModalRef = useRef<SearchableSelectModalRef>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -118,7 +64,9 @@ export default function NewNotificationBroadcastScreen() {
   })
 
   const [selectedUsers, setSelectedUsers] = useState<User[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -199,28 +147,6 @@ export default function NewNotificationBroadcastScreen() {
     }
   }, [])
 
-  // Kullanıcı ekleme
-  const handleUserAdd = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim()) return
-
-    try {
-      const users = await getUsers(searchQuery)
-      if (users.length > 0) {
-        const newUser = users[0]
-        if (!selectedUsers.find(u => u.id === newUser.id)) {
-          const updatedUsers = [...selectedUsers, newUser]
-          setSelectedUsers(updatedUsers)
-          setFormData(prev => ({
-            ...prev,
-            target_user_ids: updatedUsers.map(u => u.id)
-          }))
-        }
-      }
-    } catch (err: any) {
-      console.error('Kullanıcı eklenirken hata:', err)
-    }
-  }, [selectedUsers])
-
   // Kullanıcı kaldırma
   const handleUserRemove = useCallback((userId: number) => {
     const updatedUsers = selectedUsers.filter(u => u.id !== userId)
@@ -241,7 +167,18 @@ export default function NewNotificationBroadcastScreen() {
     setFormData(prev => ({ ...prev, deep_link_route: routePath as string | null }))
   }, [])
 
-  // Form doğrulama
+  // Target type seçimi
+  const handleTargetTypeSelect = useCallback((option: SelectOption) => {
+    handleInputChange('target_type', option.value)
+  }, [handleInputChange])
+
+  // Hedef kitle label
+  const getTargetLabel = useCallback(() => {
+    const option = TARGET_TYPE_OPTIONS.find(o => o.value === formData.target_type)
+    return option?.label || 'Seçiniz'
+  }, [formData.target_type])
+
+    // Form doğrulama
   const validateForm = useCallback((): boolean => {
     const newErrors: Record<string, string> = {}
 
@@ -338,48 +275,12 @@ export default function NewNotificationBroadcastScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
-        <LinearGradient
-          colors={['#022920', '#044134', '#065f4a']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-
-        {/* Animasyonlu orb'lar */}
-        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
-        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
-
-        {/* Header içeriği */}
-        <View style={styles.headerContent}>
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={handleBack}
-              disabled={isSubmitting}
-            >
-              <Ionicons name="chevron-back" size={24} color={DashboardColors.textOnPrimary} />
-            </TouchableOpacity>
-
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Yeni Bildirim</Text>
-              <Text style={styles.headerSubtitle}>Toplu bildirim gönder</Text>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color={DashboardColors.textOnPrimary} />
-              ) : (
-                <Ionicons name="checkmark" size={24} color={DashboardColors.textOnPrimary} />
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+      <FormHeader
+        title="Yeni Bildirim"
+        onBackPress={handleBack}
+        onSavePress={handleSubmit}
+        isSaving={isSubmitting}
+      />
 
       {/* Form */}
       <KeyboardAwareScrollView
@@ -417,21 +318,36 @@ export default function NewNotificationBroadcastScreen() {
           />
         </View>
 
-        {/* Hedef Tip */}
+        {/* Hedef Tip - SearchableSelectModal */}
         <View style={styles.section}>
-          <SelectInput
-            label="Hedef Kitle"
-            options={TARGET_TYPE_OPTIONS}
-            value={formData.target_type}
-            onValueChange={(value) => handleInputChange('target_type', value)}
+          <Text style={styles.inputLabel}>Hedef Kitle *</Text>
+          <TouchableOpacity
+            onPress={() => targetTypeModalRef.current?.present()}
+            style={styles.selectButton}
             disabled={isSubmitting}
+          >
+            <Text style={[
+              styles.selectButtonText,
+              formData.target_type && styles.selectButtonTextActive
+            ]}>
+              {getTargetLabel()}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
+          </TouchableOpacity>
+
+          <SearchableSelectModal
+            ref={targetTypeModalRef}
+            title="Hedef Kitle Seçimi"
+            options={TARGET_TYPE_OPTIONS}
+            selectedValue={formData.target_type}
+            onSelect={handleTargetTypeSelect}
           />
         </View>
 
         {/* Kullanıcı Seçimi (specific_users için) */}
         {formData.target_type === 'specific_users' && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Kullanıcılar</Text>
+            <Text style={styles.inputLabel}>Kullanıcılar</Text>
             <SearchableSelect
               placeholder="Kullanıcı ara ve ekle"
               loadOptions={loadUsers}
@@ -555,87 +471,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DashboardColors.background
   },
-  headerContainer: {
-    position: 'relative',
-    overflow: 'hidden',
-    paddingBottom: DashboardSpacing.xl
-  },
-  glowOrb1: {
-    position: 'absolute',
-    top: -40,
-    right: -20,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)'
-  },
-  glowOrb2: {
-    position: 'absolute',
-    bottom: -20,
-    left: -50,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)'
-  },
-  headerContent: {
-    paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
-    zIndex: 10
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: DashboardBorderRadius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center'
-  },
-  headerTitle: {
-    fontSize: DashboardFontSizes.xl,
-    fontWeight: '700',
-    color: DashboardColors.textOnPrimary
-  },
-  headerSubtitle: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textOnPrimaryMuted,
-    marginTop: 2
-  },
-  saveButton: {
-    width: 40,
-    height: 40,
-    borderRadius: DashboardBorderRadius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  saveButtonDisabled: {
-    opacity: 0.5
-  },
   scrollView: {
     flex: 1
   },
   scrollContent: {
-    paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.xl
+    padding: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing['3xl']
   },
   section: {
     marginBottom: DashboardSpacing.xl
   },
-  sectionLabel: {
-    fontSize: DashboardFontSizes.base,
+  inputLabel: {
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
     color: DashboardColors.textPrimary,
     marginBottom: DashboardSpacing.sm
+  },
+  selectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.md,
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: DashboardColors.border
+  },
+  selectButtonText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textMuted
+  },
+  selectButtonTextActive: {
+    color: DashboardColors.textPrimary
   },
   selectedItemsContainer: {
     marginTop: DashboardSpacing.md,

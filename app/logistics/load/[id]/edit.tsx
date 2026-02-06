@@ -48,9 +48,9 @@ import {
 
 // SelectOption tipi
 interface SelectOption {
-  label: string;
-  value: number;
-  subtitle?: string;
+  label: string
+  value: number
+  subtitle?: string
 }
 
 const STEPS = [
@@ -60,7 +60,7 @@ const STEPS = [
   { id: 4, title: 'Fiyatlandırma', description: 'Navlun fiyatlandırması' },
   { id: 5, title: 'Beyanname ve Fatura', description: 'Gümrük ve fatura bilgileri' },
   { id: 6, title: 'Gümrük ve Belgeler', description: 'GTIP, ATR ve belge durumları' },
-];
+]
 
 // Default load item
 const getDefaultLoadItem = (): LoadItem => ({
@@ -88,7 +88,7 @@ const getDefaultLoadItem = (): LoadItem => ({
   hazmat_packing_group: '',
   hazmat_flash_point: '0',
   hazmat_description: '',
-});
+})
 
 export default function EditLoadScreen() {
   const insets = useSafeAreaInsets()
@@ -143,39 +143,39 @@ export default function EditLoadScreen() {
 
   // Parse ID safely
   const loadId = React.useMemo(() => {
-    const idStr = Array.isArray(rawId) ? rawId[0] : rawId;
-    if (!idStr) return null;
-    const parsed = parseInt(idStr, 10);
-    return isNaN(parsed) ? null : parsed;
-  }, [rawId]);
+    const idStr = Array.isArray(rawId) ? rawId[0] : rawId
+    if (!idStr) return null
+    const parsed = parseInt(idStr, 10)
+    return isNaN(parsed) ? null : parsed
+  }, [rawId])
 
   // Form data state
   const [formData, setFormData] = useState<LoadFormData>({
     is_active: true,
     publish_to_pool: false,
     estimated_value_currency: 'TRY',
-  });
+  })
 
   // Items state
-  const [items, setItems] = useState<LoadItem[]>([getDefaultLoadItem()]);
-  const [addresses, setAddresses] = useState<LoadAddress[]>([]);
-  const [pricingItems, setPricingItems] = useState<LoadPricingItem[]>([]);
+  const [items, setItems] = useState<LoadItem[]>([getDefaultLoadItem()])
+  const [addresses, setAddresses] = useState<LoadAddress[]>([])
+  const [pricingItems, setPricingItems] = useState<LoadPricingItem[]>([])
 
   // Firma seçim state'leri
-  const [selectedCustomer, setSelectedCustomer] = useState<SelectOption | null>(null);
-  const [selectedSender, setSelectedSender] = useState<SelectOption | null>(null);
-  const [selectedManufacturer, setSelectedManufacturer] = useState<SelectOption | null>(null);
-  const [selectedReceiver, setSelectedReceiver] = useState<SelectOption | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<SelectOption | null>(null)
+  const [selectedSender, setSelectedSender] = useState<SelectOption | null>(null)
+  const [selectedManufacturer, setSelectedManufacturer] = useState<SelectOption | null>(null)
+  const [selectedReceiver, setSelectedReceiver] = useState<SelectOption | null>(null)
 
   // Hata state'i
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Cleanup
   useEffect(() => {
     return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+      isMountedRef.current = false
+    }
+  }, [])
 
   // Load existing data
   useEffect(() => {
@@ -236,8 +236,8 @@ export default function EditLoadScreen() {
           t1_t2_document: load.t1_t2_document,
           is_active: load.is_active,
           publish_to_pool: false,
-        };
-        setFormData(mappedFormData);
+        }
+        setFormData(mappedFormData)
 
         // Map items
         if (load.items && load.items.length > 0) {
@@ -267,8 +267,8 @@ export default function EditLoadScreen() {
             hazmat_packing_group: item.hazmat_packing_group || '',
             hazmat_flash_point: item.hazmat_flash_point || '0',
             hazmat_description: item.hazmat_description || '',
-          }));
-          setItems(mappedItems);
+          }))
+          setItems(mappedItems)
         }
 
         // Map addresses - ensure sort_order is set with defaults
@@ -278,8 +278,8 @@ export default function EditLoadScreen() {
             sort_order: addr.sort_order ?? index,
             pickup_type: addr.pickup_type ?? null,
             delivery_type: addr.delivery_type ?? null,
-          })) as LoadAddress[];
-          setAddresses(mappedAddresses);
+          })) as LoadAddress[]
+          setAddresses(mappedAddresses)
         }
 
         // Set selected companies
@@ -288,28 +288,28 @@ export default function EditLoadScreen() {
             label: load.customer.name,
             value: load.customer.id,
             subtitle: load.customer.code,
-          });
+          })
         }
         if (load.sender_company) {
           setSelectedSender({
             label: load.sender_company.name,
             value: load.sender_company.id,
             subtitle: load.sender_company.code,
-          });
+          })
         }
         if (load.manufacturer_company) {
           setSelectedManufacturer({
             label: load.manufacturer_company.name,
             value: load.manufacturer_company.id,
             subtitle: load.manufacturer_company.code,
-          });
+          })
         }
         if (load.receiver_company) {
           setSelectedReceiver({
             label: load.receiver_company.name,
             value: load.receiver_company.id,
             subtitle: load.receiver_company.code,
-          });
+          })
         }
       } catch (err) {
         console.error('Load fetch error:', err)
@@ -333,49 +333,49 @@ export default function EditLoadScreen() {
 
   // Form data güncelleme
   const updateFormData = useCallback((field: keyof LoadFormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }))
     setErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors[field];
-      return newErrors;
-    });
-  }, []);
+      const newErrors = { ...prev }
+      delete newErrors[field]
+      return newErrors
+    })
+  }, [])
 
   // Müşteri seçim handler'ı
   const handleCustomerChange = useCallback(
     async (option: SelectOption | null) => {
-      setSelectedCustomer(option);
-      updateFormData('customer_id', option?.value);
+      setSelectedCustomer(option)
+      updateFormData('customer_id', option?.value)
     },
     [updateFormData]
-  );
+  )
 
   // Gönderici firma seçim handler'ı
   const handleSenderChange = useCallback(
     async (option: SelectOption | null) => {
-      setSelectedSender(option);
-      updateFormData('sender_company_id', option?.value);
+      setSelectedSender(option)
+      updateFormData('sender_company_id', option?.value)
     },
     [updateFormData]
-  );
+  )
 
   // Üretici firma seçim handler'ı
   const handleManufacturerChange = useCallback(
     async (option: SelectOption | null) => {
-      setSelectedManufacturer(option);
-      updateFormData('manufacturer_company_id', option?.value);
+      setSelectedManufacturer(option)
+      updateFormData('manufacturer_company_id', option?.value)
     },
     [updateFormData]
-  );
+  )
 
   // Alıcı firma seçim handler'ı
   const handleReceiverChange = useCallback(
     async (option: SelectOption | null) => {
-      setSelectedReceiver(option);
-      updateFormData('receiver_company_id', option?.value);
+      setSelectedReceiver(option)
+      updateFormData('receiver_company_id', option?.value)
     },
     [updateFormData]
-  );
+  )
 
   // Validation
   const validateStep = (step: number): boolean => {
@@ -589,7 +589,7 @@ export default function EditLoadScreen() {
         sort_order: pItem.sort_order || 0,
         is_active: pItem.is_active !== false,
       })) as unknown as LoadFormData['pricing_items'],
-    };
+    }
 
     try {
       setIsSubmitting(true)
@@ -637,21 +637,21 @@ export default function EditLoadScreen() {
             onReceiverChange={handleReceiverChange}
             isDirectionLocked={false}
           />
-        );
+        )
       case 2:
-        return <Step2LoadItems items={items} setItems={setItems} />;
+        return <Step2LoadItems items={items} setItems={setItems} />
       case 3:
-        return <Step3Addresses addresses={addresses} setAddresses={setAddresses} />;
+        return <Step3Addresses addresses={addresses} setAddresses={setAddresses} />
       case 4:
-        return <Step4Pricing items={pricingItems} setItems={setPricingItems} />;
+        return <Step4Pricing items={pricingItems} setItems={setPricingItems} />
       case 5:
-        return <Step5InvoiceDeclaration data={formData} updateFormData={updateFormData} />;
+        return <Step5InvoiceDeclaration data={formData} updateFormData={updateFormData} />
       case 6:
-        return <Step6CustomsDocuments data={formData} updateFormData={updateFormData} />;
+        return <Step6CustomsDocuments data={formData} updateFormData={updateFormData} />
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   // Loading state
   if (isLoading) {
@@ -817,6 +817,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 70,
     paddingBottom: DashboardSpacing.lg
   },
   backButton: {

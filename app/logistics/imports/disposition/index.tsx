@@ -5,7 +5,7 @@
  * Web dispozisyon sürükle-bırak arayüzünün mobil uyarlaması.
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -14,19 +14,19 @@ import {
   FlatList,
   RefreshControl,
   Pressable,
-} from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+} from 'react-native'
+import { router, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-} from 'react-native-reanimated';
-import { PageHeader } from '@/components/navigation';
-import { Skeleton } from '@/components/ui/skeleton';
-import ConfirmDialog from '@/components/modals/ConfirmDialog';
-import LoadPickerModal, { LoadPickerModalRef } from '@/components/modals/LoadPickerModal';
+} from 'react-native-reanimated'
+import { PageHeader } from '@/components/navigation'
+import { Skeleton } from '@/components/ui/skeleton'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import LoadPickerModal, { LoadPickerModalRef } from '@/components/modals/LoadPickerModal'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -34,8 +34,8 @@ import {
   DashboardFontSizes,
   DashboardShadows,
   DashboardAnimations,
-} from '@/constants/dashboard-theme';
-import { useToast } from '@/hooks/use-toast';
+} from '@/constants/dashboard-theme'
+import { useToast } from '@/hooks/use-toast'
 import {
   getDispositionData,
   createDraftPosition,
@@ -46,10 +46,10 @@ import {
   calculatePositionCapacity,
   DraftPosition,
   DispositionData,
-} from '@/services/endpoints/disposition';
-import { Load } from '@/services/endpoints/loads';
+} from '@/services/endpoints/disposition'
+import { Load } from '@/services/endpoints/loads'
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 // Pozisyon durum renkleri
 const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
@@ -57,7 +57,7 @@ const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
   completed: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' },
   cancelled: { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' },
   draft: { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' },
-};
+}
 
 // Skeleton Bileşeni
 function PositionCardSkeleton() {
@@ -76,19 +76,19 @@ function PositionCardSkeleton() {
         <Skeleton width={100} height={14} />
       </View>
     </View>
-  );
+  )
 }
 
 // Taslak Pozisyon Kartı Bileşeni
 interface DraftPositionCardProps {
-  position: DraftPosition;
-  isExpanded: boolean;
-  isConfirming: boolean;
-  onToggleExpand: () => void;
-  onAddLoad: () => void;
-  onConfirm: () => void;
-  onDelete: () => void;
-  onRemoveLoad: (load: Load) => void;
+  position: DraftPosition
+  isExpanded: boolean
+  isConfirming: boolean
+  onToggleExpand: () => void
+  onAddLoad: () => void
+  onConfirm: () => void
+  onDelete: () => void
+  onRemoveLoad: (load: Load) => void
 }
 
 function DraftPositionCard({
@@ -101,27 +101,27 @@ function DraftPositionCard({
   onDelete,
   onRemoveLoad,
 }: DraftPositionCardProps) {
-  const scale = useSharedValue(1);
-  const colors = STATUS_COLORS.draft;
-  const loads = position.loads || [];
-  const capacity = calculatePositionCapacity(loads);
+  const scale = useSharedValue(1)
+  const colors = STATUS_COLORS.draft
+  const loads = position.loads || []
+  const capacity = calculatePositionCapacity(loads)
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-  }));
+  }))
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.98, DashboardAnimations.springBouncy);
-  };
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy)
+  }
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, DashboardAnimations.springBouncy);
-  };
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onToggleExpand();
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    onToggleExpand()
+  }
 
   return (
     <AnimatedPressable
@@ -198,8 +198,8 @@ function DraftPositionCard({
                   <TouchableOpacity
                     style={styles.removeLoadBtn}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      onRemoveLoad(load);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                      onRemoveLoad(load)
                     }}
                   >
                     <Ionicons name="close" size={14} color={DashboardColors.danger} />
@@ -219,8 +219,8 @@ function DraftPositionCard({
             <TouchableOpacity
               style={[styles.actionBtn, styles.actionBtnSecondary]}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onAddLoad();
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                onAddLoad()
               }}
             >
               <Ionicons name="add" size={16} color={DashboardColors.primary} />
@@ -236,8 +236,8 @@ function DraftPositionCard({
                 (isConfirming || loads.length === 0) && styles.actionBtnDisabled,
               ]}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                onConfirm();
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                onConfirm()
               }}
               disabled={isConfirming || loads.length === 0}
             >
@@ -254,8 +254,8 @@ function DraftPositionCard({
             <TouchableOpacity
               style={[styles.actionBtn, styles.actionBtnDanger]}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                onDelete();
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                onDelete()
               }}
             >
               <Ionicons name="trash-outline" size={16} color={DashboardColors.danger} />
@@ -264,7 +264,7 @@ function DraftPositionCard({
         </View>
       )}
     </AnimatedPressable>
-  );
+  )
 }
 
 // Boş Durum Bileşeni
@@ -279,13 +279,13 @@ function EmptyState() {
         Yeni taslak oluşturmak için + butonuna tıklayın
       </Text>
     </View>
-  );
+  )
 }
 
 // Hata Durumu Bileşeni
 interface ErrorStateProps {
-  error: string;
-  onRetry: () => void;
+  error: string
+  onRetry: () => void
 }
 
 function ErrorState({ error, onRetry }: ErrorStateProps) {
@@ -301,189 +301,189 @@ function ErrorState({ error, onRetry }: ErrorStateProps) {
         <Text style={styles.retryButtonText}>Tekrar Dene</Text>
       </TouchableOpacity>
     </View>
-  );
+  )
 }
 
 export default function DispositionScreen() {
-  const { success, error: showError } = useToast();
+  const { success, error: showError } = useToast()
 
   // Veri state
-  const [data, setData] = useState<DispositionData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<DispositionData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // UI state
-  const [selectedPosition, setSelectedPosition] = useState<DraftPosition | null>(null);
-  const [expandedPositions, setExpandedPositions] = useState<Set<number>>(new Set());
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [positionToDelete, setPositionToDelete] = useState<DraftPosition | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<DraftPosition | null>(null)
+  const [expandedPositions, setExpandedPositions] = useState<Set<number>>(new Set())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [positionToDelete, setPositionToDelete] = useState<DraftPosition | null>(null)
 
   // Yükleme state'leri
-  const [isCreating, setIsCreating] = useState(false);
-  const [isConfirming, setIsConfirming] = useState<number | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isAssigning, setIsAssigning] = useState<number | null>(null);
+  const [isCreating, setIsCreating] = useState(false)
+  const [isConfirming, setIsConfirming] = useState<number | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isAssigning, setIsAssigning] = useState<number | null>(null)
 
   // Refs
-  const isMountedRef = useRef(true);
-  const loadPickerModalRef = useRef<LoadPickerModalRef>(null);
-  const hasInitialFetchRef = useRef(false);
+  const isMountedRef = useRef(true)
+  const loadPickerModalRef = useRef<LoadPickerModalRef>(null)
+  const hasInitialFetchRef = useRef(false)
 
   // Veri çekme
   const fetchData = useCallback(async () => {
     try {
-      setError(null);
+      setError(null)
       // İthalat için 'import' parametresi kullanılır
-      const result = await getDispositionData('import');
+      const result = await getDispositionData('import')
       if (isMountedRef.current) {
-        setData(result);
-        hasInitialFetchRef.current = true;
+        setData(result)
+        hasInitialFetchRef.current = true
       }
     } catch (err) {
       if (isMountedRef.current) {
-        console.error('İthalat dispozisyon getirme hatası:', err);
-        setError(err instanceof Error ? err.message : 'Veriler yüklenemedi');
+        console.error('İthalat dispozisyon getirme hatası:', err)
+        setError(err instanceof Error ? err.message : 'Veriler yüklenemedi')
       }
     } finally {
       if (isMountedRef.current) {
-        setIsLoading(false);
-        setRefreshing(false);
+        setIsLoading(false)
+        setRefreshing(false)
       }
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    isMountedRef.current = true;
-    fetchData();
+    isMountedRef.current = true
+    fetchData()
     return () => {
-      isMountedRef.current = false;
-    };
-  }, [fetchData]);
+      isMountedRef.current = false
+    }
+  }, [fetchData])
 
   // Ekran odaklandığında yenile
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        fetchData();
+        fetchData()
       }
     }, [fetchData])
-  );
+  )
 
   const onRefresh = () => {
-    setRefreshing(true);
-    fetchData();
-  };
+    setRefreshing(true)
+    fetchData()
+  }
 
   // Yeni taslak pozisyon oluştur
   const handleCreateDraft = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsCreating(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    setIsCreating(true)
     try {
       // İthalat için 'import' parametresi kullanılır
-      const position = await createDraftPosition('import');
-      success('Başarılı', 'Taslak pozisyon oluşturuldu.');
+      const position = await createDraftPosition('import')
+      success('Başarılı', 'Taslak pozisyon oluşturuldu.')
       // Yeni pozisyonu genişlet
-      setExpandedPositions((prev) => new Set([...prev, position.id]));
-      fetchData();
+      setExpandedPositions((prev) => new Set([...prev, position.id]))
+      fetchData()
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Taslak oluşturulamadı.');
+      showError('Hata', err instanceof Error ? err.message : 'Taslak oluşturulamadı.')
     } finally {
-      setIsCreating(false);
+      setIsCreating(false)
     }
-  };
+  }
 
   // Taslak pozisyonu onayla
   const handleConfirmDraft = async (position: DraftPosition) => {
-    setIsConfirming(position.id);
+    setIsConfirming(position.id)
     try {
-      await confirmDraftPosition(position.id);
-      success('Başarılı', 'Pozisyon onaylandı.');
-      fetchData();
+      await confirmDraftPosition(position.id)
+      success('Başarılı', 'Pozisyon onaylandı.')
+      fetchData()
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Pozisyon onaylanamadı.');
+      showError('Hata', err instanceof Error ? err.message : 'Pozisyon onaylanamadı.')
     } finally {
-      setIsConfirming(null);
+      setIsConfirming(null)
     }
-  };
+  }
 
   // Taslak pozisyonu sil - onay göster
   const handleDeleteDraft = (position: DraftPosition) => {
-    setPositionToDelete(position);
-    setShowDeleteConfirm(true);
-  };
+    setPositionToDelete(position)
+    setShowDeleteConfirm(true)
+  }
 
   // Silme işlemini onayla ve çalıştır
   const handleConfirmDelete = async () => {
-    if (!positionToDelete) return;
-    setIsDeleting(true);
+    if (!positionToDelete) return
+    setIsDeleting(true)
     try {
-      await deleteDraftPosition(positionToDelete.id);
-      success('Başarılı', 'Taslak pozisyon silindi.');
-      fetchData();
+      await deleteDraftPosition(positionToDelete.id)
+      success('Başarılı', 'Taslak pozisyon silindi.')
+      fetchData()
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Taslak silinemedi.');
+      showError('Hata', err instanceof Error ? err.message : 'Taslak silinemedi.')
     } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
-      setPositionToDelete(null);
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+      setPositionToDelete(null)
     }
-  };
+  }
 
   // Pozisyon için yük seçici aç
   const handleOpenLoadPicker = (position: DraftPosition) => {
-    setSelectedPosition(position);
-    loadPickerModalRef.current?.present();
-  };
+    setSelectedPosition(position)
+    loadPickerModalRef.current?.present()
+  }
 
   // Yükü pozisyona ata
   const handleAssignLoad = async (load: Load) => {
-    if (!selectedPosition) return;
-    setIsAssigning(load.id);
+    if (!selectedPosition) return
+    setIsAssigning(load.id)
     try {
-      await assignLoadToPosition(selectedPosition.id, load.id);
-      success('Başarılı', 'Yük pozisyona atandı.');
+      await assignLoadToPosition(selectedPosition.id, load.id)
+      success('Başarılı', 'Yük pozisyona atandı.')
       // Modalı kapatma - birden fazla seçime izin ver
-      fetchData();
+      fetchData()
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Yük atanamadı.');
+      showError('Hata', err instanceof Error ? err.message : 'Yük atanamadı.')
       throw err; // Modalın işlemesi için yeniden fırlat
     } finally {
-      setIsAssigning(null);
+      setIsAssigning(null)
     }
-  };
+  }
 
   // Yükü pozisyondan kaldır
   const handleRemoveLoad = async (position: DraftPosition, load: Load) => {
     try {
-      await removeLoadFromPosition(position.id, load.id);
-      success('Başarılı', 'Yük pozisyondan çıkarıldı.');
-      fetchData();
+      await removeLoadFromPosition(position.id, load.id)
+      success('Başarılı', 'Yük pozisyondan çıkarıldı.')
+      fetchData()
     } catch (err) {
-      showError('Hata', err instanceof Error ? err.message : 'Yük çıkarılamadı.');
+      showError('Hata', err instanceof Error ? err.message : 'Yük çıkarılamadı.')
     }
-  };
+  }
 
   // Pozisyon genişletme durumunu değiştir
   const togglePositionExpand = (positionId: number) => {
     setExpandedPositions((prev) => {
-      const next = new Set(prev);
+      const next = new Set(prev)
       if (next.has(positionId)) {
-        next.delete(positionId);
+        next.delete(positionId)
       } else {
-        next.add(positionId);
+        next.add(positionId)
       }
-      return next;
-    });
-  };
+      return next
+    })
+  }
 
   const handleBackPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.back();
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
 
-  const draftPositions = data?.draft_positions || [];
-  const unassignedLoads = data?.unassigned_loads || [];
+  const draftPositions = data?.draft_positions || []
+  const unassignedLoads = data?.unassigned_loads || []
 
   return (
     <View style={styles.container}>
@@ -587,12 +587,12 @@ export default function DispositionScreen() {
         isLoading={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => {
-          setShowDeleteConfirm(false);
-          setPositionToDelete(null);
+          setShowDeleteConfirm(false)
+          setPositionToDelete(null)
         }}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -904,4 +904,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
-});
+})

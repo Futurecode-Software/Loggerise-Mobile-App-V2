@@ -13,16 +13,15 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator
 } from 'react-native'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useFocusEffect } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SectionHeader, InfoRow } from '@/components/detail'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import {
   DashboardColors,
@@ -57,58 +56,10 @@ const formatDate = (dateString?: string | null): string => {
   }
 }
 
-// Bölüm başlığı
-interface SectionHeaderProps {
-  title: string
-  icon: keyof typeof Ionicons.glyphMap
-}
-
-function SectionHeader({ title, icon }: SectionHeaderProps) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionHeaderLeft}>
-        <View style={styles.sectionIcon}>
-          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
-        </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-    </View>
-  )
-}
-
-// Bilgi satırı
-interface InfoRowProps {
-  label: string
-  value: string
-  icon?: keyof typeof Ionicons.glyphMap
-  highlight?: boolean
-  color?: string
-}
-
-function InfoRow({ label, value, icon, highlight, color }: InfoRowProps) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabel}>
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={14}
-            color={color || DashboardColors.textMuted}
-            style={styles.infoIcon}
-          />
-        )}
-        <Text style={styles.infoLabelText}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight, color && { color }]}>
-        {value}
-      </Text>
-    </View>
-  )
-}
+// SectionHeader ve InfoRow shared component kullanılıyor
 
 export default function NotificationBroadcastDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
-  const router = useRouter()
   const insets = useSafeAreaInsets()
   const broadcastId = id ? parseInt(id, 10) : null
 
@@ -233,7 +184,7 @@ export default function NotificationBroadcastDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <LinearGradient
             colors={['#022920', '#044134', '#065f4a']}
             start={{ x: 0, y: 0 }}
@@ -266,7 +217,7 @@ export default function NotificationBroadcastDetailScreen() {
   if (error || !broadcast) {
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <LinearGradient
             colors={['#022920', '#044134', '#065f4a']}
             start={{ x: 0, y: 0 }}
@@ -301,7 +252,7 @@ export default function NotificationBroadcastDetailScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <LinearGradient
           colors={['#022920', '#044134', '#065f4a']}
           start={{ x: 0, y: 0 }}
@@ -466,7 +417,7 @@ const styles = StyleSheet.create({
   header: {
     position: 'relative',
     overflow: 'hidden',
-    paddingBottom: DashboardSpacing.xl
+    paddingBottom: 24
   },
   glowOrb1: {
     position: 'absolute',
@@ -491,7 +442,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    minHeight: 70,
     zIndex: 10
   },
   headerButton: {
@@ -521,6 +472,16 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.xs,
     fontWeight: '600'
   },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
   content: {
     flex: 1,
     backgroundColor: DashboardColors.background
@@ -535,64 +496,6 @@ const styles = StyleSheet.create({
     padding: DashboardSpacing.lg,
     marginBottom: DashboardSpacing.md,
     ...DashboardShadows.sm
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: DashboardSpacing.md,
-    paddingBottom: DashboardSpacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
-  },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DashboardSpacing.sm
-  },
-  sectionIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: DashboardBorderRadius.md,
-    backgroundColor: `${DashboardColors.primary}10`,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  sectionTitle: {
-    fontSize: DashboardFontSizes.base,
-    fontWeight: '600',
-    color: DashboardColors.textPrimary
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: DashboardSpacing.sm,
-    gap: DashboardSpacing.md
-  },
-  infoLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1
-  },
-  infoIcon: {
-    marginRight: DashboardSpacing.xs
-  },
-  infoLabelText: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary,
-    flex: 1
-  },
-  infoValue: {
-    fontSize: DashboardFontSizes.sm,
-    fontWeight: '500',
-    color: DashboardColors.textPrimary,
-    textAlign: 'right',
-    flex: 1
-  },
-  infoValueHighlight: {
-    fontWeight: '600',
-    color: DashboardColors.primary
   },
   errorMessage: {
     fontSize: DashboardFontSizes.sm,

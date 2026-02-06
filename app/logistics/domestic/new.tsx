@@ -4,7 +4,7 @@
  * Create new domestic transport order with customer, addresses, and items.
  */
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import {
   View,
   Text,
@@ -33,16 +33,13 @@ import {
   DashboardBorderRadius
 } from '@/constants/dashboard-theme'
 import { Input, DateInput } from '@/components/ui'
-import { SelectInput } from '@/components/ui/select-input'
+import { SearchableSelectModal } from '@/components/modals/SearchableSelectModal'
 import {
   createDomesticOrder,
   DomesticOrderType,
   DomesticBillingType
 } from '@/services/endpoints/domestic-orders'
 import api, { getErrorMessage, getValidationErrors } from '@/services/api'
-
-
-
 
 // Order type options
 const ORDER_TYPE_OPTIONS = [
@@ -51,7 +48,7 @@ const ORDER_TYPE_OPTIONS = [
   { label: 'Dağıtım', value: 'distribution' },
   { label: 'Şehir İçi Teslimat', value: 'city_delivery' },
   { label: 'Depo Transferi', value: 'warehouse_transfer' },
-];
+]
 
 // Billing type options
 const BILLING_TYPE_OPTIONS = [
@@ -59,7 +56,7 @@ const BILLING_TYPE_OPTIONS = [
   { label: 'Ana Faturaya Dahil', value: 'included_in_main' },
   { label: 'Ayrı Fatura', value: 'separate_invoice' },
   { label: 'Masraf Merkezi', value: 'cost_center' },
-];
+]
 
 // Tabs
 const TABS = [
@@ -127,14 +124,14 @@ export default function NewDomesticOrderScreen() {
     ]
   }))
 
-  const [activeTab, setActiveTab] = useState('general');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [activeTab, setActiveTab] = useState('general')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Data for selects
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [loadingCustomers, setLoadingCustomers] = useState(true);
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [addresses, setAddresses] = useState<Address[]>([])
+  const [loadingCustomers, setLoadingCustomers] = useState(true)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -147,7 +144,13 @@ export default function NewDomesticOrderScreen() {
     delivery_expected_date: '',
     notes: '',
     // Items will be added later
-  });
+  })
+
+  const orderTypeRef = useRef(null)
+  const billingTypeRef = useRef(null)
+  const customerRef = useRef(null)
+  const pickupAddressRef = useRef(null)
+  const deliveryAddressRef = useRef(null)
 
   // Load customers
   useEffect(() => {
@@ -155,114 +158,114 @@ export default function NewDomesticOrderScreen() {
       try {
         const response = await api.get('/contacts', {
           params: { per_page: 100, is_active: true, type: 'customer' },
-        });
+        })
 
-        let customerList: Customer[] = [];
+        let customerList: Customer[] = []
         if (response.data?.data?.contacts) {
-          customerList = response.data.data.contacts;
+          customerList = response.data.data.contacts
         } else if (Array.isArray(response.data?.data)) {
-          customerList = response.data.data;
+          customerList = response.data.data
         } else if (Array.isArray(response.data)) {
-          customerList = response.data;
+          customerList = response.data
         }
 
-        setCustomers(customerList);
+        setCustomers(customerList)
       } catch (err) {
-        console.error('Failed to load customers:', err);
+        console.error('Failed to load customers:', err)
       } finally {
-        setLoadingCustomers(false);
+        setLoadingCustomers(false)
       }
-    };
+    }
 
-    loadCustomers();
-  }, []);
+    loadCustomers()
+  }, [])
 
   // Load addresses when customer changes
   useEffect(() => {
     if (!formData.customer_id) {
-      setAddresses([]);
-      return;
+      setAddresses([])
+      return
     }
 
     const loadAddresses = async () => {
       try {
-        const response = await api.get(`/contacts/${formData.customer_id}/addresses`);
+        const response = await api.get(`/contacts/${formData.customer_id}/addresses`)
 
-        let addressList: Address[] = [];
+        let addressList: Address[] = []
         if (response.data?.data?.addresses) {
-          addressList = response.data.data.addresses;
+          addressList = response.data.data.addresses
         } else if (Array.isArray(response.data?.data)) {
-          addressList = response.data.data;
+          addressList = response.data.data
         } else if (Array.isArray(response.data)) {
-          addressList = response.data;
+          addressList = response.data
         }
 
-        setAddresses(addressList);
+        setAddresses(addressList)
       } catch (err) {
-        console.error('Failed to load addresses:', err);
-        setAddresses([]);
+        console.error('Failed to load addresses:', err)
+        setAddresses([])
       }
-    };
+    }
 
-    loadAddresses();
-  }, [formData.customer_id]);
+    loadAddresses()
+  }, [formData.customer_id])
 
   // Handle input change
   const handleInputChange = useCallback((field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }))
 
     // Clear error for this field
     if (errors[field]) {
       setErrors((prevErrors) => {
-        const newErrors = { ...prevErrors };
-        delete newErrors[field];
-        return newErrors;
-      });
+        const newErrors = { ...prevErrors }
+        delete newErrors[field]
+        return newErrors
+      })
     }
-  }, [errors]);
+  }, [errors])
 
   // Validate form
   const validateForm = useCallback(() => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {}
 
     if (!formData.order_type) {
-      newErrors.order_type = 'Sipariş tipi zorunludur';
+      newErrors.order_type = 'Sipariş tipi zorunludur'
     }
     if (!formData.customer_id) {
-      newErrors.customer_id = 'Müşteri seçimi zorunludur';
+      newErrors.customer_id = 'Müşteri seçimi zorunludur'
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [formData])
 
   // Submit form
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
       // Switch to tab with first error
       if (errors.order_type || errors.customer_id || errors.billing_type) {
-        setActiveTab('general');
+        setActiveTab('general')
       } else if (errors.pickup_address_id || errors.delivery_address_id) {
-        setActiveTab('addresses');
+        setActiveTab('addresses')
       }
-      return;
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      const data: Record<string, any> = {};
+      const data: Record<string, any> = {}
 
       // Only send non-empty values
       Object.entries(formData).forEach(([key, value]) => {
         if (value !== '' && value !== null && value !== undefined) {
-          data[key] = value;
+          data[key] = value
         }
-      });
+      })
 
       // Set default status
-      data.status = 'draft';
+      data.status = 'draft'
 
-      await createDomesticOrder(data);
+      await createDomesticOrder(data)
 
       Toast.show({
         type: 'success',
@@ -270,17 +273,17 @@ export default function NewDomesticOrderScreen() {
         position: 'top',
         visibilityTime: 1500
       })
-      router.back();
+      router.back()
     } catch (err: any) {
-      const validationErrors = getValidationErrors(err);
+      const validationErrors = getValidationErrors(err)
       if (validationErrors) {
-        const flatErrors: Record<string, string> = {};
+        const flatErrors: Record<string, string> = {}
         Object.entries(validationErrors).forEach(([field, messages]) => {
           if (Array.isArray(messages) && messages.length > 0) {
-            flatErrors[field] = messages[0];
+            flatErrors[field] = messages[0]
           }
-        });
-        setErrors(flatErrors);
+        })
+        setErrors(flatErrors)
       } else {
         Toast.show({
           type: 'error',
@@ -290,9 +293,9 @@ export default function NewDomesticOrderScreen() {
         })
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  }, [formData, validateForm, errors]);
+  }, [formData, validateForm, errors])
 
   // Count errors per tab
   const getTabErrorCount = useCallback((tabId: string) => {
@@ -300,10 +303,10 @@ export default function NewDomesticOrderScreen() {
       general: ['order_type', 'billing_type', 'customer_id', 'pickup_expected_date', 'delivery_expected_date', 'notes'],
       addresses: ['pickup_address_id', 'delivery_address_id'],
       items: [],
-    };
+    }
 
-    return Object.keys(errors).filter((field) => tabFields[tabId]?.includes(field)).length;
-  }, [errors]);
+    return Object.keys(errors).filter((field) => tabFields[tabId]?.includes(field)).length
+  }, [errors])
 
   // Customer options for select
   const customerOptions = [
@@ -312,7 +315,7 @@ export default function NewDomesticOrderScreen() {
       label: c.code ? `${c.name} (${c.code})` : c.name,
       value: String(c.id),
     })),
-  ];
+  ]
 
   // Address options for select
   const addressOptions = [
@@ -321,25 +324,31 @@ export default function NewDomesticOrderScreen() {
       label: a.title || a.address || `Adres ${a.id}`,
       value: String(a.id),
     })),
-  ];
+  ]
 
   const renderGeneralTab = () => (
     <>
-      <SelectInput
-        label="Sipariş Tipi *"
-        options={ORDER_TYPE_OPTIONS}
-        selectedValue={formData.order_type}
-        onValueChange={(value) => handleInputChange('order_type', value)}
-        error={errors.order_type}
-      />
+      <TouchableOpacity onPress={() => orderTypeRef.current?.present()} style={styles.selectTrigger}>
+        <Text style={styles.selectLabel}>Siparis Tipi *</Text>
+        <View style={styles.selectValueRow}>
+          <Text style={[styles.selectValue, !formData.order_type && styles.selectPlaceholder]}>
+            {ORDER_TYPE_OPTIONS.find(o => o.value === formData.order_type)?.label || 'Siparis tipi seciniz...'}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
+        </View>
+        {errors.order_type && <Text style={styles.selectError}>{errors.order_type}</Text>}
+      </TouchableOpacity>
 
-      <SelectInput
-        label="Faturalama Tipi"
-        options={BILLING_TYPE_OPTIONS}
-        selectedValue={formData.billing_type}
-        onValueChange={(value) => handleInputChange('billing_type', value)}
-        error={errors.billing_type}
-      />
+      <TouchableOpacity onPress={() => billingTypeRef.current?.present()} style={styles.selectTrigger}>
+        <Text style={styles.selectLabel}>Faturalama Tipi</Text>
+        <View style={styles.selectValueRow}>
+          <Text style={[styles.selectValue, !formData.billing_type && styles.selectPlaceholder]}>
+            {BILLING_TYPE_OPTIONS.find(o => o.value === formData.billing_type)?.label || 'Faturalama tipi seciniz...'}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
+        </View>
+        {errors.billing_type && <Text style={styles.selectError}>{errors.billing_type}</Text>}
+      </TouchableOpacity>
 
       {loadingCustomers ? (
         <View style={styles.loadingSelect}>
@@ -347,13 +356,16 @@ export default function NewDomesticOrderScreen() {
           <Text style={styles.loadingText}>Müşteriler yükleniyor...</Text>
         </View>
       ) : (
-        <SelectInput
-          label="Müşteri *"
-          options={customerOptions}
-          selectedValue={formData.customer_id}
-          onValueChange={(value) => handleInputChange('customer_id', value)}
-          error={errors.customer_id}
-        />
+        <TouchableOpacity onPress={() => customerRef.current?.present()} style={styles.selectTrigger}>
+        <Text style={styles.selectLabel}>Musteri *</Text>
+        <View style={styles.selectValueRow}>
+          <Text style={[styles.selectValue, !formData.customer_id && styles.selectPlaceholder]}>
+            {customerOptions.find(o => o.value === formData.customer_id)?.label || 'Musteri seciniz...'}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
+        </View>
+        {errors.customer_id && <Text style={styles.selectError}>{errors.customer_id}</Text>}
+      </TouchableOpacity>
       )}
 
       <DateInput
@@ -382,7 +394,7 @@ export default function NewDomesticOrderScreen() {
         numberOfLines={3}
       />
     </>
-  );
+  )
 
   const renderAddressesTab = () => (
     <>
@@ -400,25 +412,31 @@ export default function NewDomesticOrderScreen() {
         </View>
       ) : (
         <>
-          <SelectInput
-            label="Alım Adresi"
-            options={addressOptions}
-            selectedValue={formData.pickup_address_id}
-            onValueChange={(value) => handleInputChange('pickup_address_id', value)}
-            error={errors.pickup_address_id}
-          />
+          <TouchableOpacity onPress={() => pickupAddressRef.current?.present()} style={styles.selectTrigger}>
+            <Text style={styles.selectLabel}>Alım Adresi</Text>
+            <View style={styles.selectValueRow}>
+              <Text style={[styles.selectValue, !formData.pickup_address_id && styles.selectPlaceholder]}>
+                {addressOptions.find(o => o.value === formData.pickup_address_id)?.label || 'Adres seçiniz...'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
+            </View>
+            {errors.pickup_address_id && <Text style={styles.selectError}>{errors.pickup_address_id}</Text>}
+          </TouchableOpacity>
 
-          <SelectInput
-            label="Teslimat Adresi"
-            options={addressOptions}
-            selectedValue={formData.delivery_address_id}
-            onValueChange={(value) => handleInputChange('delivery_address_id', value)}
-            error={errors.delivery_address_id}
-          />
+          <TouchableOpacity onPress={() => deliveryAddressRef.current?.present()} style={styles.selectTrigger}>
+            <Text style={styles.selectLabel}>Teslimat Adresi</Text>
+            <View style={styles.selectValueRow}>
+              <Text style={[styles.selectValue, !formData.delivery_address_id && styles.selectPlaceholder]}>
+                {addressOptions.find(o => o.value === formData.delivery_address_id)?.label || 'Adres seçiniz...'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
+            </View>
+            {errors.delivery_address_id && <Text style={styles.selectError}>{errors.delivery_address_id}</Text>}
+          </TouchableOpacity>
         </>
       )}
     </>
-  );
+  )
 
   const renderItemsTab = () => (
     <View style={styles.emptyItems}>
@@ -427,20 +445,20 @@ export default function NewDomesticOrderScreen() {
         Kalemler sipariş oluşturulduktan sonra eklenebilir.
       </Text>
     </View>
-  );
+  )
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'general':
-        return renderGeneralTab();
+        return renderGeneralTab()
       case 'addresses':
-        return renderAddressesTab();
+        return renderAddressesTab()
       case 'items':
-        return renderItemsTab();
+        return renderItemsTab()
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   return (
     <View style={styles.container}>
@@ -495,8 +513,8 @@ export default function NewDomesticOrderScreen() {
           contentContainerStyle={styles.tabsContent}
         >
           {TABS.map((tab) => {
-            const errorCount = getTabErrorCount(tab.id);
-            const isActive = activeTab === tab.id;
+            const errorCount = getTabErrorCount(tab.id)
+            const isActive = activeTab === tab.id
 
             return (
               <TouchableOpacity
@@ -525,7 +543,7 @@ export default function NewDomesticOrderScreen() {
                   {tab.label}
                 </Text>
               </TouchableOpacity>
-            );
+            )
           })}
         </ScrollView>
       </View>
@@ -538,8 +556,60 @@ export default function NewDomesticOrderScreen() {
       >
         {renderTabContent()}
       </KeyboardAwareScrollView>
+
+      {/* SearchableSelectModal Components */}
+      <SearchableSelectModal
+        ref={orderTypeRef}
+        title="Sipariş Tipi Seçiniz"
+        options={ORDER_TYPE_OPTIONS.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }))}
+        selectedValue={formData.order_type}
+        onSelect={(value) => handleInputChange('order_type', value)}
+        searchPlaceholder="Sipariş tipi ara..."
+        emptyMessage="Sipariş tipi bulunamadı"
+      />
+
+      <SearchableSelectModal
+        ref={billingTypeRef}
+        title="Faturalama Tipi Seçiniz"
+        options={BILLING_TYPE_OPTIONS.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }))}
+        selectedValue={formData.billing_type}
+        onSelect={(value) => handleInputChange('billing_type', value)}
+        searchPlaceholder="Faturalama tipi ara..."
+        emptyMessage="Faturalama tipi bulunamadı"
+      />
+
+      <SearchableSelectModal
+        ref={customerRef}
+        title="Müşteri Seçiniz"
+        options={customerOptions.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }))}
+        selectedValue={formData.customer_id}
+        onSelect={(value) => handleInputChange('customer_id', value)}
+        searchPlaceholder="Müşteri ara..."
+        emptyMessage="Müşteri bulunamadı"
+        loading={loadingCustomers}
+      />
+
+      <SearchableSelectModal
+        ref={pickupAddressRef}
+        title="Alım Adresi Seçiniz"
+        options={addressOptions.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }))}
+        selectedValue={formData.pickup_address_id}
+        onSelect={(value) => handleInputChange('pickup_address_id', value)}
+        searchPlaceholder="Adres ara..."
+        emptyMessage="Adres bulunamadı"
+      />
+
+      <SearchableSelectModal
+        ref={deliveryAddressRef}
+        title="Teslimat Adresi Seçiniz"
+        options={addressOptions.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }))}
+        selectedValue={formData.delivery_address_id}
+        onSelect={(value) => handleInputChange('delivery_address_id', value)}
+        searchPlaceholder="Adres ara..."
+        emptyMessage="Adres bulunamadı"
+      />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -577,6 +647,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 70,
     paddingBottom: DashboardSpacing.lg
   },
   backButton: {
@@ -706,10 +777,41 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: DashboardSpacing['3xl']
   },
+  selectTrigger: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
+    padding: DashboardSpacing.md
+  },
+  selectLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.xs
+  },
+  selectValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  selectValue: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
+    flex: 1
+  },
+  selectPlaceholder: {
+    color: DashboardColors.textMuted
+  },
+  selectError: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.danger,
+    marginTop: DashboardSpacing.xs
+  },
   emptyItemsText: {
     fontSize: DashboardFontSizes.base,
     color: DashboardColors.textMuted,
     marginTop: DashboardSpacing.md,
     textAlign: 'center'
   }
-});
+})

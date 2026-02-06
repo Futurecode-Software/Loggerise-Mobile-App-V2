@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   View,
   Text,
@@ -7,23 +7,23 @@ import {
   FlatList,
   RefreshControl,
   Pressable,
-} from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+} from 'react-native'
+import { router, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-} from 'react-native-reanimated';
+} from 'react-native-reanimated'
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
   BottomSheetView,
-} from '@gorhom/bottom-sheet';
-import { PageHeader } from '@/components/navigation';
-import { Skeleton } from '@/components/ui/skeleton';
+} from '@gorhom/bottom-sheet'
+import { PageHeader } from '@/components/navigation'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -31,7 +31,7 @@ import {
   DashboardFontSizes,
   DashboardShadows,
   DashboardAnimations,
-} from '@/constants/dashboard-theme';
+} from '@/constants/dashboard-theme'
 import {
   getPositions,
   Position,
@@ -40,9 +40,9 @@ import {
   PositionStatus,
   getVehicleOwnerTypeLabel,
   getDriverFullName,
-} from '@/services/endpoints/positions';
+} from '@/services/endpoints/positions'
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 // Pozisyon durum renkleri
 const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
@@ -50,7 +50,7 @@ const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
   completed: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' },
   cancelled: { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' },
   draft: { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' },
-};
+}
 
 // Durum etiketleri
 const STATUS_LABELS: Record<string, string> = {
@@ -58,7 +58,7 @@ const STATUS_LABELS: Record<string, string> = {
   completed: 'Tamamlandı',
   cancelled: 'İptal',
   draft: 'Taslak',
-};
+}
 
 // Skeleton Component
 function PositionCardSkeleton() {
@@ -77,35 +77,35 @@ function PositionCardSkeleton() {
         <Skeleton width={100} height={14} />
       </View>
     </View>
-  );
+  )
 }
 
 // Card Component
 interface PositionCardProps {
-  item: Position;
-  onPress: () => void;
+  item: Position
+  onPress: () => void
 }
 
 function PositionCard({ item, onPress }: PositionCardProps) {
-  const scale = useSharedValue(1);
-  const colors = STATUS_COLORS[item.status || 'active'] || STATUS_COLORS.active;
+  const scale = useSharedValue(1)
+  const colors = STATUS_COLORS[item.status || 'active'] || STATUS_COLORS.active
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-  }));
+  }))
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.98, DashboardAnimations.springBouncy);
-  };
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy)
+  }
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, DashboardAnimations.springBouncy);
-  };
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
 
-  const driverName = getDriverFullName(item.driver);
+  const driverName = getDriverFullName(item.driver)
   const vehicleInfo = item.truck_tractor
     ? `${item.truck_tractor.plate}${item.trailer ? ' / ' + item.trailer.plate : ''}`
-    : item.trailer?.plate || '-';
+    : item.trailer?.plate || '-'
 
   return (
     <AnimatedPressable
@@ -167,7 +167,7 @@ function PositionCard({ item, onPress }: PositionCardProps) {
         <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
       </View>
     </AnimatedPressable>
-  );
+  )
 }
 
 // Empty State
@@ -186,7 +186,7 @@ function EmptyState({ searchQuery }: { searchQuery: string }) {
           : 'Dispozisyon ekranından yeni pozisyon oluşturabilirsiniz.'}
       </Text>
     </View>
-  );
+  )
 }
 
 // BottomSheet Backdrop
@@ -197,34 +197,34 @@ const renderBackdrop = (props: BottomSheetBackdropProps) => (
     appearsOnIndex={0}
     opacity={0.5}
   />
-);
+)
 
 export default function ExportPositionsScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
 
   // API state
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [positions, setPositions] = useState<Position[]>([])
+  const [pagination, setPagination] = useState<Pagination | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   // Filter state
-  const [activeStatusFilter, setActiveStatusFilter] = useState<string>('all');
+  const [activeStatusFilter, setActiveStatusFilter] = useState<string>('all')
 
   // BottomSheet ref
-  const filterBottomSheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['90%'], []);;
+  const filterBottomSheetRef = useRef<BottomSheetModal>(null)
+  const snapPoints = useMemo(() => ['90%'], []);
 
   // Refs
-  const isMountedRef = useRef(true);
-  const fetchIdRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasInitialFetchRef = useRef(false);
+  const isMountedRef = useRef(true)
+  const fetchIdRef = useRef(0)
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hasInitialFetchRef = useRef(false)
 
   // Core fetch function
   const executeFetch = useCallback(async (search: string, page: number = 1, append: boolean = false) => {
-    const currentFetchId = ++fetchIdRef.current;
+    const currentFetchId = ++fetchIdRef.current
 
     try {
       const filters: PositionFilters = {
@@ -232,129 +232,129 @@ export default function ExportPositionsScreen() {
         per_page: 20,
         position_type: 'export',
         is_active: true,
-      };
+      }
 
       if (search.trim()) {
-        filters.search = search.trim();
+        filters.search = search.trim()
       }
 
       if (activeStatusFilter !== 'all') {
-        filters.status = activeStatusFilter as PositionStatus;
+        filters.status = activeStatusFilter as PositionStatus
       }
 
-      const response = await getPositions(filters);
+      const response = await getPositions(filters)
 
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
         if (append) {
-          setPositions((prev) => [...prev, ...response.positions]);
+          setPositions((prev) => [...prev, ...response.positions])
         } else {
-          setPositions(response.positions);
+          setPositions(response.positions)
         }
-        setPagination(response.pagination);
-        hasInitialFetchRef.current = true;
+        setPagination(response.pagination)
+        hasInitialFetchRef.current = true
       }
     } catch (err) {
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-        console.error('Positions fetch error:', err);
+        console.error('Positions fetch error:', err)
       }
     } finally {
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-        setIsLoading(false);
-        setIsLoadingMore(false);
-        setRefreshing(false);
+        setIsLoading(false)
+        setIsLoadingMore(false)
+        setRefreshing(false)
       }
     }
-  }, [activeStatusFilter]);
+  }, [activeStatusFilter])
 
   // Initial fetch
   useEffect(() => {
-    isMountedRef.current = true;
-    executeFetch(searchQuery, 1, false);
+    isMountedRef.current = true
+    executeFetch(searchQuery, 1, false)
 
     return () => {
-      isMountedRef.current = false;
+      isMountedRef.current = false
       if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
+        clearTimeout(debounceTimeoutRef.current)
       }
-    };
-  }, []);
+    }
+  }, [])
 
   // Search with debounce
   useEffect(() => {
-    if (!hasInitialFetchRef.current) return;
+    if (!hasInitialFetchRef.current) return
 
     if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
+      clearTimeout(debounceTimeoutRef.current)
     }
 
     debounceTimeoutRef.current = setTimeout(() => {
-      setIsLoading(true);
-      executeFetch(searchQuery, 1, false);
-    }, 500);
+      setIsLoading(true)
+      executeFetch(searchQuery, 1, false)
+    }, 500)
 
     return () => {
       if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
+        clearTimeout(debounceTimeoutRef.current)
       }
-    };
-  }, [searchQuery, executeFetch]);
+    }
+  }, [searchQuery, executeFetch])
 
   // Filter change
   useEffect(() => {
-    if (!hasInitialFetchRef.current) return;
-    setIsLoading(true);
-    executeFetch(searchQuery, 1, false);
-  }, [activeStatusFilter, executeFetch]);
+    if (!hasInitialFetchRef.current) return
+    setIsLoading(true)
+    executeFetch(searchQuery, 1, false)
+  }, [activeStatusFilter, executeFetch])
 
   // Refs for useFocusEffect to avoid re-triggering
-  const executeFetchRef = useRef(executeFetch);
-  const searchQueryRef = useRef(searchQuery);
+  const executeFetchRef = useRef(executeFetch)
+  const searchQueryRef = useRef(searchQuery)
   useEffect(() => {
-    executeFetchRef.current = executeFetch;
-    searchQueryRef.current = searchQuery;
-  }, [executeFetch, searchQuery]);
+    executeFetchRef.current = executeFetch
+    searchQueryRef.current = searchQuery
+  }, [executeFetch, searchQuery])
 
   // Refresh on screen focus
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        executeFetchRef.current(searchQueryRef.current, 1, false);
+        executeFetchRef.current(searchQueryRef.current, 1, false)
       }
     }, [])
-  );
+  )
 
   const onRefresh = async () => {
-    setRefreshing(true);
-    await executeFetch(searchQuery, 1, false);
-  };
+    setRefreshing(true)
+    await executeFetch(searchQuery, 1, false)
+  }
 
   const loadMore = () => {
     if (!isLoadingMore && pagination && pagination.current_page < pagination.last_page) {
-      setIsLoadingMore(true);
-      executeFetch(searchQuery, pagination.current_page + 1, true);
+      setIsLoadingMore(true)
+      executeFetch(searchQuery, pagination.current_page + 1, true)
     }
-  };
+  }
 
   const handleCardPress = (item: Position) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push(`/logistics/exports/positions/${item.id}` as any);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/logistics/exports/positions/${item.id}` as any)
+  }
 
   const handleFilterPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    filterBottomSheetRef.current?.present();
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    filterBottomSheetRef.current?.present()
+  }
 
   const handleFilterSelect = (status: string) => {
-    Haptics.selectionAsync();
-    setActiveStatusFilter(status);
-    filterBottomSheetRef.current?.dismiss();
-  };
+    Haptics.selectionAsync()
+    setActiveStatusFilter(status)
+    filterBottomSheetRef.current?.dismiss()
+  }
 
   const handleBackPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.back();
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
 
   // Status filtre seçenekleri
   const STATUS_FILTERS = [
@@ -363,13 +363,13 @@ export default function ExportPositionsScreen() {
     { id: 'completed', label: 'Tamamlandı', icon: 'flag-outline' as const },
     { id: 'draft', label: 'Taslak', icon: 'document-outline' as const },
     { id: 'cancelled', label: 'İptal', icon: 'close-circle-outline' as const },
-  ];
+  ]
 
   // Aktif filtre label
   const getActiveFilterLabel = () => {
-    const filter = STATUS_FILTERS.find((f) => f.id === activeStatusFilter);
-    return filter?.label || 'Tümü';
-  };
+    const filter = STATUS_FILTERS.find((f) => f.id === activeStatusFilter)
+    return filter?.label || 'Tümü'
+  }
 
   return (
     <View style={styles.container}>
@@ -470,8 +470,8 @@ export default function ExportPositionsScreen() {
           {/* Filter Options */}
           <View style={styles.bottomSheetBody}>
             {STATUS_FILTERS.map((filter) => {
-              const isActive = activeStatusFilter === filter.id;
-              const colors = filter.id !== 'all' ? STATUS_COLORS[filter.id] : null;
+              const isActive = activeStatusFilter === filter.id
+              const colors = filter.id !== 'all' ? STATUS_COLORS[filter.id] : null
 
               return (
                 <TouchableOpacity
@@ -509,13 +509,13 @@ export default function ExportPositionsScreen() {
                     </View>
                   )}
                 </TouchableOpacity>
-              );
+              )
             })}
           </View>
         </BottomSheetView>
       </BottomSheetModal>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -740,4 +740,4 @@ const styles = StyleSheet.create({
   filterOptionCheck: {
     marginLeft: DashboardSpacing.sm,
   },
-});
+})

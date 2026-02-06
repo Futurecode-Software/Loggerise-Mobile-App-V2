@@ -201,7 +201,7 @@ export default function ConversationScreen() {
         <View style={styles.glowOrb2} />
         <View style={styles.glowOrb3} />
 
-        <View style={[styles.headerContent, { paddingTop: insets.top + 12 }]}>
+        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
           <View style={styles.headerBar}>
             {/* Sol: Geri Butonu */}
             <TouchableOpacity
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     position: 'relative',
     overflow: 'hidden',
-    paddingBottom: 20
+    paddingBottom: 24
   },
   glowOrb1: {
     position: 'absolute',
@@ -341,7 +341,8 @@ const styles = StyleSheet.create({
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    minHeight: 70
   },
   headerButton: {
     width: 44,
@@ -422,7 +423,7 @@ const styles = StyleSheet.create({
     bottom: -1,
     left: 0,
     right: 0,
-    height: 20,
+    height: 24,
     backgroundColor: DashboardColors.background,
     borderTopLeftRadius: DashboardBorderRadius['2xl'],
     borderTopRightRadius: DashboardBorderRadius['2xl']

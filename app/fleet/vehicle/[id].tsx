@@ -864,11 +864,11 @@ export default function VehicleDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DashboardColors.background
+    backgroundColor: DashboardColors.primary
   },
   headerContainer: {
     position: 'relative',
-    paddingBottom: 16,
+    paddingBottom: 24,
     overflow: 'hidden'
   },
   glowOrb1: {

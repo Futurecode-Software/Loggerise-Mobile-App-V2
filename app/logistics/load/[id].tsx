@@ -14,9 +14,8 @@ import {
   RefreshControl,
   ActivityIndicator
 } from 'react-native'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useFocusEffect } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { BottomSheetModal } from '@gorhom/bottom-sheet'
@@ -41,7 +40,7 @@ import {
 } from '@/constants/load-theme'
 import { getLoad, deleteLoad } from '@/services/endpoints/loads'
 import type { LoadDetail, LoadItem } from '@/types/load'
-import { formatCurrency } from '@/utils/currency'
+import { formatCurrency, formatNumber as formatNum } from '@/utils/currency'
 
 // Tarih formatlama
 const formatDate = (dateString?: string): string => {
@@ -61,10 +60,7 @@ const formatDate = (dateString?: string): string => {
 // Sayı formatlama
 const formatNumber = (value?: number, unit?: string): string => {
   if (value === undefined || value === null) return '-'
-  const formatted = value.toLocaleString('tr-TR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  })
+  const formatted = formatNum(value, 2)
   return unit ? `${formatted} ${unit}` : formatted
 }
 

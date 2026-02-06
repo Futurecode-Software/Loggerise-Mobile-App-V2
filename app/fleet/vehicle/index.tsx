@@ -38,8 +38,7 @@ import {
   Vehicle,
   VehicleFilters,
   Pagination,
-  getStatusLabel,
-  getStatusColor,
+  getStatusLabel
 } from '@/services/endpoints/vehicles'
 import { formatNumber } from '@/utils/formatters'
 
@@ -264,6 +263,18 @@ export default function VehicleListScreen() {
     []
   )
 
+  // Ref to avoid useFocusEffect re-triggering
+  const executeFetchRef = useRef(executeFetch)
+  const activeFilterRef = useRef(activeFilter)
+
+  useEffect(() => {
+    executeFetchRef.current = executeFetch
+  }, [executeFetch])
+
+  useEffect(() => {
+    activeFilterRef.current = activeFilter
+  }, [activeFilter])
+
   // İlk yükleme
   useEffect(() => {
     isMountedRef.current = true
@@ -272,6 +283,7 @@ export default function VehicleListScreen() {
     return () => {
       isMountedRef.current = false
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Filtre değişimi
@@ -280,15 +292,16 @@ export default function VehicleListScreen() {
 
     setIsLoading(true)
     executeFetch(activeFilter, 1, false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilter])
 
   // Ekran focus olduğunda yenile
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        executeFetch(activeFilter, 1, false)
+        executeFetchRef.current(activeFilterRef.current, 1, false)
       }
-    }, [activeFilter, executeFetch])
+    }, [])
   )
 
   const onRefresh = async () => {

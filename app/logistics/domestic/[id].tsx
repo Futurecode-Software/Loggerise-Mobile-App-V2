@@ -15,9 +15,8 @@ import {
   RefreshControl,
   ActivityIndicator
 } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useFocusEffect } from '@react-navigation/native'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { BottomSheetModal } from '@gorhom/bottom-sheet'
@@ -298,7 +297,7 @@ export default function DomesticOrderDetailScreen() {
   }
 
   const getNextStatus = (): DomesticOrderStatus | null => {
-    if (!order) return null;
+    if (!order) return null
 
     const statusFlow: Record<DomesticOrderStatus, DomesticOrderStatus | null> = {
       draft: 'planned',
@@ -307,10 +306,10 @@ export default function DomesticOrderDetailScreen() {
       in_transit: 'completed',
       completed: null,
       cancelled: null,
-    };
+    }
 
-    return statusFlow[order.status];
-  };
+    return statusFlow[order.status]
+  }
 
   const getStatusActionLabel = (status: DomesticOrderStatus): string => {
     const labels: Record<DomesticOrderStatus, string> = {
@@ -320,9 +319,9 @@ export default function DomesticOrderDetailScreen() {
       in_transit: 'Yola Çıkar',
       completed: 'Tamamla',
       cancelled: 'İptal Et',
-    };
-    return labels[status];
-  };
+    }
+    return labels[status]
+  }
 
   const nextStatus = getNextStatus()
 
@@ -890,7 +889,8 @@ const styles = StyleSheet.create({
   },
   headerBar: {
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
+    minHeight: 70
   },
   headerButton: {
     width: 44,
@@ -1340,4 +1340,4 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.base,
     fontWeight: '600'
   }
-});
+})

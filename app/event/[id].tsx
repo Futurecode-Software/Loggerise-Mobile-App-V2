@@ -291,6 +291,8 @@ export default function EventDetailScreen() {
               <View style={styles.headerButton} />
             </View>
           </View>
+
+          <View style={styles.bottomCurve} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={DashboardColors.primary} />
@@ -328,6 +330,8 @@ export default function EventDetailScreen() {
               <View style={styles.headerButton} />
             </View>
           </View>
+
+          <View style={styles.bottomCurve} />
         </View>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={64} color={DashboardColors.danger} />
@@ -402,6 +406,8 @@ export default function EventDetailScreen() {
             </View>
           </View>
         </View>
+
+        <View style={styles.bottomCurve} />
       </View>
 
       {/* Content */}
@@ -610,6 +616,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 70,
   },
   headerButton: {
     width: 44,
@@ -637,6 +644,17 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     gap: DashboardSpacing.sm,
+  },
+
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl'],
   },
 
   // Loading

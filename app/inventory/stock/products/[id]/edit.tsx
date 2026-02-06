@@ -4,16 +4,16 @@
  * Ürün düzenleme ekranı - CLAUDE.md tasarım ilkeleri ile uyumlu
  */
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
+  TouchableOpacity,
   ActivityIndicator
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import Toast from 'react-native-toast-message'
 import { FormHeader } from '@/components/navigation/FormHeader'
@@ -24,7 +24,7 @@ import {
   DashboardBorderRadius
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui'
-import { SelectInput } from '@/components/ui/select-input'
+import { SearchableSelectModal, SearchableSelectModalRef } from '@/components/modals/SearchableSelectModal'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import {
   getProduct,
@@ -64,7 +64,6 @@ const UNIT_OPTIONS = [
 
 export default function ProductEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
-  const insets = useSafeAreaInsets()
 
   // Options state
   const [brands, setBrands] = useState<ProductBrand[]>([])
@@ -94,6 +93,13 @@ export default function ProductEditScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Modal refs
+  const productTypeModalRef = useRef<SearchableSelectModalRef>(null)
+  const unitModalRef = useRef<SearchableSelectModalRef>(null)
+  const brandModalRef = useRef<SearchableSelectModalRef>(null)
+  const categoryModalRef = useRef<SearchableSelectModalRef>(null)
+  const modelModalRef = useRef<SearchableSelectModalRef>(null)
 
   // Seçenekleri yükle
   useEffect(() => {
@@ -239,29 +245,20 @@ export default function ProductEditScreen() {
   }, [id, formData, validateForm])
 
   // Select options
-  const brandOptions = [
-    { label: 'Marka seçin', value: '' },
-    ...brands.map((brand) => ({
-      label: brand.name,
-      value: String(brand.id)
-    }))
-  ]
+  const brandOptions = brands.map((brand) => ({
+    label: brand.name,
+    value: String(brand.id)
+  }))
 
-  const categoryOptions = [
-    { label: 'Kategori seçin', value: '' },
-    ...categories.map((cat) => ({
-      label: cat.name,
-      value: String(cat.id)
-    }))
-  ]
+  const categoryOptions = categories.map((cat) => ({
+    label: cat.name,
+    value: String(cat.id)
+  }))
 
-  const modelOptions = [
-    { label: 'Model seçin', value: '' },
-    ...models.map((model) => ({
-      label: model.name,
-      value: String(model.id)
-    }))
-  ]
+  const modelOptions = models.map((model) => ({
+    label: model.name,
+    value: String(model.id)
+  }))
 
   // Loading state
   if (isLoading) {
@@ -333,21 +330,35 @@ export default function ProductEditScreen() {
               numberOfLines={3}
             />
 
-            <SelectInput
-              label="Ürün Tipi *"
-              options={PRODUCT_TYPE_OPTIONS}
-              selectedValue={formData.product_type}
-              onValueChange={(value) => handleInputChange('product_type', value)}
-              error={errors.product_type}
-            />
+            <View>
+              <Text style={styles.inputLabel}>Ürün Tipi *</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.product_type && styles.selectTriggerError]}
+                onPress={() => productTypeModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.selectTriggerText, !formData.product_type && styles.selectTriggerPlaceholder]}>
+                  {PRODUCT_TYPE_OPTIONS.find(opt => opt.value === formData.product_type)?.label || 'Ürün tipi seçin'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.product_type && <Text style={styles.errorText}>{errors.product_type}</Text>}
+            </View>
 
-            <SelectInput
-              label="Birim *"
-              options={UNIT_OPTIONS}
-              selectedValue={formData.unit}
-              onValueChange={(value) => handleInputChange('unit', value)}
-              error={errors.unit}
-            />
+            <View>
+              <Text style={styles.inputLabel}>Birim *</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.unit && styles.selectTriggerError]}
+                onPress={() => unitModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.selectTriggerText, !formData.unit && styles.selectTriggerPlaceholder]}>
+                  {UNIT_OPTIONS.find(opt => opt.value === formData.unit)?.label || 'Birim seçin'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.unit && <Text style={styles.errorText}>{errors.unit}</Text>}
+            </View>
           </View>
         </View>
 
@@ -368,32 +379,47 @@ export default function ProductEditScreen() {
               </View>
             ) : (
               <>
-                <SelectInput
-                  label="Marka"
-                  options={brandOptions}
-                  selectedValue={formData.product_brand_id ? String(formData.product_brand_id) : ''}
-                  onValueChange={(value) =>
-                    handleInputChange('product_brand_id', value ? Number(value) : undefined)
-                  }
-                />
+                <View>
+                  <Text style={styles.inputLabel}>Marka</Text>
+                  <TouchableOpacity
+                    style={styles.selectTrigger}
+                    onPress={() => brandModalRef.current?.present()}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.selectTriggerText, !formData.product_brand_id && styles.selectTriggerPlaceholder]}>
+                      {brandOptions.find(opt => opt.value === String(formData.product_brand_id))?.label || 'Marka seçin'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
 
-                <SelectInput
-                  label="Kategori"
-                  options={categoryOptions}
-                  selectedValue={formData.product_category_id ? String(formData.product_category_id) : ''}
-                  onValueChange={(value) =>
-                    handleInputChange('product_category_id', value ? Number(value) : undefined)
-                  }
-                />
+                <View>
+                  <Text style={styles.inputLabel}>Kategori</Text>
+                  <TouchableOpacity
+                    style={styles.selectTrigger}
+                    onPress={() => categoryModalRef.current?.present()}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.selectTriggerText, !formData.product_category_id && styles.selectTriggerPlaceholder]}>
+                      {categoryOptions.find(opt => opt.value === String(formData.product_category_id))?.label || 'Kategori seçin'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
 
-                <SelectInput
-                  label="Model"
-                  options={modelOptions}
-                  selectedValue={formData.product_model_id ? String(formData.product_model_id) : ''}
-                  onValueChange={(value) =>
-                    handleInputChange('product_model_id', value ? Number(value) : undefined)
-                  }
-                />
+                <View>
+                  <Text style={styles.inputLabel}>Model</Text>
+                  <TouchableOpacity
+                    style={styles.selectTrigger}
+                    onPress={() => modelModalRef.current?.present()}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.selectTriggerText, !formData.product_model_id && styles.selectTriggerPlaceholder]}>
+                      {modelOptions.find(opt => opt.value === String(formData.product_model_id))?.label || 'Model seçin'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </View>
@@ -505,6 +531,52 @@ export default function ProductEditScreen() {
           </View>
         </View>
       </KeyboardAwareScrollView>
+
+      {/* Select Modals */}
+      <SearchableSelectModal
+        ref={productTypeModalRef}
+        title="Ürün Tipi Seçin"
+        options={PRODUCT_TYPE_OPTIONS}
+        selectedValue={formData.product_type}
+        onSelect={(option) => handleInputChange('product_type', option.value)}
+        searchPlaceholder="Ara..."
+      />
+
+      <SearchableSelectModal
+        ref={unitModalRef}
+        title="Birim Seçin"
+        options={UNIT_OPTIONS}
+        selectedValue={formData.unit}
+        onSelect={(option) => handleInputChange('unit', option.value)}
+        searchPlaceholder="Ara..."
+      />
+
+      <SearchableSelectModal
+        ref={brandModalRef}
+        title="Marka Seçin"
+        options={brandOptions}
+        selectedValue={formData.product_brand_id ? String(formData.product_brand_id) : undefined}
+        onSelect={(option) => handleInputChange('product_brand_id', option.value ? Number(option.value) : undefined)}
+        searchPlaceholder="Ara..."
+      />
+
+      <SearchableSelectModal
+        ref={categoryModalRef}
+        title="Kategori Seçin"
+        options={categoryOptions}
+        selectedValue={formData.product_category_id ? String(formData.product_category_id) : undefined}
+        onSelect={(option) => handleInputChange('product_category_id', option.value ? Number(option.value) : undefined)}
+        searchPlaceholder="Ara..."
+      />
+
+      <SearchableSelectModal
+        ref={modelModalRef}
+        title="Model Seçin"
+        options={modelOptions}
+        selectedValue={formData.product_model_id ? String(formData.product_model_id) : undefined}
+        onSelect={(option) => handleInputChange('product_model_id', option.value ? Number(option.value) : undefined)}
+        searchPlaceholder="Ara..."
+      />
     </View>
   )
 }
@@ -571,5 +643,39 @@ const styles = StyleSheet.create({
   loadingOptionsText: {
     fontSize: DashboardFontSizes.sm,
     color: DashboardColors.textSecondary
+  },
+  inputLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.xs
+  },
+  selectTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.md,
+    minHeight: 48
+  },
+  selectTriggerError: {
+    borderColor: DashboardColors.danger
+  },
+  selectTriggerText: {
+    flex: 1,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
+  },
+  selectTriggerPlaceholder: {
+    color: DashboardColors.textMuted
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.danger,
+    marginTop: 4
   }
 })

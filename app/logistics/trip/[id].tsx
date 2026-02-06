@@ -21,6 +21,7 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
 import { PageHeader } from '@/components/navigation'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import {
@@ -100,7 +101,7 @@ export default function TripDetailScreen() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabId>('info')
   const [isDeleting, setIsDeleting] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
 
   // Memory leak koruması
   const isMountedRef = useRef(true)
@@ -188,7 +189,7 @@ export default function TripDetailScreen() {
   // Silme dialog'unu aç
   const handleDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    setShowDeleteConfirm(true)
+    deleteDialogRef.current?.present()
   }
 
   // Silme işlemini gerçekleştir
@@ -197,13 +198,13 @@ export default function TripDetailScreen() {
     setIsDeleting(true)
     try {
       await deleteTrip(parseInt(id, 10))
+      deleteDialogRef.current?.dismiss()
       Toast.show({ type: 'success', text1: 'Başarılı', text2: 'Sefer silindi', position: 'top', visibilityTime: 1500 })
       router.back()
     } catch (err) {
       Toast.show({ type: 'error', text1: 'Hata', text2: err instanceof Error ? err.message : 'Sefer silinemedi', position: 'top', visibilityTime: 1500 })
     } finally {
       setIsDeleting(false)
-      setShowDeleteConfirm(false)
     }
   }
 
@@ -811,7 +812,7 @@ export default function TripDetailScreen() {
 
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
-        visible={showDeleteConfirm}
+        ref={deleteDialogRef}
         title="Seferi Sil"
         message="Bu seferi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
         confirmText="Sil"
@@ -819,7 +820,6 @@ export default function TripDetailScreen() {
         type="danger"
         isLoading={isDeleting}
         onConfirm={handleConfirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
       />
     </View>
   )

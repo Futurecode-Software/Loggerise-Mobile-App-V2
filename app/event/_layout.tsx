@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router'
 import { DashboardColors } from '@/constants/dashboard-theme'
 
-export default function BrandDetailLayout() {
+export default function EventLayout() {
   return (
     <Stack
       screenOptions={{
@@ -11,7 +11,8 @@ export default function BrandDetailLayout() {
       }}
     >
       <Stack.Screen name="index" />
-      <Stack.Screen name="edit" />
+      <Stack.Screen name="[id]" />
+      <Stack.Screen name="new" />
     </Stack>
   )
 }

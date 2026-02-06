@@ -5,7 +5,7 @@
  * CLAUDE.md tasarım ilkelerine uygun - animasyonlu header orb'ları.
  */
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -25,7 +25,7 @@ import {
   DashboardBorderRadius
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui'
-import { SelectInput } from '@/components/ui/select-input'
+import { SearchableSelectModal, SearchableSelectModalRef } from '@/components/modals/SearchableSelectModal'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import {
   createProductCategory,
@@ -50,6 +50,7 @@ export default function NewCategoryScreen() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const parentCategoryModalRef = useRef<SearchableSelectModalRef>(null)
 
   // Fetch parent categories
   useEffect(() => {
@@ -145,13 +146,10 @@ export default function NewCategoryScreen() {
   }, [formData, validateForm])
 
   // Parent category options for select
-  const parentOptions = [
-    { label: 'Üst kategori yok', value: '' },
-    ...parentCategories.map((cat) => ({
-      label: cat.name,
-      value: String(cat.id)
-    }))
-  ]
+  const parentOptions = parentCategories.map((cat) => ({
+    label: cat.name,
+    value: String(cat.id)
+  }))
 
   return (
     <View style={styles.container}>
@@ -206,15 +204,18 @@ export default function NewCategoryScreen() {
                   <Text style={styles.loadingText}>Kategoriler yükleniyor...</Text>
                 </View>
               ) : (
-                <SelectInput
-                  options={parentOptions}
-                  selectedValue={formData.parent_id ? String(formData.parent_id) : ''}
-                  onValueChange={(value) =>
-                    handleInputChange('parent_id', value ? Number(value) : null)
-                  }
-                  placeholder="Üst kategori seçin (opsiyonel)"
-                />
+                <TouchableOpacity
+                  style={[styles.selectTrigger, errors.parent_id && styles.selectTriggerError]}
+                  onPress={() => parentCategoryModalRef.current?.present()}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.selectTriggerText, !formData.parent_id && styles.selectTriggerPlaceholder]}>
+                    {parentOptions.find(opt => opt.value === String(formData.parent_id))?.label || 'Üst kategori seçin (opsiyonel)'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+                </TouchableOpacity>
               )}
+              {errors.parent_id && <Text style={styles.errorText}>{errors.parent_id}</Text>}
               <Text style={styles.selectHint}>
                 Boş bırakırsanız ana kategori olarak oluşturulur
               </Text>
@@ -229,6 +230,15 @@ export default function NewCategoryScreen() {
           </View>
         </View>
       </KeyboardAwareScrollView>
+
+      <SearchableSelectModal
+        ref={parentCategoryModalRef}
+        title="Üst Kategori Seçin"
+        options={parentOptions}
+        selectedValue={formData.parent_id ? String(formData.parent_id) : ''}
+        onSelect={(option) => handleInputChange('parent_id', option.value ? Number(option.value) : null)}
+        searchPlaceholder="Ara..."
+      />
     </View>
   )
 }
@@ -284,6 +294,34 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: DashboardColors.textPrimary,
     marginBottom: DashboardSpacing.xs
+  },
+  selectTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.md,
+    minHeight: 48
+  },
+  selectTriggerError: {
+    borderColor: DashboardColors.danger
+  },
+  selectTriggerText: {
+    flex: 1,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
+  },
+  selectTriggerPlaceholder: {
+    color: DashboardColors.textMuted
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.danger,
+    marginTop: 4
   },
   selectHint: {
     fontSize: DashboardFontSizes.xs,

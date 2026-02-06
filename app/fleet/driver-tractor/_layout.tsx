@@ -1,7 +1,8 @@
 import { Stack } from 'expo-router'
+import React from 'react'
 import { DashboardColors } from '@/constants/dashboard-theme'
 
-export default function BrandDetailLayout() {
+export default function DriverTractorLayout() {
   return (
     <Stack
       screenOptions={{
@@ -11,7 +12,8 @@ export default function BrandDetailLayout() {
       }}
     >
       <Stack.Screen name="index" />
-      <Stack.Screen name="edit" />
+      <Stack.Screen name="new" />
+      <Stack.Screen name="[id]" />
     </Stack>
   )
 }

@@ -8,18 +8,16 @@
  * - group/[id]: Group settings (full page)
  */
 
-import { Stack } from 'expo-router';
-import { Colors } from '@/constants/theme';
+import { Stack } from 'expo-router'
+import { DashboardColors } from '@/constants/dashboard-theme'
 
 export default function MessageLayout() {
-  const colors = Colors.light;
-
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-        animation: 'slide_from_right',
+        contentStyle: { backgroundColor: DashboardColors.background },
+        animation: 'default'
       }}
     >
       <Stack.Screen name="[id]" />
@@ -27,5 +25,5 @@ export default function MessageLayout() {
       <Stack.Screen name="group/new" />
       <Stack.Screen name="group/[id]" />
     </Stack>
-  );
+  )
 }

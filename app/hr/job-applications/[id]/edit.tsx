@@ -4,12 +4,13 @@
  * Başvuru düzenleme ekranı.
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator
+  ActivityIndicator,
+  TouchableOpacity
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -23,8 +24,7 @@ import {
   DashboardBorderRadius
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui'
-import { SelectInput } from '@/components/ui/select-input'
-import { SearchableSelect } from '@/components/ui/searchable-select'
+import { SearchableSelectModal, SearchableSelectModalRef } from '@/components/modals/SearchableSelectModal'
 import { DateInput } from '@/components/ui/date-input'
 import {
   getJobApplication,
@@ -46,6 +46,10 @@ const STATUS_OPTIONS = [
 
 export default function EditJobApplicationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
+
+  // Modal refs
+  const jobPostingModalRef = useRef<SearchableSelectModalRef>(null)
+  const statusModalRef = useRef<SearchableSelectModalRef>(null)
 
   // Form state
   const [formData, setFormData] = useState<JobApplicationFormData>({
@@ -312,16 +316,25 @@ export default function EditJobApplicationScreen() {
           </View>
 
           <View style={styles.sectionContent}>
-            <SearchableSelect
-              label="İş İlanı (Opsiyonel)"
-              value={formData.job_posting_id || 0}
-              onValueChange={(value) => handleInputChange('job_posting_id', value || undefined)}
-              options={jobPostingOptions}
-              placeholder="İş ilanı seçin"
-              searchPlaceholder="İlan ara..."
-              loading={loadingJobPostings}
-              error={errors.job_posting_id}
-            />
+            <View>
+              <Text style={styles.inputLabel}>İş İlanı (Opsiyonel)</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.job_posting_id && styles.selectTriggerError]}
+                onPress={() => jobPostingModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.selectTriggerText,
+                  !formData.job_posting_id && styles.selectTriggerPlaceholder
+                ]}>
+                  {formData.job_posting_id
+                    ? jobPostingOptions.find(opt => opt.value === formData.job_posting_id)?.label
+                    : 'İş ilanı seçin'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.job_posting_id && <Text style={styles.errorText}>{errors.job_posting_id}</Text>}
+            </View>
 
             <Input
               label="Başvurulan Pozisyon *"
@@ -350,13 +363,20 @@ export default function EditJobApplicationScreen() {
               error={errors.application_date}
             />
 
-            <SelectInput
-              label="Durum"
-              options={STATUS_OPTIONS}
-              selectedValue={formData.status || 'başvuru_alındı'}
-              onValueChange={(value) => handleInputChange('status', value as ApplicationStatus)}
-              error={errors.status}
-            />
+            <View>
+              <Text style={styles.inputLabel}>Durum</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.status && styles.selectTriggerError]}
+                onPress={() => statusModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.selectTriggerText}>
+                  {STATUS_OPTIONS.find(opt => opt.value === formData.status)?.label || 'Başvuru Alındı'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.status && <Text style={styles.errorText}>{errors.status}</Text>}
+            </View>
 
             <Input
               label="Notlar"
@@ -370,6 +390,25 @@ export default function EditJobApplicationScreen() {
           </View>
         </View>
       </KeyboardAwareScrollView>
+
+      {/* Modals */}
+      <SearchableSelectModal
+        ref={jobPostingModalRef}
+        title="İş İlanı Seçin"
+        options={jobPostingOptions}
+        selectedValue={formData.job_posting_id}
+        onSelect={(option) => handleInputChange('job_posting_id', option.value || undefined)}
+        searchPlaceholder="İlan ara..."
+        loading={loadingJobPostings}
+      />
+
+      <SearchableSelectModal
+        ref={statusModalRef}
+        title="Durum Seçin"
+        options={STATUS_OPTIONS}
+        selectedValue={formData.status}
+        onSelect={(option) => handleInputChange('status', option.value as ApplicationStatus)}
+      />
     </View>
   )
 }
@@ -426,5 +465,39 @@ const styles = StyleSheet.create({
   sectionContent: {
     padding: DashboardSpacing.lg,
     gap: DashboardSpacing.md
+  },
+  inputLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.xs
+  },
+  selectTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.md,
+    minHeight: 48
+  },
+  selectTriggerError: {
+    borderColor: DashboardColors.danger
+  },
+  selectTriggerText: {
+    flex: 1,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
+  },
+  selectTriggerPlaceholder: {
+    color: DashboardColors.textMuted
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.danger,
+    marginTop: 4
   }
 })

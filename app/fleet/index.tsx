@@ -8,8 +8,6 @@ import {
 } from 'react-native'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { LinearGradient } from 'expo-linear-gradient'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -17,6 +15,7 @@ import {
   DashboardFontSizes,
   DashboardShadows
 } from '@/constants/dashboard-theme'
+import PageHeader from '@/components/navigation/PageHeader'
 
 interface ModuleCardProps {
   title: string
@@ -46,35 +45,15 @@ function ModuleCard({ title, description, icon, iconBg, route }: ModuleCardProps
 }
 
 export default function FleetDashboard() {
-  const insets = useSafeAreaInsets()
-
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={['#022920', '#044134', '#065f4a']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
+      <PageHeader
+        title="Filo Yönetimi"
+        icon="car-sport-outline"
+        showBackButton
+        onBackPress={() => router.back()}
+      />
 
-        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
-          <View style={styles.headerBar}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color="#fff" />
-            </TouchableOpacity>
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Filo Yönetimi</Text>
-            </View>
-            <View style={styles.backButton} />
-          </View>
-        </View>
-
-        <View style={styles.bottomCurve} />
-      </View>
-
-      {/* Content */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
@@ -128,47 +107,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: DashboardColors.primary
-  },
-  headerContainer: {
-    position: 'relative',
-    paddingBottom: 24,
-    overflow: 'hidden'
-  },
-  headerContent: {
-    paddingHorizontal: DashboardSpacing.lg,
-    paddingBottom: DashboardSpacing.md
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center'
-  },
-  headerTitle: {
-    fontSize: DashboardFontSizes['2xl'],
-    fontWeight: '700',
-    color: '#fff'
-  },
-  bottomCurve: {
-    position: 'absolute',
-    bottom: -1,
-    left: 0,
-    right: 0,
-    height: 24,
-    backgroundColor: DashboardColors.background,
-    borderTopLeftRadius: DashboardBorderRadius['2xl'],
-    borderTopRightRadius: DashboardBorderRadius['2xl']
   },
   content: {
     flex: 1,

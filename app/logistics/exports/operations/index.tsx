@@ -5,7 +5,7 @@
  * Cash Register ve Positions modülleriyle uyumlu Dashboard teması.
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -14,17 +14,17 @@ import {
   ScrollView,
   RefreshControl,
   Pressable,
-} from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+} from 'react-native'
+import { router, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-} from 'react-native-reanimated';
-import { PageHeader } from '@/components/navigation';
-import { Skeleton } from '@/components/ui/skeleton';
+} from 'react-native-reanimated'
+import { PageHeader } from '@/components/navigation'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -32,14 +32,14 @@ import {
   DashboardFontSizes,
   DashboardShadows,
   DashboardAnimations,
-} from '@/constants/dashboard-theme';
+} from '@/constants/dashboard-theme'
 import {
   getDispositionData,
   DispositionData,
-} from '@/services/endpoints/disposition';
-import { Position, getDriverFullName } from '@/services/endpoints/positions';
+} from '@/services/endpoints/disposition'
+import { Position, getDriverFullName } from '@/services/endpoints/positions'
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 // Pozisyon durum etiketleri
 const POSITION_STATUS_LABELS: Record<string, string> = {
@@ -47,7 +47,7 @@ const POSITION_STATUS_LABELS: Record<string, string> = {
   completed: 'Tamamlandı',
   cancelled: 'İptal',
   draft: 'Taslak',
-};
+}
 
 // Durum renkleri
 const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
@@ -55,7 +55,7 @@ const STATUS_COLORS: Record<string, { primary: string; bg: string }> = {
   completed: { primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' },
   cancelled: { primary: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)' },
   draft: { primary: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)' },
-};
+}
 
 // İstatistik Kartı Skeleton
 function StatCardSkeleton() {
@@ -65,32 +65,32 @@ function StatCardSkeleton() {
       <Skeleton width={40} height={28} style={{ marginTop: DashboardSpacing.sm }} />
       <Skeleton width={80} height={14} style={{ marginTop: DashboardSpacing.xs }} />
     </View>
-  );
+  )
 }
 
 // İstatistik Kartı
 interface StatCardProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  value: number | string;
-  label: string;
-  color: { primary: string; bg: string };
-  onPress: () => void;
+  icon: keyof typeof Ionicons.glyphMap
+  value: number | string
+  label: string
+  color: { primary: string; bg: string }
+  onPress: () => void
 }
 
 function StatCard({ icon, value, label, color, onPress }: StatCardProps) {
-  const scale = useSharedValue(1);
+  const scale = useSharedValue(1)
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-  }));
+  }))
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.96, DashboardAnimations.springBouncy);
-  };
+    scale.value = withSpring(0.96, DashboardAnimations.springBouncy)
+  }
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, DashboardAnimations.springBouncy);
-  };
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
 
   return (
     <AnimatedPressable
@@ -105,7 +105,7 @@ function StatCard({ icon, value, label, color, onPress }: StatCardProps) {
       <Text style={[styles.statValue, { color: DashboardColors.textPrimary }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: DashboardColors.textSecondary }]}>{label}</Text>
     </AnimatedPressable>
-  );
+  )
 }
 
 // Pozisyon Kartı Skeleton
@@ -125,35 +125,35 @@ function PositionCardSkeleton() {
         <Skeleton width={100} height={14} />
       </View>
     </View>
-  );
+  )
 }
 
 // Pozisyon Kartı
 interface PositionCardProps {
-  position: Position;
-  onPress: () => void;
+  position: Position
+  onPress: () => void
 }
 
 function PositionCard({ position, onPress }: PositionCardProps) {
-  const scale = useSharedValue(1);
-  const colors = STATUS_COLORS[position.status || 'active'] || STATUS_COLORS.active;
+  const scale = useSharedValue(1)
+  const colors = STATUS_COLORS[position.status || 'active'] || STATUS_COLORS.active
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-  }));
+  }))
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.98, DashboardAnimations.springBouncy);
-  };
+    scale.value = withSpring(0.98, DashboardAnimations.springBouncy)
+  }
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, DashboardAnimations.springBouncy);
-  };
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
 
-  const driverName = getDriverFullName(position.driver);
+  const driverName = getDriverFullName(position.driver)
   const vehicleInfo = position.truck_tractor
     ? `${position.truck_tractor.plate}${position.trailer ? ' / ' + position.trailer.plate : ''}`
-    : position.trailer?.plate || '-';
+    : position.trailer?.plate || '-'
 
   return (
     <AnimatedPressable
@@ -209,33 +209,33 @@ function PositionCard({ position, onPress }: PositionCardProps) {
         </View>
       </View>
     </AnimatedPressable>
-  );
+  )
 }
 
 // Hızlı Aksiyon Butonu
 interface QuickActionProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  variant?: 'primary' | 'secondary';
+  icon: keyof typeof Ionicons.glyphMap
+  label: string
+  onPress: () => void
+  variant?: 'primary' | 'secondary'
 }
 
 function QuickAction({ icon, label, onPress, variant = 'primary' }: QuickActionProps) {
-  const scale = useSharedValue(1);
+  const scale = useSharedValue(1)
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-  }));
+  }))
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.96, DashboardAnimations.springBouncy);
-  };
+    scale.value = withSpring(0.96, DashboardAnimations.springBouncy)
+  }
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, DashboardAnimations.springBouncy);
-  };
+    scale.value = withSpring(1, DashboardAnimations.springBouncy)
+  }
 
-  const isPrimary = variant === 'primary';
+  const isPrimary = variant === 'primary'
 
   return (
     <AnimatedPressable
@@ -268,7 +268,7 @@ function QuickAction({ icon, label, onPress, variant = 'primary' }: QuickActionP
         {label}
       </Text>
     </AnimatedPressable>
-  );
+  )
 }
 
 // Boş Durum
@@ -280,7 +280,7 @@ function EmptyState() {
       </View>
       <Text style={styles.emptyText}>Aktif pozisyon bulunmuyor</Text>
     </View>
-  );
+  )
 }
 
 // Loading Durumu
@@ -303,7 +303,7 @@ function LoadingState() {
         <PositionCardSkeleton />
       </View>
     </View>
-  );
+  )
 }
 
 // Hata Durumu
@@ -320,98 +320,98 @@ function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) 
         <Text style={styles.retryButtonText}>Tekrar Dene</Text>
       </TouchableOpacity>
     </View>
-  );
+  )
 }
 
 export default function ExportOperationsScreen() {
   // Veri state'i
-  const [data, setData] = useState<DispositionData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<DispositionData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Refs
-  const isMountedRef = useRef(true);
-  const hasInitialFetchRef = useRef(false);
+  const isMountedRef = useRef(true)
+  const hasInitialFetchRef = useRef(false)
 
   // Veri çekme
   const fetchData = useCallback(async () => {
     try {
-      setError(null);
-      const result = await getDispositionData('export');
+      setError(null)
+      const result = await getDispositionData('export')
       if (isMountedRef.current) {
-        setData(result);
-        hasInitialFetchRef.current = true;
+        setData(result)
+        hasInitialFetchRef.current = true
       }
     } catch (err) {
       if (isMountedRef.current) {
-        console.error('Operations fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Veriler yüklenemedi');
+        console.error('Operations fetch error:', err)
+        setError(err instanceof Error ? err.message : 'Veriler yüklenemedi')
       }
     } finally {
       if (isMountedRef.current) {
-        setIsLoading(false);
-        setRefreshing(false);
+        setIsLoading(false)
+        setRefreshing(false)
       }
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    isMountedRef.current = true;
-    fetchData();
+    isMountedRef.current = true
+    fetchData()
     return () => {
-      isMountedRef.current = false;
-    };
-  }, [fetchData]);
+      isMountedRef.current = false
+    }
+  }, [fetchData])
 
   // Ekran focus olduğunda yenile
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        fetchData();
+        fetchData()
       }
     }, [fetchData])
-  );
+  )
 
   const onRefresh = () => {
-    setRefreshing(true);
-    fetchData();
-  };
+    setRefreshing(true)
+    fetchData()
+  }
 
   const handleRetry = () => {
-    setIsLoading(true);
-    fetchData();
-  };
+    setIsLoading(true)
+    fetchData()
+  }
 
   // Sayfa gezinme handler'ları
   const handlePositionsPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/logistics/exports/positions' as any);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push('/logistics/exports/positions' as any)
+  }
 
   const handleDispositionPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/logistics/exports/disposition' as any);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push('/logistics/exports/disposition' as any)
+  }
 
   const handleLoadsPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/logistics/exports/loads' as any);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push('/logistics/exports/loads' as any)
+  }
 
   const handlePositionPress = (position: Position) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push(`/logistics/exports/positions/${position.id}` as any);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/logistics/exports/positions/${position.id}` as any)
+  }
 
-  const activePositions = data?.active_positions || [];
-  const draftPositions = data?.draft_positions || [];
-  const unassignedLoads = data?.unassigned_loads || [];
+  const activePositions = data?.active_positions || []
+  const draftPositions = data?.draft_positions || []
+  const unassignedLoads = data?.unassigned_loads || []
 
-  const totalPositions = activePositions.length + draftPositions.length;
+  const totalPositions = activePositions.length + draftPositions.length
   const totalLoads =
     unassignedLoads.length +
-    activePositions.reduce((sum, p) => sum + (p.loads_count || 0), 0);
+    activePositions.reduce((sum, p) => sum + (p.loads_count || 0), 0)
 
   // Loading durumu
   if (isLoading) {
@@ -424,7 +424,7 @@ export default function ExportOperationsScreen() {
         />
         <LoadingState />
       </View>
-    );
+    )
   }
 
   // Hata durumu
@@ -438,7 +438,7 @@ export default function ExportOperationsScreen() {
         />
         <ErrorState error={error} onRetry={handleRetry} />
       </View>
-    );
+    )
   }
 
   return (
@@ -530,7 +530,7 @@ export default function ExportOperationsScreen() {
         </ScrollView>
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -762,4 +762,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
-});
+})

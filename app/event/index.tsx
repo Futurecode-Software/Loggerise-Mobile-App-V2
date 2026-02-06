@@ -228,6 +228,7 @@ export default function EventsScreen() {
   const [refreshing, setRefreshing] = useState(false)
 
   // API state
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [events, setEvents] = useState<Event[]>([])
   const [sections, setSections] = useState<EventSection[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)

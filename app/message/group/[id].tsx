@@ -24,7 +24,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '@/context/auth-context';
@@ -879,7 +879,8 @@ const styles = StyleSheet.create({
   },
   headerBar: {
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
+    minHeight: 70
   },
   headerButton: {
     width: 44,

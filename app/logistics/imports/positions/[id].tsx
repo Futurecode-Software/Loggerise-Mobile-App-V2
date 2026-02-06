@@ -5,7 +5,7 @@
  * Matches export position pattern
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -14,23 +14,23 @@ import {
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
+} from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Toast from 'react-native-toast-message'
 import {
   DashboardColors,
   DashboardSpacing,
   DashboardBorderRadius,
   DashboardFontSizes,
   DashboardShadows,
-} from '@/constants/dashboard-theme';
-import { Skeleton } from '@/components/ui/skeleton';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import ConfirmDialog from '@/components/modals/ConfirmDialog';
+} from '@/constants/dashboard-theme'
+import { Skeleton } from '@/components/ui/skeleton'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import ConfirmDialog from '@/components/modals/ConfirmDialog'
 import {
   getPosition,
   Position,
@@ -40,15 +40,15 @@ import {
   getInsuranceStatusLabel,
   STATUS_LABELS,
   STATUS_COLORS,
-} from '@/services/endpoints/positions';
+} from '@/services/endpoints/positions'
 
 // Section Header Component
 interface SectionHeaderProps {
-  title: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  count?: number;
-  isExpanded?: boolean;
-  onToggle?: () => void;
+  title: string
+  icon: keyof typeof Ionicons.glyphMap
+  count?: number
+  isExpanded?: boolean
+  onToggle?: () => void
 }
 
 function SectionHeader({ title, icon, count, isExpanded, onToggle }: SectionHeaderProps) {
@@ -78,15 +78,15 @@ function SectionHeader({ title, icon, count, isExpanded, onToggle }: SectionHead
         />
       )}
     </TouchableOpacity>
-  );
+  )
 }
 
 // Info Row Component
 interface InfoRowProps {
-  label: string;
-  value: string;
-  icon?: keyof typeof Ionicons.glyphMap;
-  highlight?: boolean;
+  label: string
+  value: string
+  icon?: keyof typeof Ionicons.glyphMap
+  highlight?: boolean
 }
 
 function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
@@ -107,141 +107,141 @@ function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
         {value}
       </Text>
     </View>
-  );
+  )
 }
 
 // Status Badge Component
 function StatusBadge({ status }: { status?: string }) {
-  const colors = STATUS_COLORS[status || 'active'] || STATUS_COLORS.active;
-  const label = STATUS_LABELS[status || 'active'] || status;
+  const colors = STATUS_COLORS[status || 'active'] || STATUS_COLORS.active
+  const label = STATUS_LABELS[status || 'active'] || status
 
   return (
     <View style={[styles.statusBadge, { backgroundColor: colors.bg }]}>
       <Text style={[styles.statusText, { color: colors.primary }]}>{label}</Text>
     </View>
-  );
+  )
 }
 
 export default function ImportPositionDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const insets = useSafeAreaInsets();
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const insets = useSafeAreaInsets()
 
   // State
-  const [position, setPosition] = useState<Position | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [position, setPosition] = useState<Position | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Refs
-  const isMountedRef = useRef(true);
-  const deleteDialogRef = useRef<BottomSheetModal>(null);
+  const isMountedRef = useRef(true)
+  const deleteDialogRef = useRef<BottomSheetModal>(null)
 
   // Fetch position data
   const fetchPosition = useCallback(async (showLoading = true) => {
-    if (!id) return;
+    if (!id) return
 
     try {
       if (showLoading) {
-        setIsLoading(true);
-        setError(null);
+        setIsLoading(true)
+        setError(null)
       }
 
-      const data = await getPosition(parseInt(id, 10));
+      const data = await getPosition(parseInt(id, 10))
 
       if (isMountedRef.current) {
-        setPosition(data);
+        setPosition(data)
       }
     } catch (err) {
       if (isMountedRef.current) {
-        const errorMsg = err instanceof Error ? err.message : 'Pozisyon bilgileri yüklenemedi';
-        setError(errorMsg);
+        const errorMsg = err instanceof Error ? err.message : 'Pozisyon bilgileri yüklenemedi'
+        setError(errorMsg)
         Toast.show({
           type: 'error',
           text1: 'Hata',
           text2: errorMsg,
           position: 'top',
           visibilityTime: 1500,
-        });
+        })
       }
     } finally {
       if (isMountedRef.current) {
-        setIsLoading(false);
-        setRefreshing(false);
+        setIsLoading(false)
+        setRefreshing(false)
       }
     }
-  }, [id]);
+  }, [id])
 
   useEffect(() => {
-    isMountedRef.current = true;
-    fetchPosition();
+    isMountedRef.current = true
+    fetchPosition()
 
     return () => {
-      isMountedRef.current = false;
-    };
-  }, [fetchPosition]);
+      isMountedRef.current = false
+    }
+  }, [fetchPosition])
 
   // Edit sayfasından dönüşte yenile
   useFocusEffect(
     useCallback(() => {
       if (!isLoading && position) {
-        fetchPosition(false);
+        fetchPosition(false)
       }
     }, [fetchPosition, isLoading, position])
-  );
+  )
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchPosition(false);
-  }, [fetchPosition]);
+    setRefreshing(true)
+    fetchPosition(false)
+  }, [fetchPosition])
 
   const handleBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.back();
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
 
   const handleEdit = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push(`/logistics/imports/positions/${id}/edit` as any);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push(`/logistics/imports/positions/${id}/edit` as any)
+  }
 
   // Silme dialogunu aç
   const handleDelete = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    deleteDialogRef.current?.present();
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    deleteDialogRef.current?.present()
+  }
 
   // Silme işlemini gerçekleştir
   const confirmDelete = async () => {
-    if (!id) return;
+    if (!id) return
 
-    setIsDeleting(true);
+    setIsDeleting(true)
     try {
       // TODO: Implement delete API call
-      deleteDialogRef.current?.dismiss();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      deleteDialogRef.current?.dismiss()
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       Toast.show({
         type: 'success',
         text1: 'Pozisyon başarıyla silindi',
         position: 'top',
         visibilityTime: 1500,
-      });
+      })
 
       setTimeout(() => {
-        router.back();
-      }, 300);
+        router.back()
+      }, 300)
     } catch (err) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
       Toast.show({
         type: 'error',
         text1: err instanceof Error ? err.message : 'Pozisyon silinemedi',
         position: 'top',
         visibilityTime: 1500,
-      });
+      })
     } finally {
-      setIsDeleting(false);
+      setIsDeleting(false)
     }
-  };
+  }
 
   // Loading state
   if (isLoading) {
@@ -278,7 +278,7 @@ export default function ImportPositionDetailScreen() {
           <Text style={styles.loadingText}>Pozisyon bilgileri yükleniyor...</Text>
         </View>
       </View>
-    );
+    )
   }
 
   // Error state
@@ -323,15 +323,15 @@ export default function ImportPositionDetailScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    );
+    )
   }
 
-  const driverName = getDriverFullName(position.driver);
-  const secondDriverName = getDriverFullName(position.second_driver);
+  const driverName = getDriverFullName(position.driver)
+  const secondDriverName = getDriverFullName(position.second_driver)
   const vehicleInfo = position.truck_tractor
     ? `${position.truck_tractor.plate}${position.trailer ? ' / ' + position.trailer.plate : ''}`
-    : position.trailer?.plate || '-';
-  const insuranceStatus = getInsuranceStatusLabel(position.insurance_status);
+    : position.trailer?.plate || '-'
+  const insuranceStatus = getInsuranceStatusLabel(position.insurance_status)
 
   return (
     <View style={styles.container}>
@@ -563,7 +563,7 @@ export default function ImportPositionDetailScreen() {
         isLoading={isDeleting}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -837,4 +837,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
-});
+})

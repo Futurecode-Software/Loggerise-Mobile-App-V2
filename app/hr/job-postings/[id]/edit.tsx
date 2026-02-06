@@ -4,7 +4,7 @@
  * Mevcut iş ilanını güncelleme - CLAUDE.md tasarım ilkeleri ile uyumlu
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   View,
   Text,
@@ -24,7 +24,7 @@ import {
 } from '@/constants/dashboard-theme'
 import { FormHeader } from '@/components/navigation/FormHeader'
 import { Input } from '@/components/ui'
-import { SelectInput } from '@/components/ui/select-input'
+import { SearchableSelectModal, SearchableSelectModalRef } from '@/components/modals/SearchableSelectModal'
 import { DateInput } from '@/components/ui/date-input'
 import {
   getJobPosting,
@@ -54,6 +54,11 @@ const EXPERIENCE_LEVEL_OPTIONS = [
 
 export default function EditJobPostingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
+
+  // Modal refs
+  const employmentTypeModalRef = useRef<SearchableSelectModalRef>(null)
+  const experienceLevelModalRef = useRef<SearchableSelectModalRef>(null)
+  const salaryCurrencyModalRef = useRef<SearchableSelectModalRef>(null)
 
   // Form state
   const [formData, setFormData] = useState<JobPostingFormData>({
@@ -275,21 +280,35 @@ export default function EditJobPostingScreen() {
               placeholder="Örn: İstanbul"
             />
 
-            <SelectInput
-              label="İstihdam Türü *"
-              options={EMPLOYMENT_TYPE_OPTIONS}
-              selectedValue={formData.employment_type}
-              onValueChange={(value) => handleInputChange('employment_type', value as EmploymentType)}
-              error={errors.employment_type}
-            />
+            <View>
+              <Text style={styles.inputLabel}>İstihdam Türü *</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.employment_type && styles.selectTriggerError]}
+                onPress={() => employmentTypeModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.selectTriggerText}>
+                  {EMPLOYMENT_TYPE_OPTIONS.find(opt => opt.value === formData.employment_type)?.label || 'Seçiniz'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.employment_type && <Text style={styles.errorText}>{errors.employment_type}</Text>}
+            </View>
 
-            <SelectInput
-              label="Deneyim Seviyesi *"
-              options={EXPERIENCE_LEVEL_OPTIONS}
-              selectedValue={formData.experience_level}
-              onValueChange={(value) => handleInputChange('experience_level', value as ExperienceLevel)}
-              error={errors.experience_level}
-            />
+            <View>
+              <Text style={styles.inputLabel}>Deneyim Seviyesi *</Text>
+              <TouchableOpacity
+                style={[styles.selectTrigger, errors.experience_level && styles.selectTriggerError]}
+                onPress={() => experienceLevelModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.selectTriggerText}>
+                  {EXPERIENCE_LEVEL_OPTIONS.find(opt => opt.value === formData.experience_level)?.label || 'Seçiniz'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+              {errors.experience_level && <Text style={styles.errorText}>{errors.experience_level}</Text>}
+            </View>
           </View>
         </View>
 
@@ -345,12 +364,19 @@ export default function EditJobPostingScreen() {
           </View>
 
           <View style={styles.sectionContent}>
-            <SelectInput
-              label="Para Birimi"
-              options={CURRENCY_OPTIONS}
-              selectedValue={formData.salary_currency || 'TRY'}
-              onValueChange={(value) => handleInputChange('salary_currency', value)}
-            />
+            <View>
+              <Text style={styles.inputLabel}>Para Birimi</Text>
+              <TouchableOpacity
+                style={styles.selectTrigger}
+                onPress={() => salaryCurrencyModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.selectTriggerText}>
+                  {CURRENCY_OPTIONS.find(opt => opt.value === formData.salary_currency)?.label || 'TRY'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textSecondary} />
+              </TouchableOpacity>
+            </View>
 
             <Input
               label="Minimum Maaş"
@@ -437,6 +463,31 @@ export default function EditJobPostingScreen() {
           </View>
         </View>
       </KeyboardAwareScrollView>
+
+      {/* Modals */}
+      <SearchableSelectModal
+        ref={employmentTypeModalRef}
+        title="İstihdam Türü Seçin"
+        options={EMPLOYMENT_TYPE_OPTIONS}
+        selectedValue={formData.employment_type}
+        onSelect={(option) => handleInputChange('employment_type', option.value as EmploymentType)}
+      />
+
+      <SearchableSelectModal
+        ref={experienceLevelModalRef}
+        title="Deneyim Seviyesi Seçin"
+        options={EXPERIENCE_LEVEL_OPTIONS}
+        selectedValue={formData.experience_level}
+        onSelect={(option) => handleInputChange('experience_level', option.value as ExperienceLevel)}
+      />
+
+      <SearchableSelectModal
+        ref={salaryCurrencyModalRef}
+        title="Para Birimi Seçin"
+        options={CURRENCY_OPTIONS}
+        selectedValue={formData.salary_currency}
+        onSelect={(option) => handleInputChange('salary_currency', String(option.value))}
+      />
     </View>
   )
 }
@@ -530,5 +581,36 @@ const styles = StyleSheet.create({
   },
   toggleKnobActive: {
     alignSelf: 'flex-end'
+  },
+  inputLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.xs
+  },
+  selectTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: DashboardColors.background,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.md,
+    minHeight: 48
+  },
+  selectTriggerError: {
+    borderColor: DashboardColors.danger
+  },
+  selectTriggerText: {
+    flex: 1,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.danger,
+    marginTop: 4
   }
 })

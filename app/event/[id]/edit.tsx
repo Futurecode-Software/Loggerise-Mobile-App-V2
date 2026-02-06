@@ -1,7 +1,7 @@
 /**
  * Edit Event Screen (Etkinlik Düzenle)
  *
- * Dashboard theme + animasyonlu header + BottomSheetModal selects
+ * FormHeader component + KeyboardAwareScrollView + BottomSheetModal selects
  * CLAUDE.md standartlarına tam uyumlu
  */
 
@@ -16,18 +16,9 @@ import {
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
 import Toast from 'react-native-toast-message'
+import { FormHeader } from '@/components/navigation/FormHeader'
 import { Input } from '@/components/ui'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { DateInput } from '@/components/ui/date-input'
@@ -111,7 +102,6 @@ function flattenErrors(validationErrors: any): Record<string, string> {
 
 export default function EditEventScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
-  const insets = useSafeAreaInsets()
   const scrollViewRef = useRef<ScrollView>(null)
 
   // Modal refs
@@ -125,58 +115,6 @@ export default function EditEventScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [event, setEvent] = useState<Event | null>(null)
 
-  // Animasyonlu dekoratif daireler
-  const orb1TranslateY = useSharedValue(0)
-  const orb2TranslateX = useSharedValue(0)
-  const orb1Scale = useSharedValue(1)
-  const orb2Scale = useSharedValue(1)
-
-  useEffect(() => {
-    // Orb 1 - Yukarı aşağı hareket + pulse
-    orb1TranslateY.value = withRepeat(
-      withTiming(15, {
-        duration: 4000,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true
-    )
-    orb1Scale.value = withRepeat(
-      withTiming(1.1, {
-        duration: 3000,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true
-    )
-
-    // Orb 2 - Sağa sola hareket + pulse
-    orb2TranslateX.value = withRepeat(
-      withTiming(20, {
-        duration: 5000,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true
-    )
-    orb2Scale.value = withRepeat(
-      withTiming(1.15, {
-        duration: 4000,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const orb1AnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: orb1TranslateY.value }, { scale: orb1Scale.value }],
-  }))
-
-  const orb2AnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: orb2TranslateX.value }, { scale: orb2Scale.value }],
-  }))
 
   // Form state
   const [formData, setFormData] = useState<EventFormData>({
@@ -377,15 +315,9 @@ export default function EditEventScreen() {
     }
   }, [])
 
-  const handleBackPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+  const handleBackPress = useCallback(() => {
     router.back()
-  }
-
-  const handleSavePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    handleSubmit()
-  }
+  }, [])
 
   // Modal select handlers
   const handleEventTypeSelect = (value: string | number) => {
@@ -438,29 +370,12 @@ export default function EditEventScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <View style={styles.headerContainer}>
-          <LinearGradient
-            colors={['#022920', '#044134', '#065f4a']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
-            <View style={styles.headerBar}>
-              <TouchableOpacity
-                onPress={handleBackPress}
-                style={styles.headerButton}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-              <View style={styles.headerTitleContainer}>
-                <Text style={styles.headerTitle}>Etkinliği Düzenle</Text>
-              </View>
-              <View style={styles.headerButton} />
-            </View>
-          </View>
-        </View>
+        <FormHeader
+          title="Etkinliği Düzenle"
+          onBackPress={handleBackPress}
+          onSavePress={() => {}}
+          saveDisabled
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={DashboardColors.primary} />
           <Text style={styles.loadingText}>Etkinlik yükleniyor...</Text>
@@ -468,56 +383,17 @@ export default function EditEventScreen() {
       </View>
     )
   }
-
   if (!event) return null
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={['#022920', '#044134', '#065f4a']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-
-        {/* Animasyonlu glow orbs */}
-        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
-        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
-
-        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
-          <View style={styles.headerBar}>
-            <TouchableOpacity
-              onPress={handleBackPress}
-              style={styles.headerButton}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Etkinliği Düzenle</Text>
-              <Text style={styles.headerSubtitle} numberOfLines={1}>
-                {event.title}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={handleSavePress}
-              style={styles.headerButton}
-              activeOpacity={0.7}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Ionicons name="checkmark" size={24} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+      <FormHeader
+        title="Etkinliği Düzenle"
+        onBackPress={handleBackPress}
+        onSavePress={handleSubmit}
+        isSaving={isSubmitting}
+      />
 
       {/* Content */}
       <KeyboardAwareScrollView
@@ -799,63 +675,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: DashboardColors.background,
-  },
-
-  // Header
-  headerContainer: {
-    position: 'relative',
-    paddingBottom: 24,
-    overflow: 'hidden',
-  },
-  glowOrb1: {
-    position: 'absolute',
-    top: -40,
-    right: -20,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-  },
-  glowOrb2: {
-    position: 'absolute',
-    bottom: 30,
-    left: -50,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-  },
-  headerContent: {
-    paddingHorizontal: DashboardSpacing.lg,
-    paddingBottom: DashboardSpacing.md,
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: DashboardSpacing.md,
-  },
-  headerTitle: {
-    fontSize: DashboardFontSizes['2xl'],
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  headerSubtitle: {
-    fontSize: DashboardFontSizes.sm,
-    color: 'rgba(255, 255, 255, 0.8)',
   },
 
   // Loading

@@ -84,7 +84,10 @@
       "Bash(git reset:*)",
       "Bash(copy google-services.json androidappgoogle-services.json)",
       "Bash(if exist \"C:\\\\Users\\\\Ufuk\\\\AppData\\\\Local\\\\Android\\\\Sdk\" echo \"SDK Found\" else echo \"SDK Not Found\")",
-      "Bash(Select-String \"cash-register\" -Context 0,3)"
+      "Bash(Select-String \"cash-register\" -Context 0,3)",
+      "Bash(npx expo lint:*)",
+      "Bash(Select-String -Pattern \"error\")",
+      "Bash(Select-String -NotMatch \"warning\")"
     ]
   },
   "enableAllProjectMcpServers": true,

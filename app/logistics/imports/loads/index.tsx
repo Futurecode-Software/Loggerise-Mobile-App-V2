@@ -281,7 +281,7 @@ export default function ImportLoadsScreen() {
 
   // BottomSheet ref
   const filterBottomSheetRef = useRef<BottomSheetModal>(null)
-  const snapPoints = useMemo(() => ['90%'], []);
+  const snapPoints = useMemo(() => ['90%'], [])
 
   // API state
   const [loads, setLoads] = useState<Load[]>([])

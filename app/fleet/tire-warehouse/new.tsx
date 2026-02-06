@@ -6,11 +6,12 @@
  * Backend endpoint: POST /api/v1/mobile/filo-yonetimi/lastik-deposu
  */
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 import {
   View,
   Text,
-  StyleSheet
+  StyleSheet,
+  TouchableOpacity
 } from 'react-native'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -23,20 +24,20 @@ import {
   DashboardBorderRadius
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui'
-import { SelectInput } from '@/components/ui/select-input'
+import { SearchableSelectModal, SearchableSelectModalRef, SelectOption } from '@/components/modals/SearchableSelectModal'
 import { DateInput } from '@/components/ui/date-input'
 import { FormHeader } from '@/components/navigation/FormHeader'
 import api, { getErrorMessage, getValidationErrors } from '@/services/api'
 
 // Lastik tipi seçenekleri
-const TIRE_TYPE_OPTIONS = [
+const TIRE_TYPE_OPTIONS: SelectOption[] = [
   { label: 'Yaz Lastiği', value: 'summer' },
   { label: 'Kış Lastiği', value: 'winter' },
   { label: 'Dört Mevsim', value: 'all_season' }
 ]
 
 // Kondisyon seçenekleri
-const CONDITION_OPTIONS = [
+const CONDITION_OPTIONS: SelectOption[] = [
   { label: 'Yeni', value: 'new' },
   { label: 'İyi', value: 'good' },
   { label: 'Orta', value: 'fair' },
@@ -71,6 +72,10 @@ export default function NewTireScreen() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Modal refs
+  const tireTypeModalRef = useRef<SearchableSelectModalRef>(null)
+  const conditionModalRef = useRef<SearchableSelectModalRef>(null)
 
   // Input değişiklik handler'ı
   const handleInputChange = useCallback((field: string, value: any) => {
@@ -234,21 +239,33 @@ export default function NewTireScreen() {
               maxLength={255}
             />
 
-            <SelectInput
-              label="Lastik Tipi *"
-              options={TIRE_TYPE_OPTIONS}
-              selectedValue={formData.tire_type}
-              onValueChange={(val) => handleInputChange('tire_type', val)}
-              error={errors.tire_type}
-            />
+            <View style={styles.fieldContainer}>
+              <Text style={styles.inputLabel}>Lastik Tipi *</Text>
+              <TouchableOpacity
+                style={[styles.selectButton, errors.tire_type ? styles.selectButtonError : null]}
+                onPress={() => tireTypeModalRef.current?.present()}
+              >
+                <Text style={formData.tire_type ? styles.selectButtonText : styles.selectButtonPlaceholder}>
+                  {TIRE_TYPE_OPTIONS.find(o => o.value === formData.tire_type)?.label || 'Lastik tipi seçin'}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color={DashboardColors.textMuted} />
+              </TouchableOpacity>
+              {errors.tire_type && <Text style={styles.errorText}>{errors.tire_type}</Text>}
+            </View>
 
-            <SelectInput
-              label="Durum"
-              options={CONDITION_OPTIONS}
-              selectedValue={formData.condition}
-              onValueChange={(val) => handleInputChange('condition', val)}
-              error={errors.condition}
-            />
+            <View style={styles.fieldContainer}>
+              <Text style={styles.inputLabel}>Durum</Text>
+              <TouchableOpacity
+                style={[styles.selectButton, errors.condition ? styles.selectButtonError : null]}
+                onPress={() => conditionModalRef.current?.present()}
+              >
+                <Text style={formData.condition ? styles.selectButtonText : styles.selectButtonPlaceholder}>
+                  {CONDITION_OPTIONS.find(o => o.value === formData.condition)?.label || 'Durum seçin'}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color={DashboardColors.textMuted} />
+              </TouchableOpacity>
+              {errors.condition && <Text style={styles.errorText}>{errors.condition}</Text>}
+            </View>
 
             <Input
               label="Diş Derinliği (mm)"
@@ -339,6 +356,27 @@ export default function NewTireScreen() {
           </View>
         </View>
       </KeyboardAwareScrollView>
+
+      {/* Modals */}
+      <SearchableSelectModal
+        ref={tireTypeModalRef}
+        title="Lastik Tipi Seçin"
+        options={TIRE_TYPE_OPTIONS}
+        selectedValue={formData.tire_type}
+        onSelect={(option) => handleInputChange('tire_type', option.value)}
+        searchPlaceholder="Lastik tipi ara..."
+        emptyMessage="Lastik tipi bulunamadı"
+      />
+
+      <SearchableSelectModal
+        ref={conditionModalRef}
+        title="Durum Seçin"
+        options={CONDITION_OPTIONS}
+        selectedValue={formData.condition}
+        onSelect={(option) => handleInputChange('condition', option.value)}
+        searchPlaceholder="Durum ara..."
+        emptyMessage="Durum bulunamadı"
+      />
     </View>
   )
 }
@@ -385,5 +423,43 @@ const styles = StyleSheet.create({
   sectionContent: {
     padding: DashboardSpacing.lg,
     gap: DashboardSpacing.md
+  },
+  fieldContainer: {
+    gap: DashboardSpacing.xs
+  },
+  inputLabel: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
+    marginBottom: 4
+  },
+  selectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: DashboardColors.background,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight
+  },
+  selectButtonError: {
+    borderColor: DashboardColors.danger
+  },
+  selectButtonText: {
+    flex: 1,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
+  },
+  selectButtonPlaceholder: {
+    flex: 1,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textMuted
+  },
+  errorText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.danger,
+    marginTop: 4
   }
 })

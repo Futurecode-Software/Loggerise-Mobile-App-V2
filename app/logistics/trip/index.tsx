@@ -297,6 +297,7 @@ export default function TripsScreen() {
   const isMountedRef = useRef(true)
   const fetchIdRef = useRef(0)
   const hasInitialFetchRef = useRef(false)
+  const activeFilterRef = useRef(activeFilter)
 
   // Veri çekme fonksiyonu
   const executeFetch = useCallback(
@@ -359,6 +360,7 @@ export default function TripsScreen() {
 
   // Filtre değişimi
   useEffect(() => {
+    activeFilterRef.current = activeFilter
     if (!hasInitialFetchRef.current) return
 
     setIsLoading(true)
@@ -369,9 +371,9 @@ export default function TripsScreen() {
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        executeFetch(activeFilter, 1, false)
+        executeFetch(activeFilterRef.current, 1, false)
       }
-    }, [activeFilter, executeFetch])
+    }, [executeFetch])
   )
 
   const onRefresh = async () => {
