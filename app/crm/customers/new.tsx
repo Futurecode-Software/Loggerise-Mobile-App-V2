@@ -677,6 +677,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 70,
     paddingBottom: DashboardSpacing.lg
   },
   headerButton: {
@@ -748,18 +749,19 @@ const styles = StyleSheet.create({
     color: DashboardColors.textPrimary
   },
   sectionContent: {
-    padding: DashboardSpacing.lg,
-    gap: DashboardSpacing.md
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.lg,
+    paddingTop: 0,
+    gap: DashboardSpacing.sm
   },
   toggleRow: {
-    gap: DashboardSpacing.md,
-    marginBottom: DashboardSpacing.md
+    gap: DashboardSpacing.sm
   },
   toggleGroup: {
     flex: 1
   },
   inputGroup: {
-    marginBottom: DashboardSpacing.sm
+    marginBottom: 0
   },
   inputLabel: {
     fontSize: DashboardFontSizes.sm,
