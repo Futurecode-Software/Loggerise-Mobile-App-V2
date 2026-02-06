@@ -47,6 +47,7 @@ import {
   StockMovementFilters,
   Pagination
 } from '@/services/endpoints/stock-movements'
+import { formatCurrency } from '@/utils/currency'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -187,7 +188,7 @@ function MovementCard({ item, onPress }: MovementCardProps) {
           <View style={styles.costContainer}>
             <Text style={styles.costLabel}>Birim Maliyet</Text>
             <Text style={styles.costValue}>
-              {item.unit_cost.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL
+              {formatCurrency(item.unit_cost, item.currency_type || 'TRY')}
             </Text>
           </View>
         )}

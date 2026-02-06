@@ -36,69 +36,9 @@ import {
   deleteProductBrand,
   ProductBrand
 } from '@/services/endpoints/products'
-
-// Tarih formatlama
-const formatDate = (dateString?: string): string => {
-  if (!dateString) return '-'
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('tr-TR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    })
-  } catch {
-    return dateString
-  }
-}
-
-// Bolum basligi
-interface SectionHeaderProps {
-  title: string
-  icon: keyof typeof Ionicons.glyphMap
-}
-
-function SectionHeader({ title, icon }: SectionHeaderProps) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionHeaderLeft}>
-        <View style={styles.sectionIcon}>
-          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
-        </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-    </View>
-  )
-}
-
-// Bilgi satiri
-interface InfoRowProps {
-  label: string
-  value: string
-  icon?: keyof typeof Ionicons.glyphMap
-  highlight?: boolean
-}
-
-function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabel}>
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={14}
-            color={DashboardColors.textMuted}
-            style={styles.infoIcon}
-          />
-        )}
-        <Text style={styles.infoLabelText}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
-        {value}
-      </Text>
-    </View>
-  )
-}
+import { formatDate } from '@/utils/date'
+import { SectionHeader } from '@/components/detail/SectionHeader'
+import { InfoRow } from '@/components/detail/InfoRow'
 
 export default function BrandDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -473,7 +413,8 @@ const styles = StyleSheet.create({
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: DashboardSpacing.md
+    marginBottom: DashboardSpacing.md,
+    minHeight: 70
   },
   headerButton: {
     width: 44,
@@ -560,66 +501,6 @@ const styles = StyleSheet.create({
   cardContent: {
     paddingHorizontal: DashboardSpacing.lg,
     paddingBottom: DashboardSpacing.lg
-  },
-
-  // Bolum Basligi
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: DashboardSpacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
-  },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DashboardSpacing.sm
-  },
-  sectionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: DashboardColors.primaryGlow,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  sectionTitle: {
-    fontSize: DashboardFontSizes.base,
-    fontWeight: '600',
-    color: DashboardColors.textPrimary
-  },
-
-  // Bilgi Satiri
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: DashboardSpacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
-  },
-  infoLabel: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  infoIcon: {
-    marginRight: DashboardSpacing.sm
-  },
-  infoLabelText: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary
-  },
-  infoValue: {
-    fontSize: DashboardFontSizes.sm,
-    fontWeight: '500',
-    color: DashboardColors.textPrimary,
-    maxWidth: '50%',
-    textAlign: 'right'
-  },
-  infoValueHighlight: {
-    color: DashboardColors.primary,
-    fontWeight: '600'
   },
 
   // Skeleton

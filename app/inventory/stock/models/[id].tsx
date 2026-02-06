@@ -40,6 +40,7 @@ import {
   DashboardShadows
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import {
   getProductModel,
   updateProductModel,
@@ -48,69 +49,9 @@ import {
   ModelFormData,
 } from '@/services/endpoints/products'
 import { getErrorMessage, getValidationErrors } from '@/services/api'
-
-// Tarih formatlama
-const formatDate = (dateString?: string): string => {
-  if (!dateString) return '-'
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('tr-TR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    })
-  } catch {
-    return dateString
-  }
-}
-
-// Bölüm başlığı
-interface SectionHeaderProps {
-  title: string
-  icon: keyof typeof Ionicons.glyphMap
-}
-
-function SectionHeader({ title, icon }: SectionHeaderProps) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionHeaderLeft}>
-        <View style={styles.sectionIcon}>
-          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
-        </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-    </View>
-  )
-}
-
-// Bilgi satırı
-interface InfoRowProps {
-  label: string
-  value: string
-  icon?: keyof typeof Ionicons.glyphMap
-  highlight?: boolean
-}
-
-function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabel}>
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={14}
-            color={DashboardColors.textMuted}
-            style={styles.infoIcon}
-          />
-        )}
-        <Text style={styles.infoLabelText}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
-        {value}
-      </Text>
-    </View>
-  )
-}
+import { formatDate } from '@/utils/date'
+import { SectionHeader } from '@/components/detail/SectionHeader'
+import { InfoRow } from '@/components/detail/InfoRow'
 
 export default function ModelDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -598,25 +539,12 @@ export default function ModelDetailScreen() {
                 numberOfLines={3}
               />
 
-              <TouchableOpacity
-                style={styles.toggleRow}
-                onPress={() => handleInputChange('is_active', !formData.is_active)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.toggleContent}>
-                  <Text style={styles.toggleLabel}>Aktif Model</Text>
-                  <Text style={styles.toggleDescription}>Bu model kullanıma açık olacak</Text>
-                </View>
-                <View style={[
-                  styles.toggleSwitch,
-                  formData.is_active && styles.toggleSwitchActive
-                ]}>
-                  <View style={[
-                    styles.toggleKnob,
-                    formData.is_active && styles.toggleKnobActive
-                  ]} />
-                </View>
-              </TouchableOpacity>
+              <ToggleSwitch
+                label="Aktif Model"
+                description="Bu model kullanıma açık olacak"
+                value={formData.is_active}
+                onValueChange={(value) => handleInputChange('is_active', value)}
+              />
             </View>
           </View>
         </KeyboardAwareScrollView>
@@ -730,7 +658,8 @@ const styles = StyleSheet.create({
   },
   headerBar: {
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
+    minHeight: 70
   },
   headerButton: {
     width: 44,
@@ -833,66 +762,6 @@ const styles = StyleSheet.create({
     paddingBottom: DashboardSpacing.lg
   },
 
-  // Bölüm Başlığı
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: DashboardSpacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
-  },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DashboardSpacing.sm
-  },
-  sectionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: DashboardColors.primaryGlow,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  sectionTitle: {
-    fontSize: DashboardFontSizes.base,
-    fontWeight: '600',
-    color: DashboardColors.textPrimary
-  },
-
-  // Bilgi Satırı
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: DashboardSpacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
-  },
-  infoLabel: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  infoIcon: {
-    marginRight: DashboardSpacing.sm
-  },
-  infoLabelText: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary
-  },
-  infoValue: {
-    fontSize: DashboardFontSizes.sm,
-    fontWeight: '500',
-    color: DashboardColors.textPrimary,
-    maxWidth: '50%',
-    textAlign: 'right'
-  },
-  infoValueHighlight: {
-    color: DashboardColors.primary,
-    fontWeight: '600'
-  },
-
   // Edit Section
   section: {
     backgroundColor: DashboardColors.surface,
@@ -903,49 +772,6 @@ const styles = StyleSheet.create({
   sectionContent: {
     padding: DashboardSpacing.lg,
     gap: DashboardSpacing.md
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: DashboardSpacing.md,
-    paddingHorizontal: DashboardSpacing.lg,
-    backgroundColor: DashboardColors.background,
-    borderRadius: DashboardBorderRadius.lg
-  },
-  toggleContent: {
-    flex: 1,
-    marginRight: DashboardSpacing.md
-  },
-  toggleLabel: {
-    fontSize: DashboardFontSizes.base,
-    fontWeight: '500',
-    color: DashboardColors.textPrimary
-  },
-  toggleDescription: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary,
-    marginTop: 2
-  },
-  toggleSwitch: {
-    width: 52,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: DashboardColors.borderLight,
-    padding: 2,
-    justifyContent: 'center'
-  },
-  toggleSwitchActive: {
-    backgroundColor: DashboardColors.primary
-  },
-  toggleKnob: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#fff'
-  },
-  toggleKnobActive: {
-    alignSelf: 'flex-end'
   },
 
   // Skeleton

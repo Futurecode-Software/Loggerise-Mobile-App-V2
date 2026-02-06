@@ -39,91 +39,10 @@ import {
   getMovementTypeColor,
   StockMovement
 } from '@/services/endpoints/stock-movements'
-
-// Tarih formatlama
-const formatDate = (dateString?: string): string => {
-  if (!dateString) return '-'
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('tr-TR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  } catch {
-    return dateString
-  }
-}
-
-// Bölüm başlığı
-interface SectionHeaderProps {
-  title: string
-  icon: keyof typeof Ionicons.glyphMap
-  count?: number
-  isExpanded?: boolean
-  onToggle?: () => void
-}
-
-function SectionHeader({ title, icon, count, isExpanded, onToggle }: SectionHeaderProps) {
-  return (
-    <TouchableOpacity
-      style={styles.sectionHeader}
-      onPress={onToggle}
-      disabled={!onToggle}
-      activeOpacity={onToggle ? 0.7 : 1}
-    >
-      <View style={styles.sectionHeaderLeft}>
-        <View style={styles.sectionIcon}>
-          <Ionicons name={icon} size={16} color={DashboardColors.primary} />
-        </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {count !== undefined && (
-          <View style={styles.countBadge}>
-            <Text style={styles.countText}>{count}</Text>
-          </View>
-        )}
-      </View>
-      {onToggle && (
-        <Ionicons
-          name={isExpanded ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          color={DashboardColors.textMuted}
-        />
-      )}
-    </TouchableOpacity>
-  )
-}
-
-// Bilgi satırı
-interface InfoRowProps {
-  label: string
-  value: string
-  icon?: keyof typeof Ionicons.glyphMap
-  highlight?: boolean
-}
-
-function InfoRow({ label, value, icon, highlight }: InfoRowProps) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabel}>
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={14}
-            color={DashboardColors.textMuted}
-            style={styles.infoIcon}
-          />
-        )}
-        <Text style={styles.infoLabelText}>{label}</Text>
-      </View>
-      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>
-        {value}
-      </Text>
-    </View>
-  )
-}
+import { formatCurrency } from '@/utils/currency'
+import { formatDate } from '@/utils/date'
+import { SectionHeader } from '@/components/detail/SectionHeader'
+import { InfoRow } from '@/components/detail/InfoRow'
 
 export default function MovementDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -468,14 +387,14 @@ export default function MovementDetailScreen() {
                 {movement.unit_cost !== undefined && movement.unit_cost !== null && (
                   <InfoRow
                     label="Birim Maliyet"
-                    value={`${movement.unit_cost.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL`}
+                    value={formatCurrency(movement.unit_cost, movement.currency_type || 'TRY')}
                     icon="cash-outline"
                   />
                 )}
                 {movement.total_cost !== undefined && movement.total_cost !== null && (
                   <InfoRow
                     label="Toplam Maliyet"
-                    value={`${movement.total_cost.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL`}
+                    value={formatCurrency(movement.total_cost, movement.currency_type || 'TRY')}
                     icon="calculator-outline"
                   />
                 )}
@@ -570,7 +489,8 @@ const styles = StyleSheet.create({
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: DashboardSpacing.md
+    marginBottom: DashboardSpacing.md,
+    minHeight: 70
   },
   headerButton: {
     width: 44,
@@ -663,77 +583,6 @@ const styles = StyleSheet.create({
   cardContent: {
     paddingHorizontal: DashboardSpacing.lg,
     paddingBottom: DashboardSpacing.lg
-  },
-
-  // Bölüm Başlığı
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: DashboardSpacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
-  },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DashboardSpacing.sm
-  },
-  sectionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: DashboardColors.primaryGlow,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  sectionTitle: {
-    fontSize: DashboardFontSizes.base,
-    fontWeight: '600',
-    color: DashboardColors.textPrimary
-  },
-  countBadge: {
-    backgroundColor: DashboardColors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10
-  },
-  countText: {
-    fontSize: DashboardFontSizes.xs,
-    fontWeight: '600',
-    color: '#fff'
-  },
-
-  // Bilgi Satırı
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: DashboardSpacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
-  },
-  infoLabel: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  infoIcon: {
-    marginRight: DashboardSpacing.sm
-  },
-  infoLabelText: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary
-  },
-  infoValue: {
-    fontSize: DashboardFontSizes.sm,
-    fontWeight: '500',
-    color: DashboardColors.textPrimary,
-    maxWidth: '50%',
-    textAlign: 'right'
-  },
-  infoValueHighlight: {
-    color: DashboardColors.primary,
-    fontWeight: '600'
   },
 
   // Notlar
