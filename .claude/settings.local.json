@@ -91,7 +91,9 @@
       "Bash(while read file)",
       "Bash(do grep -n \"paddingBottom\" \"$file\")",
       "Bash(echo:*)",
-      "Bash(perl:*)"
+      "Bash(perl:*)",
+      "Bash(for f in app/accounting/index.tsx app/crm/index.tsx app/fleet/index.tsx app/hr/index.tsx app/inventory/index.tsx app/inventory/stock/index.tsx app/logistics/index.tsx)",
+      "Bash(do)"
     ]
   },
   "enableAllProjectMcpServers": true,

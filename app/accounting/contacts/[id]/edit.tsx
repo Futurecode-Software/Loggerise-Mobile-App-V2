@@ -977,7 +977,7 @@ const styles = StyleSheet.create({
     flex: 1
   },
   scrollContent: {
-    padding: DashboardSpacing.lg,
+    paddingHorizontal: DashboardSpacing.lg,
     paddingTop: 0,
     gap: DashboardSpacing.md,
     paddingBottom: DashboardSpacing['4xl']

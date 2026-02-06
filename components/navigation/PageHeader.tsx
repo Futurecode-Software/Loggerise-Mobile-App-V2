@@ -295,14 +295,12 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     overflow: 'hidden',
+    paddingBottom: 24,
   },
   content: {
-    paddingHorizontal: DashboardSpacing.lg,
-    paddingBottom: 24
+    paddingHorizontal: DashboardSpacing.lg
   },
-  contentCompact: {
-    paddingBottom: DashboardSpacing['2xl'],
-  },
+  contentCompact: {},
   glowOrb1: {
     position: 'absolute',
     top: -40,

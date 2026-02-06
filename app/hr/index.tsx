@@ -8,8 +8,7 @@ import {
 } from 'react-native'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { LinearGradient } from 'expo-linear-gradient'
+import { PageHeader } from '@/components/navigation'
 import {
   DashboardColors,
   DashboardSpacing,
@@ -46,33 +45,13 @@ function ModuleCard({ title, description, icon, iconBg, route }: ModuleCardProps
 }
 
 export default function HRDashboard() {
-  const insets = useSafeAreaInsets()
-
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={['#022920', '#044134', '#065f4a']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-
-        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
-          <View style={styles.headerBar}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color="#fff" />
-            </TouchableOpacity>
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>İnsan Kaynakları</Text>
-            </View>
-            <View style={styles.backButton} />
-          </View>
-        </View>
-
-        <View style={styles.bottomCurve} />
-      </View>
+      <PageHeader
+        title="İnsan Kaynakları"
+        showBackButton
+        onBackPress={() => router.back()}
+      />
 
       {/* Content */}
       <ScrollView
@@ -113,53 +92,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DashboardColors.primary
   },
-  headerContainer: {
-    position: 'relative',
-    paddingBottom: 24,
-    overflow: 'hidden'
-  },
-  headerContent: {
-    paddingHorizontal: DashboardSpacing.lg
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center'
-  },
-  headerTitle: {
-    fontSize: DashboardFontSizes['2xl'],
-    fontWeight: '700',
-    color: '#fff'
-  },
-  bottomCurve: {
-    position: 'absolute',
-    bottom: -1,
-    left: 0,
-    right: 0,
-    height: 24,
-    backgroundColor: DashboardColors.background,
-    borderTopLeftRadius: DashboardBorderRadius['2xl'],
-    borderTopRightRadius: DashboardBorderRadius['2xl']
-  },
   content: {
     flex: 1,
     backgroundColor: DashboardColors.background
   },
   contentContainer: {
-    padding: DashboardSpacing.lg,
+    paddingHorizontal: DashboardSpacing.lg,
     paddingTop: 0,
+    paddingBottom: DashboardSpacing.lg,
   },
   card: {
     flexDirection: 'row',

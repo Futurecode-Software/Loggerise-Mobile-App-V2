@@ -97,7 +97,8 @@ const styles = StyleSheet.create({
     flex: 1
   },
   contentContainer: {
-    padding: DashboardSpacing.lg,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing['3xl']
   },
   contactCard: {

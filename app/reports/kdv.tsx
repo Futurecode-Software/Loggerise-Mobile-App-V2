@@ -443,7 +443,8 @@ const styles = StyleSheet.create({
     backgroundColor: DashboardColors.background,
   },
   contentContainer: {
-    padding: DashboardSpacing.lg,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing['3xl'],
   },
   centerContent: {

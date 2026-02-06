@@ -876,8 +876,8 @@ const styles = StyleSheet.create({
     flex: 1
   },
   scrollContent: {
-    padding: DashboardSpacing.lg,
-    paddingTop: 10,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing['4xl']
   },
   loadingContainer: {
