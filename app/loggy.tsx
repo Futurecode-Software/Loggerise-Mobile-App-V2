@@ -1,53 +1,53 @@
-import React, { useState, useRef, useMemo, useCallback } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Platform,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  Pressable,
-  Keyboard
-} from 'react-native'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring
-} from 'react-native-reanimated'
-import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller'
-import { BottomSheetModal } from '@gorhom/bottom-sheet'
-import { router, useFocusEffect } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import * as Haptics from 'expo-haptics'
-import Toast from 'react-native-toast-message'
+import { ViewMode } from '@/components/loggy/constants'
+import { LoggyInput } from '@/components/loggy/LoggyInput'
+import { MessageBubble } from '@/components/loggy/MessageBubble'
+import { QuickSuggestions } from '@/components/loggy/QuickSuggestions'
+import { TypingIndicator } from '@/components/loggy/TypingIndicator'
 import ConfirmDialog from '@/components/modals/ConfirmDialog'
+import { PageHeader } from '@/components/navigation'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  DashboardColors,
-  DashboardSpacing,
+  DashboardAnimations,
   DashboardBorderRadius,
+  DashboardColors,
   DashboardFontSizes,
   DashboardShadows,
-  DashboardAnimations
+  DashboardSpacing
 } from '@/constants/dashboard-theme'
-import {
-  formatConversationTime,
-  AiConversation,
-  deleteConversation,
-  checkAiConfiguration
-} from '@/services/endpoints/loggy'
 import { useLoggyConversations } from '@/hooks/use-logy-conversations'
 import { useLoggyMessages } from '@/hooks/use-logy-messages'
 import { useLoggySearch } from '@/hooks/use-logy-search'
-import { ViewMode } from '@/components/loggy/constants'
-import { TypingIndicator } from '@/components/loggy/TypingIndicator'
-import { QuickSuggestions } from '@/components/loggy/QuickSuggestions'
-import { MessageBubble } from '@/components/loggy/MessageBubble'
-import { LoggyInput } from '@/components/loggy/LoggyInput'
-import { PageHeader } from '@/components/navigation'
-import { Skeleton } from '@/components/ui/skeleton'
+import {
+  AiConversation,
+  checkAiConfiguration,
+  deleteConversation,
+  formatConversationTime
+} from '@/services/endpoints/loggy'
+import { Ionicons } from '@expo/vector-icons'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import * as Haptics from 'expo-haptics'
+import { router, useFocusEffect } from 'expo-router'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
+import {
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
+  Platform,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native'
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller'
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring
+} from 'react-native-reanimated'
+import Toast from 'react-native-toast-message'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -363,206 +363,206 @@ export default function LoggyScreen() {
       {viewMode === 'list' ? (
         // LIST VIEW
         <View style={styles.container}>
-        <PageHeader
-          title="Loggy"
-          icon="sparkles-outline"
-          subtitle="AI Asistan"
-          showBackButton
-          onBackPress={handleBackPress}
-          rightAction={{
-            icon: 'add',
-            onPress: handleCreateNewConversation
-          }}
-        />
+          <PageHeader
+            title="Loggy"
+            icon="sparkles-outline"
+            subtitle="AI Asistan"
+            showBackButton
+            onBackPress={handleBackPress}
+            rightAction={{
+              icon: 'add',
+              onPress: handleCreateNewConversation
+            }}
+          />
 
-        <View style={styles.content}>
-          {/* Search */}
-          <View style={styles.searchContainer}>
-            <View style={styles.searchInputWrapper}>
-              <Ionicons name="search" size={20} color={DashboardColors.textMuted} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Sohbetlerde ara..."
-                placeholderTextColor={DashboardColors.textMuted}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
+          <View style={styles.content}>
+            {/* Search */}
+            <View style={styles.searchContainer}>
+              <View style={styles.searchInputWrapper}>
+                <Ionicons name="search" size={20} color={DashboardColors.textMuted} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Sohbetlerde ara..."
+                  placeholderTextColor={DashboardColors.textMuted}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {isSearching && <ActivityIndicator size="small" color={DashboardColors.primary} />}
+              </View>
+            </View>
+
+            {/* Conversations List */}
+            {isLoadingConversations ? (
+              <View style={styles.listContent}>
+                <ConversationCardSkeleton />
+                <ConversationCardSkeleton />
+                <ConversationCardSkeleton />
+              </View>
+            ) : conversationsError ? (
+              <ErrorState message={conversationsError} onRetry={refresh} />
+            ) : (
+              <FlatList
+                data={displayConversations}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={({ item }) => (
+                  <ConversationCard
+                    item={item}
+                    isActive={currentConversation?.id === item.id}
+                    onPress={() => handleSelectConversation(item)}
+                    onDelete={() => handleDeleteClick(item.id)}
+                  />
+                )}
+                contentContainerStyle={styles.listContent}
+                ListEmptyComponent={<EmptyState onCreateNew={handleCreateNewConversation} />}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={refresh}
+                    tintColor={DashboardColors.primary}
+                  />
+                }
               />
-              {isSearching && <ActivityIndicator size="small" color={DashboardColors.primary} />}
-            </View>
+            )}
           </View>
-
-          {/* Conversations List */}
-          {isLoadingConversations ? (
-            <View style={styles.listContent}>
-              <ConversationCardSkeleton />
-              <ConversationCardSkeleton />
-              <ConversationCardSkeleton />
-            </View>
-          ) : conversationsError ? (
-            <ErrorState message={conversationsError} onRetry={refresh} />
-          ) : (
-            <FlatList
-              data={displayConversations}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => (
-                <ConversationCard
-                  item={item}
-                  isActive={currentConversation?.id === item.id}
-                  onPress={() => handleSelectConversation(item)}
-                  onDelete={() => handleDeleteClick(item.id)}
-                />
-              )}
-              contentContainerStyle={styles.listContent}
-              ListEmptyComponent={<EmptyState onCreateNew={handleCreateNewConversation} />}
-              showsVerticalScrollIndicator={false}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={refresh}
-                  tintColor={DashboardColors.primary}
-                />
-              }
-            />
-          )}
-        </View>
         </View>
       ) : (
         // CHAT VIEW
-    <View style={styles.container}>
-      <PageHeader
-        title={currentConversation?.title || 'Yeni Konuşma'}
-        icon="chatbubble-ellipses-outline"
-        subtitle={
-          currentConversation
-            ? formatConversationTime(currentConversation.created_at)
-            : 'Doğal dille sorgula'
-        }
-        showBackButton
-        onBackPress={goBackToList}
-        rightAction={
-          currentConversation
-            ? {
-                icon: 'trash-outline',
-                onPress: () => handleDeleteClick(currentConversation.id)
-              }
-            : undefined
-        }
-      />
+        <View style={styles.container}>
+          <PageHeader
+            title={currentConversation?.title || 'Yeni Konuşma'}
+            icon="chatbubble-ellipses-outline"
+            subtitle={
+              currentConversation
+                ? formatConversationTime(currentConversation.created_at)
+                : 'Doğal dille sorgula'
+            }
+            showBackButton
+            onBackPress={goBackToList}
+            rightAction={
+              currentConversation
+                ? {
+                  icon: 'trash-outline',
+                  onPress: () => handleDeleteClick(currentConversation.id)
+                }
+                : undefined
+            }
+          />
 
-      <View style={styles.content}>
-        {/* API Not Configured Overlay */}
-        {!isAiConfigured && !isCheckingConfig && (
-          <View style={styles.overlay}>
-            <View style={styles.overlayContent}>
-              <View style={styles.overlayIcon}>
-                <Ionicons name="key" size={32} color="#f59e0b" />
-              </View>
-              <Text style={styles.overlayTitle}>AI Yapılandırması Gerekli</Text>
-              <Text style={styles.overlayText}>
-                {aiConfigMessage || 'Loggy AI asistanını kullanabilmek için web panelinde AI ayarlarınızı yapılandırmanız gerekiyor.'}
-              </Text>
-              <Text style={styles.overlayTextSecondary}>
-                Web panelinde Ayarlar {'>'} Sistem Ayarları bölümünden API anahtarınızı ve model bilgilerinizi girebilirsiniz.
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Config Check Loading */}
-        {isCheckingConfig && (
-          <View style={styles.overlay}>
-            <ActivityIndicator size="large" color={DashboardColors.primary} />
-            <Text style={[styles.loadingText, { marginTop: DashboardSpacing.md }]}>
-              AI yapılandırması kontrol ediliyor...
-            </Text>
-          </View>
-        )}
-
-        {/* Chat Content */}
-        <Pressable
-          style={styles.chatContainer}
-          onPress={() => Keyboard.dismiss()}
-          android_disableSound
-        >
-          {/* Messages */}
-          {isLoadingMessages && messages.length === 0 ? (
-            <View style={[styles.messagesContainer, styles.centerContainer]}>
-              <ActivityIndicator size="large" color={DashboardColors.primary} />
-              <Text style={styles.loadingText}>Mesajlar yükleniyor...</Text>
-            </View>
-          ) : messagesError ? (
-            <View style={[styles.messagesContainer, styles.centerContainer]}>
-              <View style={styles.errorIconLarge}>
-                <Ionicons name="alert-circle" size={64} color={DashboardColors.danger} />
-              </View>
-              <Text style={styles.chatErrorTitle}>Bir hata oluştu</Text>
-              <Text style={styles.chatErrorText}>{messagesError}</Text>
-            </View>
-          ) : invertedMessages.length === 0 && !isSending ? (
-            <View style={[styles.messagesContainer, styles.emptyStateContainer]}>
-              <View style={styles.emptyStateContent}>
-                <View style={styles.chatEmptyIcon}>
-                  <Ionicons name="sparkles" size={48} color={DashboardColors.primary} />
+          <View style={styles.content}>
+            {/* API Not Configured Overlay */}
+            {!isAiConfigured && !isCheckingConfig && (
+              <View style={styles.overlay}>
+                <View style={styles.overlayContent}>
+                  <View style={styles.overlayIcon}>
+                    <Ionicons name="key" size={32} color="#f59e0b" />
+                  </View>
+                  <Text style={styles.overlayTitle}>AI Yapılandırması Gerekli</Text>
+                  <Text style={styles.overlayText}>
+                    {aiConfigMessage || 'Loggy AI asistanını kullanabilmek için web panelinde AI ayarlarınızı yapılandırmanız gerekiyor.'}
+                  </Text>
+                  <Text style={styles.overlayTextSecondary}>
+                    Web panelinde Ayarlar {'>'} Sistem Ayarları bölümünden API anahtarınızı ve model bilgilerinizi girebilirsiniz.
+                  </Text>
                 </View>
-                <Text style={styles.chatEmptyTitle}>Henüz mesaj yok</Text>
-                <Text style={styles.chatEmptyText}>
-                  Merhaba! Ben Loggy, sizin AI asistanınızım.{'\n'}
-                  Yük oluşturma, cari arama gibi işlemlerde size yardımcı olabilirim.
+              </View>
+            )}
+
+            {/* Config Check Loading */}
+            {isCheckingConfig && (
+              <View style={styles.overlay}>
+                <ActivityIndicator size="large" color={DashboardColors.primary} />
+                <Text style={[styles.loadingText, { marginTop: DashboardSpacing.md }]}>
+                  AI yapılandırması kontrol ediliyor...
                 </Text>
               </View>
-              <View style={styles.quickSuggestionsWrapper}>
-                <QuickSuggestions
-                  onSuggestionClick={handleSuggestionClick}
-                  isLoading={isLoadingMessages}
-                  isAiConfigured={isAiConfigured}
-                />
-              </View>
-            </View>
-          ) : (
-            <Animated.View style={[styles.messagesContainer, animatedListStyle]}>
-              <FlatList
-                ref={flatListRef}
-                data={invertedMessages}
-                keyExtractor={(item) => String(item.id)}
-                renderItem={({ item }) => <MessageBubble message={item} />}
-                inverted
-                contentContainerStyle={styles.messagesList}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="interactive"
-                removeClippedSubviews={Platform.OS === 'android'}
-                maxToRenderPerBatch={15}
-                windowSize={21}
-                initialNumToRender={20}
-                maintainVisibleContentPosition={{
-                  minIndexForVisible: 0,
-                  autoscrollToTopThreshold: 100
-                }}
-                style={styles.flatList}
-                ListHeaderComponent={
-                  isSending ? (
-                    <TypingIndicator />
-                  ) : messagesError ? (
-                    <View style={styles.errorBanner}>
-                      <Ionicons name="alert-circle" size={16} color={DashboardColors.danger} />
-                      <Text style={styles.errorBannerText}>{messagesError}</Text>
-                    </View>
-                  ) : null
-                }
-              />
-            </Animated.View>
-          )}
+            )}
 
-          {/* Input Bar */}
-          <LoggyInput
-            value={inputValue}
-            onChangeText={setInputValue}
-            onSend={handleSend}
-            isSending={isSending}
-            disabled={!isAiConfigured}
-          />
-        </Pressable>
-      </View>
+            {/* Chat Content */}
+            <Pressable
+              style={styles.chatContainer}
+              onPress={() => Keyboard.dismiss()}
+              android_disableSound
+            >
+              {/* Messages */}
+              {isLoadingMessages && messages.length === 0 ? (
+                <View style={[styles.messagesContainer, styles.centerContainer]}>
+                  <ActivityIndicator size="large" color={DashboardColors.primary} />
+                  <Text style={styles.loadingText}>Mesajlar yükleniyor...</Text>
+                </View>
+              ) : messagesError ? (
+                <View style={[styles.messagesContainer, styles.centerContainer]}>
+                  <View style={styles.errorIconLarge}>
+                    <Ionicons name="alert-circle" size={64} color={DashboardColors.danger} />
+                  </View>
+                  <Text style={styles.chatErrorTitle}>Bir hata oluştu</Text>
+                  <Text style={styles.chatErrorText}>{messagesError}</Text>
+                </View>
+              ) : invertedMessages.length === 0 && !isSending ? (
+                <View style={[styles.messagesContainer, styles.emptyStateContainer]}>
+                  <View style={styles.emptyStateContent}>
+                    <View style={styles.chatEmptyIcon}>
+                      <Ionicons name="sparkles" size={48} color={DashboardColors.primary} />
+                    </View>
+                    <Text style={styles.chatEmptyTitle}>Henüz mesaj yok</Text>
+                    <Text style={styles.chatEmptyText}>
+                      Merhaba! Ben Loggy, sizin AI asistanınızım.{'\n'}
+                      Yük oluşturma, cari arama gibi işlemlerde size yardımcı olabilirim.
+                    </Text>
+                  </View>
+                  <View style={styles.quickSuggestionsWrapper}>
+                    <QuickSuggestions
+                      onSuggestionClick={handleSuggestionClick}
+                      isLoading={isLoadingMessages}
+                      isAiConfigured={isAiConfigured}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <Animated.View style={[styles.messagesContainer, animatedListStyle]}>
+                  <FlatList
+                    ref={flatListRef}
+                    data={invertedMessages}
+                    keyExtractor={(item) => String(item.id)}
+                    renderItem={({ item }) => <MessageBubble message={item} />}
+                    inverted
+                    contentContainerStyle={styles.messagesList}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="interactive"
+                    removeClippedSubviews={Platform.OS === 'android'}
+                    maxToRenderPerBatch={15}
+                    windowSize={21}
+                    initialNumToRender={20}
+                    maintainVisibleContentPosition={{
+                      minIndexForVisible: 0,
+                      autoscrollToTopThreshold: 100
+                    }}
+                    style={styles.flatList}
+                    ListHeaderComponent={
+                      isSending ? (
+                        <TypingIndicator />
+                      ) : messagesError ? (
+                        <View style={styles.errorBanner}>
+                          <Ionicons name="alert-circle" size={16} color={DashboardColors.danger} />
+                          <Text style={styles.errorBannerText}>{messagesError}</Text>
+                        </View>
+                      ) : null
+                    }
+                  />
+                </Animated.View>
+              )}
+
+              {/* Input Bar */}
+              <LoggyInput
+                value={inputValue}
+                onChangeText={setInputValue}
+                onSend={handleSend}
+                isSending={isSending}
+                disabled={!isAiConfigured}
+              />
+            </Pressable>
+          </View>
 
         </View>
       )}
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
   // Search
   searchContainer: {
     marginHorizontal: DashboardSpacing.lg,
-    marginTop: DashboardSpacing.md,
+    marginTop: 0,
     marginBottom: DashboardSpacing.sm
   },
   searchInputWrapper: {
@@ -619,7 +619,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.sm,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl
   },
 
@@ -780,7 +780,7 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     paddingHorizontal: DashboardSpacing.md,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.md
   },
   centerContainer: {

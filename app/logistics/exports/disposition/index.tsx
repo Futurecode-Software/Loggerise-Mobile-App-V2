@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Disposition Screen
  *
  * Manages draft positions and load assignments for exports.
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl,
   },
 
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
   expandedContent: {
     borderTopWidth: 1,
     borderTopColor: DashboardColors.borderLight,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     marginTop: DashboardSpacing.md,
     gap: DashboardSpacing.md,
   },

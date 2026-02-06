@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Araçlar Liste Sayfası
  *
  * CLAUDE.md tasarım ilkelerine uygun modern liste sayfası
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl
   },
 

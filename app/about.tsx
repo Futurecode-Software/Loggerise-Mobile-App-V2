@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: DashboardSpacing['2xl'],
-    paddingTop: DashboardSpacing.xl
+    paddingTop: 0,
   },
   logoContainer: {
     alignItems: 'center',

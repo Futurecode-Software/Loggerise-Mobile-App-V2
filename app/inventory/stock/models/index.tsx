@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.sm,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl
   },
 

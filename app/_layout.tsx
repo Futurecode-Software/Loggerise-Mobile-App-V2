@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Root Layout - Entry Point
  *
  * Wraps the entire app with providers and handles initial navigation

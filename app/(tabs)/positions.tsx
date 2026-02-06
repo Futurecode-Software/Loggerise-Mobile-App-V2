@@ -1,39 +1,39 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+﻿import { FullScreenHeader } from '@/components/header';
+import { Badge, Card, Input } from '@/components/ui';
+import { BorderRadius, Brand, Colors, Shadows, Spacing, Typography } from '@/constants/theme';
 import { router, useFocusEffect } from 'expo-router';
 import {
-  Search,
-  Filter,
-  Plus,
-  Truck,
-  MapPin,
-  User,
-  Calendar,
-  ArrowRight,
   AlertCircle,
+  ArrowRight,
+  Calendar,
+  Filter,
+  MapPin,
+  Plus,
   Route,
+  Search,
+  Truck,
+  User,
 } from 'lucide-react-native';
-import { Card, Badge, Input } from '@/components/ui';
-import { FullScreenHeader } from '@/components/header';
-import { Colors, Typography, Spacing, Brand, BorderRadius, Shadows } from '@/constants/theme';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 // useColorScheme kaldirildi - her zaman light mode kullanilir
 import {
+  getDriverFullName,
   getPositions,
-  Position,
-  PositionType,
-  PositionFilters,
-  Pagination,
   getPositionTypeLabel,
   getVehicleOwnerTypeLabel,
-  getDriverFullName,
+  Pagination,
+  Position,
+  PositionFilters,
+  PositionType,
 } from '@/services/endpoints/positions';
 
 const TYPE_FILTERS = [
@@ -389,74 +389,74 @@ export default function PositionsScreen() {
       <View style={styles.contentArea}>
         {/* Search */}
         <View style={styles.searchContainer}>
-        <Input
-          placeholder="Pozisyon no, plaka veya şoför ile ara..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          leftIcon={<Search size={20} color={colors.icon} />}
-          containerStyle={styles.searchInput}
-        />
-      </View>
+          <Input
+            placeholder="Pozisyon no, plaka veya şoför ile ara..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            leftIcon={<Search size={20} color={colors.icon} />}
+            containerStyle={styles.searchInput}
+          />
+        </View>
 
-      {/* Type Filters */}
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          data={TYPE_FILTERS}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor:
-                    activeFilter === item.id
-                      ? item.color || Brand.primary
-                      : colors.card,
-                  borderColor:
-                    activeFilter === item.id
-                      ? item.color || Brand.primary
-                      : colors.border,
-                },
-              ]}
-              onPress={() => setActiveFilter(item.id)}
-            >
-              <Text
+        {/* Type Filters */}
+        <View style={styles.filterContainer}>
+          <FlatList
+            horizontal
+            data={TYPE_FILTERS}
+            keyExtractor={(item) => item.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterContent}
+            renderItem={({ item }) => (
+              <TouchableOpacity
                 style={[
-                  styles.filterChipText,
+                  styles.filterChip,
                   {
-                    color: activeFilter === item.id ? '#FFFFFF' : colors.textSecondary,
+                    backgroundColor:
+                      activeFilter === item.id
+                        ? item.color || Brand.primary
+                        : colors.card,
+                    borderColor:
+                      activeFilter === item.id
+                        ? item.color || Brand.primary
+                        : colors.border,
                   },
                 ]}
+                onPress={() => setActiveFilter(item.id)}
               >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
-
-      {/* Position List */}
-      <FlatList
-        data={positions}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderPosition}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Brand.primary}
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    {
+                      color: activeFilter === item.id ? '#FFFFFF' : colors.textSecondary,
+                    },
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            )}
           />
-        }
-      />
+        </View>
+
+        {/* Position List */}
+        <FlatList
+          data={positions}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderPosition}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={renderFooter}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Brand.primary}
+            />
+          }
+        />
       </View>
     </View>
   );
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: 0,
   },
   searchInput: {
     marginBottom: 0,

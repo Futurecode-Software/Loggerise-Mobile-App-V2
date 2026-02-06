@@ -1,4 +1,4 @@
-/**
+﻿/**
  * New Product Screen
  *
  * Yeni ürün oluşturma ekranı - CLAUDE.md tasarım ilkeleri ile uyumlu

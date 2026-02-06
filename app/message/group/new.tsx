@@ -1,4 +1,4 @@
-/**
+﻿/**
  * New Group Screen
  *
  * Screen for creating a new group conversation.

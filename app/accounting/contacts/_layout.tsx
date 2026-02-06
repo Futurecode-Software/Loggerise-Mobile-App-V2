@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cari Sayfaları Layout
  *
  * Cari detay ve oluşturma sayfaları için stack navigator

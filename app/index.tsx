@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Splash Screen
  *
  * Uygulama başlangıç ekranı

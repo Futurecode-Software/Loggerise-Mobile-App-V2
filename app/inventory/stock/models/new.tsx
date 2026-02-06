@@ -1,4 +1,4 @@
-/**
+﻿/**
  * New Model Screen
  *
  * Create new product model.

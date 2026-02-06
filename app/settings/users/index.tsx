@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   // Search
   searchSection: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.sm
   },
   searchContainer: {
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl
   },
 
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
   cardFooter: {
     flexDirection: 'row',
     gap: DashboardSpacing.sm,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     borderTopWidth: 1,
     borderTopColor: DashboardColors.borderLight
   },
@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     color: DashboardColors.danger
   },
   cardFooterProtected: {
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     borderTopWidth: 1,
     borderTopColor: DashboardColors.borderLight
   },

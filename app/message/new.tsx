@@ -1,4 +1,4 @@
-/**
+﻿/**
  * New Conversation Screen
  *
  * Screen for starting a new direct message conversation.

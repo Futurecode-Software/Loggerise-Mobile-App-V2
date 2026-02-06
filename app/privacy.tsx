@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
+﻿import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import { router } from 'expo-router'
 import { PageHeader } from '@/components/navigation'
 import {

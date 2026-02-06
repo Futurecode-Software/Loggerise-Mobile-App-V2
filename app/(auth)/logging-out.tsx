@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Çıkış Yapılıyor Sayfası
  *
  * Logout işlemi sırasında gösterilen loading ekranı

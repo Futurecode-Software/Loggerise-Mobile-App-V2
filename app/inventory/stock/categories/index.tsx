@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Kategoriler Liste Sayfası
  *
  * Ürün kategorilerini listeler. CLAUDE.md tasarım ilkelerine uygun.
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl
   },
 
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: DashboardSpacing.md
+    paddingTop: 0,
   },
   childrenBadge: {
     flexDirection: 'row',

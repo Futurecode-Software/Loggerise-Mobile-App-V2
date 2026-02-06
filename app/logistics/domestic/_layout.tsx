@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router'
+﻿import { Stack } from 'expo-router'
 import { DashboardColors } from '@/constants/dashboard-theme'
 
 export default function DomesticLayout() {

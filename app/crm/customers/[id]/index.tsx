@@ -853,7 +853,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md
+    paddingTop: 0,
   },
 
   // Kartlar

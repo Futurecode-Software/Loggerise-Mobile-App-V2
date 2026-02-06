@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Kar/Zarar Analizi Raporu
  * Gelir, gider ve karlılık analizleri
  */
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing['3xl']
   },
   centerContent: {

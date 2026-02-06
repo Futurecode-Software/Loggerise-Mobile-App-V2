@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Events List Screen (Ajanda)
  *
  * Timeline-style events list with Dashboard theme.
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing['3xl'],
   },
 

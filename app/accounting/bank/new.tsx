@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Yeni Banka Hesabı Ekranı
  *
  * Modern tasarım - CLAUDE.md ilkelerine uygun

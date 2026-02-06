@@ -1,4 +1,4 @@
-/**
+﻿/**
  * İthalat Dispozisyon Ekranı
  *
  * İthalat taslak pozisyonları ve yük atamalarını yönetir.
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   // Liste
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl,
   },
 
@@ -709,7 +709,7 @@ const styles = StyleSheet.create({
   expandedContent: {
     borderTopWidth: 1,
     borderTopColor: DashboardColors.borderLight,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     marginTop: DashboardSpacing.md,
     gap: DashboardSpacing.md,
   },

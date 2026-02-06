@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   View,
   Text,
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl
   },
 
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
     color: DashboardColors.textMuted
   },
   cardFooter: {
-    paddingTop: DashboardSpacing.md
+    paddingTop: 0,
   },
   badgeContainer: {
     flexDirection: 'row',

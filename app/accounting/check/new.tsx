@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Yeni Çek Oluşturma Sayfası
  *
  * CLAUDE.md tasarım ilkelerine uygun modern tasarım

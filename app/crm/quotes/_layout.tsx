@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Quote Stack Layout
  *
  * Manages navigation stack for quote-related screens.

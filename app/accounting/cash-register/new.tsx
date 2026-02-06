@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Yeni Kasa Ekranı
  *
  * Modern tasarım - CLAUDE.md ilkelerine uygun

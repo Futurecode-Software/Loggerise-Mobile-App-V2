@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   View,
   Text,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md
+    paddingTop: 0,
   },
   card: {
     flexDirection: 'row',

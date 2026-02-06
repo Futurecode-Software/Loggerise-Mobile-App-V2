@@ -1,4 +1,4 @@
-/**
+﻿/**
  * New Job Application Screen
  *
  * Yeni başvuru oluşturma ekranı.

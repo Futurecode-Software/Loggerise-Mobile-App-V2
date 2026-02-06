@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cari Raporları
  * Alacak, borç ve yaşlandırma raporları
  */
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing['3xl']
   },
   centerContent: {

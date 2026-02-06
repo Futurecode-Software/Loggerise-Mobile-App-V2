@@ -1,28 +1,28 @@
-import React from 'react'
+﻿import { PageHeader } from '@/components/navigation'
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable
-} from 'react-native'
-import { router } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import * as Haptics from 'expo-haptics'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring
-} from 'react-native-reanimated'
-import { PageHeader } from '@/components/navigation'
-import {
-  DashboardColors,
-  DashboardSpacing,
+  DashboardAnimations,
   DashboardBorderRadius,
+  DashboardColors,
   DashboardFontSizes,
   DashboardShadows,
-  DashboardAnimations
+  DashboardSpacing
 } from '@/constants/dashboard-theme'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import { router } from 'expo-router'
+import React from 'react'
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from 'react-native'
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring
+} from 'react-native-reanimated'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing['3xl']
   },
   grid: {

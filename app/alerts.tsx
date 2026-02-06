@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native'
+﻿import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'

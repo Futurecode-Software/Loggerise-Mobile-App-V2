@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.xl
+    paddingTop: 0,
   },
   card: {
     backgroundColor: DashboardColors.surface,

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * New Stock Movement Screen
  *
  * Yeni stok hareketi oluşturma ekranı - CLAUDE.md tasarım ilkeleri ile uyumlu

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Mobil Bildirimler Liste Sayfası
  *
  * Backend'den gelen notification_broadcasts kayıtlarını listeler
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: DashboardSpacing.sm,
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.sm
   },
   filterChip: {

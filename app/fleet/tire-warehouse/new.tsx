@@ -1,4 +1,4 @@
-/**
+﻿/**
  * New Tire Screen
  *
  * Yeni lastik oluşturma ekranı - CLAUDE.md standartlarına uyumlu

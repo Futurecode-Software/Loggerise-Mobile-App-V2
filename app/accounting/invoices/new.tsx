@@ -1,4 +1,4 @@
-/**
+﻿/**
  * New Invoice Screen
  *
  * Yeni fatura oluşturma ekranı.
@@ -1379,7 +1379,7 @@ const styles = StyleSheet.create({
   itemTotals: {
     borderTopWidth: 1,
     borderTopColor: DashboardColors.borderLight,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     marginTop: DashboardSpacing.sm
   },
   itemTotalRow: {

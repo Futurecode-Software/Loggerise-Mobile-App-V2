@@ -1,4 +1,4 @@
-/**
+﻿/**
  * İthalat Yükleri Sayfası
  *
  * İthalat yönündeki yüklerin listelenmesi ve filtrelenmesi.
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   // Liste
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl
   },
 
@@ -843,7 +843,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: DashboardSpacing.md
+    paddingTop: 0,
   },
   directionContainer: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   View,
   Text,
@@ -703,7 +703,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl
   },
 
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   summaryStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)'
   },
@@ -901,7 +901,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    paddingTop: DashboardSpacing.md
+    paddingTop: 0,
   },
   balanceContainer: {},
   balanceLabel: {

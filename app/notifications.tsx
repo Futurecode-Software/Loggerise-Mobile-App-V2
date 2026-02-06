@@ -1,42 +1,39 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+﻿import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  View,
-  Text,
-  StyleSheet,
   FlatList,
-  TouchableOpacity,
+  Pressable,
   RefreshControl,
-  ActivityIndicator,
-  Pressable
+  StyleSheet,
+  Text,
+  View
 } from 'react-native'
 
-import { router, useFocusEffect } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import * as Haptics from 'expo-haptics'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring
-} from 'react-native-reanimated'
 import { PageHeader } from '@/components/navigation'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  DashboardColors,
-  DashboardSpacing,
+  DashboardAnimations,
   DashboardBorderRadius,
+  DashboardColors,
   DashboardFontSizes,
   DashboardShadows,
-  DashboardAnimations
+  DashboardSpacing
 } from '@/constants/dashboard-theme'
 import { useNotificationContext } from '@/context/notification-context'
 import {
-  getNotifications,
   deleteNotification,
+  getNotifications,
   getNotificationUrl,
   Notification,
-  NotificationType,
-  NotificationData
+  NotificationType
 } from '@/services/endpoints/notifications'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import { router, useFocusEffect } from 'expo-router'
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring
+} from 'react-native-reanimated'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -369,11 +366,11 @@ export default function NotificationsScreen() {
         rightActions={
           unreadCount > 0
             ? [
-                {
-                  icon: 'checkmark-done',
-                  onPress: handleMarkAllAsRead
-                }
-              ]
+              {
+                icon: 'checkmark-done',
+                onPress: handleMarkAllAsRead
+              }
+            ]
             : undefined
         }
       />
@@ -428,7 +425,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl
   },
 

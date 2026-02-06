@@ -1,58 +1,58 @@
-/**
+﻿/**
  * Mesajlar Listesi Ekranı
  *
  * Ana mesaj listesi - arama, WebSocket ve pull-to-refresh
  * CLAUDE.md standartlarına uygun - DashboardColors, PageHeader
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  RefreshControl,
-  ActivityIndicator,
-  AppState,
-  AppStateStatus,
-  Pressable
-} from 'react-native'
-import { router, useFocusEffect } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import * as Haptics from 'expo-haptics'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring
-} from 'react-native-reanimated'
-import { Avatar } from '@/components/ui'
-import { PageHeader } from '@/components/navigation'
-import UserSelectModal, { UserSelectModalRef } from '@/components/modals/UserSelectModal'
 import GroupCreateModal, { GroupCreateModalRef } from '@/components/modals/GroupCreateModal'
+import UserSelectModal, { UserSelectModalRef } from '@/components/modals/UserSelectModal'
+import { PageHeader } from '@/components/navigation'
+import { Avatar } from '@/components/ui'
 import {
-  DashboardColors,
-  DashboardSpacing,
-  DashboardFontSizes,
+  DashboardAnimations,
   DashboardBorderRadius,
+  DashboardColors,
+  DashboardFontSizes,
   DashboardShadows,
-  DashboardAnimations
+  DashboardSpacing
 } from '@/constants/dashboard-theme'
 import { useAuth } from '@/context/auth-context'
 import { useMessageContext } from '@/context/message-context'
-import {
-  getConversations,
-  Conversation,
-  ConversationFilters,
-  getConversationName,
-  getConversationAvatar,
-  getMessagePreview,
-  getLastMessageTime,
-  Message
-} from '@/services/endpoints/messaging'
 import { useMessagingWebSocket } from '@/hooks/use-messaging-websocket'
 import { scheduleMessageNotification } from '@/hooks/use-notification-observer'
+import {
+  Conversation,
+  ConversationFilters,
+  getConversationAvatar,
+  getConversationName,
+  getConversations,
+  getLastMessageTime,
+  getMessagePreview,
+  Message
+} from '@/services/endpoints/messaging'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import { router, useFocusEffect } from 'expo-router'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ActivityIndicator,
+  AppState,
+  AppStateStatus,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native'
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring
+} from 'react-native-reanimated'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
   // Arama
   searchContainer: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.sm
   },
   searchInputWrapper: {

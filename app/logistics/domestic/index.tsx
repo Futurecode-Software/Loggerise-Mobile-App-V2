@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   // Search
   searchContainer: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.lg,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.sm,
     backgroundColor: DashboardColors.background
   },
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl
   },
 
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: DashboardSpacing.sm,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     borderTopWidth: 1,
     borderTopColor: DashboardColors.borderLight
   },

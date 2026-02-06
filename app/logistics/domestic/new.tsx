@@ -1,4 +1,4 @@
-/**
+﻿/**
  * New Domestic Transport Order Screen
  *
  * Create new domestic transport order with customer, addresses, and items.
@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: DashboardColors.borderLight,
     backgroundColor: DashboardColors.background,
-    paddingTop: DashboardSpacing.md
+    paddingTop: 0,
   },
   tabsContent: {
     paddingHorizontal: DashboardSpacing.sm

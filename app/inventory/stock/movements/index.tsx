@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Stock Movements List Screen
  *
  * Stok hareketleri listesi - CLAUDE.md tasarım ilkeleri ile uyumlu
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
   // List
   listContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.xl
   },
 
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    paddingTop: DashboardSpacing.md
+    paddingTop: 0,
   },
   quantityContainer: {},
   quantityLabel: {

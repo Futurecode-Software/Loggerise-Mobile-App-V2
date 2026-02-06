@@ -1,4 +1,4 @@
-/**
+﻿/**
  * İhracat Operasyonları Ekranı
  *
  * Aktif ihracat pozisyonlarını ve dashboard'u gösterir.
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     marginTop: DashboardSpacing.md,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     borderTopWidth: 1,
     borderTopColor: DashboardColors.borderLight,
     gap: DashboardSpacing.md,
