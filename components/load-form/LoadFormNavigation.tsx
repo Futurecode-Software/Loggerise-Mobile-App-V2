@@ -1,16 +1,28 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { ChevronLeft, ChevronRight, Save } from 'lucide-react-native';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
+/**
+ * LoadFormNavigation - Sabit Alt Navigasyon Butonları
+ *
+ * 6 adımlı wizard için İleri/Geri/Kaydet butonları - ekranın altında sabit
+ */
+
+import React from 'react'
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
 
 interface LoadFormNavigationProps {
-  currentStep: number;
-  totalSteps: number;
-  onPrevious: () => void;
-  onNext: () => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-  submitButtonText?: string;
+  currentStep: number
+  totalSteps: number
+  onPrevious: () => void
+  onNext: () => void
+  onSubmit: () => void
+  isSubmitting: boolean
+  submitButtonText?: string
+  bottomInset?: number
 }
 
 export default function LoadFormNavigation({
@@ -21,32 +33,31 @@ export default function LoadFormNavigation({
   onSubmit,
   isSubmitting,
   submitButtonText = 'Kaydet',
+  bottomInset = 0,
 }: LoadFormNavigationProps) {
-  const colors = Colors.light;
-  const isFirstStep = currentStep === 1;
-  const isLastStep = currentStep === totalSteps;
+  const isFirstStep = currentStep === 1
+  const isLastStep = currentStep === totalSteps
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+    <View style={[styles.container, { paddingBottom: Math.max(bottomInset, DashboardSpacing.md) }]}>
       {/* Previous Button */}
       {!isFirstStep && (
         <TouchableOpacity
-          style={[styles.button, styles.previousButton, { borderColor: colors.border }]}
+          style={styles.previousButton}
           onPress={onPrevious}
           activeOpacity={0.7}
         >
-          <ChevronLeft size={20} color={colors.text} />
-          <Text style={[styles.buttonText, { color: colors.text }]}>Geri</Text>
+          <Ionicons name="chevron-back" size={20} color={DashboardColors.text} />
+          <Text style={styles.previousButtonText}>Geri</Text>
         </TouchableOpacity>
       )}
 
       {/* Next/Submit Button */}
       <TouchableOpacity
         style={[
-          styles.button,
           styles.nextButton,
-          { backgroundColor: Brand.primary },
           isFirstStep && styles.fullWidthButton,
+          isSubmitting && styles.nextButtonDisabled,
         ]}
         onPress={isLastStep ? onSubmit : onNext}
         disabled={isSubmitting}
@@ -55,57 +66,71 @@ export default function LoadFormNavigation({
         {isSubmitting ? (
           <>
             <ActivityIndicator size="small" color="#FFFFFF" />
-            <Text style={[styles.buttonText, styles.buttonTextWhite]}>Kaydediliyor...</Text>
+            <Text style={styles.nextButtonText}>Kaydediliyor...</Text>
           </>
         ) : (
           <>
-            <Text style={[styles.buttonText, styles.buttonTextWhite]}>
+            <Text style={styles.nextButtonText}>
               {isLastStep ? submitButtonText : 'İleri'}
             </Text>
             {isLastStep ? (
-              <Save size={20} color="#FFFFFF" />
+              <Ionicons name="save-outline" size={20} color="#FFFFFF" />
             ) : (
-              <ChevronRight size={20} color="#FFFFFF" />
+              <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
             )}
           </>
         )}
       </TouchableOpacity>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    gap: Spacing.md,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
+    gap: DashboardSpacing.md,
     borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
-  button: {
+  previousButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    gap: DashboardSpacing.xs,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: 'transparent',
+  },
+  previousButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.text,
+  },
+  nextButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.xs,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary,
+  },
+  nextButtonDisabled: {
+    opacity: 0.6,
   },
   fullWidthButton: {
     flex: 1,
   },
-  previousButton: {
-    borderWidth: 1,
-    backgroundColor: 'transparent',
-  },
-  nextButton: {
-    // backgroundColor set in component
-  },
-  buttonText: {
-    ...Typography.bodyMD,
+  nextButtonText: {
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
-  },
-  buttonTextWhite: {
     color: '#FFFFFF',
   },
-});
+})

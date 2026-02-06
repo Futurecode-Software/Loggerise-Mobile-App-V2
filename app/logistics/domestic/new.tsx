@@ -1,7 +1,8 @@
-﻿/**
+/**
  * New Domestic Transport Order Screen
  *
  * Create new domestic transport order with customer, addresses, and items.
+ * CLAUDE.md form sayfası standardına uygun - animasyonlu header + KeyboardAwareScrollView
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react'
@@ -9,7 +10,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator
 } from 'react-native'
@@ -34,6 +34,8 @@ import {
 } from '@/constants/dashboard-theme'
 import { Input, DateInput } from '@/components/ui'
 import { SearchableSelectModal } from '@/components/modals/SearchableSelectModal'
+import { DomesticFormStepper } from '@/components/domestic-form/DomesticFormStepper'
+import LoadFormNavigation from '@/components/load-form/LoadFormNavigation'
 import {
   createDomesticOrder,
   DomesticOrderType,
@@ -43,7 +45,6 @@ import api, { getErrorMessage, getValidationErrors } from '@/services/api'
 
 // Order type options
 const ORDER_TYPE_OPTIONS = [
-  { label: 'Sipariş tipi seçiniz...', value: '' },
   { label: 'Ön Taşıma', value: 'pre_carriage' },
   { label: 'Dağıtım', value: 'distribution' },
   { label: 'Şehir İçi Teslimat', value: 'city_delivery' },
@@ -52,18 +53,12 @@ const ORDER_TYPE_OPTIONS = [
 
 // Billing type options
 const BILLING_TYPE_OPTIONS = [
-  { label: 'Faturalama tipi seçiniz...', value: '' },
   { label: 'Ana Faturaya Dahil', value: 'included_in_main' },
   { label: 'Ayrı Fatura', value: 'separate_invoice' },
   { label: 'Masraf Merkezi', value: 'cost_center' },
 ]
 
-// Tabs
-const TABS = [
-  { id: 'general', label: 'Genel', icon: 'document-text-outline' as const },
-  { id: 'addresses', label: 'Adresler', icon: 'location-outline' as const },
-  { id: 'items', label: 'Kalemler', icon: 'cube-outline' as const }
-]
+const TOTAL_STEPS = 3
 
 interface Customer {
   id: number
@@ -108,6 +103,7 @@ export default function NewDomesticOrderScreen() {
       -1,
       true
     )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const orb1AnimatedStyle = useAnimatedStyle(() => ({
@@ -124,7 +120,9 @@ export default function NewDomesticOrderScreen() {
     ]
   }))
 
-  const [activeTab, setActiveTab] = useState('general')
+  // Global form state
+  const [currentStep, setCurrentStep] = useState(1)
+  const [completedSteps, setCompletedSteps] = useState<number[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -143,7 +141,6 @@ export default function NewDomesticOrderScreen() {
     pickup_expected_date: '',
     delivery_expected_date: '',
     notes: '',
-    // Items will be added later
   })
 
   const orderTypeRef = useRef(null)
@@ -224,30 +221,79 @@ export default function NewDomesticOrderScreen() {
     }
   }, [errors])
 
-  // Validate form
-  const validateForm = useCallback(() => {
+  // Validate step
+  const validateStep = useCallback((step: number): boolean => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.order_type) {
-      newErrors.order_type = 'Sipariş tipi zorunludur'
-    }
-    if (!formData.customer_id) {
-      newErrors.customer_id = 'Müşteri seçimi zorunludur'
+    if (step === 1) {
+      if (!formData.order_type) {
+        newErrors.order_type = 'Sipariş tipi zorunludur'
+      }
+      if (!formData.customer_id) {
+        newErrors.customer_id = 'Müşteri seçimi zorunludur'
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors)
+        Toast.show({
+          type: 'error',
+          text1: Object.values(newErrors)[0],
+          position: 'top',
+          visibilityTime: 1500
+        })
+        return false
+      }
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return true
   }, [formData])
+
+  // Go to next step
+  const goToNextStep = useCallback(() => {
+    if (!validateStep(currentStep)) {
+      return
+    }
+
+    if (!completedSteps.includes(currentStep)) {
+      setCompletedSteps((prev) => [...prev, currentStep])
+    }
+
+    if (currentStep < TOTAL_STEPS) {
+      setCurrentStep(currentStep + 1)
+    }
+  }, [currentStep, validateStep, completedSteps])
+
+  // Go to previous step
+  const goToPreviousStep = useCallback(() => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }, [currentStep])
+
+  // Go to specific step (from stepper)
+  const goToStep = useCallback(
+    (step: number) => {
+      if (step <= currentStep || completedSteps.includes(step)) {
+        setCurrentStep(step)
+      }
+    },
+    [currentStep, completedSteps]
+  )
+
+  // Handle back navigation
+  const handleBack = useCallback(() => {
+    if (currentStep > 1) {
+      goToPreviousStep()
+    } else {
+      router.back()
+    }
+  }, [currentStep, goToPreviousStep])
 
   // Submit form
   const handleSubmit = useCallback(async () => {
-    if (!validateForm()) {
-      // Switch to tab with first error
-      if (errors.order_type || errors.customer_id || errors.billing_type) {
-        setActiveTab('general')
-      } else if (errors.pickup_address_id || errors.delivery_address_id) {
-        setActiveTab('addresses')
-      }
+    // Validate step 1
+    if (!validateStep(1)) {
+      setCurrentStep(1)
       return
     }
 
@@ -295,44 +341,27 @@ export default function NewDomesticOrderScreen() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, validateForm, errors])
-
-  // Count errors per tab
-  const getTabErrorCount = useCallback((tabId: string) => {
-    const tabFields: Record<string, string[]> = {
-      general: ['order_type', 'billing_type', 'customer_id', 'pickup_expected_date', 'delivery_expected_date', 'notes'],
-      addresses: ['pickup_address_id', 'delivery_address_id'],
-      items: [],
-    }
-
-    return Object.keys(errors).filter((field) => tabFields[tabId]?.includes(field)).length
-  }, [errors])
+  }, [formData, validateStep])
 
   // Customer options for select
-  const customerOptions = [
-    { label: 'Müşteri seçiniz...', value: '' },
-    ...customers.map((c) => ({
-      label: c.code ? `${c.name} (${c.code})` : c.name,
-      value: String(c.id),
-    })),
-  ]
+  const customerOptions = customers.map((c) => ({
+    label: c.code ? `${c.name} (${c.code})` : c.name,
+    value: String(c.id),
+  }))
 
   // Address options for select
-  const addressOptions = [
-    { label: 'Adres seçiniz...', value: '' },
-    ...addresses.map((a) => ({
-      label: a.title || a.address || `Adres ${a.id}`,
-      value: String(a.id),
-    })),
-  ]
+  const addressOptions = addresses.map((a) => ({
+    label: a.title || a.address || `Adres ${a.id}`,
+    value: String(a.id),
+  }))
 
-  const renderGeneralTab = () => (
+  const renderGeneralStep = () => (
     <>
       <TouchableOpacity onPress={() => orderTypeRef.current?.present()} style={styles.selectTrigger}>
-        <Text style={styles.selectLabel}>Siparis Tipi *</Text>
+        <Text style={styles.selectLabel}>Sipariş Tipi *</Text>
         <View style={styles.selectValueRow}>
           <Text style={[styles.selectValue, !formData.order_type && styles.selectPlaceholder]}>
-            {ORDER_TYPE_OPTIONS.find(o => o.value === formData.order_type)?.label || 'Siparis tipi seciniz...'}
+            {ORDER_TYPE_OPTIONS.find(o => o.value === formData.order_type)?.label || 'Sipariş tipi seçiniz...'}
           </Text>
           <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
         </View>
@@ -343,7 +372,7 @@ export default function NewDomesticOrderScreen() {
         <Text style={styles.selectLabel}>Faturalama Tipi</Text>
         <View style={styles.selectValueRow}>
           <Text style={[styles.selectValue, !formData.billing_type && styles.selectPlaceholder]}>
-            {BILLING_TYPE_OPTIONS.find(o => o.value === formData.billing_type)?.label || 'Faturalama tipi seciniz...'}
+            {BILLING_TYPE_OPTIONS.find(o => o.value === formData.billing_type)?.label || 'Faturalama tipi seçiniz...'}
           </Text>
           <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
         </View>
@@ -353,19 +382,19 @@ export default function NewDomesticOrderScreen() {
       {loadingCustomers ? (
         <View style={styles.loadingSelect}>
           <ActivityIndicator size="small" color={DashboardColors.primary} />
-          <Text style={styles.loadingText}>Müşteriler yükleniyor...</Text>
+          <Text style={styles.loadingSelectText}>Müşteriler yükleniyor...</Text>
         </View>
       ) : (
         <TouchableOpacity onPress={() => customerRef.current?.present()} style={styles.selectTrigger}>
-        <Text style={styles.selectLabel}>Musteri *</Text>
-        <View style={styles.selectValueRow}>
-          <Text style={[styles.selectValue, !formData.customer_id && styles.selectPlaceholder]}>
-            {customerOptions.find(o => o.value === formData.customer_id)?.label || 'Musteri seciniz...'}
-          </Text>
-          <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
-        </View>
-        {errors.customer_id && <Text style={styles.selectError}>{errors.customer_id}</Text>}
-      </TouchableOpacity>
+          <Text style={styles.selectLabel}>Müşteri *</Text>
+          <View style={styles.selectValueRow}>
+            <Text style={[styles.selectValue, !formData.customer_id && styles.selectPlaceholder]}>
+              {customerOptions.find(o => o.value === formData.customer_id)?.label || 'Müşteri seçiniz...'}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
+          </View>
+          {errors.customer_id && <Text style={styles.selectError}>{errors.customer_id}</Text>}
+        </TouchableOpacity>
       )}
 
       <DateInput
@@ -396,7 +425,7 @@ export default function NewDomesticOrderScreen() {
     </>
   )
 
-  const renderAddressesTab = () => (
+  const renderAddressesStep = () => (
     <>
       {!formData.customer_id ? (
         <View style={styles.warningBox}>
@@ -438,7 +467,7 @@ export default function NewDomesticOrderScreen() {
     </>
   )
 
-  const renderItemsTab = () => (
+  const renderItemsStep = () => (
     <View style={styles.emptyItems}>
       <Ionicons name="cube-outline" size={48} color={DashboardColors.textMuted} />
       <Text style={styles.emptyItemsText}>
@@ -447,14 +476,14 @@ export default function NewDomesticOrderScreen() {
     </View>
   )
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'general':
-        return renderGeneralTab()
-      case 'addresses':
-        return renderAddressesTab()
-      case 'items':
-        return renderItemsTab()
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return renderGeneralStep()
+      case 2:
+        return renderAddressesStep()
+      case 3:
+        return renderItemsStep()
       default:
         return null
     }
@@ -478,90 +507,69 @@ export default function NewDomesticOrderScreen() {
         <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
           <View style={styles.headerBar}>
             {/* Sol: Geri Butonu */}
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
               <Ionicons name="chevron-back" size={24} color="#fff" />
             </TouchableOpacity>
 
-            {/* Orta: Başlık */}
+            {/* Orta: Başlık ve Adım */}
             <View style={styles.headerTitleContainer}>
               <Text style={styles.headerTitle}>Yeni İş Emri</Text>
+              <Text style={styles.headerSubtitle}>
+                Adım {currentStep} / {TOTAL_STEPS}
+              </Text>
             </View>
 
-            {/* Sağ: Kaydet Butonu */}
-            <TouchableOpacity
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Ionicons name="checkmark" size={24} color="#fff" />
-              )}
-            </TouchableOpacity>
+            {/* Sağ: Boş alan (dengeleme için) */}
+            <View style={styles.headerButton} />
           </View>
         </View>
 
         <View style={styles.bottomCurve} />
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsContent}
+      {/* Content */}
+      <View style={styles.content}>
+        {/* Stepper */}
+        <DomesticFormStepper
+          currentStep={currentStep}
+          completedSteps={completedSteps}
+          onStepPress={goToStep}
+        />
+
+        {/* Step Content - Scrollable with Keyboard Support */}
+        <KeyboardAwareScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          bottomOffset={20}
         >
-          {TABS.map((tab) => {
-            const errorCount = getTabErrorCount(tab.id)
-            const isActive = activeTab === tab.id
+          {renderStepContent()}
+        </KeyboardAwareScrollView>
 
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                style={[
-                  styles.tab,
-                  isActive && styles.tabActive
-                ]}
-                onPress={() => setActiveTab(tab.id)}
-              >
-                <View style={styles.tabHeader}>
-                  <Ionicons name={tab.icon} size={18} color={isActive ? DashboardColors.primary : DashboardColors.textSecondary} />
-                  {errorCount > 0 && (
-                    <View style={styles.errorBadge}>
-                      <Text style={styles.errorBadgeText}>{errorCount}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text
-                  style={[
-                    styles.tabText,
-                    isActive && styles.tabTextActive,
-                    errorCount > 0 && styles.tabTextError
-                  ]}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
-        </ScrollView>
+        {/* Fixed Bottom Navigation */}
+        <LoadFormNavigation
+          currentStep={currentStep}
+          totalSteps={TOTAL_STEPS}
+          onPrevious={goToPreviousStep}
+          onNext={goToNextStep}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          bottomInset={insets.bottom}
+        />
+
+        {/* Loading Overlay */}
+        {isSubmitting && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={DashboardColors.primary} />
+            <Text style={styles.loadingText}>İş emri oluşturuluyor...</Text>
+          </View>
+        )}
       </View>
-
-      {/* Form Content */}
-      <KeyboardAwareScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        bottomOffset={20}
-      >
-        {renderTabContent()}
-      </KeyboardAwareScrollView>
 
       {/* SearchableSelectModal Components */}
       <SearchableSelectModal
         ref={orderTypeRef}
         title="Sipariş Tipi Seçiniz"
-        options={ORDER_TYPE_OPTIONS.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }))}
+        options={ORDER_TYPE_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
         selectedValue={formData.order_type}
         onSelect={(value) => handleInputChange('order_type', value)}
         searchPlaceholder="Sipariş tipi ara..."
@@ -571,7 +579,7 @@ export default function NewDomesticOrderScreen() {
       <SearchableSelectModal
         ref={billingTypeRef}
         title="Faturalama Tipi Seçiniz"
-        options={BILLING_TYPE_OPTIONS.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }))}
+        options={BILLING_TYPE_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
         selectedValue={formData.billing_type}
         onSelect={(value) => handleInputChange('billing_type', value)}
         searchPlaceholder="Faturalama tipi ara..."
@@ -581,7 +589,7 @@ export default function NewDomesticOrderScreen() {
       <SearchableSelectModal
         ref={customerRef}
         title="Müşteri Seçiniz"
-        options={customerOptions.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }))}
+        options={customerOptions.map(o => ({ value: o.value, label: o.label }))}
         selectedValue={formData.customer_id}
         onSelect={(value) => handleInputChange('customer_id', value)}
         searchPlaceholder="Müşteri ara..."
@@ -592,7 +600,7 @@ export default function NewDomesticOrderScreen() {
       <SearchableSelectModal
         ref={pickupAddressRef}
         title="Alım Adresi Seçiniz"
-        options={addressOptions.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }))}
+        options={addressOptions.map(o => ({ value: o.value, label: o.label }))}
         selectedValue={formData.pickup_address_id}
         onSelect={(value) => handleInputChange('pickup_address_id', value)}
         searchPlaceholder="Adres ara..."
@@ -602,7 +610,7 @@ export default function NewDomesticOrderScreen() {
       <SearchableSelectModal
         ref={deliveryAddressRef}
         title="Teslimat Adresi Seçiniz"
-        options={addressOptions.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }))}
+        options={addressOptions.map(o => ({ value: o.value, label: o.label }))}
         selectedValue={formData.delivery_address_id}
         onSelect={(value) => handleInputChange('delivery_address_id', value)}
         searchPlaceholder="Adres ara..."
@@ -619,7 +627,6 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     position: 'relative',
-    paddingBottom: 24,
     overflow: 'hidden'
   },
   glowOrb1: {
@@ -641,16 +648,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.04)'
   },
   headerContent: {
-    paddingHorizontal: DashboardSpacing.lg
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: 24
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 70,
-    paddingBottom: DashboardSpacing.lg
+    minHeight: 70
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -670,16 +677,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center'
   },
-  saveButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  saveButtonDisabled: {
-    opacity: 0.5
+  headerSubtitle: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginTop: 2
   },
   bottomCurve: {
     position: 'absolute',
@@ -691,92 +694,19 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: DashboardBorderRadius['2xl'],
     borderTopRightRadius: DashboardBorderRadius['2xl']
   },
-  tabsContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight,
-    backgroundColor: DashboardColors.background,
-    paddingTop: 0,
-  },
-  tabsContent: {
-    paddingHorizontal: DashboardSpacing.sm
-  },
-  tab: {
-    paddingHorizontal: DashboardSpacing.md,
-    paddingVertical: DashboardSpacing.sm,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-    alignItems: 'center',
-    minWidth: 80
-  },
-  tabActive: {
-    borderBottomColor: DashboardColors.primary
-  },
-  tabHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: DashboardSpacing.xs,
-    gap: 4
-  },
-  tabText: {
-    fontSize: DashboardFontSizes.sm,
-    fontWeight: '500',
-    textAlign: 'center',
-    color: DashboardColors.textSecondary
-  },
-  tabTextActive: {
-    color: DashboardColors.primary
-  },
-  tabTextError: {
-    color: '#DC2626'
-  },
-  errorBadge: {
-    backgroundColor: '#DC2626',
-    borderRadius: 10,
-    minWidth: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 4
-  },
-  errorBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
-    paddingHorizontal: 4
-  },
   content: {
     flex: 1
   },
-  contentContainer: {
+  scrollView: {
+    flex: 1
+  },
+  scrollContent: {
     padding: DashboardSpacing.lg,
-    paddingBottom: DashboardSpacing['3xl'],
+    paddingTop: 10,
+    paddingBottom: DashboardSpacing['4xl'],
     gap: DashboardSpacing.md
   },
-  loadingSelect: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DashboardSpacing.sm,
-    padding: DashboardSpacing.md
-  },
-  loadingText: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textMuted
-  },
-  warningBox: {
-    padding: DashboardSpacing.lg,
-    backgroundColor: '#f5a623' + '15',
-    borderRadius: DashboardBorderRadius.md
-  },
-  warningText: {
-    fontSize: DashboardFontSizes.base,
-    color: DashboardColors.textMuted,
-    textAlign: 'center'
-  },
-  emptyItems: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: DashboardSpacing['3xl']
-  },
+  // Select styles
   selectTrigger: {
     backgroundColor: DashboardColors.surface,
     borderRadius: DashboardBorderRadius.lg,
@@ -808,10 +738,48 @@ const styles = StyleSheet.create({
     color: DashboardColors.danger,
     marginTop: DashboardSpacing.xs
   },
+  loadingSelect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.sm,
+    padding: DashboardSpacing.md
+  },
+  loadingSelectText: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textMuted
+  },
+  warningBox: {
+    padding: DashboardSpacing.lg,
+    backgroundColor: '#f5a623' + '15',
+    borderRadius: DashboardBorderRadius.md
+  },
+  warningText: {
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textMuted,
+    textAlign: 'center'
+  },
+  emptyItems: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: DashboardSpacing['3xl']
+  },
   emptyItemsText: {
     fontSize: DashboardFontSizes.base,
     color: DashboardColors.textMuted,
     marginTop: DashboardSpacing.md,
     textAlign: 'center'
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000
+  },
+  loadingText: {
+    marginTop: DashboardSpacing.md,
+    fontSize: DashboardFontSizes.lg,
+    color: '#FFFFFF',
+    fontWeight: '500'
   }
 })

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Multi-Step Quote Creation Screen
  *
  * Web ile %100 uyumlu 5-adımlı teklif oluşturma ekranı
@@ -44,6 +44,8 @@ import { QuoteCreateBasicInfoScreen } from '@/components/quote/steps/basic-info'
 import { QuoteCreateCargoItemsScreen } from '@/components/quote/steps/cargo-items'
 import { QuoteCreatePreviewScreen } from '@/components/quote/steps/preview'
 import { QuoteCreatePricingScreen } from '@/components/quote/steps/pricing'
+
+const TOTAL_STEPS = 5
 
 export default function CreateMultiStepQuoteScreen() {
   const insets = useSafeAreaInsets()
@@ -143,7 +145,7 @@ export default function CreateMultiStepQuoteScreen() {
     }
 
     // Move to next step
-    if (currentStep < 5) {
+    if (currentStep < TOTAL_STEPS) {
       setCurrentStep(currentStep + 1)
     }
   }, [currentStep, validateCurrentStep, completedSteps])
@@ -152,8 +154,6 @@ export default function CreateMultiStepQuoteScreen() {
   const goToPreviousStep = useCallback(() => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
-    } else {
-      router.back()
     }
   }, [currentStep])
 
@@ -294,6 +294,80 @@ export default function CreateMultiStepQuoteScreen() {
     }
   }, [currentStep, goToPreviousStep])
 
+  // Render bottom navigation
+  const renderBottomNavigation = () => {
+    const isFirstStep = currentStep === 1
+    const isLastStep = currentStep === TOTAL_STEPS
+    const bottomPadding = Math.max(insets.bottom, DashboardSpacing.md)
+
+    // Son adım: Geri / Taslak Kaydet / Gönder
+    if (isLastStep) {
+      return (
+        <View style={[styles.bottomNav, { paddingBottom: bottomPadding }]}>
+          <TouchableOpacity
+            style={styles.navBackButton}
+            onPress={goToPreviousStep}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-back" size={20} color={DashboardColors.text} />
+            <Text style={styles.navBackButtonText}>Geri</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.navDraftButton, isSubmitting && styles.navButtonDisabled]}
+            onPress={() => handleSubmit('draft')}
+            disabled={isSubmitting}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="save-outline" size={18} color="#FFFFFF" />
+            <Text style={styles.navDraftButtonText}>Taslak</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.navSendButton, isSubmitting && styles.navButtonDisabled]}
+            onPress={confirmSendQuote}
+            disabled={isSubmitting}
+            activeOpacity={0.7}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="send-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.navSendButtonText}>Gönder</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )
+    }
+
+    // Diğer adımlar: Geri / İleri
+    return (
+      <View style={[styles.bottomNav, { paddingBottom: bottomPadding }]}>
+        {!isFirstStep && (
+          <TouchableOpacity
+            style={styles.navBackButton}
+            onPress={goToPreviousStep}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-back" size={20} color={DashboardColors.text} />
+            <Text style={styles.navBackButtonText}>Geri</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={[styles.navNextButton, isFirstStep && { flex: 1 }]}
+          onPress={goToNextStep}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.navNextButtonText}>İleri</Text>
+          <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
   return (
     <View style={styles.container}>
       {/* Header with gradient and animated orbs */}
@@ -319,7 +393,7 @@ export default function CreateMultiStepQuoteScreen() {
             {/* Orta: Başlık ve Adım */}
             <View style={styles.headerTitleContainer}>
               <Text style={styles.headerTitle}>Yeni Teklif</Text>
-              <Text style={styles.headerSubtitle}>Adım {currentStep} / 5</Text>
+              <Text style={styles.headerSubtitle}>Adım {currentStep} / {TOTAL_STEPS}</Text>
             </View>
 
             {/* Sağ: Boş alan (dengeleme için) */}
@@ -347,6 +421,9 @@ export default function CreateMultiStepQuoteScreen() {
         >
           {renderStepContent()}
         </KeyboardAwareScrollView>
+
+        {/* Fixed Bottom Navigation */}
+        {renderBottomNavigation()}
 
         {/* Loading Overlay */}
         {isSubmitting && (
@@ -453,8 +530,83 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: DashboardSpacing.lg,
-    paddingTop: 0,
+    paddingTop: 10,
     paddingBottom: DashboardSpacing['4xl']
+  },
+  // Bottom Navigation
+  bottomNav: {
+    flexDirection: 'row',
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
+    gap: DashboardSpacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  navBackButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.xs,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: 'transparent',
+  },
+  navBackButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.text,
+  },
+  navNextButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.xs,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary,
+  },
+  navNextButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  navDraftButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.xs,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: '#4B5563',
+  },
+  navDraftButtonText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  navSendButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DashboardSpacing.xs,
+    paddingVertical: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary,
+  },
+  navSendButtonText: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  navButtonDisabled: {
+    opacity: 0.6,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -9,13 +9,12 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
 } from 'react-native';
 import { Plus, Trash2, Package } from 'lucide-react-native';
 import { Input, Card, Checkbox, ConfirmDialog } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
-import { Colors, Spacing, Brand } from '@/constants/theme';
+import { Spacing, Brand } from '@/constants/theme';
 import { NewQuoteFormData, NewCargoItem } from '@/services/endpoints/quotes-new-format';
 import { useToast } from '@/hooks/use-toast';
 
@@ -50,7 +49,6 @@ export function QuoteCreateCargoItemsScreen({
   onNext,
   onBack,
 }: QuoteCreateCargoItemsScreenProps) {
-  const colors = Colors.light;
   const cargoItems = data.cargo_items || [];
   const toast = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -258,25 +256,6 @@ export function QuoteCreateCargoItemsScreen({
           <Plus size={20} color={Brand.primary} />
           <Text style={styles.addButtonText}>Kalem Ekle</Text>
         </TouchableOpacity>
-
-      {/* Bottom Actions */}
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={onBack}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.backButtonText}>Geri</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.nextButton}
-          onPress={onNext}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.nextButtonText}>Sonraki Adım</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

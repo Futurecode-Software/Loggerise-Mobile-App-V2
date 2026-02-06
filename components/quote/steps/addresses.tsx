@@ -9,19 +9,17 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Modal,
 } from 'react-native';
 import { MapPin, Plus } from 'lucide-react-native';
-import { Input, Card, AutocompleteInput, SelectInput } from '@/components/ui';
+import { Card, AutocompleteInput, SelectInput } from '@/components/ui';
 import type { AutocompleteOption } from '@/components/ui';
-import { Colors, Spacing, Brand } from '@/constants/theme';
+import { Spacing, Brand } from '@/constants/theme';
 import {
   NewQuoteFormData,
   PickupType,
   DeliveryType,
-  NewAddressData,
 } from '@/services/endpoints/quotes-new-format';
 import { getContactAddresses } from '@/services/endpoints/contacts';
 
@@ -50,8 +48,6 @@ export function QuoteCreateAddressesScreen({
   onNext,
   onBack,
 }: QuoteCreateAddressesScreenProps) {
-  const colors = Colors.light;
-
   const [showPickupAddressForm, setShowPickupAddressForm] = useState(false);
   const [showDeliveryAddressForm, setShowDeliveryAddressForm] = useState(false);
 
@@ -234,25 +230,6 @@ export function QuoteCreateAddressesScreen({
             </View>
           )}
         </Card>
-
-      {/* Bottom Actions */}
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={onBack}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.backButtonText}>Geri</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.nextButton}
-          onPress={onNext}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.nextButtonText}>Sonraki Adım</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Yeni Adres Modal (Pickup) - Basitleştirilmiş versiyon */}
       <Modal

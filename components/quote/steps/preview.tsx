@@ -9,10 +9,8 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  TouchableOpacity,
 } from 'react-native';
-import { Eye, Save, Send } from 'lucide-react-native';
+import { Eye } from 'lucide-react-native';
 import { Card } from '@/components/ui';
 import { Spacing, Brand } from '@/constants/theme';
 import { NewQuoteFormData } from '@/services/endpoints/quotes-new-format';
@@ -306,34 +304,6 @@ export function QuoteCreatePreviewScreen({
           </Card>
         )}
 
-      {/* Bottom Actions */}
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={onBack}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.backButtonText}>Geri</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.draftButton}
-          onPress={onSaveDraft}
-          activeOpacity={0.8}
-        >
-          <Save size={20} color="#FFFFFF" />
-          <Text style={styles.draftButtonText}>Taslak Kaydet</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.sendButton}
-          onPress={onSend}
-          activeOpacity={0.8}
-        >
-          <Send size={20} color="#FFFFFF" />
-          <Text style={styles.sendButtonText}>Gönder</Text>
-        </TouchableOpacity>
-            </View>
     </>
   );
 }

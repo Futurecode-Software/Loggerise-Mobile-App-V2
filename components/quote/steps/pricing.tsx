@@ -9,14 +9,13 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import { DollarSign, Plus, Trash2, FileText } from 'lucide-react-native';
 import { Input, Card, Checkbox } from '@/components/ui';
 import { SelectInput } from '@/components/ui/select-input';
-import { Colors, Spacing, Brand } from '@/constants/theme';
+import { Spacing, Brand } from '@/constants/theme';
 import { NewQuoteFormData, PricingItem } from '@/services/endpoints/quotes-new-format';
 import { getCurrentRate } from '@/services/endpoints/exchange-rates';
 import { useToast } from '@/hooks/use-toast';
@@ -47,7 +46,6 @@ export function QuoteCreatePricingScreen({
   onNext,
   onBack,
 }: QuoteCreatePricingScreenProps) {
-  const colors = Colors.light;
   const [isLoadingRate, setIsLoadingRate] = useState(false);
   const pricingItems = data.pricing_items || [];
   const toast = useToast();
@@ -308,24 +306,6 @@ export function QuoteCreatePricingScreen({
           />
         </Card>
 
-      {/* Bottom Actions */}
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={onBack}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.backButtonText}>Geri</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.nextButton}
-          onPress={onNext}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.nextButtonText}>Önizleme</Text>
-        </TouchableOpacity>
-            </View>
     </>
   );
 }

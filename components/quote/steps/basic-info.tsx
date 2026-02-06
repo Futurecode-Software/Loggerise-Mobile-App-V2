@@ -352,18 +352,6 @@ export function QuoteCreateBasicInfoScreen({
         </View>
       </View>
 
-      {/* Bottom Actions */}
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-          style={styles.nextButton}
-          onPress={onNext}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
-          <Text style={styles.nextButtonText}>Sonraki Adım</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Customer Select Modal */}
       <SearchableSelectModal
         ref={customerModalRef}

@@ -546,17 +546,18 @@ export default function NewLoadScreen() {
           bottomOffset={20}
         >
           {renderStep()}
-
-          {/* Navigation Buttons */}
-          <LoadFormNavigation
-            currentStep={currentStep}
-            totalSteps={TOTAL_STEPS}
-            onPrevious={goToPreviousStep}
-            onNext={goToNextStep}
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
-          />
         </KeyboardAwareScrollView>
+
+        {/* Fixed Bottom Navigation */}
+        <LoadFormNavigation
+          currentStep={currentStep}
+          totalSteps={TOTAL_STEPS}
+          onPrevious={goToPreviousStep}
+          onNext={goToNextStep}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          bottomInset={insets.bottom}
+        />
 
         {/* Loading Overlay */}
         {isSubmitting && (
@@ -652,7 +653,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: DashboardSpacing.lg,
-    paddingTop: 0,
+    paddingTop: 10,
     paddingBottom: DashboardSpacing['4xl']
   },
   loadingOverlay: {
