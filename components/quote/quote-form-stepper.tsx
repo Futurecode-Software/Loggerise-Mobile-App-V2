@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingTop: Spacing.lg,
+    paddingTop: 0,
     paddingBottom: Spacing.md,
     paddingHorizontal: Spacing.sm,
     backgroundColor: 'transparent',

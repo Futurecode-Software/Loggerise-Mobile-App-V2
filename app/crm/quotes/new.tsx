@@ -6,44 +6,44 @@
  * CLAUDE.md form sayfası standardına uygun - animasyonlu header + KeyboardAwareScrollView
  */
 
-import React, { useState, useCallback, useEffect } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity
-} from 'react-native'
-import { router } from 'expo-router'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { LinearGradient } from 'expo-linear-gradient'
-import { Ionicons } from '@expo/vector-icons'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing
-} from 'react-native-reanimated'
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
-import Toast from 'react-native-toast-message'
-import {
-  DashboardColors,
-  DashboardSpacing,
-  DashboardFontSizes,
-  DashboardBorderRadius
-} from '@/constants/dashboard-theme'
-import { ConfirmDialog } from '@/components/ui'
 import { QuoteFormStepper } from '@/components/quote/quote-form-stepper'
-import { NewQuoteFormData, validateStep } from '@/services/endpoints/quotes-new-format'
+import { ConfirmDialog } from '@/components/ui'
+import {
+  DashboardBorderRadius,
+  DashboardColors,
+  DashboardFontSizes,
+  DashboardSpacing
+} from '@/constants/dashboard-theme'
 import api from '@/services/api'
+import { NewQuoteFormData, validateStep } from '@/services/endpoints/quotes-new-format'
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { router } from 'expo-router'
+import React, { useCallback, useEffect, useState } from 'react'
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming
+} from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Toast from 'react-native-toast-message'
 
 // Step component imports
+import { QuoteCreateAddressesScreen } from '@/components/quote/steps/addresses'
 import { QuoteCreateBasicInfoScreen } from '@/components/quote/steps/basic-info'
 import { QuoteCreateCargoItemsScreen } from '@/components/quote/steps/cargo-items'
-import { QuoteCreateAddressesScreen } from '@/components/quote/steps/addresses'
-import { QuoteCreatePricingScreen } from '@/components/quote/steps/pricing'
 import { QuoteCreatePreviewScreen } from '@/components/quote/steps/preview'
+import { QuoteCreatePricingScreen } from '@/components/quote/steps/pricing'
 
 export default function CreateMultiStepQuoteScreen() {
   const insets = useSafeAreaInsets()
@@ -75,7 +75,7 @@ export default function CreateMultiStepQuoteScreen() {
       -1,
       true
     )
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const orb1AnimatedStyle = useAnimatedStyle(() => ({
@@ -400,13 +400,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.04)'
   },
   headerContent: {
-    paddingHorizontal: DashboardSpacing.lg
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: DashboardSpacing.md
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: DashboardSpacing.lg
+    minHeight: 70
   },
   headerButton: {
     width: 40,
@@ -453,6 +454,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: DashboardSpacing.lg,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing['4xl']
   },
   loadingOverlay: {
