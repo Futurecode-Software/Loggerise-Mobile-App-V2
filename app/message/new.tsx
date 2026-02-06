@@ -193,6 +193,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 70,
     paddingBottom: DashboardSpacing.lg
   },
   backButton: {
