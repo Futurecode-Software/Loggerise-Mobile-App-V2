@@ -378,7 +378,6 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     position: 'relative',
-    paddingBottom: 24,
     overflow: 'hidden'
   },
   glowOrb1: {
@@ -401,7 +400,7 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingBottom: DashboardSpacing.md
+    paddingBottom: 24
   },
   headerBar: {
     flexDirection: 'row',
