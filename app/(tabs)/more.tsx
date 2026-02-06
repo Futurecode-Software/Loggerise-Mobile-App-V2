@@ -4,26 +4,26 @@
  * Ana navigasyon menüsü - Tüm modüllere erişim
  */
 
-import React, { useState, useMemo, useRef } from 'react'
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform, TextInput, InteractionManager } from 'react-native'
-import { useRouter } from 'expo-router'
+import { PageHeader } from '@/components/navigation'
+import {
+  DashboardAnimations,
+  DashboardBorderRadius,
+  DashboardColors,
+  DashboardFontSizes,
+  DashboardShadows,
+  DashboardSpacing
+} from '@/constants/dashboard-theme'
 import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
+import { useRouter } from 'expo-router'
+import React, { useMemo, useRef, useState } from 'react'
+import { InteractionManager, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
   withTiming
 } from 'react-native-reanimated'
-import * as Haptics from 'expo-haptics'
-import { PageHeader } from '@/components/navigation'
-import {
-  DashboardColors,
-  DashboardSpacing,
-  DashboardFontSizes,
-  DashboardBorderRadius,
-  DashboardShadows,
-  DashboardAnimations
-} from '@/constants/dashboard-theme'
 
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
@@ -78,7 +78,7 @@ function CollapsibleMenu({ category, isExpanded, onToggle, router, scrollViewRef
           const scrollY = Math.max(0, y - DashboardSpacing.md)
           scrollViewRef.current?.scrollTo({ y: scrollY, animated: true })
         },
-        () => {}
+        () => { }
       )
     }
   }
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: DashboardSpacing['2xl'],
-    paddingTop: DashboardSpacing.xl
+    paddingTop: 0
   },
   searchContainer: {
     flexDirection: 'row',

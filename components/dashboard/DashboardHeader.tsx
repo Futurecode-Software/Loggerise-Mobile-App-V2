@@ -5,47 +5,36 @@
  * and horizontal scrollable tab list
  */
 
-import React, { useEffect } from 'react'
 import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-  Image,
-} from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { LinearGradient } from 'expo-linear-gradient'
-import { Ionicons } from '@expo/vector-icons'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withRepeat,
-  withSequence,
-  interpolate,
-  Easing,
-  FadeIn,
-  FadeInDown,
-} from 'react-native-reanimated'
-import {
-  DashboardColors,
-  DashboardSpacing,
   DashboardBorderRadius,
+  DashboardColors,
   DashboardFontSizes,
+  DashboardSpacing,
 } from '@/constants/dashboard-theme'
 import { useAuth } from '@/context/auth-context'
-
-interface DashboardTab {
-  id: string
-  label: string
-  icon: keyof typeof Ionicons.glyphMap
-}
+import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import React, { useEffect } from 'react'
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View
+} from 'react-native'
+import Animated, {
+  Easing,
+  FadeInDown,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming
+} from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 interface DashboardHeaderProps {
-  tabs: DashboardTab[]
-  activeTab: string
-  onTabChange: (tabId: string) => void
   notificationCount?: number
   messageCount?: number
   onNotificationPress?: () => void
@@ -53,12 +42,7 @@ interface DashboardHeaderProps {
   onAvatarPress?: () => void
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
-
 export default function DashboardHeader({
-  tabs,
-  activeTab,
-  onTabChange,
   notificationCount = 0,
   messageCount = 0,
   onNotificationPress,
@@ -122,7 +106,7 @@ export default function DashboardHeader({
       <Animated.View style={[styles.glowOrb2, glowStyle]} />
 
       {/* Content */}
-      <View style={[styles.content, { paddingTop: insets.top + DashboardSpacing.md }]}>
+      <View style={[styles.content, { paddingTop: insets.top + 16 }]}>
         {/* Top Row */}
         <Animated.View
           entering={FadeInDown.delay(100).duration(400)}
@@ -188,49 +172,6 @@ export default function DashboardHeader({
             </Pressable>
           </View>
         </Animated.View>
-
-        {/* Tabs */}
-        <Animated.View
-          entering={FadeIn.delay(300).duration(400)}
-        >
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabsContainer}
-          >
-            {tabs.map((tab) => {
-              const isActive = tab.id === activeTab
-
-              return (
-                <AnimatedPressable
-                  key={tab.id}
-                  style={[
-                    styles.tab,
-                    isActive && styles.tabActive,
-                  ]}
-                  onPress={() => onTabChange(tab.id)}
-                >
-                  <Ionicons
-                    name={tab.icon}
-                    size={16}
-                    color={isActive
-                      ? DashboardColors.textOnPrimary
-                      : DashboardColors.textOnPrimaryMuted
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      isActive && styles.tabLabelActive,
-                    ]}
-                  >
-                    {tab.label}
-                  </Text>
-                </AnimatedPressable>
-              )
-            })}
-          </ScrollView>
-        </Animated.View>
       </View>
 
       {/* Bottom curve */}
@@ -246,7 +187,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: DashboardSpacing['2xl'],
-    paddingBottom: DashboardSpacing['3xl'],
+    paddingBottom: 24,
   },
   glowOrb1: {
     position: 'absolute',
@@ -270,7 +211,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: DashboardSpacing.xl,
+    minHeight: 70,
   },
   userSection: {
     flexDirection: 'row',

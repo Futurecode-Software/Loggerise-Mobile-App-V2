@@ -1,27 +1,27 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, RefreshControl, Pressable } from 'react-native'
-import { useRouter } from 'expo-router'
+import { StatusBadge } from '@/components/contacts/StatusBadge'
+import { PageHeader } from '@/components/navigation'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DashboardAnimations,
+  DashboardBorderRadius,
+  DashboardColors,
+  DashboardFontSizes,
+  DashboardShadows,
+  DashboardSpacing
+} from '@/constants/dashboard-theme'
+import { getContacts } from '@/services/endpoints/contacts'
+import type { Contact } from '@/types/contact'
+import { getContactTypeLabel } from '@/utils/contacts/labels'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
+import { useRouter } from 'expo-router'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withSpring
 } from 'react-native-reanimated'
-import { PageHeader } from '@/components/navigation'
-import { StatusBadge } from '@/components/contacts/StatusBadge'
-import { Skeleton } from '@/components/ui/skeleton'
-import type { Contact } from '@/types/contact'
-import { getContacts } from '@/services/endpoints/contacts'
-import { getContactTypeLabel } from '@/utils/contacts/labels'
-import {
-  DashboardColors,
-  DashboardSpacing,
-  DashboardFontSizes,
-  DashboardBorderRadius,
-  DashboardShadows,
-  DashboardAnimations
-} from '@/constants/dashboard-theme'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: DashboardColors.surface,
     marginHorizontal: DashboardSpacing.lg,
-    marginTop: DashboardSpacing.lg,
+    marginTop: 0,
     marginBottom: DashboardSpacing.md,
     paddingHorizontal: DashboardSpacing.md,
     borderRadius: DashboardBorderRadius.lg,

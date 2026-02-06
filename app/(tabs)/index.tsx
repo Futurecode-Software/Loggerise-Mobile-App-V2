@@ -6,30 +6,30 @@
  * Backend API'den gelen verilerle beslenir
  */
 
-import React, { useCallback, useMemo } from 'react'
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  Text,
-  ActivityIndicator,
-} from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { DashboardHeader, DashboardTabs, MetricCard, QuickActionButton } from '@/components/dashboard'
 import {
   DashboardColors,
-  DashboardSpacing,
   DashboardFontSizes,
+  DashboardSpacing,
 } from '@/constants/dashboard-theme'
-import { DashboardHeader, MetricCard, QuickActionButton } from '@/components/dashboard'
 import {
-  useDashboard,
-  DashboardTab
+  DashboardTab,
+  useDashboard
 } from '@/context/dashboard-context'
-import { useRouter } from 'expo-router'
-import { formatDashboardCurrency } from '@/utils/currency'
-import { useNotificationContext } from '@/context/notification-context'
 import { useMessageContext } from '@/context/message-context'
+import { useNotificationContext } from '@/context/notification-context'
+import { formatDashboardCurrency } from '@/utils/currency'
+import { Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
+import React, { useCallback, useMemo } from 'react'
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 
 // Metrik tipi
 interface Metric {
@@ -459,9 +459,6 @@ export default function Dashboard() {
     <View style={styles.container}>
       {/* Header - her zaman goster */}
       <DashboardHeader
-        tabs={headerTabs}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
         notificationCount={notificationCount}
         messageCount={messageCount}
         onNotificationPress={handleNotificationPress}
@@ -508,9 +505,15 @@ export default function Dashboard() {
           </View>
         ) : (
           <>
+            {/* Tab'lar - beyaz content alanında */}
+            <DashboardTabs
+              tabs={headerTabs}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+            />
+
             {/* Metrikler Bölümü */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Özet</Text>
 
               {isTabLoading && currentMetrics.length === 0 ? (
                 <View style={styles.tabLoadingContainer}>
@@ -582,7 +585,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: DashboardSpacing['2xl'],
-    paddingTop: DashboardSpacing.lg,
+    paddingTop: 0,
   },
   section: {
     marginBottom: DashboardSpacing['2xl'],

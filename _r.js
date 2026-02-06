@@ -1,2 +1,0 @@
-const fs=require("fs"),p=require("path");const f=p.join(process.cwd(),"app","admin","notification-broadcast","new.tsx");let c=fs.readFileSync(f,"utf8");c=c.replace("import { SelectInput } from '@/components/ui/select-input'","import { FormHeader } from '@/components/navigation/FormHeader'
-import { SearchableSelectModal, SearchableSelectModalRef, SelectOption } from '@/components/modals/SearchableSelectModal'");fs.writeFileSync(f,c);console.log("done",c.includes("FormHeader"));

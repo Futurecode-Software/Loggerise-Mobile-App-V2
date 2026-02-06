@@ -5,26 +5,26 @@
  * %100 Backend uyumlu
  */
 
-import React, { useState, useRef } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import { router } from 'expo-router'
-import * as Haptics from 'expo-haptics'
-import * as ImagePicker from 'expo-image-picker'
-import Constants from 'expo-constants'
-import Toast from 'react-native-toast-message'
-import { BottomSheetModal } from '@gorhom/bottom-sheet'
-import { PageHeader } from '@/components/navigation'
 import CustomBottomSheet from '@/components/modals/CustomBottomSheet'
+import { PageHeader } from '@/components/navigation'
 import {
-  DashboardColors,
-  DashboardSpacing,
-  DashboardFontSizes,
   DashboardBorderRadius,
-  DashboardShadows
+  DashboardColors,
+  DashboardFontSizes,
+  DashboardShadows,
+  DashboardSpacing
 } from '@/constants/dashboard-theme'
 import { useAuth } from '@/context/auth-context'
-import { uploadAvatar, deleteAvatar } from '@/services/endpoints/profile'
+import { deleteAvatar, uploadAvatar } from '@/services/endpoints/profile'
+import { Ionicons } from '@expo/vector-icons'
+import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import Constants from 'expo-constants'
+import * as Haptics from 'expo-haptics'
+import * as ImagePicker from 'expo-image-picker'
+import { router } from 'expo-router'
+import React, { useRef, useState } from 'react'
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import Toast from 'react-native-toast-message'
 
 export default function ProfileScreen(): React.ReactElement {
   const { user, refreshUser } = useAuth()
@@ -94,17 +94,17 @@ export default function ProfileScreen(): React.ReactElement {
       // Resim seç
       const result = source === 'camera'
         ? await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8
-          })
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8
+        })
         : await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8
-          })
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8
+        })
 
       if (!result.canceled && result.assets[0]) {
         await handleUploadAvatar(result.assets[0].uri)
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: DashboardSpacing['2xl'],
-    paddingTop: DashboardSpacing.xl
+    paddingTop: 0
   },
   userCard: {
     backgroundColor: DashboardColors.surface,

@@ -4,57 +4,57 @@
  * Ana yük listesi - filtreleme, arama ve infinite scroll
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  RefreshControl,
-  ActivityIndicator,
-  Pressable
-} from 'react-native'
-import { useRouter } from 'expo-router'
-import { useFocusEffect } from '@react-navigation/native'
-import { Ionicons } from '@expo/vector-icons'
-import * as Haptics from 'expo-haptics'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring
-} from 'react-native-reanimated'
-import {
-  BottomSheetModal,
-  BottomSheetBackdrop,
-  BottomSheetBackdropProps,
-  BottomSheetView
-} from '@gorhom/bottom-sheet'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PageHeader } from '@/components/navigation'
 import { LoadListSkeleton } from '@/components/ui/skeleton'
 import {
-  DashboardColors,
-  DashboardSpacing,
-  DashboardFontSizes,
+  DashboardAnimations,
   DashboardBorderRadius,
+  DashboardColors,
+  DashboardFontSizes,
   DashboardShadows,
-  DashboardAnimations
+  DashboardSpacing
 } from '@/constants/dashboard-theme'
 import {
-  LoadStatusColors,
-  LoadStatusBgColors,
-  LoadStatusLabels,
-  LoadDirectionColors,
+  DIRECTION_FILTER_OPTIONS,
   LoadDirectionBgColors,
+  LoadDirectionColors,
   LoadDirectionLabels,
-  STATUS_FILTER_OPTIONS,
-  DIRECTION_FILTER_OPTIONS
+  LoadStatusBgColors,
+  LoadStatusColors,
+  LoadStatusLabels,
+  STATUS_FILTER_OPTIONS
 } from '@/constants/load-theme'
 import { getLoads } from '@/services/endpoints/loads'
-import type { Load, LoadStatus, LoadDirection, Pagination } from '@/types/load'
+import type { Load, LoadDirection, LoadStatus, Pagination } from '@/types/load'
 import { formatCurrency } from '@/utils/currency'
+import { Ionicons } from '@expo/vector-icons'
+import {
+  BottomSheetBackdrop,
+  BottomSheetBackdropProps,
+  BottomSheetModal,
+  BottomSheetView
+} from '@gorhom/bottom-sheet'
+import { useFocusEffect } from '@react-navigation/native'
+import * as Haptics from 'expo-haptics'
+import { useRouter } from 'expo-router'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native'
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring
+} from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -623,177 +623,177 @@ export default function LoadsScreen() {
 
         {/* İçerik */}
         <View style={styles.content}>
-        {/* Arama Kutusu */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchInputWrapper}>
-            <Ionicons
-              name="search"
-              size={20}
-              color={DashboardColors.textMuted}
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Yük no, kargo adı veya müşteri ara..."
-              placeholderTextColor={DashboardColors.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setSearchQuery('')}
-                style={styles.clearButton}
-              >
-                <Ionicons
-                  name="close-circle"
-                  size={20}
-                  color={DashboardColors.textMuted}
-                />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-
-        {/* Yük Listesi */}
-        <FlatList
-          data={loads}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <LoadCard
-              item={item}
-              onPress={() => handleLoadPress(item)}
-            />
-          )}
-          contentContainerStyle={[
-            styles.listContent,
-            loads.length === 0 && styles.listContentEmpty
-          ]}
-          showsVerticalScrollIndicator={false}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          ListEmptyComponent={renderEmptyState}
-          ListFooterComponent={renderFooter}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={DashboardColors.primary}
-              colors={[DashboardColors.primary]}
-            />
-          }
-        />
-      </View>
-    </View>
-
-    {/* Filtre Bottom Sheet Modal */}
-    <BottomSheetModal
-      ref={filterBottomSheetRef}
-      enablePanDownToClose={true}
-      enableDynamicSizing={true}
-      animateOnMount={true}
-      backdropComponent={renderBackdrop}
-      backgroundStyle={styles.bottomSheetBackground}
-      handleIndicatorStyle={styles.bottomSheetHandle}
-    >
-      <BottomSheetView>
-        {/* Modal Header - Sabit */}
-        <View style={styles.modalHeader}>
-          <View style={styles.modalHeaderLeft}>
-            <View style={styles.modalIconContainer}>
+          {/* Arama Kutusu */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputWrapper}>
               <Ionicons
-                name="funnel"
+                name="search"
                 size={20}
-                color={DashboardColors.primary}
+                color={DashboardColors.textMuted}
+                style={styles.searchIcon}
               />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Yük no, kargo adı veya müşteri ara..."
+                placeholderTextColor={DashboardColors.textMuted}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery('')}
+                  style={styles.clearButton}
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={20}
+                    color={DashboardColors.textMuted}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
-            <Text style={styles.modalTitle}>Filtreler</Text>
-            {activeFilterCount > 0 && (
-              <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-              </View>
+          </View>
+
+
+          {/* Yük Listesi */}
+          <FlatList
+            data={loads}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
+              <LoadCard
+                item={item}
+                onPress={() => handleLoadPress(item)}
+              />
             )}
-          </View>
-          <TouchableOpacity
-            style={styles.modalCloseButton}
-            onPress={closeFilterModal}
-          >
-            <Ionicons
-              name="close"
-              size={24}
-              color={DashboardColors.textSecondary}
-            />
-          </TouchableOpacity>
+            contentContainerStyle={[
+              styles.listContent,
+              loads.length === 0 && styles.listContentEmpty
+            ]}
+            showsVerticalScrollIndicator={false}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            ListEmptyComponent={renderEmptyState}
+            ListFooterComponent={renderFooter}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={DashboardColors.primary}
+                colors={[DashboardColors.primary]}
+              />
+            }
+          />
         </View>
+      </View>
 
-        {/* Filtre İçeriği */}
-        <View style={styles.modalBody}>
-          {/* Yön Filtreleri */}
-          <View style={styles.filterGroup}>
-            <Text style={styles.filterGroupTitle}>Yön</Text>
-            <View style={styles.filterOptionsGrid}>
-              {DIRECTION_FILTER_OPTIONS.map((item) => (
-                <FilterChip
-                  key={item.id}
-                  label={item.label}
-                  isActive={activeDirectionFilter === item.id}
-                  color={
-                    item.id !== 'all'
-                      ? LoadDirectionColors[item.id as LoadDirection]
-                      : undefined
-                  }
-                  onPress={() => setActiveDirectionFilter(item.id)}
+      {/* Filtre Bottom Sheet Modal */}
+      <BottomSheetModal
+        ref={filterBottomSheetRef}
+        enablePanDownToClose={true}
+        enableDynamicSizing={true}
+        animateOnMount={true}
+        backdropComponent={renderBackdrop}
+        backgroundStyle={styles.bottomSheetBackground}
+        handleIndicatorStyle={styles.bottomSheetHandle}
+      >
+        <BottomSheetView>
+          {/* Modal Header - Sabit */}
+          <View style={styles.modalHeader}>
+            <View style={styles.modalHeaderLeft}>
+              <View style={styles.modalIconContainer}>
+                <Ionicons
+                  name="funnel"
+                  size={20}
+                  color={DashboardColors.primary}
                 />
-              ))}
+              </View>
+              <Text style={styles.modalTitle}>Filtreler</Text>
+              {activeFilterCount > 0 && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={closeFilterModal}
+            >
+              <Ionicons
+                name="close"
+                size={24}
+                color={DashboardColors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Filtre İçeriği */}
+          <View style={styles.modalBody}>
+            {/* Yön Filtreleri */}
+            <View style={styles.filterGroup}>
+              <Text style={styles.filterGroupTitle}>Yön</Text>
+              <View style={styles.filterOptionsGrid}>
+                {DIRECTION_FILTER_OPTIONS.map((item) => (
+                  <FilterChip
+                    key={item.id}
+                    label={item.label}
+                    isActive={activeDirectionFilter === item.id}
+                    color={
+                      item.id !== 'all'
+                        ? LoadDirectionColors[item.id as LoadDirection]
+                        : undefined
+                    }
+                    onPress={() => setActiveDirectionFilter(item.id)}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {/* Durum Filtreleri */}
+            <View style={styles.filterGroup}>
+              <Text style={styles.filterGroupTitle}>Durum</Text>
+              <View style={styles.filterOptionsGrid}>
+                {STATUS_FILTER_OPTIONS.map((item) => (
+                  <FilterChip
+                    key={item.id}
+                    label={item.label}
+                    isActive={activeStatusFilter === item.id}
+                    color={
+                      item.id !== 'all'
+                        ? LoadStatusColors[item.id as LoadStatus]
+                        : undefined
+                    }
+                    onPress={() => setActiveStatusFilter(item.id)}
+                  />
+                ))}
+              </View>
             </View>
           </View>
 
-          {/* Durum Filtreleri */}
-          <View style={styles.filterGroup}>
-            <Text style={styles.filterGroupTitle}>Durum</Text>
-            <View style={styles.filterOptionsGrid}>
-              {STATUS_FILTER_OPTIONS.map((item) => (
-                <FilterChip
-                  key={item.id}
-                  label={item.label}
-                  isActive={activeStatusFilter === item.id}
-                  color={
-                    item.id !== 'all'
-                      ? LoadStatusColors[item.id as LoadStatus]
-                      : undefined
-                  }
-                  onPress={() => setActiveStatusFilter(item.id)}
-                />
-              ))}
-            </View>
+          {/* Modal Footer */}
+          <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, DashboardSpacing.lg) }]}>
+            <TouchableOpacity
+              style={styles.modalClearButton}
+              onPress={clearFilters}
+            >
+              <Ionicons
+                name="refresh-outline"
+                size={18}
+                color={DashboardColors.textSecondary}
+              />
+              <Text style={styles.clearButtonText}>Temizle</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.applyButton}
+              onPress={closeFilterModal}
+            >
+              <Text style={styles.applyButtonText}>Uygula</Text>
+              <Ionicons name="checkmark" size={18} color="#fff" />
+            </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Modal Footer */}
-        <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, DashboardSpacing.lg) }]}>
-          <TouchableOpacity
-            style={styles.modalClearButton}
-            onPress={clearFilters}
-          >
-            <Ionicons
-              name="refresh-outline"
-              size={18}
-              color={DashboardColors.textSecondary}
-            />
-            <Text style={styles.clearButtonText}>Temizle</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.applyButton}
-            onPress={closeFilterModal}
-          >
-            <Text style={styles.applyButtonText}>Uygula</Text>
-            <Ionicons name="checkmark" size={18} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </BottomSheetView>
-    </BottomSheetModal>
-  </>
+        </BottomSheetView>
+      </BottomSheetModal>
+    </>
   )
 }
 
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
   // Arama
   searchContainer: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: DashboardSpacing.md,
+    paddingTop: 0,
     paddingBottom: DashboardSpacing.sm
   },
   searchInputWrapper: {
