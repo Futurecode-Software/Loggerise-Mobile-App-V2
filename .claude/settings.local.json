@@ -93,7 +93,20 @@
       "Bash(echo:*)",
       "Bash(perl:*)",
       "Bash(for f in app/accounting/index.tsx app/crm/index.tsx app/fleet/index.tsx app/hr/index.tsx app/inventory/index.tsx app/inventory/stock/index.tsx app/logistics/index.tsx)",
-      "Bash(do)"
+      "Bash(do)",
+      "Bash({)",
+      "Bash(if grep -q \"PageHeader\" \"$file\")",
+      "Bash(then)",
+      "Bash(__NEW_LINE_c115e828bbec1262__ echo \"\")",
+      "Bash(__NEW_LINE_c115e828bbec1262__ echo \"# FormHeader kullananlar:\")",
+      "Bash(__NEW_LINE_656804d4702a6787__ echo \"\")",
+      "Bash(__NEW_LINE_b960818b06f6bf60__ echo \"\")",
+      "Bash(elif grep -q \"FormHeader\" \"$file\")",
+      "Bash(elif grep -q \"LinearGradient\" \"$file\")",
+      "Bash(else)",
+      "Bash(cat:*)",
+      "Bash(copy \"C:\\\\loggerisemobil\\\\app\\\\event\\\\[id].tsx\" \"C:\\\\loggerisemobil\\\\app\\\\event\\\\[id]\\\\index.tsx\")",
+      "Bash(del \"C:\\\\loggerisemobil\\\\app\\\\event\\\\[id].tsx\")"
     ]
   },
   "enableAllProjectMcpServers": true,

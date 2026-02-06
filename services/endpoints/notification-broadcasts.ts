@@ -65,6 +65,7 @@ export async function getBroadcasts(params?: {
   status?: BroadcastStatus | 'all'
 }) {
   const response = await api.get<{
+    success: boolean
     data: NotificationBroadcast[]
     meta: {
       current_page: number
@@ -73,39 +74,39 @@ export async function getBroadcasts(params?: {
       total: number
     }
   }>('/notification-broadcasts', { params })
-  return response.data
+  return { data: response.data.data, meta: response.data.meta }
 }
 
 export async function getBroadcast(id: number) {
-  const response = await api.get<NotificationBroadcast>(`/notification-broadcasts/${id}`)
-  return response.data
+  const response = await api.get<{ success: boolean, data: NotificationBroadcast }>(`/notification-broadcasts/${id}`)
+  return response.data.data
 }
 
 export async function createBroadcast(data: BroadcastCreateData) {
-  const response = await api.post<NotificationBroadcast>('/notification-broadcasts', data)
-  return response.data
+  const response = await api.post<{ success: boolean, data: NotificationBroadcast }>('/notification-broadcasts', data)
+  return response.data.data
 }
 
 export async function deleteBroadcast(id: number) {
-  const response = await api.delete(`/notification-broadcasts/${id}`)
+  const response = await api.delete<{ success: boolean, message: string }>(`/notification-broadcasts/${id}`)
   return response.data
 }
 
 export async function getUsers(search?: string) {
-  const response = await api.get<User[]>('/notification-broadcasts/targets/users', {
+  const response = await api.get<{ success: boolean, data: User[] }>('/notification-broadcasts/targets/users', {
     params: { search }
   })
-  return response.data
+  return response.data.data
 }
 
 export async function getRoles() {
-  const response = await api.get<Role[]>('/notification-broadcasts/targets/roles')
-  return response.data
+  const response = await api.get<{ success: boolean, data: Role[] }>('/notification-broadcasts/targets/roles')
+  return response.data.data
 }
 
 export async function getRoutes() {
-  const response = await api.get<Route[]>('/notification-broadcasts/targets/routes')
-  return response.data
+  const response = await api.get<{ success: boolean, data: Route[] }>('/notification-broadcasts/targets/routes')
+  return response.data.data
 }
 
 // Helper functions
