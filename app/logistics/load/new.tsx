@@ -1,7 +1,8 @@
-﻿/**
+/**
  * New Load Screen - 6 Step Wizard
  *
  * Web versiyonu ile %100 uyumlu - Müşteri/Firma seçimleri, fiyatlandırma kalemleri
+ * CLAUDE.md form sayfası standardına uygun - animasyonlu header + KeyboardAwareScrollView
  */
 
 import React, { useState, useCallback, useEffect } from 'react'
@@ -31,7 +32,7 @@ import {
   DashboardFontSizes,
   DashboardBorderRadius
 } from '@/constants/dashboard-theme'
-import LoadFormProgress from '@/components/load-form/LoadFormProgress'
+import { LoadFormStepper } from '@/components/load-form/LoadFormStepper'
 import LoadFormNavigation from '@/components/load-form/LoadFormNavigation'
 import Step1BasicInfo from '@/components/load-form/Step1BasicInfo'
 import Step2LoadItems, { type LoadItem } from '@/components/load-form/Step2LoadItems'
@@ -48,14 +49,7 @@ interface SelectOption {
   subtitle?: string
 }
 
-const STEPS = [
-  { id: 1, title: 'Temel Bilgiler', description: 'Yük hakkında temel bilgiler' },
-  { id: 2, title: 'Yük Kalemleri', description: 'Yük kalemlerini ekleyin' },
-  { id: 3, title: 'Adresler', description: 'Alış ve teslim adresleri' },
-  { id: 4, title: 'Fiyatlandırma', description: 'Navlun fiyatlandırması' },
-  { id: 5, title: 'Beyanname ve Fatura', description: 'Gümrük ve fatura bilgileri' },
-  { id: 6, title: 'Gümrük ve Belgeler', description: 'GTIP, ATR ve belge durumları' },
-]
+const TOTAL_STEPS = 6
 
 // Default load item
 const getDefaultLoadItem = (): LoadItem => ({
@@ -88,10 +82,8 @@ const getDefaultLoadItem = (): LoadItem => ({
 export default function NewLoadScreen() {
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{ direction?: string }>()
-  const [currentStep, setCurrentStep] = useState(1)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Animated orbs for header
+  // Animasyonlu orb'lar için shared values
   const orb1TranslateY = useSharedValue(0)
   const orb2TranslateX = useSharedValue(0)
   const orb1Scale = useSharedValue(1)
@@ -118,6 +110,7 @@ export default function NewLoadScreen() {
       -1,
       true
     )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const orb1AnimatedStyle = useAnimatedStyle(() => ({
@@ -133,6 +126,11 @@ export default function NewLoadScreen() {
       { scale: orb2Scale.value }
     ]
   }))
+
+  // Global form state
+  const [currentStep, setCurrentStep] = useState(1)
+  const [completedSteps, setCompletedSteps] = useState<number[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Form data state
   const [formData, setFormData] = useState<LoadFormData>({
@@ -204,7 +202,7 @@ export default function NewLoadScreen() {
   )
 
   // Validation
-  const validateStep = (step: number): boolean => {
+  const validateStep = useCallback((step: number): boolean => {
     const newErrors: Record<string, string> = {}
 
     if (step === 1) {
@@ -316,31 +314,51 @@ export default function NewLoadScreen() {
     }
 
     return true
-  }
+  }, [formData, items, addresses])
 
-  const handleNext = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep((prev) => Math.min(prev + 1, STEPS.length))
+  // Go to next step
+  const goToNextStep = useCallback(() => {
+    if (!validateStep(currentStep)) {
+      return
     }
-  }
 
-  const handlePrevious = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1))
-  }
+    // Mark current step as completed
+    if (!completedSteps.includes(currentStep)) {
+      setCompletedSteps((prev) => [...prev, currentStep])
+    }
 
-  const handleStepClick = (stepId: number) => {
-    // Önceki adımları validate et
-    for (let i = 1; i < stepId; i++) {
-      if (!validateStep(i)) {
-        return
+    // Move to next step
+    if (currentStep < TOTAL_STEPS) {
+      setCurrentStep(currentStep + 1)
+    }
+  }, [currentStep, validateStep, completedSteps])
+
+  // Go to previous step
+  const goToPreviousStep = useCallback(() => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }, [currentStep])
+
+  // Go to specific step (from stepper)
+  const goToStep = useCallback(
+    (step: number) => {
+      // Sadece tamamlanmış veya önceki step'lere gidilebilir
+      if (step <= currentStep || completedSteps.includes(step)) {
+        setCurrentStep(step)
       }
-    }
-    setCurrentStep(stepId)
-  }
+    },
+    [currentStep, completedSteps]
+  )
 
-  const handleBack = () => {
-    router.back()
-  }
+  // Handle back navigation
+  const handleBack = useCallback(() => {
+    if (currentStep > 1) {
+      goToPreviousStep()
+    } else {
+      router.back()
+    }
+  }, [currentStep, goToPreviousStep])
 
   const handleSubmit = async () => {
     // Tüm adımları validate et
@@ -492,34 +510,20 @@ export default function NewLoadScreen() {
         <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
           <View style={styles.headerBar}>
             {/* Sol: Geri Butonu */}
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
               <Ionicons name="chevron-back" size={24} color="#fff" />
             </TouchableOpacity>
 
-            {/* Orta: Başlık ve Alt Başlık */}
+            {/* Orta: Başlık ve Adım */}
             <View style={styles.headerTitleContainer}>
               <Text style={styles.headerTitle}>{headerTitle}</Text>
               <Text style={styles.headerSubtitle}>
-                Adım {currentStep} / {STEPS.length}
+                Adım {currentStep} / {TOTAL_STEPS}
               </Text>
             </View>
 
-            {/* Sağ: Kaydet Butonu (sadece son adımda) */}
-            {currentStep === STEPS.length ? (
-              <TouchableOpacity
-                onPress={handleSubmit}
-                disabled={isSubmitting}
-                style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Ionicons name="checkmark" size={24} color="#fff" />
-                )}
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.saveButton} />
-            )}
+            {/* Sağ: Boş alan (dengeleme için) */}
+            <View style={styles.headerButton} />
           </View>
         </View>
 
@@ -527,29 +531,41 @@ export default function NewLoadScreen() {
       </View>
 
       {/* Content */}
-      <KeyboardAwareScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        bottomOffset={20}
-      >
-        {/* Progress Steps */}
-        <LoadFormProgress steps={STEPS} currentStep={currentStep} onStepClick={handleStepClick} />
-
-        {/* Form Content */}
-        <View style={styles.formContent}>
-          {renderStep()}
-        </View>
-
-        {/* Navigation Buttons */}
-        <LoadFormNavigation
+      <View style={styles.content}>
+        {/* Stepper */}
+        <LoadFormStepper
           currentStep={currentStep}
-          totalSteps={STEPS.length}
-          onPrevious={handlePrevious}
-          onNext={handleNext}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
+          completedSteps={completedSteps}
+          onStepPress={goToStep}
         />
-      </KeyboardAwareScrollView>
+
+        {/* Step Content - Scrollable with Keyboard Support */}
+        <KeyboardAwareScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          bottomOffset={20}
+        >
+          {renderStep()}
+
+          {/* Navigation Buttons */}
+          <LoadFormNavigation
+            currentStep={currentStep}
+            totalSteps={TOTAL_STEPS}
+            onPrevious={goToPreviousStep}
+            onNext={goToNextStep}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+          />
+        </KeyboardAwareScrollView>
+
+        {/* Loading Overlay */}
+        {isSubmitting && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={DashboardColors.primary} />
+            <Text style={styles.loadingText}>Yük oluşturuluyor...</Text>
+          </View>
+        )}
+      </View>
     </View>
   )
 }
@@ -561,7 +577,6 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     position: 'relative',
-    paddingBottom: 24,
     overflow: 'hidden'
   },
   glowOrb1: {
@@ -583,16 +598,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.04)'
   },
   headerContent: {
-    paddingHorizontal: DashboardSpacing.lg
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingBottom: 24
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 70,
-    paddingBottom: DashboardSpacing.lg
+    minHeight: 70
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -610,25 +625,14 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.xl,
     fontWeight: '700',
     color: '#fff',
-    textAlign: 'center',
-    marginBottom: 2
+    textAlign: 'center'
   },
   headerSubtitle: {
     fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'center'
-  },
-  saveButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  saveButtonDisabled: {
-    opacity: 0.5
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginTop: 2
   },
   bottomCurve: {
     position: 'absolute',
@@ -643,12 +647,25 @@ const styles = StyleSheet.create({
   content: {
     flex: 1
   },
-  contentContainer: {
-    padding: DashboardSpacing.lg,
-    paddingTop:0,
-    paddingBottom: DashboardSpacing['3xl']
+  scrollView: {
+    flex: 1
   },
-  formContent: {
-    marginTop: DashboardSpacing.md
+  scrollContent: {
+    padding: DashboardSpacing.lg,
+    paddingTop: 0,
+    paddingBottom: DashboardSpacing['4xl']
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000
+  },
+  loadingText: {
+    marginTop: DashboardSpacing.md,
+    fontSize: DashboardFontSizes.lg,
+    color: '#FFFFFF',
+    fontWeight: '500'
   }
 })
