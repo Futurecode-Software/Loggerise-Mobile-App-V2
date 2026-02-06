@@ -306,7 +306,7 @@ export default function NotificationBroadcastDetailScreen() {
         <View style={styles.card}>
           <SectionHeader title="Genel Bilgiler" icon="information-circle-outline" />
           <InfoRow label="Başlık" value={broadcast.title} icon="document-text-outline" />
-          <InfoRow label="Mesaj" value={broadcast.message} />
+          <InfoRow label="Mesaj" value={broadcast.body} />
           <InfoRow
             label="Hedef Kitle"
             value={getTargetTypeLabel(broadcast.target_type)}

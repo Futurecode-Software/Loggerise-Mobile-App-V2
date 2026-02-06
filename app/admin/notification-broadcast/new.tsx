@@ -54,7 +54,7 @@ export default function NewNotificationBroadcastScreen() {
   // Form state
   const [formData, setFormData] = useState({
     title: '',
-    message: '',
+    body: '',
     target_type: 'all' as TargetType,
     target_user_ids: [] as number[],
     target_role: null as string | null,
@@ -185,8 +185,8 @@ export default function NewNotificationBroadcastScreen() {
     if (!formData.title?.trim()) {
       newErrors.title = 'Başlık zorunludur'
     }
-    if (!formData.message?.trim()) {
-      newErrors.message = 'Mesaj zorunludur'
+    if (!formData.body?.trim()) {
+      newErrors.body = 'Mesaj zorunludur'
     }
     if (formData.target_type === 'specific_users' && formData.target_user_ids.length === 0) {
       newErrors.target_user_ids = 'En az bir kullanıcı seçmelisiniz'
@@ -224,7 +224,7 @@ export default function NewNotificationBroadcastScreen() {
 
       const createData: BroadcastCreateData = {
         title: formData.title,
-        message: formData.message,
+        body: formData.body,
         target_type: formData.target_type,
         is_scheduled: formData.is_scheduled
       }
@@ -307,9 +307,9 @@ export default function NewNotificationBroadcastScreen() {
           <Input
             label="Mesaj"
             placeholder="Bildirim mesajı"
-            value={formData.message}
-            onChangeText={(text) => handleInputChange('message', text)}
-            error={errors.message}
+            value={formData.body}
+            onChangeText={(text) => handleInputChange('body', text)}
+            error={errors.body}
             required
             multiline
             numberOfLines={4}

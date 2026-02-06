@@ -148,7 +148,7 @@ function BroadcastCard({ item, onPress, onDelete }: BroadcastCardProps) {
 
       {/* Message */}
       <Text style={styles.cardMessage} numberOfLines={2}>
-        {item.message}
+        {item.body}
       </Text>
 
       {/* Footer */}

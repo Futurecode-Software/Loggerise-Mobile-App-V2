@@ -15,7 +15,7 @@ export interface NotificationBroadcast {
   target_user_ids: number[] | null
   target_role: string | null
   title: string
-  message: string
+  body: string
   deep_link_route: string | null
   deep_link_params: Record<string, any> | null
   is_scheduled: boolean
@@ -32,7 +32,7 @@ export interface NotificationBroadcast {
 
 export interface BroadcastCreateData {
   title: string
-  message: string
+  body: string
   target_type: TargetType
   target_user_ids?: number[]
   target_role?: string
