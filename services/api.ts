@@ -249,4 +249,27 @@ export function getValidationErrors(
   return null;
 }
 
+/**
+ * Flatten Laravel validation errors to Record<string, string>
+ * Converts { field: ['error1', 'error2'] } to { field: 'error1' }
+ * Takes only the first error message for each field
+ */
+export function flattenValidationErrors(
+  error: unknown
+): Record<string, string> | null {
+  const validationErrors = getValidationErrors(error)
+  if (!validationErrors) {
+    return null
+  }
+
+  const flatErrors: Record<string, string> = {}
+  Object.entries(validationErrors).forEach(([field, messages]) => {
+    if (Array.isArray(messages) && messages.length > 0) {
+      flatErrors[field] = messages[0]
+    }
+  })
+
+  return Object.keys(flatErrors).length > 0 ? flatErrors : null
+}
+
 export default api;

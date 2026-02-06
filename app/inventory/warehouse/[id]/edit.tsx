@@ -10,27 +10,17 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing
-} from 'react-native-reanimated'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import Toast from 'react-native-toast-message'
+import { FormHeader } from '@/components/navigation/FormHeader'
+import { FormSection } from '@/components/form/FormSection'
+import { Toggle } from '@/components/ui/Toggle'
 import {
   DashboardColors,
-  DashboardSpacing,
-  DashboardFontSizes,
-  DashboardBorderRadius
+  DashboardSpacing
 } from '@/constants/dashboard-theme'
 import { Input } from '@/components/ui'
 import {
@@ -38,54 +28,10 @@ import {
   updateWarehouse,
   WarehouseFormData
 } from '@/services/endpoints/warehouses'
-import { getErrorMessage, getValidationErrors } from '@/services/api'
+import { getErrorMessage, flattenValidationErrors } from '@/services/api'
 
 export default function WarehouseEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
-  const insets = useSafeAreaInsets()
-
-  // Animasyonlu orb'lar için shared values
-  const orb1TranslateY = useSharedValue(0)
-  const orb2TranslateX = useSharedValue(0)
-  const orb1Scale = useSharedValue(1)
-  const orb2Scale = useSharedValue(1)
-
-  useEffect(() => {
-    orb1TranslateY.value = withRepeat(
-      withTiming(15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-    orb1Scale.value = withRepeat(
-      withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-    orb2TranslateX.value = withRepeat(
-      withTiming(20, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-    orb2Scale.value = withRepeat(
-      withTiming(1.15, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    )
-  }, [])
-
-  const orb1AnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: orb1TranslateY.value },
-      { scale: orb1Scale.value }
-    ]
-  }))
-
-  const orb2AnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: orb2TranslateX.value },
-      { scale: orb2Scale.value }
-    ]
-  }))
 
   // Form state - backend validation kurallarına uygun
   const [formData, setFormData] = useState<WarehouseFormData>({
@@ -207,15 +153,8 @@ export default function WarehouseEditScreen() {
       })
       router.back()
     } catch (error: any) {
-      const validationErrors = getValidationErrors(error)
-      if (validationErrors) {
-        // Laravel hatalarını düz objeye çevir
-        const flatErrors: Record<string, string> = {}
-        Object.entries(validationErrors).forEach(([field, messages]) => {
-          if (Array.isArray(messages) && messages.length > 0) {
-            flatErrors[field] = messages[0]
-          }
-        })
+      const flatErrors = flattenValidationErrors(error)
+      if (flatErrors) {
         setErrors(flatErrors)
       } else {
         Toast.show({
@@ -234,26 +173,13 @@ export default function WarehouseEditScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <View style={styles.headerContainer}>
-          <LinearGradient
-            colors={['#022920', '#044134', '#065f4a']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
-            <View style={styles.headerBar}>
-              <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                <Ionicons name="chevron-back" size={24} color="#fff" />
-              </TouchableOpacity>
-              <View style={styles.headerTitleContainer}>
-                <Text style={styles.headerTitle}>Depo Düzenle</Text>
-              </View>
-              <View style={styles.saveButton} />
-            </View>
-          </View>
-          <View style={styles.bottomCurve} />
-        </View>
+        <FormHeader
+          title="Depo Düzenle"
+          onBackPress={handleBack}
+          onSavePress={() => {}}
+          isSaving={false}
+          saveDisabled={true}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={DashboardColors.primary} />
           <Text style={styles.loadingText}>Depo bilgileri yükleniyor...</Text>
@@ -264,48 +190,12 @@ export default function WarehouseEditScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with gradient and animated orbs */}
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={['#022920', '#044134', '#065f4a']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-
-        {/* Dekoratif ışık efektleri - Animasyonlu */}
-        <Animated.View style={[styles.glowOrb1, orb1AnimatedStyle]} />
-        <Animated.View style={[styles.glowOrb2, orb2AnimatedStyle]} />
-
-        <View style={[styles.headerContent, { paddingTop: insets.top + 16 }]}>
-          <View style={styles.headerBar}>
-            {/* Sol: Geri Butonu */}
-            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color="#fff" />
-            </TouchableOpacity>
-
-            {/* Orta: Başlık */}
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>Depo Düzenle</Text>
-            </View>
-
-            {/* Sağ: Kaydet Butonu */}
-            <TouchableOpacity
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-              style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Ionicons name="checkmark" size={24} color="#fff" />
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.bottomCurve} />
-      </View>
+      <FormHeader
+        title="Depo Düzenle"
+        onBackPress={handleBack}
+        onSavePress={handleSubmit}
+        isSaving={isSubmitting}
+      />
 
       {/* Form Content */}
       <KeyboardAwareScrollView
@@ -314,15 +204,7 @@ export default function WarehouseEditScreen() {
         bottomOffset={20}
       >
         {/* Temel Bilgiler Bölümü */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <Ionicons name="business-outline" size={18} color={DashboardColors.primary} />
-            </View>
-            <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
-          </View>
-
-          <View style={styles.sectionContent}>
+        <FormSection title="Temel Bilgiler" icon="business-outline">
             <Input
               label="Depo Kodu *"
               placeholder="Örn: DEP001"
@@ -359,19 +241,10 @@ export default function WarehouseEditScreen() {
               onChangeText={(text) => handleInputChange('postal_code', text)}
               error={errors.postal_code}
             />
-          </View>
-        </View>
+        </FormSection>
 
         {/* İletişim Bilgileri Bölümü */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <Ionicons name="call-outline" size={18} color={DashboardColors.primary} />
-            </View>
-            <Text style={styles.sectionTitle}>İletişim Bilgileri</Text>
-          </View>
-
-          <View style={styles.sectionContent}>
+        <FormSection title="İletişim Bilgileri" icon="call-outline">
             <Input
               label="Telefon"
               placeholder="Opsiyonel"
@@ -398,51 +271,27 @@ export default function WarehouseEditScreen() {
               onChangeText={(text) => handleInputChange('manager', text)}
               error={errors.manager}
             />
-          </View>
-        </View>
+        </FormSection>
 
         {/* Diğer Bilgiler Bölümü */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <Ionicons name="document-text-outline" size={18} color={DashboardColors.primary} />
-            </View>
-            <Text style={styles.sectionTitle}>Diğer Bilgiler</Text>
-          </View>
+        <FormSection title="Diğer Bilgiler" icon="document-text-outline">
+          <Input
+            label="Notlar"
+            placeholder="Opsiyonel"
+            value={formData.notes}
+            onChangeText={(text) => handleInputChange('notes', text)}
+            error={errors.notes}
+            multiline
+            numberOfLines={4}
+          />
 
-          <View style={styles.sectionContent}>
-            <Input
-              label="Notlar"
-              placeholder="Opsiyonel"
-              value={formData.notes}
-              onChangeText={(text) => handleInputChange('notes', text)}
-              error={errors.notes}
-              multiline
-              numberOfLines={4}
-            />
-
-            {/* Aktif/Pasif Toggle */}
-            <TouchableOpacity
-              style={styles.toggleRow}
-              onPress={() => handleInputChange('is_active', !formData.is_active)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.toggleContent}>
-                <Text style={styles.toggleLabel}>Aktif Depo</Text>
-                <Text style={styles.toggleDescription}>Bu depo kullanıma açık olacak</Text>
-              </View>
-              <View style={[
-                styles.toggleSwitch,
-                formData.is_active && styles.toggleSwitchActive
-              ]}>
-                <View style={[
-                  styles.toggleKnob,
-                  formData.is_active && styles.toggleKnobActive
-                ]} />
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
+          <Toggle
+            label="Aktif Depo"
+            description="Bu depo kullanıma açık olacak"
+            value={formData.is_active}
+            onValueChange={(value) => handleInputChange('is_active', value)}
+          />
+        </FormSection>
       </KeyboardAwareScrollView>
     </View>
   )
@@ -453,79 +302,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: DashboardColors.background
   },
-  headerContainer: {
-    position: 'relative',
-    paddingBottom: 24,
-    overflow: 'hidden'
-  },
-  glowOrb1: {
-    position: 'absolute',
-    top: -40,
-    right: -20,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)'
-  },
-  glowOrb2: {
-    position: 'absolute',
-    bottom: 30,
-    left: -50,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)'
-  },
-  headerContent: {
-    paddingHorizontal: DashboardSpacing.lg
-  },
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: DashboardSpacing.lg
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: DashboardSpacing.md
-  },
-  headerTitle: {
-    fontSize: DashboardFontSizes.xl,
-    fontWeight: '700',
-    color: '#fff',
-    textAlign: 'center'
-  },
-  saveButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  saveButtonDisabled: {
-    opacity: 0.5
-  },
-  bottomCurve: {
-    position: 'absolute',
-    bottom: -1,
-    left: 0,
-    right: 0,
-    height: 24,
-    backgroundColor: DashboardColors.background,
-    borderTopLeftRadius: DashboardBorderRadius['2xl'],
-    borderTopRightRadius: DashboardBorderRadius['2xl']
-  },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
@@ -533,7 +309,7 @@ const styles = StyleSheet.create({
     gap: DashboardSpacing.md
   },
   loadingText: {
-    fontSize: DashboardFontSizes.base,
+    fontSize: DashboardSpacing.base,
     color: DashboardColors.textSecondary
   },
   content: {
@@ -542,79 +318,5 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: DashboardSpacing.lg,
     paddingBottom: DashboardSpacing['3xl']
-  },
-  section: {
-    backgroundColor: DashboardColors.surface,
-    borderRadius: DashboardBorderRadius.xl,
-    marginBottom: DashboardSpacing.lg,
-    overflow: 'hidden'
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: DashboardSpacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight,
-    gap: DashboardSpacing.sm
-  },
-  sectionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: DashboardBorderRadius.lg,
-    backgroundColor: DashboardColors.primaryGlow,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  sectionTitle: {
-    fontSize: DashboardFontSizes.lg,
-    fontWeight: '600',
-    color: DashboardColors.textPrimary
-  },
-  sectionContent: {
-    padding: DashboardSpacing.lg,
-    gap: DashboardSpacing.md
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: DashboardSpacing.md,
-    paddingHorizontal: DashboardSpacing.lg,
-    backgroundColor: DashboardColors.background,
-    borderRadius: DashboardBorderRadius.lg
-  },
-  toggleContent: {
-    flex: 1,
-    marginRight: DashboardSpacing.md
-  },
-  toggleLabel: {
-    fontSize: DashboardFontSizes.base,
-    fontWeight: '500',
-    color: DashboardColors.textPrimary
-  },
-  toggleDescription: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary,
-    marginTop: 2
-  },
-  toggleSwitch: {
-    width: 52,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: DashboardColors.borderLight,
-    padding: 2,
-    justifyContent: 'center'
-  },
-  toggleSwitchActive: {
-    backgroundColor: DashboardColors.primary
-  },
-  toggleKnob: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#fff'
-  },
-  toggleKnobActive: {
-    alignSelf: 'flex-end'
   }
 })

@@ -28,7 +28,7 @@ import {
   BottomSheetBackdropProps,
   BottomSheetView
 } from '@gorhom/bottom-sheet'
-import { PageHeader } from '@/components/navigation'
+import PageHeader from '@/components/navigation/PageHeader'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   DashboardColors,
@@ -253,7 +253,7 @@ export default function WarehouseScreen() {
     return () => {
       isMountedRef.current = false
     }
-  }, [])
+  }, [executeFetch, activeFilter])
 
   // Filtre değişimi
   useEffect(() => {
@@ -261,7 +261,7 @@ export default function WarehouseScreen() {
 
     setIsLoading(true)
     executeFetch(activeFilter, 1, false)
-  }, [activeFilter])
+  }, [activeFilter, executeFetch])
 
   // Ref to store executeFetch and activeFilter to avoid useFocusEffect re-triggering
   const executeFetchRef = useRef(executeFetch)
