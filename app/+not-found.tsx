@@ -2,137 +2,166 @@
  * 404 - Sayfa Bulunamadı
  *
  * Geçersiz route'lara gidildiğinde Expo Router tarafından gösterilen sayfa.
+ * Auth sayfalarıyla aynı tasarım dili: AuthHeader + beyaz card.
  */
 
 import React from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
+import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Link } from 'expo-router'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { FileQuestion, Home } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
+import Animated, { FadeInDown } from 'react-native-reanimated'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import AuthHeader from '@/components/auth/AuthHeader'
 import {
-  DashboardColors,
-  DashboardSpacing,
-  DashboardBorderRadius,
-  DashboardFontSizes,
-} from '@/constants/dashboard-theme'
+  AuthColors,
+  AuthSpacing,
+  AuthBorderRadius,
+  AuthFontSizes,
+  AuthShadows,
+} from '@/constants/auth-styles'
 
 export default function NotFoundScreen() {
-  const insets = useSafeAreaInsets()
-
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#022920', '#044134', '#065f4a']}
-        style={[styles.header, { paddingTop: insets.top + DashboardSpacing['3xl'] }]}
-      >
-        {/* Glow Orbs (Statik) */}
-        <View style={[styles.glowOrb, styles.glowOrb1]} />
-        <View style={[styles.glowOrb, styles.glowOrb2]} />
-      </LinearGradient>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <AuthHeader
+        title="Kayıp Sayfa"
+        subtitle="Aradığınız içerik burada değil gibi görünüyor"
+        iconType="not-found"
+      />
 
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <FileQuestion
-            size={56}
-            color={DashboardColors.warning}
-            strokeWidth={1.5}
-          />
-        </View>
+      <View style={styles.card}>
+        {/* 404 Badge */}
+        <Animated.View
+          entering={FadeInDown.delay(100).duration(400)}
+          style={styles.badgeContainer}
+        >
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>404</Text>
+          </View>
+        </Animated.View>
 
-        <Text style={styles.code}>404</Text>
-        <Text style={styles.title}>Sayfa Bulunamadı</Text>
-        <Text style={styles.subtitle}>
-          Aradığınız sayfa mevcut değil veya taşınmış olabilir.
-        </Text>
+        {/* Title */}
+        <Animated.View
+          entering={FadeInDown.delay(200).duration(400)}
+          style={styles.textContainer}
+        >
+          <Text style={styles.title}>Sayfa Bulunamadı</Text>
+          <Text style={styles.subtitle}>
+            Aradığınız sayfa mevcut değil, taşınmış veya kaldırılmış olabilir.
+          </Text>
+        </Animated.View>
 
+        {/* Hint */}
+        <Animated.View
+          entering={FadeInDown.delay(300).duration(400)}
+          style={styles.hintBox}
+        >
+          <Ionicons name="information-circle-outline" size={18} color={AuthColors.primary} />
+          <Text style={styles.hintText}>
+            URL&apos;yi kontrol edin veya ana sayfaya dönün
+          </Text>
+        </Animated.View>
+
+        {/* Action Button */}
         <Link href="/" asChild>
-          <TouchableOpacity style={styles.button} activeOpacity={0.8}>
-            <Home size={20} color="#FFFFFF" strokeWidth={2} />
+          <Pressable style={styles.button}>
             <Text style={styles.buttonText}>Ana Sayfaya Dön</Text>
-          </TouchableOpacity>
+            <View style={styles.buttonIcon}>
+              <Ionicons name="arrow-forward" size={18} color={AuthColors.white} />
+            </View>
+          </Pressable>
         </Link>
       </View>
-    </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DashboardColors.background,
+    backgroundColor: AuthColors.primary,
   },
-  header: {
-    paddingBottom: DashboardSpacing['5xl'],
-    overflow: 'hidden',
-  },
-  glowOrb: {
-    position: 'absolute',
-    borderRadius: 9999,
-    opacity: 0.15,
-  },
-  glowOrb1: {
-    width: 200,
-    height: 200,
-    backgroundColor: DashboardColors.accent,
-    top: -40,
-    right: -60,
-  },
-  glowOrb2: {
-    width: 150,
-    height: 150,
-    backgroundColor: DashboardColors.accent,
-    bottom: -30,
-    left: -40,
-  },
-  content: {
+  card: {
     flex: 1,
+    backgroundColor: AuthColors.white,
+    paddingHorizontal: AuthSpacing['2xl'],
+    paddingTop: AuthSpacing['3xl'],
+    alignItems: 'center',
+  },
+  badgeContainer: {
+    marginBottom: AuthSpacing.xl,
+  },
+  badge: {
+    width: 88,
+    height: 88,
+    borderRadius: AuthBorderRadius['2xl'],
+    backgroundColor: AuthColors.warningLight,
+    borderWidth: 1.5,
+    borderColor: 'rgba(217, 119, 6, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: DashboardSpacing['3xl'],
-    marginTop: -DashboardSpacing['3xl'],
   },
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: DashboardBorderRadius['2xl'],
-    backgroundColor: DashboardColors.warningBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: DashboardSpacing.lg,
-  },
-  code: {
-    fontSize: DashboardFontSizes['6xl'],
+  badgeText: {
+    fontSize: 32,
     fontWeight: '800',
-    color: DashboardColors.textMuted,
-    marginBottom: DashboardSpacing.xs,
+    color: AuthColors.warning,
+    letterSpacing: -1,
+  },
+  textContainer: {
+    alignItems: 'center',
+    marginBottom: AuthSpacing['2xl'],
   },
   title: {
-    fontSize: DashboardFontSizes['3xl'],
+    fontSize: AuthFontSizes['4xl'],
     fontWeight: '700',
-    color: DashboardColors.text,
-    textAlign: 'center',
-    marginBottom: DashboardSpacing.sm,
+    color: AuthColors.textPrimary,
+    marginBottom: AuthSpacing.sm,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: DashboardFontSizes.base,
-    color: DashboardColors.textSecondary,
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: DashboardSpacing['3xl'],
+    maxWidth: '85%',
   },
-  button: {
+  hintBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DashboardSpacing.sm,
-    backgroundColor: DashboardColors.primary,
-    paddingHorizontal: DashboardSpacing['2xl'],
-    paddingVertical: DashboardSpacing.lg,
-    borderRadius: DashboardBorderRadius.lg,
+    gap: AuthSpacing.sm,
+    backgroundColor: 'rgba(4, 65, 52, 0.05)',
+    paddingHorizontal: AuthSpacing.lg,
+    paddingVertical: AuthSpacing.md,
+    borderRadius: AuthBorderRadius.md,
+    marginBottom: AuthSpacing['3xl'],
+  },
+  hintText: {
+    fontSize: AuthFontSizes.md,
+    color: AuthColors.textSecondary,
+  },
+  button: {
+    backgroundColor: AuthColors.primary,
+    height: 56,
+    borderRadius: AuthBorderRadius.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: AuthSpacing.sm,
+    paddingHorizontal: AuthSpacing['3xl'],
+    ...AuthShadows.glow,
   },
   buttonText: {
-    fontSize: DashboardFontSizes.lg,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    color: AuthColors.white,
+    fontSize: AuthFontSizes.xl,
+    fontWeight: '700',
+  },
+  buttonIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: AuthSpacing.xs,
   },
 })
