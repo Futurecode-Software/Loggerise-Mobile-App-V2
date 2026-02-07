@@ -450,13 +450,11 @@ export default function SetupStatus() {
 
         {/* Header Content */}
         <Animated.View style={[styles.headerContent, headerContentStyle]}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={LogoWhite}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
+          <Image
+            source={LogoWhite}
+            style={styles.logo}
+            resizeMode="contain"
+          />
 
           <Text style={styles.headerTitle}>
             {isComplete
@@ -481,39 +479,6 @@ export default function SetupStatus() {
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Status Icon */}
-        <View style={styles.statusSection}>
-          <Animated.View
-            style={[
-              styles.iconContainer,
-              isFailed && styles.iconContainerError,
-              isComplete && styles.iconContainerSuccess,
-              !isFailed && !isComplete && pulseStyle,
-            ]}
-          >
-            {isComplete ? (
-              <Animated.View style={successIconStyle}>
-                <Ionicons name="checkmark-circle" size={56} color={AuthColors.success} />
-              </Animated.View>
-            ) : isFailed ? (
-              <Ionicons name="alert-circle" size={56} color={AuthColors.error} />
-            ) : isLoadingDashboard ? (
-              <Animated.View style={rotateStyle}>
-                <Ionicons name="sync" size={48} color={AuthColors.primary} />
-              </Animated.View>
-            ) : (
-              <Ionicons name="rocket-outline" size={48} color={AuthColors.primary} />
-            )}
-          </Animated.View>
-
-          {estimatedTime && !isFailed && !isComplete && !isLoadingDashboard && (
-            <View style={styles.estimatedContainer}>
-              <Ionicons name="time-outline" size={16} color={AuthColors.textMuted} />
-              <Text style={styles.estimatedText}>Tahmini: {estimatedTime}</Text>
-            </View>
-          )}
-        </View>
-
         {/* Progress Bar */}
         {!isFailed && (
           <View style={styles.progressSection}>
@@ -611,12 +576,11 @@ const styles = StyleSheet.create({
   headerContent: {
     zIndex: 10,
   },
-  logoContainer: {
-    marginBottom: AuthSpacing.xl,
-  },
   logo: {
     width: AuthSizes.logoWidth,
     height: AuthSizes.logoHeight,
+    marginLeft: -12,
+    marginBottom: AuthSpacing.lg,
   },
   headerTitle: {
     fontSize: AuthFontSizes['5xl'],
@@ -689,39 +653,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: AuthSpacing['2xl'],
     backgroundColor: AuthColors.white,
-  },
-  // Status Section
-  statusSection: {
-    alignItems: 'center',
-    marginBottom: AuthSpacing.xl,
-  },
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: AuthColors.primaryGlow,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: AuthSpacing.md,
-  },
-  iconContainerError: {
-    backgroundColor: AuthColors.errorLight,
-  },
-  iconContainerSuccess: {
-    backgroundColor: AuthColors.successLight,
-  },
-  estimatedContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: AuthSpacing.xs,
-    paddingHorizontal: AuthSpacing.lg,
-    paddingVertical: AuthSpacing.sm,
-    backgroundColor: AuthColors.inputBackground,
-    borderRadius: AuthBorderRadius.full,
-  },
-  estimatedText: {
-    fontSize: AuthFontSizes.sm,
-    color: AuthColors.textMuted,
   },
   // Progress
   progressSection: {

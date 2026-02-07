@@ -262,6 +262,7 @@ const styles = StyleSheet.create({
   logo: {
     width: AuthSizes.logoWidth,
     height: AuthSizes.logoHeight,
+    marginLeft: -12,
   },
   title: {
     fontSize: AuthFontSizes['5xl'],
