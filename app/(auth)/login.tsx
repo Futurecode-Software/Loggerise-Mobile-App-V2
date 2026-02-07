@@ -146,8 +146,8 @@ export default function Login() {
     }
   }, [googleSignIn])
 
-  // Show Google auth errors
-  useCallback(() => {
+  // Google auth hook hataları göster
+  React.useEffect(() => {
     if (googleError) {
       Toast.show({
         type: 'error',

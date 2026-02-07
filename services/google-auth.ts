@@ -1,151 +1,173 @@
 /**
  * Google Sign-In Service
  *
- * Handles Google OAuth authentication using expo-auth-session.
- * Works with Expo Go and production builds.
+ * Native Google Sign-In kullanır (@react-native-google-signin/google-signin).
+ * Web tarayıcı açmaz, native dialog gösterir.
  *
- * Required Client IDs (from Google Cloud Console):
- * - expoClientId: For Expo Go development
- * - webClientId: For web and getting ID token
- * - androidClientId: For Android native builds
- * - iosClientId: For iOS native builds
+ * Gerekli:
+ * - google-services.json (Android)
+ * - webClientId: idToken almak için zorunlu (Google Cloud Console > Web client)
  */
 
-import * as Google from 'expo-auth-session/providers/google';
-import { AuthSessionResult } from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
-import Constants from 'expo-constants';
-
-// Complete auth session for web browser redirect
-WebBrowser.maybeCompleteAuthSession();
+import {
+  GoogleSignin,
+  isSuccessResponse,
+  isNoSavedCredentialFoundResponse,
+  statusCodes,
+} from '@react-native-google-signin/google-signin'
+import Constants from 'expo-constants'
 
 /**
- * Google OAuth Client IDs from environment
+ * Google OAuth Client IDs
  */
 const GOOGLE_CONFIG = {
-  expoClientId: Constants.expoConfig?.extra?.googleExpoClientId || '',
   webClientId: Constants.expoConfig?.extra?.googleWebClientId || '',
   androidClientId: Constants.expoConfig?.extra?.googleAndroidClientId || '',
   iosClientId: Constants.expoConfig?.extra?.googleIosClientId || '',
-};
+}
 
-/**
- * Google Sign-In result
- */
-export interface GoogleSignInResult {
-  idToken: string;
-  accessToken: string;
+// Lazy configure - sadece ilk signIn çağrısında çalışır
+let isConfigured = false
+
+function ensureConfigured() {
+  if (isConfigured) return
+  GoogleSignin.configure({
+    webClientId: GOOGLE_CONFIG.webClientId,
+    offlineAccess: false,
+    scopes: ['profile', 'email'],
+  })
+  isConfigured = true
 }
 
 /**
- * Google Sign-In error types
+ * Google Sign-In sonucu
  */
-export type GoogleSignInErrorType =
-  | 'SIGN_IN_CANCELLED'
-  | 'NOT_CONFIGURED'
-  | 'NETWORK_ERROR'
-  | 'UNKNOWN';
-
-/**
- * Custom error class for Google Sign-In errors
- */
-export class GoogleSignInError extends Error {
-  public readonly type: GoogleSignInErrorType;
-
-  constructor(type: GoogleSignInErrorType, message: string) {
-    super(message);
-    this.name = 'GoogleSignInError';
-    this.type = type;
+export interface GoogleSignInResult {
+  idToken: string
+  user: {
+    email: string
+    name: string | null
+    photo: string | null
   }
 }
 
 /**
- * Check if Google Sign-In is configured for the current platform
+ * Google Sign-In yapılandırılmış mı kontrol et
  */
 export function isGoogleSignInConfigured(): boolean {
-  // At minimum, we need expoClientId for Expo Go or platform-specific ID
-  return !!(
-    GOOGLE_CONFIG.expoClientId ||
-    GOOGLE_CONFIG.webClientId ||
-    GOOGLE_CONFIG.androidClientId ||
-    GOOGLE_CONFIG.iosClientId
-  );
+  return !!GOOGLE_CONFIG.webClientId
 }
 
 /**
- * Get Google OAuth configuration
+ * Native Google Sign-In başlat
+ * Web tarayıcı açmaz, native dialog gösterir.
  */
-export function getGoogleAuthConfig() {
-  return GOOGLE_CONFIG;
-}
+export async function googleNativeSignIn(): Promise<GoogleSignInResult> {
+  // İlk çağrıda configure et
+  ensureConfigured()
 
-/**
- * Hook configuration for Google Auth Request
- * Use this with useAuthRequest hook in components
- */
-export function useGoogleAuthRequest() {
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: GOOGLE_CONFIG.expoClientId,
-    webClientId: GOOGLE_CONFIG.webClientId,
-    androidClientId: GOOGLE_CONFIG.androidClientId,
-    iosClientId: GOOGLE_CONFIG.iosClientId,
-    scopes: ['profile', 'email'],
-  });
+  // Play Services kontrolü (Android)
+  await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
 
-  return { request, response, promptAsync };
-}
+  // Önceki oturumu temizle - her seferinde hesap seçici göstermek için
+  try { await GoogleSignin.signOut() } catch { /* ilk kullanımda hata verebilir */ }
 
-/**
- * Extract tokens from Google auth response
- */
-export function extractTokensFromResponse(
-  response: AuthSessionResult | null
-): GoogleSignInResult | null {
-  if (!response) return null;
+  const response = await GoogleSignin.signIn()
 
-  if (response.type === 'success') {
-    const { authentication } = response;
-
-    if (!authentication?.idToken && !authentication?.accessToken) {
-      return null;
+  if (isSuccessResponse(response)) {
+    const { idToken, user } = response.data
+    if (!idToken) {
+      throw new GoogleSignInError(
+        'NO_ID_TOKEN',
+        'Google ile giriş yapılamadı: ID token alınamadı. webClientId yapılandırmasını kontrol edin.'
+      )
     }
 
     return {
-      idToken: authentication.idToken || '',
-      accessToken: authentication.accessToken || '',
-    };
+      idToken,
+      user: {
+        email: user.email,
+        name: user.name,
+        photo: user.photo,
+      },
+    }
   }
 
-  return null;
+  if (isNoSavedCredentialFoundResponse(response)) {
+    throw new GoogleSignInError(
+      'NO_SAVED_CREDENTIAL',
+      'Kayıtlı Google hesabı bulunamadı.'
+    )
+  }
+
+  throw new GoogleSignInError('UNKNOWN', 'Google ile giriş yapılamadı.')
 }
 
 /**
- * Check if response indicates user cancelled
+ * Google Sign-In oturumunu kapat
  */
-export function isUserCancellation(
-  response: AuthSessionResult | null
-): boolean {
-  return response?.type === 'cancel' || response?.type === 'dismiss';
+export async function googleSignOut(): Promise<void> {
+  try {
+    ensureConfigured()
+    await GoogleSignin.signOut()
+  } catch {
+    // Sessizce devam et
+  }
 }
 
 /**
- * Get error message from response
+ * Google Sign-In hata tipleri
  */
-export function getErrorFromResponse(
-  response: AuthSessionResult | null
-): GoogleSignInError | null {
-  if (!response) return null;
+export type GoogleSignInErrorType =
+  | 'SIGN_IN_CANCELLED'
+  | 'IN_PROGRESS'
+  | 'PLAY_SERVICES_NOT_AVAILABLE'
+  | 'NO_ID_TOKEN'
+  | 'NO_SAVED_CREDENTIAL'
+  | 'NETWORK_ERROR'
+  | 'NOT_CONFIGURED'
+  | 'UNKNOWN'
 
-  switch (response.type) {
-    case 'cancel':
-    case 'dismiss':
-      return new GoogleSignInError('SIGN_IN_CANCELLED', 'Giriş iptal edildi');
-    case 'error':
-      return new GoogleSignInError(
-        'UNKNOWN',
-        response.error?.message || 'Google ile giriş yapılamadı'
-      );
-    default:
-      return null;
+/**
+ * Google Sign-In hata sınıfı
+ */
+export class GoogleSignInError extends Error {
+  public readonly type: GoogleSignInErrorType
+
+  constructor(type: GoogleSignInErrorType, message: string) {
+    super(message)
+    this.name = 'GoogleSignInError'
+    this.type = type
   }
+}
+
+/**
+ * Native hataları anlamlı hata mesajlarına çevir
+ */
+export function parseGoogleSignInError(error: unknown): GoogleSignInError {
+  if (error instanceof GoogleSignInError) {
+    return error
+  }
+
+  // @react-native-google-signin status codes
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const code = (error as { code: string }).code
+
+    switch (code) {
+      case statusCodes.SIGN_IN_CANCELLED:
+        return new GoogleSignInError('SIGN_IN_CANCELLED', 'Giriş iptal edildi.')
+      case statusCodes.IN_PROGRESS:
+        return new GoogleSignInError('IN_PROGRESS', 'Giriş işlemi devam ediyor.')
+      case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+        return new GoogleSignInError(
+          'PLAY_SERVICES_NOT_AVAILABLE',
+          'Google Play Services kullanılamıyor. Lütfen güncelleyin.'
+        )
+      default:
+        break
+    }
+  }
+
+  const message = error instanceof Error ? error.message : 'Google ile giriş yapılamadı.'
+  return new GoogleSignInError('UNKNOWN', message)
 }

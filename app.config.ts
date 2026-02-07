@@ -56,17 +56,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-secure-store',
     'expo-notifications',
+    '@react-native-google-signin/google-signin',
   ],
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
   },
   extra: {
-    // Google OAuth Client IDs
-    googleWebClientId: '729255118841-mtgt26tjv5lb0ngbk27ckabr5os0p77n.apps.googleusercontent.com',
-    googleIosClientId: '729255118841-mtgt26tjv5lb0ngbk27ckabr5os0p77n.apps.googleusercontent.com',
-    googleAndroidClientId: '729255118841-339pa5b8nl0mskgrhj8mra1lqh9o2a6t.apps.googleusercontent.com',
-    googleExpoClientId: '729255118841-mtgt26tjv5lb0ngbk27ckabr5os0p77n.apps.googleusercontent.com',
+    // Google OAuth Client IDs (Firebase loggerise-erp projesi)
+    googleWebClientId: '1039412213943-qk6dt54mve1jckpq54aj017mh8n9hj31.apps.googleusercontent.com',
+    googleAndroidClientId: '1039412213943-u4q0qe8952h8khk5oaq55cf2gkqbvp07.apps.googleusercontent.com',
     // Google Maps API Key
     googleMapsApiKey: '',
     // API Configuration - Production Backend

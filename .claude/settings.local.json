@@ -106,7 +106,11 @@
       "Bash(else)",
       "Bash(cat:*)",
       "Bash(copy \"C:\\\\loggerisemobil\\\\app\\\\event\\\\[id].tsx\" \"C:\\\\loggerisemobil\\\\app\\\\event\\\\[id]\\\\index.tsx\")",
-      "Bash(del \"C:\\\\loggerisemobil\\\\app\\\\event\\\\[id].tsx\")"
+      "Bash(del \"C:\\\\loggerisemobil\\\\app\\\\event\\\\[id].tsx\")",
+      "Bash(keytool:*)",
+      "Bash(npx expo config:*)",
+      "WebFetch(domain:react-native-google-signin.github.io)",
+      "Bash(npx @react-native-google-signin/config-doctor:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

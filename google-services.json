@@ -12,7 +12,28 @@
           "package_name": "com.loggerise.erp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1039412213943-u4q0qe8952h8khk5oaq55cf2gkqbvp07.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.loggerise.erp",
+            "certificate_hash": "ff2b55017b63d46828fefa11e5c5d0f5afa63c47"
+          }
+        },
+        {
+          "client_id": "1039412213943-uoe9h266tgusabebth8s7s2f444m3rln.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.loggerise.erp",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "1039412213943-qk6dt54mve1jckpq54aj017mh8n9hj31.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyB_CZZyrPy77-XREhqyLymok_AqyPLLNvY"
@@ -20,7 +41,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1039412213943-qk6dt54mve1jckpq54aj017mh8n9hj31.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
