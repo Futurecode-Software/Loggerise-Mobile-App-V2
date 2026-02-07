@@ -68,8 +68,10 @@ const CustomBottomSheet = forwardRef<BottomSheetModal, CustomBottomSheetProps>(
       <BottomSheetModal
         ref={ref}
         index={index}
-        snapPoints={points}
-        enableDynamicSizing={enableDynamicSizing}
+        {...(enableDynamicSizing
+          ? { enableDynamicSizing: true }
+          : { snapPoints: points }
+        )}
         enablePanDownToClose={true}
         animateOnMount={animateOnMount}
         animationConfigs={animationConfigs}
@@ -82,7 +84,7 @@ const CustomBottomSheet = forwardRef<BottomSheetModal, CustomBottomSheetProps>(
       >
         <BottomSheetView
           style={[
-            styles.contentContainer,
+            !enableDynamicSizing && styles.contentContainer,
             keyboardState && { paddingBottom: keyboardHeight }
           ]}
         >

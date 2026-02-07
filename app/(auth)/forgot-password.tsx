@@ -36,11 +36,13 @@ import {
   AuthShadows,
 } from '@/constants/auth-styles'
 import AuthHeader from '@/components/auth/AuthHeader'
+import { useAuth } from '@/context/auth-context'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
 export default function ForgotPassword() {
   const router = useRouter()
+  const { forgotPassword } = useAuth()
   const { height: screenHeight } = useWindowDimensions()
 
   const [email, setEmail] = useState('')
@@ -83,8 +85,7 @@ export default function ForgotPassword() {
     if (validate()) {
       setIsLoading(true)
       try {
-        // API call would go here
-        await new Promise(resolve => setTimeout(resolve, 1500))
+        await forgotPassword(email.trim().toLowerCase())
         setIsSent(true)
         startCountdown()
         Toast.show({
@@ -94,10 +95,11 @@ export default function ForgotPassword() {
           position: 'top',
           visibilityTime: 2000
         })
-      } catch (err) {
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Bir hata oluştu'
         Toast.show({
           type: 'error',
-          text1: 'Bir hata oluştu',
+          text1: errorMessage,
           text2: 'Lütfen tekrar deneyin',
           position: 'top',
           visibilityTime: 1500
@@ -153,7 +155,7 @@ export default function ForgotPassword() {
         <AuthHeader
           title="E-posta Gönderildi"
           subtitle="Gelen kutunuzu kontrol edin"
-          iconType="none"
+          iconType="forgot-password"
         />
 
         <KeyboardAwareScrollView
@@ -215,7 +217,7 @@ export default function ForgotPassword() {
       <AuthHeader
         title="Şifrenizi mi Unuttunuz?"
         subtitle="E-posta adresinize sıfırlama bağlantısı göndereceğiz"
-        iconType="none"
+        iconType="forgot-password"
       />
 
       <KeyboardAwareScrollView

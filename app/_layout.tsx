@@ -44,7 +44,7 @@ function NavigationController() {
 
     if (!isAuthenticated) {
       // Not authenticated - go to login
-      if (!inAuthGroup || (currentPage !== 'login' && currentPage !== 'register')) {
+      if (!inAuthGroup || (currentPage !== 'login' && currentPage !== 'register' && currentPage !== 'forgot-password')) {
         router.replace('/(auth)/login')
       }
     } else {

@@ -39,7 +39,6 @@ import {
   AuthShadows,
 } from '@/constants/auth-styles'
 import AuthHeader from '@/components/auth/AuthHeader'
-import { ForgotPasswordModal, ForgotPasswordModalRef } from '@/components/modals'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -58,7 +57,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
 
-  const forgotPasswordModalRef = useRef<ForgotPasswordModalRef>(null)
   const emailInputRef = useRef<TextInput>(null)
   const passwordInputRef = useRef<TextInput>(null)
 
@@ -130,8 +128,8 @@ export default function Login() {
   }, [formData, rememberMe, login, router, validate])
 
   const handleForgotPassword = useCallback(() => {
-    forgotPasswordModalRef.current?.present()
-  }, [])
+    router.push('/(auth)/forgot-password')
+  }, [router])
 
   const handleGoogleLogin = useCallback(async () => {
     try {
@@ -415,7 +413,6 @@ export default function Login() {
         </View>
       </KeyboardAwareScrollView>
 
-      <ForgotPasswordModal ref={forgotPasswordModalRef} />
     </SafeAreaView>
   )
 }

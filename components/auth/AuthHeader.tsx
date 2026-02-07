@@ -28,7 +28,7 @@ import {
 
 const LogoWhite = require('../../assets/images/logo-white.png')
 
-type IconType = 'login' | 'register' | 'none'
+type IconType = 'login' | 'register' | 'forgot-password' | 'none'
 
 interface AuthHeaderProps {
   title: string
@@ -51,6 +51,12 @@ const getIconConfig = (iconType: IconType) => {
         primary: 'person-add-outline',
         secondary: 'sparkles-outline',
         tertiary: 'rocket-outline',
+      }
+    case 'forgot-password':
+      return {
+        primary: 'mail-unread-outline',
+        secondary: 'lock-open-outline',
+        tertiary: 'refresh-outline',
       }
     default:
       return null
