@@ -117,7 +117,8 @@
       "Bash(eas credentials:configure-build:*)",
       "Bash(eas build:view:*)",
       "Bash(npx expo-cli:*)",
-      "Bash(eas build:inspect:*)"
+      "Bash(eas build:inspect:*)",
+      "Bash(eas build:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

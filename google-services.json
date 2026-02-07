@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "1039412213943-d2sgiehdc2g1nfhffafpissj1qgpe9s1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.loggerise.erp",
+            "certificate_hash": "dc5397efa8d953b5773889be409322eee7fbc30b"
+          }
+        },
+        {
           "client_id": "1039412213943-u4q0qe8952h8khk5oaq55cf2gkqbvp07.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

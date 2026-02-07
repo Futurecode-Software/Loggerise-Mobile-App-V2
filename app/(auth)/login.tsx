@@ -45,7 +45,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 export default function Login() {
   const router = useRouter()
   const { login, isLoading, isInitializing } = useAuth()
-  const { signIn: googleSignIn, isLoading: isGoogleLoading, error: googleError } = useGoogleAuth()
+  const { signIn: googleSignIn, isLoading: isGoogleLoading, isAvailable: isGoogleAvailable, error: googleError } = useGoogleAuth()
 
   // Form state
   const [formData, setFormData] = useState({
@@ -367,33 +367,36 @@ export default function Login() {
             )}
           </AnimatedPressable>
 
-          {/* Divider */}
-          <Animated.View
-            entering={FadeInDown.delay(600).duration(400)}
-            style={styles.divider}
-          >
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>veya</Text>
-            <View style={styles.dividerLine} />
-          </Animated.View>
+          {/* Divider + Google Button - Expo Go'da gizle */}
+          {isGoogleAvailable && (
+            <>
+              <Animated.View
+                entering={FadeInDown.delay(600).duration(400)}
+                style={styles.divider}
+              >
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>veya</Text>
+                <View style={styles.dividerLine} />
+              </Animated.View>
 
-          {/* Google Button */}
-          <View style={styles.socialSection}>
-            <Pressable
-              style={styles.googleButtonFull}
-              onPress={handleGoogleLogin}
-              disabled={isGoogleLoading || isLoading || isInitializing}
-            >
-              {isGoogleLoading ? (
-                <ActivityIndicator size="small" color={AuthColors.textPrimary} />
-              ) : (
-                <>
-                  <FontAwesome name="google" size={18} color={AuthColors.textPrimary} />
-                  <Text style={styles.googleButtonText}>Google ile Devam Et</Text>
-                </>
-              )}
-            </Pressable>
-          </View>
+              <View style={styles.socialSection}>
+                <Pressable
+                  style={styles.googleButtonFull}
+                  onPress={handleGoogleLogin}
+                  disabled={isGoogleLoading || isLoading || isInitializing}
+                >
+                  {isGoogleLoading ? (
+                    <ActivityIndicator size="small" color={AuthColors.textPrimary} />
+                  ) : (
+                    <>
+                      <FontAwesome name="google" size={18} color={AuthColors.textPrimary} />
+                      <Text style={styles.googleButtonText}>Google ile Devam Et</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
+            </>
+          )}
 
           {/* Footer */}
           <Animated.View

@@ -10,12 +10,14 @@ import { useAuth } from '@/context/auth-context'
 import {
   googleNativeSignIn,
   isGoogleSignInConfigured,
+  isGoogleSignInAvailable,
   parseGoogleSignInError,
 } from '@/services/google-auth'
 
 interface UseGoogleAuthReturn {
   signIn: () => Promise<void>
   isLoading: boolean
+  isAvailable: boolean
   isConfigured: boolean
   error: string | null
   clearError: () => void
@@ -27,6 +29,11 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
   const [error, setError] = useState<string | null>(null)
 
   const signIn = useCallback(async () => {
+    if (!isGoogleSignInAvailable) {
+      setError('Google Sign-In bu ortamda kullanılamıyor.')
+      return
+    }
+
     if (!isGoogleSignInConfigured()) {
       setError('Google Sign-In yapılandırılmamış. webClientId eksik.')
       return
@@ -63,6 +70,7 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
   return {
     signIn,
     isLoading,
+    isAvailable: isGoogleSignInAvailable,
     isConfigured: isGoogleSignInConfigured(),
     error,
     clearError,

@@ -4,18 +4,44 @@
  * Native Google Sign-In kullanır (@react-native-google-signin/google-signin).
  * Web tarayıcı açmaz, native dialog gösterir.
  *
+ * Expo Go'da native modül mevcut olmadığı için otomatik devre dışı kalır.
+ *
  * Gerekli:
  * - google-services.json (Android)
  * - webClientId: idToken almak için zorunlu (Google Cloud Console > Web client)
  */
 
-import {
-  GoogleSignin,
-  isSuccessResponse,
-  isNoSavedCredentialFoundResponse,
-  statusCodes,
-} from '@react-native-google-signin/google-signin'
-import Constants from 'expo-constants'
+import Constants, { ExecutionEnvironment } from 'expo-constants'
+
+/**
+ * Expo Go ortamında mıyız kontrolü
+ * Expo Go'da native modüller (RNGoogleSignin) mevcut değil
+ */
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+
+// Native modülü sadece Expo Go dışında yükle
+let GoogleSignin: typeof import('@react-native-google-signin/google-signin').GoogleSignin | null = null
+let isSuccessResponse: typeof import('@react-native-google-signin/google-signin').isSuccessResponse | null = null
+let isNoSavedCredentialFoundResponse: typeof import('@react-native-google-signin/google-signin').isNoSavedCredentialFoundResponse | null = null
+let statusCodes: typeof import('@react-native-google-signin/google-signin').statusCodes | null = null
+
+if (!isExpoGo) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const googleSignInModule = require('@react-native-google-signin/google-signin')
+    GoogleSignin = googleSignInModule.GoogleSignin
+    isSuccessResponse = googleSignInModule.isSuccessResponse
+    isNoSavedCredentialFoundResponse = googleSignInModule.isNoSavedCredentialFoundResponse
+    statusCodes = googleSignInModule.statusCodes
+  } catch {
+    // Native modül yüklenemedi
+  }
+}
+
+/**
+ * Google Sign-In native modülü kullanılabilir mi
+ */
+export const isGoogleSignInAvailable = !isExpoGo && GoogleSignin !== null
 
 /**
  * Google OAuth Client IDs
@@ -30,7 +56,7 @@ const GOOGLE_CONFIG = {
 let isConfigured = false
 
 function ensureConfigured() {
-  if (isConfigured) return
+  if (isConfigured || !GoogleSignin) return
   GoogleSignin.configure({
     webClientId: GOOGLE_CONFIG.webClientId,
     iosClientId: GOOGLE_CONFIG.iosClientId || undefined,
@@ -56,7 +82,7 @@ export interface GoogleSignInResult {
  * Google Sign-In yapılandırılmış mı kontrol et
  */
 export function isGoogleSignInConfigured(): boolean {
-  return !!GOOGLE_CONFIG.webClientId
+  return isGoogleSignInAvailable && !!GOOGLE_CONFIG.webClientId
 }
 
 /**
@@ -64,6 +90,13 @@ export function isGoogleSignInConfigured(): boolean {
  * Web tarayıcı açmaz, native dialog gösterir.
  */
 export async function googleNativeSignIn(): Promise<GoogleSignInResult> {
+  if (!GoogleSignin || !isSuccessResponse || !isNoSavedCredentialFoundResponse) {
+    throw new GoogleSignInError(
+      'NOT_CONFIGURED',
+      'Google Sign-In bu ortamda kullanılamıyor.'
+    )
+  }
+
   // İlk çağrıda configure et
   ensureConfigured()
 
@@ -108,6 +141,7 @@ export async function googleNativeSignIn(): Promise<GoogleSignInResult> {
  * Google Sign-In oturumunu kapat
  */
 export async function googleSignOut(): Promise<void> {
+  if (!GoogleSignin) return
   try {
     ensureConfigured()
     await GoogleSignin.signOut()
@@ -151,7 +185,7 @@ export function parseGoogleSignInError(error: unknown): GoogleSignInError {
   }
 
   // @react-native-google-signin status codes
-  if (typeof error === 'object' && error !== null && 'code' in error) {
+  if (statusCodes && typeof error === 'object' && error !== null && 'code' in error) {
     const code = (error as { code: string }).code
 
     switch (code) {

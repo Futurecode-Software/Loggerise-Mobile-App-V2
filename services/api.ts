@@ -14,6 +14,28 @@ import axios, {
 import { API_BASE_URL, API_TIMEOUT } from './config';
 import { secureStorage, clearAllStorage } from './storage';
 
+// Lazy import - döngüsel bağımlılığı önle
+interface ErrorLogContext {
+  errorType?: string
+  screen?: string
+  apiEndpoint?: string
+  apiMethod?: string
+  apiStatusCode?: number
+}
+let _logError: ((error: unknown, context?: ErrorLogContext) => Promise<void>) | null = null
+function getLogError() {
+  if (!_logError) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const mod = require('@/utils/error-logger')
+      _logError = mod.logError
+    } catch {
+      _logError = async () => {} // Modül yüklenemezse sessizce geç
+    }
+  }
+  return _logError
+}
+
 /**
  * API Error Response Type
  */
@@ -144,6 +166,30 @@ api.interceptors.response.use(
   },
   async (error: AxiosError<ApiErrorResponse>) => {
     const status = error.response?.status;
+    const requestUrl = error.config?.url || '';
+
+    // Hata logla (error-logs endpoint'ini loglama - döngü önle)
+    if (!requestUrl.includes('/error-logs')) {
+      const logFn = getLogError()
+      if (logFn) {
+        if (error.response) {
+          logFn(error, {
+            errorType: 'api_error',
+            screen: 'api_interceptor',
+            apiEndpoint: requestUrl,
+            apiMethod: error.config?.method?.toUpperCase(),
+            apiStatusCode: status,
+          })
+        } else if (error.request) {
+          logFn(error, {
+            errorType: 'network_error',
+            screen: 'api_interceptor',
+            apiEndpoint: requestUrl,
+            apiMethod: error.config?.method?.toUpperCase(),
+          })
+        }
+      }
+    }
 
     // Handle 401 Unauthorized - Token expired or invalid
     if (status === 401) {
