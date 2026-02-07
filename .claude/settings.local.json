@@ -111,7 +111,13 @@
       "Bash(npx expo config:*)",
       "WebFetch(domain:react-native-google-signin.github.io)",
       "Bash(npx @react-native-google-signin/config-doctor:*)",
-      "Bash(.env \")"
+      "Bash(.env \")",
+      "Bash(eas credentials:*)",
+      "Bash(eas build:list:*)",
+      "Bash(eas credentials:configure-build:*)",
+      "Bash(eas build:view:*)",
+      "Bash(npx expo-cli:*)",
+      "Bash(eas build:inspect:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

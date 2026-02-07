@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1039412213943-3fsnmudmsjdu59tnuu8c41gg48257lj5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.loggerise.erp",
+            "certificate_hash": "0d122b0b0c8cb47387bdddaaa9275ef80e57c1a8"
+          }
+        },
+        {
           "client_id": "1039412213943-u4q0qe8952h8khk5oaq55cf2gkqbvp07.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -45,6 +53,13 @@
             {
               "client_id": "1039412213943-qk6dt54mve1jckpq54aj017mh8n9hj31.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "1039412213943-rse40k3ujo3dt7jci4ba4uclq787angf.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.loggerise.erp"
+              }
             }
           ]
         }
