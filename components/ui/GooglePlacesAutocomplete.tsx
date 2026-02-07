@@ -1,170 +1,203 @@
 /**
  * Google Places Autocomplete Component
  *
- * Direkt Google Places API'ye istek atar (backend proxy kullanmaz)
+ * Google Places API (New) kullanarak adres araması yapar.
+ * BottomSheet modal ile sonuçları gösterir.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
-  FlatList,
   ActivityIndicator,
-} from 'react-native';
-import { MapPin } from 'lucide-react-native';
-import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme';
-import { PlaceDetails } from '@/services/endpoints/locations';
+} from 'react-native'
+import {
+  BottomSheetModal,
+  BottomSheetFlatList,
+  BottomSheetBackdrop,
+  BottomSheetTextInput,
+  useBottomSheetSpringConfigs,
+  BottomSheetBackdropProps,
+} from '@gorhom/bottom-sheet'
+import { MapPin, Search, X } from 'lucide-react-native'
+import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme'
+import { PlaceDetails } from '@/services/endpoints/locations'
 
-// Google Places API key from env
-// Mobil için ayrı key varsa onu kullan, yoksa genel key'i kullan
+// Google Places API key
 const GOOGLE_API_KEY =
   process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_MOBILE ||
-  process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+  process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 
 interface GooglePlacesAutocompleteProps {
-  value?: string;
-  onChange?: (value: string) => void;
-  onPlaceSelect: (place: PlaceDetails | null) => void;
-  placeholder?: string;
-  label?: string;
-  error?: string;
+  value?: string
+  onChange?: (value: string) => void
+  onPlaceSelect: (place: PlaceDetails | null) => void
+  placeholder?: string
+  label?: string
+  error?: string
 }
 
-interface PlacePrediction {
-  description: string;
-  place_id: string;
-  structured_formatting: {
-    main_text: string;
-    secondary_text: string;
-  };
+interface PlaceSuggestion {
+  placeId: string
+  mainText: string
+  secondaryText: string
 }
 
 export function GooglePlacesAutocomplete({
   value,
   onChange,
   onPlaceSelect,
-  placeholder = 'Adres aramak için yazmaya başlayın...',
+  placeholder = 'Adres aramak için tıklayın...',
   label,
   error,
 }: GooglePlacesAutocompleteProps) {
-  const colors = Colors.light;
+  const colors = Colors.light
 
-  const [inputValue, setInputValue] = useState(value || '');
-  const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPredictions, setShowPredictions] = useState(false);
-  const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [displayValue, setDisplayValue] = useState(value || '')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+  const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const bottomSheetRef = useRef<BottomSheetModal>(null)
 
   useEffect(() => {
     if (value !== undefined) {
-      setInputValue(value);
+      setDisplayValue(value)
     }
-  }, [value]);
+  }, [value])
 
-  const fetchPredictions = async (input: string) => {
+  const snapPoints = useMemo(() => ['92%'], [])
+
+  const animationConfigs = useBottomSheetSpringConfigs({
+    damping: 80,
+    overshootClamping: true,
+    stiffness: 500,
+  })
+
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    []
+  )
+
+  // Places API (New) - Autocomplete
+  const fetchSuggestions = useCallback(async (input: string) => {
     if (!input || input.length < 3) {
-      setPredictions([]);
-      setShowPredictions(false);
-      return;
+      setSuggestions([])
+      return
     }
 
     if (!GOOGLE_API_KEY) {
-      console.error('[GooglePlaces] API key is missing');
-      return;
+      console.error('[GooglePlaces] API key is missing')
+      return
     }
 
-    setIsLoading(true);
+    setIsSearching(true)
     try {
-      console.log('[GooglePlaces] Fetching predictions for:', input);
+      const response = await fetch(
+        'https://places.googleapis.com/v1/places:autocomplete',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': GOOGLE_API_KEY,
+          },
+          body: JSON.stringify({
+            input,
+            languageCode: 'tr',
+          }),
+        }
+      )
+      const data = await response.json()
 
-      // Direkt Google Places API'ye istek at
-      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-        input
-      )}&language=tr&components=country:tr&key=${GOOGLE_API_KEY}`;
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      console.log('[GooglePlaces] API Response status:', data.status);
-
-      if (data.status === 'OK' && data.predictions) {
-        console.log('[GooglePlaces] Found predictions:', data.predictions.length);
-        setPredictions(data.predictions);
-        setShowPredictions(true);
+      if (data.suggestions && data.suggestions.length > 0) {
+        const mapped: PlaceSuggestion[] = data.suggestions
+          .filter((s: any) => s.placePrediction)
+          .map((s: any) => ({
+            placeId: s.placePrediction.placeId,
+            mainText: s.placePrediction.structuredFormat?.mainText?.text || '',
+            secondaryText: s.placePrediction.structuredFormat?.secondaryText?.text || '',
+          }))
+        setSuggestions(mapped)
       } else {
-        console.log('[GooglePlaces] No predictions:', data.status, data.error_message);
-        setPredictions([]);
-        setShowPredictions(false);
+        setSuggestions([])
       }
-    } catch (err) {
-      console.error('[GooglePlaces] Fetch error:', err);
-      setPredictions([]);
-      setShowPredictions(false);
+    } catch (err: unknown) {
+      console.error('[GooglePlaces] Autocomplete error:', err)
+      setSuggestions([])
     } finally {
-      setIsLoading(false);
+      setIsSearching(false)
     }
-  };
+  }, [])
 
-  const fetchPlaceDetails = async (placeId: string) => {
+  // Places API (New) - Place Details
+  const fetchPlaceDetails = useCallback(async (placeId: string): Promise<PlaceDetails | null> => {
     if (!GOOGLE_API_KEY) {
-      console.error('[GooglePlaces] API key is missing');
-      return null;
+      console.error('[GooglePlaces] API key is missing')
+      return null
     }
 
     try {
-      console.log('[GooglePlaces] Fetching place details for:', placeId);
+      const response = await fetch(
+        `https://places.googleapis.com/v1/places/${placeId}`,
+        {
+          method: 'GET',
+          headers: {
+            'X-Goog-Api-Key': GOOGLE_API_KEY,
+            'X-Goog-FieldMask': 'id,displayName,formattedAddress,location,addressComponents',
+          },
+        }
+      )
+      const data = await response.json()
 
-      // Direkt Google Places API'ye istek at
-      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(
-        placeId
-      )}&language=tr&fields=formatted_address,geometry,address_components,place_id&key=${GOOGLE_API_KEY}`;
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.status === 'OK' && data.result) {
-        const result = data.result;
-        const extracted = extractAddressComponents(result.address_components);
+      if (data.formattedAddress) {
+        const extracted = extractAddressComponents(data.addressComponents)
 
         const placeDetails: PlaceDetails = {
-          address: result.formatted_address || '',
-          formatted_address: result.formatted_address || '',
+          address: data.formattedAddress || '',
+          formatted_address: data.formattedAddress || '',
           place_id: placeId,
-          latitude: result.geometry?.location?.lat || 0,
-          longitude: result.geometry?.location?.lng || 0,
+          latitude: data.location?.latitude || 0,
+          longitude: data.location?.longitude || 0,
           ...extracted,
-        };
+        }
 
-        console.log('[GooglePlaces] Place details:', placeDetails);
-        return placeDetails;
+        return placeDetails
       }
-    } catch (err) {
-      console.error('[GooglePlaces] Details fetch error:', err);
+    } catch (err: unknown) {
+      console.error('[GooglePlaces] Details error:', err)
     }
-    return null;
-  };
+    return null
+  }, [])
 
   const extractAddressComponents = (components: any[]): Partial<PlaceDetails> => {
-    const result: Partial<PlaceDetails> = {};
+    const result: Partial<PlaceDetails> = {}
 
-    if (!components) return result;
+    if (!components) return result
 
     for (const component of components) {
-      const types = component.types;
+      const types = component.types
 
       if (types.includes('country')) {
-        result.country = component.long_name;
-        result.country_code = component.short_name;
+        result.country = component.longText
+        result.country_code = component.shortText
       }
       if (types.includes('administrative_area_level_1')) {
-        result.state = component.long_name;
+        result.state = component.longText
       }
       if (types.includes('administrative_area_level_2') || types.includes('locality')) {
         if (!result.city) {
-          result.city = component.long_name;
+          result.city = component.longText
         }
       }
       if (
@@ -172,47 +205,174 @@ export function GooglePlacesAutocomplete({
         types.includes('sublocality') ||
         types.includes('sublocality_level_1')
       ) {
-        result.district = component.long_name;
+        result.district = component.longText
       }
       if (types.includes('postal_code')) {
-        result.postal_code = component.long_name;
+        result.postal_code = component.longText
       }
       if (types.includes('route')) {
-        result.street = component.long_name;
+        result.street = component.longText
       }
       if (types.includes('street_number')) {
-        result.street_number = component.long_name;
+        result.street_number = component.longText
       }
     }
 
-    return result;
-  };
+    return result
+  }
 
-  const handleTextChange = (text: string) => {
-    setInputValue(text);
-    onChange?.(text);
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text)
 
-    // Debounce API calls
     if (debounceTimeout.current) {
-      clearTimeout(debounceTimeout.current);
+      clearTimeout(debounceTimeout.current)
     }
 
     debounceTimeout.current = setTimeout(() => {
-      fetchPredictions(text);
-    }, 500);
-  };
+      fetchSuggestions(text)
+    }, 500)
+  }, [fetchSuggestions])
 
-  const handleSelectPrediction = async (prediction: PlacePrediction) => {
-    setInputValue(prediction.description);
-    setShowPredictions(false);
-    setPredictions([]);
+  const handleSelectSuggestion = useCallback(async (suggestion: PlaceSuggestion) => {
+    setIsLoadingDetails(true)
+    bottomSheetRef.current?.dismiss()
 
-    const details = await fetchPlaceDetails(prediction.place_id);
+    const details = await fetchPlaceDetails(suggestion.placeId)
     if (details) {
-      onChange?.(details.formatted_address);
-      onPlaceSelect(details);
+      setDisplayValue(details.formatted_address)
+      onChange?.(details.formatted_address)
+      onPlaceSelect(details)
     }
-  };
+
+    setIsLoadingDetails(false)
+  }, [fetchPlaceDetails, onChange, onPlaceSelect])
+
+  const handleOpenModal = useCallback(() => {
+    setSearchQuery('')
+    setSuggestions([])
+    bottomSheetRef.current?.present()
+  }, [])
+
+  const handleDismiss = useCallback(() => {
+    setSearchQuery('')
+    setSuggestions([])
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current)
+    }
+  }, [])
+
+  const renderItem = useCallback(
+    ({ item }: { item: PlaceSuggestion }) => (
+      <TouchableOpacity
+        style={styles.item}
+        onPress={() => handleSelectSuggestion(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.itemIcon}>
+          <MapPin size={18} color={colors.textMuted} />
+        </View>
+        <View style={styles.itemTextContainer}>
+          <Text style={[styles.itemMainText, { color: colors.text }]} numberOfLines={1}>
+            {item.mainText}
+          </Text>
+          {item.secondaryText ? (
+            <Text style={[styles.itemSecondaryText, { color: colors.textMuted }]} numberOfLines={1}>
+              {item.secondaryText}
+            </Text>
+          ) : null}
+        </View>
+      </TouchableOpacity>
+    ),
+    [colors, handleSelectSuggestion]
+  )
+
+  const renderEmpty = useCallback(() => {
+    if (isSearching) {
+      return (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.emptyText, { color: colors.textMuted }]}>Aranıyor...</Text>
+        </View>
+      )
+    }
+
+    if (searchQuery.length > 0 && searchQuery.length < 3) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Search size={48} color={colors.textMuted} strokeWidth={1.5} />
+          <Text style={[styles.emptyText, { color: colors.text }]}>En az 3 karakter yazın</Text>
+        </View>
+      )
+    }
+
+    if (searchQuery.length >= 3) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Search size={48} color={colors.textMuted} strokeWidth={1.5} />
+          <Text style={[styles.emptyText, { color: colors.text }]}>Sonuç bulunamadı</Text>
+        </View>
+      )
+    }
+
+    return (
+      <View style={styles.emptyContainer}>
+        <MapPin size={48} color={colors.textMuted} strokeWidth={1.5} />
+        <Text style={[styles.emptyText, { color: colors.text }]}>Adres aramak için yazın</Text>
+        <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
+          En az 3 karakter girin
+        </Text>
+      </View>
+    )
+  }, [isSearching, searchQuery, colors])
+
+  const renderHeader = useCallback(() => (
+    <>
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerLeft}>
+          <Text style={[styles.title, { color: colors.text }]}>Adres Ara</Text>
+          {suggestions.length > 0 && (
+            <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+              {suggestions.length} sonuç
+            </Text>
+          )}
+        </View>
+        <TouchableOpacity
+          onPress={() => bottomSheetRef.current?.dismiss()}
+          style={styles.closeButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <X size={24} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Input */}
+      <View style={[styles.searchContainer, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+        <Search size={20} color={colors.icon} />
+        <BottomSheetTextInput
+          style={[styles.searchInput, { color: colors.text }]}
+          placeholder="Adres veya yer adı yazın..."
+          placeholderTextColor={colors.placeholder}
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoFocus
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity
+            onPress={() => {
+              setSearchQuery('')
+              setSuggestions([])
+            }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <X size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </>
+  ), [suggestions.length, searchQuery, colors, handleSearchChange])
 
   return (
     <View style={styles.container}>
@@ -220,58 +380,33 @@ export function GooglePlacesAutocomplete({
         <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
       )}
 
-      <View style={styles.inputWrapper}>
-        <View style={styles.iconContainer}>
-          <MapPin size={18} color={colors.icon} />
-        </View>
-        <TextInput
+      {/* Tıklanabilir input alanı */}
+      <TouchableOpacity
+        style={[
+          styles.inputTouchable,
+          {
+            borderColor: error ? colors.danger : colors.border,
+          },
+        ]}
+        onPress={handleOpenModal}
+        activeOpacity={0.7}
+      >
+        <MapPin size={18} color={colors.icon} />
+        <Text
           style={[
-            styles.input,
+            styles.inputText,
             {
-              borderColor: error ? colors.danger : colors.border,
-              color: colors.text,
+              color: displayValue ? colors.text : colors.textMuted,
             },
           ]}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textMuted}
-          value={inputValue}
-          onChangeText={handleTextChange}
-          onFocus={() => {
-            if (predictions.length > 0) {
-              setShowPredictions(true);
-            }
-          }}
-        />
-        {isLoading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={colors.primary} />
-          </View>
+          numberOfLines={1}
+        >
+          {displayValue || placeholder}
+        </Text>
+        {isLoadingDetails && (
+          <ActivityIndicator size="small" color={colors.primary} />
         )}
-      </View>
-
-      {showPredictions && predictions.length > 0 && (
-        <View style={[styles.predictionsContainer, { borderColor: colors.border }]}>
-          <FlatList
-            data={predictions}
-            keyExtractor={(item) => item.place_id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.predictionItem, { borderBottomColor: colors.border }]}
-                onPress={() => handleSelectPrediction(item)}
-              >
-                <Text style={[styles.mainText, { color: colors.text }]}>
-                  {item.structured_formatting.main_text}
-                </Text>
-                <Text style={[styles.secondaryText, { color: colors.textMuted }]}>
-                  {item.structured_formatting.secondary_text}
-                </Text>
-              </TouchableOpacity>
-            )}
-            nestedScrollEnabled={true}
-            keyboardShouldPersistTaps="handled"
-          />
-        </View>
-      )}
+      </TouchableOpacity>
 
       {error && (
         <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
@@ -280,62 +415,63 @@ export function GooglePlacesAutocomplete({
       <Text style={[styles.hint, { color: colors.textMuted }]}>
         Adres seçince koordinatlar otomatik dolar
       </Text>
+
+      {/* BottomSheet Modal */}
+      <BottomSheetModal
+        ref={bottomSheetRef}
+        index={0}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        enableContentPanningGesture={false}
+        enableDynamicSizing={false}
+        animateOnMount
+        animationConfigs={animationConfigs}
+        backdropComponent={renderBackdrop}
+        backgroundStyle={styles.background}
+        handleIndicatorStyle={styles.handleIndicator}
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
+        onDismiss={handleDismiss}
+      >
+        {renderHeader()}
+
+        <BottomSheetFlatList
+          data={suggestions}
+          renderItem={renderItem}
+          keyExtractor={(item: PlaceSuggestion) => item.placeId}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmpty}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        />
+      </BottomSheetModal>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     marginBottom: Spacing.md,
-    zIndex: 1000,
   },
   label: {
     ...Typography.bodySM,
     fontWeight: '500',
     marginBottom: Spacing.sm,
   },
-  inputWrapper: {
-    position: 'relative',
+  inputTouchable: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  iconContainer: {
-    position: 'absolute',
-    left: Spacing.md,
-    zIndex: 1,
-  },
-  input: {
-    flex: 1,
     height: 44,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
-    paddingLeft: 40,
-    paddingRight: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
+    backgroundColor: '#FFFFFF',
+  },
+  inputText: {
+    flex: 1,
     fontSize: 15,
-    backgroundColor: '#FFFFFF',
-  },
-  loadingContainer: {
-    position: 'absolute',
-    right: Spacing.md,
-  },
-  predictionsContainer: {
-    maxHeight: 200,
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing.xs,
-    backgroundColor: '#FFFFFF',
-  },
-  predictionItem: {
-    padding: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  mainText: {
-    ...Typography.bodyMD,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  secondaryText: {
-    ...Typography.bodySM,
   },
   errorText: {
     ...Typography.bodySM,
@@ -346,4 +482,103 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
     fontStyle: 'italic',
   },
-});
+  // BottomSheet styles
+  background: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+  },
+  handleIndicator: {
+    backgroundColor: '#9CA3AF',
+    width: 48,
+    height: 5,
+    borderRadius: 3,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing['2xl'],
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  title: {
+    ...Typography.headingLG,
+    marginBottom: 2,
+  },
+  subtitle: {
+    ...Typography.bodySM,
+  },
+  closeButton: {
+    padding: Spacing.xs,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginHorizontal: Spacing.lg,
+    marginVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    ...Typography.bodyMD,
+    paddingVertical: Spacing.xs,
+  },
+  listContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing['3xl'],
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    marginBottom: Spacing.xs,
+    borderRadius: BorderRadius.md,
+  },
+  itemIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
+  itemTextContainer: {
+    flex: 1,
+  },
+  itemMainText: {
+    ...Typography.bodyMD,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  itemSecondaryText: {
+    ...Typography.bodySM,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing['5xl'],
+    paddingHorizontal: Spacing['2xl'],
+  },
+  emptyText: {
+    ...Typography.bodyLG,
+    fontWeight: '500',
+    marginTop: Spacing.md,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    ...Typography.bodySM,
+    marginTop: Spacing.xs,
+    textAlign: 'center',
+  },
+})
