@@ -21,6 +21,7 @@ interface ErrorLogContext {
   apiEndpoint?: string
   apiMethod?: string
   apiStatusCode?: number
+  additionalData?: Record<string, unknown>
 }
 let _logError: ((error: unknown, context?: ErrorLogContext) => Promise<void>) | null = null
 function getLogError() {
@@ -173,12 +174,24 @@ api.interceptors.response.use(
       const logFn = getLogError()
       if (logFn) {
         if (error.response) {
+          const responseData = safeJsonParse(error.response.data)
+          const respMsg = typeof responseData === 'object' && responseData !== null
+            ? (responseData as Record<string, unknown>).message
+            : undefined
+          const respErrors = typeof responseData === 'object' && responseData !== null
+            ? (responseData as Record<string, unknown>).errors
+            : undefined
+
           logFn(error, {
             errorType: 'api_error',
             screen: 'api_interceptor',
             apiEndpoint: requestUrl,
             apiMethod: error.config?.method?.toUpperCase(),
             apiStatusCode: status,
+            additionalData: {
+              response_message: respMsg,
+              validation_errors: respErrors,
+            },
           })
         } else if (error.request) {
           logFn(error, {
@@ -186,6 +199,9 @@ api.interceptors.response.use(
             screen: 'api_interceptor',
             apiEndpoint: requestUrl,
             apiMethod: error.config?.method?.toUpperCase(),
+            additionalData: {
+              code: error.code,
+            },
           })
         }
       }

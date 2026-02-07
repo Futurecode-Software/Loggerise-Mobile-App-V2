@@ -7,7 +7,7 @@
 
 import api from '../api'
 
-export type ErrorType = 'js_error' | 'api_error' | 'network_error' | 'unhandled_rejection'
+export type ErrorType = 'js_error' | 'api_error' | 'network_error' | 'unhandled_rejection' | 'route_not_found'
 
 export interface DeviceInfo {
   platform: string

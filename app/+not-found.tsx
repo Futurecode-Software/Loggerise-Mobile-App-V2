@@ -5,13 +5,14 @@
  * Auth sayfalarıyla aynı tasarım dili: AuthHeader + beyaz card.
  */
 
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { Link } from 'expo-router'
+import { Link, usePathname } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import AuthHeader from '@/components/auth/AuthHeader'
+import { logError } from '@/utils/error-logger'
 import {
   AuthColors,
   AuthSpacing,
@@ -21,6 +22,21 @@ import {
 } from '@/constants/auth-styles'
 
 export default function NotFoundScreen() {
+  const pathname = usePathname()
+  const loggedRef = useRef(false)
+
+  useEffect(() => {
+    if (loggedRef.current) return
+    loggedRef.current = true
+
+    logError(new Error(`404 - Route not found: ${pathname}`), {
+      errorType: 'route_not_found',
+      screen: '+not-found',
+      additionalData: {
+        attempted_path: pathname,
+      },
+    })
+  }, [pathname])
   return (
     <SafeAreaView style={styles.container} edges={[]}>
       <AuthHeader
