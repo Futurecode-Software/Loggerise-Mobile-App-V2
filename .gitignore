@@ -20,7 +20,7 @@ expo-env.d.ts
 
 # Firebase
 # google-services.json - Committed for EAS Build
-GoogleService-Info.plist
+#GoogleService-Info.plist
 *firebase-adminsdk*.json
 
 # Metro
