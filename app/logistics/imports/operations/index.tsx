@@ -399,6 +399,11 @@ export default function ImportOperationsScreen() {
     router.push('/logistics/imports/loads' as any)
   }
 
+  const handleBackPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
+
   const handlePositionPress = (position: Position) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     router.push(`/logistics/imports/positions/${position.id}` as any)
@@ -413,121 +418,100 @@ export default function ImportOperationsScreen() {
     unassignedLoads.length +
     activePositions.reduce((sum, p) => sum + (p.loads_count || 0), 0)
 
-  // Loading durumu
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <PageHeader
-          title="İthalat Operasyonları"
-          icon="briefcase-outline"
-          showBackButton
-        />
-        <LoadingState />
-      </View>
-    )
-  }
-
-  // Hata durumu
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <PageHeader
-          title="İthalat Operasyonları"
-          icon="briefcase-outline"
-          showBackButton
-        />
-        <ErrorState error={error} onRetry={handleRetry} />
-      </View>
-    )
-  }
-
   return (
     <View style={styles.container}>
       <PageHeader
         title="İthalat Operasyonları"
         icon="briefcase-outline"
-        subtitle={`${totalPositions} pozisyon • ${totalLoads} yük`}
+        subtitle={!isLoading && !error ? `${totalPositions} pozisyon • ${totalLoads} yük` : undefined}
         showBackButton
+        onBackPress={handleBackPress}
       />
 
       <View style={styles.content}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={DashboardColors.primary}
-            />
-          }
-        >
-          {/* İstatistik Kartları */}
-          <View style={styles.statsGrid}>
-            <StatCard
-              icon="location-outline"
-              value={activePositions.length}
-              label="Aktif Pozisyon"
-              color={STATUS_COLORS.active}
-              onPress={handlePositionsPress}
-            />
-            <StatCard
-              icon="document-outline"
-              value={draftPositions.length}
-              label="Taslak"
-              color={STATUS_COLORS.draft}
-              onPress={handleDispositionPress}
-            />
-            <StatCard
-              icon="cube-outline"
-              value={unassignedLoads.length}
-              label="Atanmamış Yük"
-              color={{ primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' }}
-              onPress={handleLoadsPress}
-            />
-          </View>
-
-          {/* Hızlı Aksiyonlar */}
-          <View style={styles.quickActions}>
-            <QuickAction
-              icon="map-outline"
-              label="Dispozisyon"
-              onPress={handleDispositionPress}
-              variant="primary"
-            />
-            <QuickAction
-              icon="cube-outline"
-              label="Tüm Yükler"
-              onPress={handleLoadsPress}
-              variant="secondary"
-            />
-          </View>
-
-          {/* Aktif Pozisyonlar */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Aktif Pozisyonlar</Text>
-              <TouchableOpacity onPress={handlePositionsPress}>
-                <Text style={styles.seeAllText}>Tümünü Gör</Text>
-              </TouchableOpacity>
+        {isLoading ? (
+          <LoadingState />
+        ) : error ? (
+          <ErrorState error={error} onRetry={handleRetry} />
+        ) : (
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={DashboardColors.primary}
+              />
+            }
+          >
+            {/* İstatistik Kartları */}
+            <View style={styles.statsGrid}>
+              <StatCard
+                icon="location-outline"
+                value={activePositions.length}
+                label="Aktif Pozisyon"
+                color={STATUS_COLORS.active}
+                onPress={handlePositionsPress}
+              />
+              <StatCard
+                icon="document-outline"
+                value={draftPositions.length}
+                label="Taslak"
+                color={STATUS_COLORS.draft}
+                onPress={handleDispositionPress}
+              />
+              <StatCard
+                icon="cube-outline"
+                value={unassignedLoads.length}
+                label="Atanmamış Yük"
+                color={{ primary: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)' }}
+                onPress={handleLoadsPress}
+              />
             </View>
 
-            {activePositions.length > 0 ? (
-              <View style={styles.positionsList}>
-                {activePositions.slice(0, 5).map((position) => (
-                  <PositionCard
-                    key={position.id}
-                    position={position}
-                    onPress={() => handlePositionPress(position)}
-                  />
-                ))}
+            {/* Hızlı Aksiyonlar */}
+            <View style={styles.quickActions}>
+              <QuickAction
+                icon="map-outline"
+                label="Dispozisyon"
+                onPress={handleDispositionPress}
+                variant="primary"
+              />
+              <QuickAction
+                icon="cube-outline"
+                label="Tüm Yükler"
+                onPress={handleLoadsPress}
+                variant="secondary"
+              />
+            </View>
+
+            {/* Aktif Pozisyonlar */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Aktif Pozisyonlar</Text>
+                <TouchableOpacity onPress={handlePositionsPress}>
+                  <Text style={styles.seeAllText}>Tümünü Gör</Text>
+                </TouchableOpacity>
               </View>
-            ) : (
-              <EmptyState />
-            )}
-          </View>
-        </ScrollView>
+
+              {activePositions.length > 0 ? (
+                <View style={styles.positionsList}>
+                  {activePositions.slice(0, 5).map((position) => (
+                    <PositionCard
+                      key={position.id}
+                      position={position}
+                      onPress={() => handlePositionPress(position)}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <EmptyState />
+              )}
+            </View>
+          </ScrollView>
+        )}
       </View>
     </View>
   )

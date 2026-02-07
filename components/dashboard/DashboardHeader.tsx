@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: DashboardSpacing['2xl'],
-    paddingBottom: 24,
+    paddingBottom: 32,
   },
   glowOrb1: {
     position: 'absolute',

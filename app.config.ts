@@ -69,7 +69,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     googleAndroidClientId: '1039412213943-u4q0qe8952h8khk5oaq55cf2gkqbvp07.apps.googleusercontent.com',
     googleIosClientId: '1039412213943-rse40k3ujo3dt7jci4ba4uclq787angf.apps.googleusercontent.com',
     // Google Maps API Key
-    googleMapsApiKey: '',
+    googleMapsApiKey: 'AIzaSyA2DXbVIyUDLlLrFCzgwLp3X0GmrnPMSzk',
     // API Configuration - Production Backend
     apiUrl: 'https://erp.loggerise.com/api/v1/mobile',
     // WebSocket/Reverb Configuration (Laravel Reverb - Pusher compatible)

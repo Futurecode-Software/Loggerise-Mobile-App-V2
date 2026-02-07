@@ -578,7 +578,8 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     position: 'relative',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    paddingBottom: 32
   },
   glowOrb1: {
     position: 'absolute',

@@ -399,6 +399,11 @@ export default function ExportOperationsScreen() {
     router.push('/logistics/exports/loads' as any)
   }
 
+  const handleBackPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.back()
+  }
+
   const handlePositionPress = (position: Position) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     router.push(`/logistics/exports/positions/${position.id}` as any)
@@ -413,44 +418,22 @@ export default function ExportOperationsScreen() {
     unassignedLoads.length +
     activePositions.reduce((sum, p) => sum + (p.loads_count || 0), 0)
 
-  // Loading durumu
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <PageHeader
-          title="İhracat Operasyonları"
-          icon="briefcase-outline"
-          showBackButton
-        />
-        <LoadingState />
-      </View>
-    )
-  }
-
-  // Hata durumu
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <PageHeader
-          title="İhracat Operasyonları"
-          icon="briefcase-outline"
-          showBackButton
-        />
-        <ErrorState error={error} onRetry={handleRetry} />
-      </View>
-    )
-  }
-
   return (
     <View style={styles.container}>
       <PageHeader
         title="İhracat Operasyonları"
         icon="briefcase-outline"
-        subtitle={`${totalPositions} pozisyon • ${totalLoads} yük`}
+        subtitle={!isLoading && !error ? `${totalPositions} pozisyon • ${totalLoads} yük` : undefined}
         showBackButton
+        onBackPress={handleBackPress}
       />
 
       <View style={styles.content}>
+        {isLoading ? (
+          <LoadingState />
+        ) : error ? (
+          <ErrorState error={error} onRetry={handleRetry} />
+        ) : (
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -528,6 +511,7 @@ export default function ExportOperationsScreen() {
             )}
           </View>
         </ScrollView>
+        )}
       </View>
     </View>
   )

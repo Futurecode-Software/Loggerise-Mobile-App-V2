@@ -201,14 +201,14 @@ paddingTop: insets.top + 16  // HeaderLayout.PADDING_TOP
 minHeight: 70  // HeaderLayout.HEADER_CONTENT_MIN_HEIGHT
 
 // Header paddingBottom HER ZAMAN:
-paddingBottom: 24  // HeaderLayout.HEADER_PADDING_BOTTOM
+paddingBottom: 32  // HeaderLayout.HEADER_PADDING_BOTTOM
 ```
 
 ### Header Yapıları
 
 **FormHeader (new.tsx, edit.tsx):**
 ```typescript
-headerContainer: { paddingBottom: 24, overflow: 'hidden' }
+headerContainer: { paddingBottom: 32, overflow: 'hidden' }
 headerContent: { paddingTop: insets.top + 16 }
 headerBar: { minHeight: 70, paddingBottom: 16 }  // ← minHeight kritik!
 bottomCurve: { height: 24 }
@@ -216,7 +216,7 @@ bottomCurve: { height: 24 }
 
 **PageHeader (index.tsx, [id].tsx):**
 ```typescript
-content: { paddingTop: insets.top + 16, paddingBottom: 24 }
+content: { paddingTop: insets.top + 16, paddingBottom: 32 }
 headerRow: { minHeight: 70 }  // ← minHeight kritik!
 bottomCurve: { height: 24 }
 ```

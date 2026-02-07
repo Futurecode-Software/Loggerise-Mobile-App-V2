@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     overflow: 'hidden',
-    paddingBottom: 24,
+    paddingBottom: 32,
   },
   content: {
     paddingHorizontal: DashboardSpacing.lg
