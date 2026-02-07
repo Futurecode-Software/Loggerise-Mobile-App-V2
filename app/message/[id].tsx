@@ -11,11 +11,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Platform,
-  StatusBar as RNStatusBar,
   ActivityIndicator
 } from 'react-native'
-import { StatusBar } from 'expo-status-bar'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller'
@@ -177,15 +174,7 @@ export default function ConversationScreen() {
 
   return (
     <View style={styles.container}>
-      {/* StatusBar */}
-      <StatusBar style="light" backgroundColor={DashboardColors.primaryDark} />
-      {Platform.OS === 'android' && (
-        <RNStatusBar
-          barStyle="light-content"
-          backgroundColor={DashboardColors.primaryDark}
-          translucent={false}
-        />
-      )}
+      {/* StatusBar root layout'tan yönetilir */}
 
       {/* Header - Detay sayfası standardı (statik glow orbs) */}
       <View style={styles.headerContainer}>

@@ -19,7 +19,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { StatusBar } from 'expo-status-bar'
+
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -388,7 +388,7 @@ export default function Register() {
   if (isInitializing || isAuthenticated) {
     return (
       <SafeAreaView style={styles.container} edges={[]}>
-        <StatusBar style="light" />
+
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={AuthColors.white} />
         </View>
@@ -398,7 +398,7 @@ export default function Register() {
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
-      <StatusBar style="light" />
+
 
       <AuthHeader
         title="Hesap Oluştur"

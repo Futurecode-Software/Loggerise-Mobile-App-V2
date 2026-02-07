@@ -12,12 +12,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  StatusBar as RNStatusBar,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { Brand, Typography, Spacing } from '@/constants/theme';
@@ -81,16 +79,6 @@ export function FullScreenHeader({
 
   return (
     <>
-      {/* StatusBar - Yeşil arka plan, beyaz içerik */}
-      <StatusBar style="light" backgroundColor={Brand.primary} />
-      {Platform.OS === 'android' && (
-        <RNStatusBar
-          barStyle="light-content"
-          backgroundColor={Brand.primary}
-          translucent={false}
-        />
-      )}
-
       {/* Header Container - Tam ekran yeşil arka plan */}
       <View
         style={[

@@ -19,7 +19,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons, FontAwesome } from '@expo/vector-icons'
-import { StatusBar } from 'expo-status-bar'
+
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -216,8 +216,6 @@ export default function Login() {
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
-      <StatusBar style="light" />
-
       <AuthHeader
         title="Hoş Geldiniz"
         subtitle="Görevleriniz ve projeleriniz için giriş yapın"

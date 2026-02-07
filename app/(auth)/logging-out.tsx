@@ -19,7 +19,7 @@ import Animated, {
   Easing
 } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
-import { StatusBar } from 'expo-status-bar'
+
 import { useAuth } from '@/context/auth-context'
 import { DashboardColors, DashboardFontSizes, DashboardSpacing } from '@/constants/dashboard-theme'
 
@@ -117,7 +117,7 @@ export default function LoggingOutScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+
 
       {/* Gradient Background */}
       <LinearGradient

@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { StatusBar } from 'expo-status-bar'
 import Toast from 'react-native-toast-message'
 import { AuthProvider, useAuth } from '@/context/auth-context'
 import { DashboardProvider } from '@/context/dashboard-context'
@@ -94,6 +95,7 @@ export default function RootLayout() {
                 <MessageProvider>
                   <NotificationProvider>
                     <QuickActionsProvider>
+                      <StatusBar style="light" />
                       <NavigationController />
                       <Toast />
                     </QuickActionsProvider>

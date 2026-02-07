@@ -19,7 +19,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { StatusBar } from 'expo-status-bar'
+
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -150,7 +150,7 @@ export default function ForgotPassword() {
   if (isSent) {
     return (
       <SafeAreaView style={styles.container} edges={[]}>
-        <StatusBar style="light" />
+
 
         <AuthHeader
           title="E-posta Gönderildi"
@@ -212,7 +212,7 @@ export default function ForgotPassword() {
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
-      <StatusBar style="light" />
+
 
       <AuthHeader
         title="Şifrenizi mi Unuttunuz?"

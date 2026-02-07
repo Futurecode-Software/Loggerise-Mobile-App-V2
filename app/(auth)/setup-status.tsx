@@ -16,7 +16,7 @@ import {
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { StatusBar } from 'expo-status-bar'
+
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated, {
   useSharedValue,
@@ -422,7 +422,7 @@ export default function SetupStatus() {
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
-      <StatusBar style="light" />
+
 
       {/* Header with Logo */}
       <View style={styles.header}>
