@@ -20,6 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.loggerise.erp',
+    googleServicesFile: './GoogleService-Info.plist',
   },
   android: {
     adaptiveIcon: {
@@ -66,6 +67,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Google OAuth Client IDs (Firebase loggerise-erp projesi)
     googleWebClientId: '1039412213943-qk6dt54mve1jckpq54aj017mh8n9hj31.apps.googleusercontent.com',
     googleAndroidClientId: '1039412213943-u4q0qe8952h8khk5oaq55cf2gkqbvp07.apps.googleusercontent.com',
+    googleIosClientId: '1039412213943-rse40k3ujo3dt7jci4ba4uclq787angf.apps.googleusercontent.com',
     // Google Maps API Key
     googleMapsApiKey: '',
     // API Configuration - Production Backend

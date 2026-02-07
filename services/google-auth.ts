@@ -33,6 +33,7 @@ function ensureConfigured() {
   if (isConfigured) return
   GoogleSignin.configure({
     webClientId: GOOGLE_CONFIG.webClientId,
+    iosClientId: GOOGLE_CONFIG.iosClientId || undefined,
     offlineAccess: false,
     scopes: ['profile', 'email'],
   })
