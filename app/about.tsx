@@ -19,26 +19,6 @@ import {
 } from '@/constants/dashboard-theme'
 import Constants from 'expo-constants'
 
-interface FeatureItemProps {
-  icon: keyof typeof Ionicons.glyphMap
-  title: string
-  description: string
-  color: string
-}
-
-function FeatureItem({ icon, title, description, color }: FeatureItemProps): React.ReactElement {
-  return (
-    <View style={styles.featureItem}>
-      <View style={[styles.featureIcon, { backgroundColor: `${color}15` }]}>
-        <Ionicons name={icon} size={24} color={color} />
-      </View>
-      <View style={styles.featureContent}>
-        <Text style={styles.featureTitle}>{title}</Text>
-        <Text style={styles.featureDescription}>{description}</Text>
-      </View>
-    </View>
-  )
-}
 
 export default function AboutScreen(): React.ReactElement {
   const handleBackPress = (): void => {
@@ -63,129 +43,69 @@ export default function AboutScreen(): React.ReactElement {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo ve Başlık */}
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="business" size={48} color={DashboardColors.primary} />
-          </View>
+        <View style={styles.headerContainer}>
           <Text style={styles.appName}>Loggerise Mobile</Text>
-          <Text style={styles.appTagline}>Entegre İşletme Yönetim Sistemi</Text>
+          <Text style={styles.appTagline}>İşletmeniz İçin Akıllı, Entegre ve Mobil Çözümler</Text>
         </View>
 
-        {/* Açıklama */}
-        <View style={styles.descriptionCard}>
+        <View style={styles.contentCard}>
+          <Text style={styles.sectionTitle}>Vizyonumuz</Text>
           <Text style={styles.descriptionText}>
-            Loggerise Mobile, lojistik ve taşımacılık sektöründe faaliyet gösteren işletmelerin
-            operasyonel süreçlerini dijitalleştiren, mobil tabanlı bir yönetim sistemidir.
-            Muhasebe, CRM, filo yönetimi, depo ve insan kaynakları süreçlerini tek bir platformda
-            birleştirerek iş akışlarınızı hızlandırır ve verimliliğinizi artırır.
+            Loggerise Mobile olarak vizyonumuz, lojistik ve saha operasyonları yürüten işletmelerin dijital dönüşümüne liderlik etmektir. Karmaşık iş süreçlerini basitleştiren, tüm operasyonel birimleri tek bir platformda birleştiren ve mobil teknolojinin gücüyle işletmenize her an her yerden erişim imkanı sunan yenilikçi bir ekosistem sağlıyoruz. Amacımız, verimliliği maksimize ederek ve stratejik karar alma süreçlerinizi anlık verilerle destekleyerek pazarınızda rekabet avantajı elde etmenizi sağlamaktır.
           </Text>
         </View>
 
-        {/* Özellikler */}
-        <Text style={styles.sectionTitle}>Temel Özellikler</Text>
-        <View style={styles.featuresContainer}>
-          <FeatureItem
-            icon="calculator"
-            title="Muhasebe Yönetimi"
-            description="Kasa, banka, çek, senet işlemleri ve fatura yönetimi"
-            color="#3b82f6"
-          />
-          <FeatureItem
-            icon="navigate"
-            title="Lojistik Operasyonlar"
-            description="İhracat, ithalat ve yurtiçi taşıma süreçlerinin takibi"
-            color="#8b5cf6"
-          />
-          <FeatureItem
-            icon="car-sport"
-            title="Filo Yönetimi"
-            description="Araç, sürücü ve römork takibi, bakım planlaması"
-            color="#f97316"
-          />
-          <FeatureItem
-            icon="business"
-            title="Depo Yönetimi"
-            description="Stok takibi, depo hareketleri ve pozisyon kontrolü"
-            color="#10b981"
-          />
-          <FeatureItem
-            icon="sparkles"
-            title="CRM"
-            description="Müşteri ilişkileri yönetimi ve teklif takibi"
-            color="#ec4899"
-          />
-          <FeatureItem
-            icon="people-circle"
-            title="İnsan Kaynakları"
-            description="Personel yönetimi, iş ilanları ve başvuru süreçleri"
-            color="#06b6d4"
-          />
-          <FeatureItem
-            icon="bar-chart"
-            title="Raporlama"
-            description="Detaylı finansal ve operasyonel raporlar"
-            color="#14b8a6"
-          />
-          <FeatureItem
-            icon="notifications"
-            title="Bildirimler"
-            description="Anlık bildirimler ile önemli gelişmeleri kaçırmayın"
-            color="#f59e0b"
-          />
-        </View>
-
-        {/* Avantajlar */}
-        <Text style={styles.sectionTitle}>Avantajları</Text>
-        <View style={styles.advantagesCard}>
-          <View style={styles.advantageItem}>
-            <Ionicons name="checkmark-circle" size={20} color={DashboardColors.success} />
-            <Text style={styles.advantageText}>Mobil erişim ile her yerden yönetim</Text>
-          </View>
-          <View style={styles.advantageItem}>
-            <Ionicons name="checkmark-circle" size={20} color={DashboardColors.success} />
-            <Text style={styles.advantageText}>Gerçek zamanlı veri senkronizasyonu</Text>
-          </View>
-          <View style={styles.advantageItem}>
-            <Ionicons name="checkmark-circle" size={20} color={DashboardColors.success} />
-            <Text style={styles.advantageText}>Kullanıcı dostu arayüz</Text>
-          </View>
-          <View style={styles.advantageItem}>
-            <Ionicons name="checkmark-circle" size={20} color={DashboardColors.success} />
-            <Text style={styles.advantageText}>Güvenli veri saklama</Text>
-          </View>
-          <View style={styles.advantageItem}>
-            <Ionicons name="checkmark-circle" size={20} color={DashboardColors.success} />
-            <Text style={styles.advantageText}>Entegre iş akışları</Text>
-          </View>
-        </View>
-
-        {/* Versiyon Bilgisi */}
-        <View style={styles.versionCard}>
-          <View style={styles.versionRow}>
-            <Text style={styles.versionLabel}>Versiyon</Text>
-            <Text style={styles.versionValue}>{appVersion}</Text>
-          </View>
-          <View style={styles.versionRow}>
-            <Text style={styles.versionLabel}>Platform</Text>
-            <Text style={styles.versionValue}>React Native (Expo)</Text>
-          </View>
-          <View style={styles.versionRow}>
-            <Text style={styles.versionLabel}>Son Güncelleme</Text>
-            <Text style={styles.versionValue}>2025</Text>
-          </View>
-        </View>
-
-        {/* İletişim */}
-        <View style={styles.contactCard}>
-          <Ionicons name="mail" size={24} color={DashboardColors.primary} />
-          <Text style={styles.contactText}>
-            Destek ve öneri için lütfen sistem yöneticinizle iletişime geçin.
+        <View style={styles.contentCard}>
+          <Text style={styles.sectionTitle}>Çekirdek Modüllerimiz</Text>
+          <Text style={styles.moduleDescriptionText}>
+            Uygulamamız, işletmenizin her alanını kapsayacak şekilde tasarlanmış güçlü modüllerden oluşur:
           </Text>
+          
+          <View style={styles.moduleGrid}>
+            <ModuleItem icon="navigate" title="Lojistik ve Operasyon" description="Yurtiçi ve uluslararası taşımalarınızı, seferlerinizi ve yüklerinizi anlık olarak yönetin." color="#8b5cf6" />
+            <ModuleItem icon="calculator" title="Finans ve Muhasebe" description="Kasa, banka, çek, senet ve tüm finansal akışınızı kontrol altında tutun." color="#3b82f6" />
+            <ModuleItem icon="car-sport" title="Filo Yönetimi" description="Araçlarınızın, sürücülerinizin ve bakım süreçlerinizin tam kontrolünü sağlayın." color="#f97316" />
+            <ModuleItem icon="sparkles" title="CRM ve Satış" description="Müşteri ilişkilerinizi güçlendirin ve tekliften satışa tüm süreci yönetin." color="#ec4899" />
+            <ModuleItem icon="business" title="Stok ve Depo" description="Depolarınızdaki stok hareketlerini ve ürün pozisyonlarını hassasiyetle izleyin." color="#10b981" />
+            <ModuleItem icon="people-circle" title="İnsan Kaynakları" description="Personel yönetimi, işe alım ve performans takibi süreçlerinizi dijitalleştirin." color="#06b6d4" />
+          </View>
         </View>
+
+        <View style={styles.contentCard}>
+          <Text style={styles.sectionTitle}>Neden Loggerise Mobile?</Text>
+          <AdvantageItem text="Tüm iş süreçlerini tek bir entegre platformda birleştirin." />
+          <AdvantageItem text="Mobil erişim sayesinde ofis dışında bile tam kontrol sağlayın." />
+          <AdvantageItem text="Anlık veri akışı ile hızlı ve doğru kararlar alın." />
+          <AdvantageItem text="Kullanıcı dostu arayüzü ile ekibinizin hızla adapte olmasını sağlayın." />
+          <AdvantageItem text="Güçlü raporlama araçlarıyla işletmenizin performansını derinlemesine analiz edin." />
+        </View>
+
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+    </View>
+  )
+}
+
+function ModuleItem({ icon, title, description, color }: { icon: keyof typeof Ionicons.glyphMap, title: string, description: string, color: string }) {
+  return (
+    <View style={styles.moduleItem}>
+      <View style={[styles.moduleIconContainer, { backgroundColor: `${color}20` }]}>
+        <Ionicons name={icon} size={22} color={color} />
+      </View>
+      <View style={styles.moduleTextContainer}>
+        <Text style={styles.moduleTitle}>{title}</Text>
+        <Text style={styles.moduleItemDescription}>{description}</Text>
+      </View>
+    </View>
+  )
+}
+
+function AdvantageItem({ text }: { text: string }) {
+  return (
+    <View style={styles.advantageItem}>
+      <Ionicons name="checkmark-circle-outline" size={20} color={DashboardColors.success} />
+      <Text style={styles.advantageText}>{text}</Text>
     </View>
   )
 }
@@ -200,139 +120,118 @@ const styles = StyleSheet.create({
     backgroundColor: DashboardColors.background
   },
   scrollContent: {
-    paddingHorizontal: DashboardSpacing['2xl'],
-    paddingTop: 0,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.lg,
   },
-  logoContainer: {
+  headerContainer: {
     alignItems: 'center',
-    paddingVertical: DashboardSpacing['2xl']
-  },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: `${DashboardColors.primary}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: DashboardSpacing.lg
+    paddingVertical: DashboardSpacing.lg,
+    marginBottom: DashboardSpacing.md,
   },
   appName: {
     fontSize: DashboardFontSizes['2xl'],
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: DashboardColors.textPrimary,
-    marginBottom: DashboardSpacing.xs
+    textAlign: 'center',
+    marginBottom: DashboardSpacing.sm,
   },
   appTagline: {
     fontSize: DashboardFontSizes.base,
-    color: DashboardColors.textSecondary
+    color: DashboardColors.textSecondary,
+    textAlign: 'center',
   },
-  descriptionCard: {
+  contentCard: {
     backgroundColor: DashboardColors.surface,
     borderRadius: DashboardBorderRadius.xl,
     padding: DashboardSpacing.lg,
-    marginBottom: DashboardSpacing.xl,
+    marginBottom: DashboardSpacing.lg,
     ...DashboardShadows.sm
+  },
+  sectionTitle: {
+    fontSize: DashboardFontSizes.lg,
+    fontWeight: 'bold',
+    color: DashboardColors.textPrimary,
+    marginBottom: DashboardSpacing.md,
   },
   descriptionText: {
     fontSize: DashboardFontSizes.base,
     lineHeight: 24,
-    color: DashboardColors.textPrimary
+    color: DashboardColors.textSecondary,
   },
-  sectionTitle: {
-    fontSize: DashboardFontSizes.lg,
-    fontWeight: '700',
-    color: DashboardColors.textPrimary,
-    marginBottom: DashboardSpacing.lg
+  moduleDescriptionText: {
+    fontSize: DashboardFontSizes.base,
+    lineHeight: 24,
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.lg,
   },
-  featuresContainer: {
-    gap: DashboardSpacing.md,
-    marginBottom: DashboardSpacing.xl
+  moduleGrid: {
+    gap: DashboardSpacing.lg,
   },
-  featureItem: {
+  moduleItem: {
     flexDirection: 'row',
-    backgroundColor: DashboardColors.surface,
-    borderRadius: DashboardBorderRadius.xl,
-    padding: DashboardSpacing.lg,
-    ...DashboardShadows.sm
+    alignItems: 'center',
+    gap: DashboardSpacing.md,
   },
-  featureIcon: {
-    width: 48,
-    height: 48,
+  moduleIconContainer: {
+    width: 44,
+    height: 44,
     borderRadius: DashboardBorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: DashboardSpacing.md
   },
-  featureContent: {
-    flex: 1
+  moduleTextContainer: {
+    flex: 1,
   },
-  featureTitle: {
+  moduleTitle: {
     fontSize: DashboardFontSizes.base,
     fontWeight: '600',
     color: DashboardColors.textPrimary,
-    marginBottom: DashboardSpacing.xs
+    marginBottom: 2,
   },
-  featureDescription: {
+  moduleItemDescription: {
     fontSize: DashboardFontSizes.sm,
     color: DashboardColors.textSecondary,
-    lineHeight: 20
-  },
-  advantagesCard: {
-    backgroundColor: DashboardColors.surface,
-    borderRadius: DashboardBorderRadius.xl,
-    padding: DashboardSpacing.lg,
-    marginBottom: DashboardSpacing.xl,
-    gap: DashboardSpacing.md,
-    ...DashboardShadows.sm
+    lineHeight: 18,
   },
   advantageItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DashboardSpacing.sm
+    gap: DashboardSpacing.sm,
+    marginBottom: DashboardSpacing.sm,
   },
   advantageText: {
     fontSize: DashboardFontSizes.base,
-    color: DashboardColors.textPrimary,
-    flex: 1
+    color: DashboardColors.textSecondary,
+    flex: 1,
+    lineHeight: 22,
   },
-  versionCard: {
-    backgroundColor: DashboardColors.surface,
+  footerCard: {
+    backgroundColor: 'transparent',
     borderRadius: DashboardBorderRadius.xl,
-    padding: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.sm,
+    paddingHorizontal: DashboardSpacing.lg,
     marginBottom: DashboardSpacing.xl,
-    gap: DashboardSpacing.md,
-    ...DashboardShadows.sm
+    borderWidth: 1,
+    borderColor: DashboardColors.border,
   },
   versionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  versionLabel: {
-    fontSize: DashboardFontSizes.base,
-    color: DashboardColors.textSecondary
-  },
-  versionValue: {
-    fontSize: DashboardFontSizes.base,
-    fontWeight: '600',
-    color: DashboardColors.textPrimary
-  },
-  contactCard: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: DashboardSpacing.md,
-    backgroundColor: `${DashboardColors.primary}10`,
-    borderRadius: DashboardBorderRadius.xl,
-    padding: DashboardSpacing.lg,
-    marginBottom: DashboardSpacing.xl
+    paddingVertical: DashboardSpacing.sm,
   },
-  contactText: {
-    flex: 1,
+  versionLabel: {
     fontSize: DashboardFontSizes.sm,
     color: DashboardColors.textSecondary,
-    lineHeight: 20
+    flex: 1,
+  },
+  versionValue: {
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '600',
+    color: DashboardColors.textPrimary,
   },
   bottomSpacer: {
     height: 100
   }
 })
+
