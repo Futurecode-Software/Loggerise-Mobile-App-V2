@@ -88,7 +88,7 @@ export default function NewPromissoryNoteScreen() {
         const response = await getContacts({ per_page: 100, is_active: true })
         setContacts(response.contacts)
       } catch (err) {
-        console.error('Failed to load contacts:', err)
+        if (__DEV__) console.error('Failed to load contacts:', err)
       } finally {
         setLoadingContacts(false)
       }

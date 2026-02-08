@@ -99,7 +99,7 @@ export function useFetchData<T, F extends Record<string, any>>({
 
       // Only update error if this is still the latest fetch
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-        console.error('[useFetchData] Fetch error:', err);
+        if (__DEV__) console.error('[useFetchData] Fetch error:', err);
         setError(err instanceof Error ? err.message : 'Veri yüklenemedi');
       }
     } finally {
@@ -307,7 +307,7 @@ export function useFetchList<T, F extends Record<string, any>>({
         if (err.name === 'AbortError') return;
 
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('[useFetchList] Fetch error:', err);
+          if (__DEV__) console.error('[useFetchList] Fetch error:', err);
           setError(err instanceof Error ? err.message : 'Veri yüklenemedi');
         }
       } finally {

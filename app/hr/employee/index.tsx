@@ -256,7 +256,7 @@ export default function EmployeesScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Employees fetch error:', err)
+          if (__DEV__) console.error('Employees fetch error:', err)
           setError(err instanceof Error ? err.message : 'Çalışanlar yüklenemedi')
         }
       } finally {

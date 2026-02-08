@@ -112,7 +112,7 @@ export default function NewProductScreen() {
         setCategories(categoriesRes.categories)
         setModels(modelsRes.models)
       } catch (err) {
-        console.error('Failed to fetch options:', err)
+        if (__DEV__) console.error('Failed to fetch options:', err)
       } finally {
         setIsLoadingOptions(false)
       }

@@ -168,7 +168,7 @@ export default function NewDomesticOrderScreen() {
 
         setCustomers(customerList)
       } catch (err) {
-        console.error('Failed to load customers:', err)
+        if (__DEV__) console.error('Failed to load customers:', err)
       } finally {
         setLoadingCustomers(false)
       }
@@ -199,7 +199,7 @@ export default function NewDomesticOrderScreen() {
 
         setAddresses(addressList)
       } catch (err) {
-        console.error('Failed to load addresses:', err)
+        if (__DEV__) console.error('Failed to load addresses:', err)
         setAddresses([])
       }
     }

@@ -296,7 +296,7 @@ export default function TireWarehouseScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Tires fetch error:', err)
+          if (__DEV__) console.error('Tires fetch error:', err)
           setError(err instanceof Error ? err.message : 'Lastikler yüklenemedi')
         }
       } finally {

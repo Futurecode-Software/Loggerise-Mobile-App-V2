@@ -133,7 +133,7 @@ const loadProducts = async (searchQuery: string): Promise<SelectOption[]> => {
       price: product.price,
     }));
   } catch (error) {
-    console.error('Error loading products:', error);
+    if (__DEV__) console.error('Error loading products:', error);
     return [];
   }
 };
@@ -145,7 +145,7 @@ const fetchExchangeRate = async (currency: string): Promise<string> => {
     const response = await api.get(`/exchange-rates/current/${currency}`);
     return response.data.rate?.toString() || '1';
   } catch (error) {
-    console.error('Error fetching exchange rate:', error);
+    if (__DEV__) console.error('Error fetching exchange rate:', error);
     return '1';
   }
 };
@@ -240,7 +240,7 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
       setItems(updatedItems);
       calculateItemTotals(index, updatedItems);
     } catch (error) {
-      console.error('Error fetching product:', error);
+      if (__DEV__) console.error('Error fetching product:', error);
     }
   };
 

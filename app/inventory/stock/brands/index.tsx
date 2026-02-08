@@ -182,7 +182,7 @@ export default function BrandsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Brands fetch error:', err)
+          if (__DEV__) console.error('Brands fetch error:', err)
           setError(err instanceof Error ? err.message : 'Markalar yuklenemedi')
         }
       } finally {

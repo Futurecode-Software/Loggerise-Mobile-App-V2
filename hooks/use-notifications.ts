@@ -61,7 +61,7 @@ export function useNotifications() {
       setUnreadCount(count);
       return count;
     } catch (err) {
-      console.error('Error fetching unread count:', err);
+      if (__DEV__) console.error('Error fetching unread count:', err);
       return 0;
     }
   }, []);
@@ -73,11 +73,11 @@ export function useNotifications() {
    * Initialize notifications
    */
   const initialize = useCallback(async () => {
-    console.log('[Notifications] Initialize called - Platform:', Platform.OS);
+    if (__DEV__) console.log('[Notifications] Initialize called - Platform:', Platform.OS);
 
     // Use ref to prevent multiple initializations without depending on state
     if (isInitializingRef.current) {
-      console.log('[Notifications] Already initializing, skipping');
+      if (__DEV__) console.log('[Notifications] Already initializing, skipping');
       return;
     }
     isInitializingRef.current = true;
@@ -89,7 +89,7 @@ export function useNotifications() {
     const isSupported = isPushNotificationsSupported();
     const isDevice = Device.isDevice;
     const isExpoGoApp = isExpoGo();
-    console.log('[Notifications] Platform checks:', {
+    if (__DEV__) console.log('[Notifications] Platform checks:', {
       platform: Platform.OS,
       isDevice,
       isExpoGo: isExpoGoApp,
@@ -98,24 +98,24 @@ export function useNotifications() {
 
     // Initialize push notifications on physical devices (not in Expo Go on Android)
     if (isSupported && Platform.OS !== 'web') {
-      console.log('[Notifications] Attempting to initialize push notifications...');
+      if (__DEV__) console.log('[Notifications] Attempting to initialize push notifications...');
       try {
         const { initializePushNotifications } = await import('@/services/notifications');
-        console.log('[Notifications] Module loaded, requesting token...');
+        if (__DEV__) console.log('[Notifications] Module loaded, requesting token...');
         const token = await initializePushNotifications();
         setPushToken(token);
-        console.log('[Notifications] Push token registered:', token ? 'success' : 'no token');
+        if (__DEV__) console.log('[Notifications] Push token registered:', token ? 'success' : 'no token');
       } catch (error) {
-        console.error('[Notifications] Push notifications error:', error);
+        if (__DEV__) console.error('[Notifications] Push notifications error:', error);
       }
     } else if (Platform.OS === 'android' && isExpoGoApp) {
-      console.log('[Notifications] Push notifications require a development build on Android (not supported in Expo Go)');
+      if (__DEV__) console.log('[Notifications] Push notifications require a development build on Android (not supported in Expo Go)');
     } else {
-      console.log('[Notifications] Push notifications not supported on this platform');
+      if (__DEV__) console.log('[Notifications] Push notifications not supported on this platform');
     }
 
     setIsInitialized(true);
-    console.log('[Notifications] Initialization complete');
+    if (__DEV__) console.log('[Notifications] Initialization complete');
   }, [refreshUnreadCount]);
 
   /**
@@ -130,7 +130,7 @@ export function useNotifications() {
       setUnreadCount(data.unread_count);
       return data;
     } catch (err) {
-      console.error('Error fetching notifications:', err);
+      if (__DEV__) console.error('Error fetching notifications:', err);
       setError(err instanceof Error ? err.message : 'Bildirimler yüklenemedi');
       return null;
     } finally {
@@ -152,7 +152,7 @@ export function useNotifications() {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
-      console.error('Error marking notification as read:', err);
+      if (__DEV__) console.error('Error marking notification as read:', err);
     }
   }, []);
 
@@ -168,7 +168,7 @@ export function useNotifications() {
       );
       setUnreadCount(0);
     } catch (err) {
-      console.error('Error marking all notifications as read:', err);
+      if (__DEV__) console.error('Error marking all notifications as read:', err);
     }
   }, []);
 

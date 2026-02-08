@@ -102,7 +102,7 @@ export function AddressSelect({
         }
       }
     } catch (error) {
-      console.error('Error loading addresses:', error);
+      if (__DEV__) console.error('Error loading addresses:', error);
       setOptions([]);
     } finally {
       setIsLoading(false);

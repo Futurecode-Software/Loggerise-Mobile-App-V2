@@ -68,7 +68,7 @@ export default function NewMovementScreen() {
         setProducts(productsRes.products)
         setWarehouses(warehousesRes.warehouses)
       } catch (err) {
-        console.error('Failed to fetch data:', err)
+        if (__DEV__) console.error('Failed to fetch data:', err)
         Toast.show({
           type: 'error',
           text1: 'Ürün ve depo listesi yüklenemedi',

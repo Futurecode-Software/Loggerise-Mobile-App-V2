@@ -100,7 +100,7 @@ const GroupCreateModal = forwardRef<GroupCreateModalRef, GroupCreateModalProps>(
         // Filter out current user
         setUsers(data.filter((u) => u.id !== currentUserId));
       } catch (err) {
-        console.error('Users fetch error:', err);
+        if (__DEV__) console.error('Users fetch error:', err);
         setError(err instanceof Error ? err.message : 'Kullanıcılar yüklenemedi');
       } finally {
         setIsLoading(false);
@@ -190,7 +190,7 @@ const GroupCreateModal = forwardRef<GroupCreateModalRef, GroupCreateModalProps>(
           }
         }, 300);
       } catch (err) {
-        console.error('Create group error:', err);
+        if (__DEV__) console.error('Create group error:', err);
         showError('Hata', 'Grup oluşturulamadı. Lütfen tekrar deneyin.');
       } finally {
         setIsCreating(false);

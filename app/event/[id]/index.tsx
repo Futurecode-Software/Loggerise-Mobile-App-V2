@@ -138,7 +138,7 @@ export default function EventDetailScreen() {
           setEvent(data)
         }
       } catch (err) {
-        console.error('Event fetch error:', err)
+        if (__DEV__) console.error('Event fetch error:', err)
         if (isMountedRef.current) {
           setError(err instanceof Error ? err.message : 'Etkinlik bilgileri yüklenemedi')
         }

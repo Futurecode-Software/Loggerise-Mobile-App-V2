@@ -120,7 +120,7 @@ export function QuoteCreateBasicInfoScreen({
       })
       setContacts(response.contacts || [])
     } catch (err) {
-      console.error('[BasicInfo] Load contacts error:', err)
+      if (__DEV__) console.error('[BasicInfo] Load contacts error:', err)
       Toast.show({
         type: 'error',
         text1: 'Müşteriler yüklenemedi',

@@ -260,7 +260,7 @@ export default function DriverTractorAssignmentsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Assignments fetch error:', err)
+          if (__DEV__) console.error('Assignments fetch error:', err)
           setError(err instanceof Error ? err.message : 'Eşleştirmeler yüklenemedi')
         }
       } finally {

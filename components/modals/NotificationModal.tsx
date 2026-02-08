@@ -126,7 +126,7 @@ const NotificationModal = forwardRef<NotificationModalRef, NotificationModalProp
           }, 300);
         }
       } catch (err) {
-        console.error('Error handling notification:', err);
+        if (__DEV__) console.error('Error handling notification:', err);
       }
     };
 
@@ -138,7 +138,7 @@ const NotificationModal = forwardRef<NotificationModalRef, NotificationModalProp
           await onRefresh();
         }
       } catch (err) {
-        console.error('Error marking all as read:', err);
+        if (__DEV__) console.error('Error marking all as read:', err);
       }
     };
 

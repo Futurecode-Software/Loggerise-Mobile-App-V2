@@ -225,7 +225,7 @@ export default function TractorTrailerAssignmentsScreen() {
       }
     } catch (err) {
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-        console.error('Assignments fetch error:', err)
+        if (__DEV__) console.error('Assignments fetch error:', err)
       }
     } finally {
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {

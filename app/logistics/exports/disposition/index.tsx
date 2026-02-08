@@ -341,7 +341,7 @@ export default function DispositionScreen() {
       }
     } catch (err) {
       if (isMountedRef.current) {
-        console.error('Disposition fetch error:', err)
+        if (__DEV__) console.error('Disposition fetch error:', err)
         setError(err instanceof Error ? err.message : 'Veriler yüklenemedi')
       }
     } finally {

@@ -208,7 +208,7 @@ export default function EditInvoiceScreen() {
       const response = await getContacts({ per_page: 100 })
       setContacts(response.contacts)
     } catch (err) {
-      console.error('Contacts fetch error:', err)
+      if (__DEV__) console.error('Contacts fetch error:', err)
       Toast.show({
         type: 'error',
         text1: 'Cariler yüklenemedi',
@@ -226,7 +226,7 @@ export default function EditInvoiceScreen() {
       const response = await getWarehouses({ is_active: true, per_page: 100 })
       setWarehouses(response.warehouses)
     } catch (err) {
-      console.error('Warehouses fetch error:', err)
+      if (__DEV__) console.error('Warehouses fetch error:', err)
       Toast.show({
         type: 'error',
         text1: 'Depolar yüklenemedi',
@@ -244,7 +244,7 @@ export default function EditInvoiceScreen() {
       const response = await getProducts({ is_active: true, per_page: 200 })
       setProducts(response.products)
     } catch (err) {
-      console.error('Products fetch error:', err)
+      if (__DEV__) console.error('Products fetch error:', err)
       Toast.show({
         type: 'error',
         text1: 'Ürünler yüklenemedi',
@@ -294,7 +294,7 @@ export default function EditInvoiceScreen() {
       const selectedAddr = billingAddress || defaultAddress || firstAddress
       setSelectedContactAddress(selectedAddr)
     } catch (err) {
-      console.error('Contact addresses fetch error:', err)
+      if (__DEV__) console.error('Contact addresses fetch error:', err)
       Toast.show({
         type: 'error',
         text1: 'Adresler yüklenemedi',
@@ -332,7 +332,7 @@ export default function EditInvoiceScreen() {
           visibilityTime: 1500
         })
       } catch (err) {
-        console.error('Exchange rate fetch error:', err)
+        if (__DEV__) console.error('Exchange rate fetch error:', err)
         Toast.show({
           type: 'error',
           text1: `${currencyType} için kur bulunamadı`,
@@ -560,7 +560,7 @@ export default function EditInvoiceScreen() {
 
       router.back()
     } catch (err) {
-      console.error('Invoice update error:', err)
+      if (__DEV__) console.error('Invoice update error:', err)
       Toast.show({
         type: 'error',
         text1: err instanceof Error ? err.message : 'Fatura güncellenemedi',

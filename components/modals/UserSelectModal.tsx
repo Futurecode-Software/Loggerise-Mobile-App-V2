@@ -98,7 +98,7 @@ const UserSelectModal = forwardRef<UserSelectModalRef, UserSelectModalProps>(
         // Filter out current user
         setUsers(data.filter((u) => u.id !== currentUserId));
       } catch (err) {
-        console.error('Users fetch error:', err);
+        if (__DEV__) console.error('Users fetch error:', err);
         setError(err instanceof Error ? err.message : 'Kullanıcılar yüklenemedi');
       } finally {
         setIsLoading(false);
@@ -154,7 +154,7 @@ const UserSelectModal = forwardRef<UserSelectModalRef, UserSelectModalProps>(
           }
         }, 300);
       } catch (err) {
-        console.error('Create conversation error:', err);
+        if (__DEV__) console.error('Create conversation error:', err);
         showError('Hata', 'Konuşma başlatılamadı. Lütfen tekrar deneyin.');
       } finally {
         setIsCreating(false);

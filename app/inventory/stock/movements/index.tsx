@@ -280,7 +280,7 @@ export default function StockMovementsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Movements fetch error:', err)
+          if (__DEV__) console.error('Movements fetch error:', err)
           setError(err instanceof Error ? err.message : 'Stok hareketleri yüklenemedi')
         }
       } finally {

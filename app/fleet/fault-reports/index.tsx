@@ -356,7 +356,7 @@ export default function FaultReportsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Fault reports fetch error:', err)
+          if (__DEV__) console.error('Fault reports fetch error:', err)
           setError(err instanceof Error ? err.message : 'Arıza bildirimleri yüklenemedi')
         }
       } finally {

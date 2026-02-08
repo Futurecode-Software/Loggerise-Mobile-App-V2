@@ -86,7 +86,7 @@ const LoadPickerModal = forwardRef<LoadPickerModalRef, LoadPickerModalProps>(
         // Don't close modal - user might want to select more loads
       } catch (err) {
         // Error is handled by parent
-        console.error('Load selection error:', err);
+        if (__DEV__) console.error('Load selection error:', err);
       }
     };
 

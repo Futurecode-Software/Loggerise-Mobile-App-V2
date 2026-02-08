@@ -75,7 +75,7 @@ export function Step3Financial({ state, actions }: Step3Props) {
             })
           }
         } catch (error) {
-          console.error('E-Fatura query error:', error)
+          if (__DEV__) console.error('E-Fatura query error:', error)
         } finally {
           setIsQueryingTaxNumber(false)
         }
@@ -101,7 +101,7 @@ export function Step3Financial({ state, actions }: Step3Props) {
         data: office
       }))
     } catch (error) {
-      console.error('Tax office search error:', error)
+      if (__DEV__) console.error('Tax office search error:', error)
       return []
     }
   }, [])

@@ -330,7 +330,7 @@ export default function BankAccountsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Banks fetch error:', err)
+          if (__DEV__) console.error('Banks fetch error:', err)
           setError(err instanceof Error ? err.message : 'Banka hesapları yüklenemedi')
         }
       } finally {

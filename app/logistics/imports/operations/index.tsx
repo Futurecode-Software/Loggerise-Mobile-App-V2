@@ -345,7 +345,7 @@ export default function ImportOperationsScreen() {
       }
     } catch (err) {
       if (isMountedRef.current) {
-        console.error('Operations fetch error:', err)
+        if (__DEV__) console.error('Operations fetch error:', err)
         setError(err instanceof Error ? err.message : 'Veriler yüklenemedi')
       }
     } finally {

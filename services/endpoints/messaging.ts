@@ -268,9 +268,11 @@ export async function getConversation(
       try {
         apiResponse = JSON.parse(response.data) as ConversationShowResponse;
       } catch (parseError) {
-        console.error('[Messaging API] JSON parse error:', parseError);
-        console.error('[Messaging API] Raw response (first 500 chars):',
-          (response.data as string).substring(0, 500));
+        if (__DEV__) {
+          console.error('[Messaging API] JSON parse error:', parseError);
+          console.error('[Messaging API] Raw response (first 500 chars):',
+            (response.data as string).substring(0, 500));
+        }
         throw new Error('Sunucudan geçersiz yanıt alındı');
       }
     } else if (response.data && typeof response.data === 'object') {
@@ -281,8 +283,10 @@ export async function getConversation(
     const data = apiResponse?.data;
 
     if (!data || !data.conversation) {
-      console.error('[Messaging API] Invalid response structure');
-      console.error('[Messaging API] apiResponse:', JSON.stringify(apiResponse)?.substring(0, 300));
+      if (__DEV__) {
+        console.error('[Messaging API] Invalid response structure');
+        console.error('[Messaging API] apiResponse:', JSON.stringify(apiResponse)?.substring(0, 300));
+      }
       throw new Error('Konuşma bilgisi alınamadı');
     }
 
@@ -298,7 +302,7 @@ export async function getConversation(
       },
     };
   } catch (error) {
-    console.error('[Messaging API] Error fetching conversation:', error);
+    if (__DEV__) console.error('[Messaging API] Error fetching conversation:', error);
     const message = getErrorMessage(error);
     throw new Error(message);
   }
@@ -379,7 +383,7 @@ export async function sendTypingIndicator(
     });
   } catch (error) {
     // Silently fail for typing indicators
-    console.warn('Typing indicator failed:', error);
+    if (__DEV__) console.warn('Typing indicator failed:', error);
   }
 }
 
@@ -526,6 +530,71 @@ export async function getAvailableUsers(): Promise<UserBasic[]> {
     }
 
     return response.data.data;
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+// =============================================
+// User Blocking & Message Reporting
+// =============================================
+
+/**
+ * Blocked user info
+ */
+export interface BlockedUserInfo {
+  id: number;
+  name: string;
+  email: string;
+  avatar: string | null;
+  blocked_at: string;
+  reason: string | null;
+}
+
+/**
+ * Block a user
+ */
+export async function blockUser(userId: number, reason?: string): Promise<void> {
+  try {
+    await api.post(`/users/${userId}/block`, { reason });
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Unblock a user
+ */
+export async function unblockUser(userId: number): Promise<void> {
+  try {
+    await api.delete(`/users/${userId}/block`);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Get blocked users list
+ */
+export async function getBlockedUsers(): Promise<BlockedUserInfo[]> {
+  try {
+    const response = await api.get<{ success: boolean; data: BlockedUserInfo[] }>('/users/blocked');
+    return response.data.data || [];
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
+}
+
+/**
+ * Report a message
+ */
+export async function reportMessage(messageId: number, reason: string): Promise<void> {
+  try {
+    await api.post(`/messages/${messageId}/report`, { reason });
   } catch (error) {
     const message = getErrorMessage(error);
     throw new Error(message);

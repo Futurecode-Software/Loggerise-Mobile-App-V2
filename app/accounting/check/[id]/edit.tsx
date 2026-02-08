@@ -163,7 +163,7 @@ export default function EditCheckScreen() {
           description: checkData.description || ''
         })
       } catch (err) {
-        console.error('Failed to load check:', err)
+        if (__DEV__) console.error('Failed to load check:', err)
         Toast.show({
           type: 'error',
           text1: 'Çek bilgileri yüklenemedi',

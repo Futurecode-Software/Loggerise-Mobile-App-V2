@@ -75,7 +75,7 @@ export default function Step5InvoiceDeclaration({
         updateFormData('estimated_value_exchange_rate', rate?.toString() || '1');
       }
     } catch (error) {
-      console.error('Kur çekilirken hata:', error);
+      if (__DEV__) console.error('Kur çekilirken hata:', error);
       // Hata durumunda sessizce devam et, kullanıcı manuel giriş yapabilir
     }
   };

@@ -53,7 +53,7 @@ const loadGtipCodes = async (searchQuery: string): Promise<SelectOption[]> => {
       subtitle: item.description,
     }));
   } catch (error) {
-    console.error('Error loading GTIP codes:', error);
+    if (__DEV__) console.error('Error loading GTIP codes:', error);
     return [];
   }
 };

@@ -72,7 +72,7 @@ export function TaxOfficeSelect({
       const results = await searchTaxOffices({ search, limit: 100 });
       setOptions(results);
     } catch (err) {
-      console.error('Tax office search error:', err);
+      if (__DEV__) console.error('Tax office search error:', err);
       setOptions([]);
     } finally {
       setIsLoading(false);

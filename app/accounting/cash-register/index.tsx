@@ -319,7 +319,7 @@ export default function CashRegistersScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Cash registers fetch error:', err)
+          if (__DEV__) console.error('Cash registers fetch error:', err)
           setError(err instanceof Error ? err.message : 'Kasalar yüklenemedi')
         }
       } finally {

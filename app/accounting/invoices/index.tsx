@@ -386,7 +386,7 @@ export default function InvoicesListScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Invoices fetch error:', err)
+          if (__DEV__) console.error('Invoices fetch error:', err)
           setError(err instanceof Error ? err.message : 'Faturalar yüklenemedi')
         }
       } finally {

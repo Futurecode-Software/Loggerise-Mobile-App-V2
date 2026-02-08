@@ -261,7 +261,7 @@ export default function NotificationsScreen() {
       }
     } catch (error) {
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-        console.error('Error fetching notifications:', error)
+        if (__DEV__) console.error('Error fetching notifications:', error)
       }
     } finally {
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
@@ -338,7 +338,7 @@ export default function NotificationsScreen() {
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId))
       refreshUnreadCount()
     } catch (error) {
-      console.error('Error deleting notification:', error)
+      if (__DEV__) console.error('Error deleting notification:', error)
     }
   }
 

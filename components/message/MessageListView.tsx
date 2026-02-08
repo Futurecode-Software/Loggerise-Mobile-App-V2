@@ -36,6 +36,7 @@ interface MessageListViewProps {
   keyboardHeight: SharedValue<number>
   flatListRef: React.RefObject<FlatList<any> | null>
   onRetry: () => void
+  onMessageLongPress?: (message: Message) => void
 }
 
 export function MessageListView({
@@ -46,7 +47,8 @@ export function MessageListView({
   typingUsers,
   keyboardHeight,
   flatListRef,
-  onRetry
+  onRetry,
+  onMessageLongPress
 }: MessageListViewProps) {
   // Inverted messages for FlatList (newest first)
   const invertedMessages = useMemo(() => [...messages].reverse(), [messages])
@@ -113,11 +115,12 @@ export function MessageListView({
             isFirstInGroup={isFirstInGroup}
             isLastInGroup={isLastInGroup}
             isGroupConversation={isGroupConversation}
+            onLongPress={onMessageLongPress}
           />
         </>
       )
     },
-    [invertedMessages, isGroupConversation]
+    [invertedMessages, isGroupConversation, onMessageLongPress]
   )
 
   // Key extractor

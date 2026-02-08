@@ -107,7 +107,7 @@ const loadContacts = async (searchQuery: string): Promise<SelectOptionLocal[]> =
       subtitle: contact.code || contact.short_name,
     }));
   } catch (error) {
-    console.error('Error loading contacts:', error);
+    if (__DEV__) console.error('Error loading contacts:', error);
     return [];
   }
 };

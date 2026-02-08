@@ -268,7 +268,7 @@ export default function DomesticOrdersScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Domestic orders fetch error:', err)
+          if (__DEV__) console.error('Domestic orders fetch error:', err)
           setError(err instanceof Error ? err.message : 'İş emirleri yüklenemedi')
         }
       } finally {

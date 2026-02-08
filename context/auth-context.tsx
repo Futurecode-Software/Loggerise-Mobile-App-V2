@@ -140,18 +140,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setIsSetupComplete(setupStatus.is_setup_complete);
             } catch (setupErr) {
               // If setup status check fails, assume setup is complete to allow access
-              console.log('Setup status check failed:', setupErr);
+              if (__DEV__) console.log('Setup status check failed:', setupErr);
               setIsSetupComplete(true);
             }
           } catch (err) {
             // Token may be invalid, clear auth state
-            console.log('Token validation failed:', err);
+            if (__DEV__) console.log('Token validation failed:', err);
             setUser(null);
             setIsSetupComplete(true);
           }
         }
       } catch (err) {
-        console.error('Auth initialization error:', err);
+        if (__DEV__) console.error('Auth initialization error:', err);
       } finally {
         setIsInitializing(false);
       }
@@ -245,7 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiLogout();
     } catch (err) {
-      console.error('Logout error:', err);
+      if (__DEV__) console.error('Logout error:', err);
     } finally {
       // Reset all auth state
       setUser(null);
@@ -287,7 +287,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentUser = await getCurrentUser();
       setUser(transformUser(currentUser));
     } catch (err) {
-      console.error('Refresh user error:', err);
+      if (__DEV__) console.error('Refresh user error:', err);
     }
   };
 
@@ -302,7 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsSetupComplete(isComplete);
       return isComplete;
     } catch (err) {
-      console.error('Refresh setup status error:', err);
+      if (__DEV__) console.error('Refresh setup status error:', err);
       // Hata durumunda true dön (erişime izin ver)
       setIsSetupComplete(true);
       return true;

@@ -395,14 +395,14 @@ export async function exportQuotePdf(id: number): Promise<{ uri: string; fileNam
     const pdfDirectory = new Directory(Paths.cache, 'pdfs');
     await pdfDirectory.create({ idempotent: true });
 
-    console.log('[PDF Export] Downloading from:', `${API_BASE_URL}/quotes/${id}/pdf`);
+    if (__DEV__) console.log('[PDF Export] Downloading from:', `${API_BASE_URL}/quotes/${id}/pdf`);
 
     // Create the target file
     const targetFile = new File(pdfDirectory, fileName);
 
     // Delete if already exists
     if (await targetFile.exists) {
-      console.log('[PDF Export] Deleting existing file:', targetFile.uri);
+      if (__DEV__) console.log('[PDF Export] Deleting existing file:', targetFile.uri);
       await targetFile.delete();
     }
 
@@ -418,23 +418,23 @@ export async function exportQuotePdf(id: number): Promise<{ uri: string; fileNam
       }
     );
 
-    console.log('[PDF Export] Downloaded file:', downloadedFile.uri);
+    if (__DEV__) console.log('[PDF Export] Downloaded file:', downloadedFile.uri);
 
     // Share/Open the downloaded PDF
     if (await Sharing.isAvailableAsync()) {
-      console.log('[PDF Export] Sharing file...');
+      if (__DEV__) console.log('[PDF Export] Sharing file...');
       await Sharing.shareAsync(downloadedFile.uri, {
         mimeType: 'application/pdf',
         dialogTitle: 'Teklif PDF',
         UTI: 'com.adobe.pdf',
       });
     } else {
-      console.warn('[PDF Export] Sharing not available on this device');
+      if (__DEV__) console.warn('[PDF Export] Sharing not available on this device');
     }
 
     return { uri: downloadedFile.uri, fileName };
   } catch (error) {
-    console.error('PDF download error:', error);
+    if (__DEV__) console.error('PDF download error:', error);
     const message = getErrorMessage(error);
     throw new Error(message);
   }

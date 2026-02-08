@@ -249,7 +249,7 @@ export default function CrmCustomersListScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('CRM customers fetch error:', err)
+          if (__DEV__) console.error('CRM customers fetch error:', err)
           setError(err instanceof Error ? err.message : 'Müşteriler yüklenemedi')
         }
       } finally {

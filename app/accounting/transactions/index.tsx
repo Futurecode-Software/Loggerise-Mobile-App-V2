@@ -397,7 +397,7 @@ export default function TransactionsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Transactions fetch error:', err)
+          if (__DEV__) console.error('Transactions fetch error:', err)
           setError(err instanceof Error ? err.message : 'İşlemler yüklenemedi')
         }
       } finally {

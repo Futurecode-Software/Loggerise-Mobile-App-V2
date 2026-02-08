@@ -457,11 +457,11 @@ export interface LoadFormData {
  */
 export async function updateLoad(id: number, data: LoadFormData): Promise<LoadDetail> {
   try {
-    console.log('[API] Updating load', id, 'with data:', JSON.stringify(data, null, 2));
+    if (__DEV__) console.log('[API] Updating load', id, 'with data:', JSON.stringify(data, null, 2));
     const response = await api.put<LoadResponse>(`/loads/${id}`, data);
     return response.data.data.load;
   } catch (error: any) {
-    console.error('[API] Load update failed:', error?.response?.data || error);
+    if (__DEV__) console.error('[API] Load update failed:', error?.response?.data || error);
     // Get detailed error message
     if (error?.response?.data?.errors) {
       const errors = error.response.data.errors;
@@ -483,11 +483,11 @@ export async function updateLoad(id: number, data: LoadFormData): Promise<LoadDe
  */
 export async function createLoad(data: LoadFormData): Promise<LoadDetail> {
   try {
-    console.log('[API] Creating load with data:', JSON.stringify(data, null, 2));
+    if (__DEV__) console.log('[API] Creating load with data:', JSON.stringify(data, null, 2));
     const response = await api.post<LoadResponse>('/loads', data);
     return response.data.data.load;
   } catch (error: any) {
-    console.error('[API] Load creation failed:', error?.response?.data || error);
+    if (__DEV__) console.error('[API] Load creation failed:', error?.response?.data || error);
     // Get detailed error message
     if (error?.response?.data?.errors) {
       const errors = error.response.data.errors;

@@ -311,7 +311,7 @@ export default function PromissoryNotesScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Promissory notes fetch error:', err)
+          if (__DEV__) console.error('Promissory notes fetch error:', err)
           setError(err instanceof Error ? err.message : 'Senetler yüklenemedi')
         }
       } finally {

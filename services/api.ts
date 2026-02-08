@@ -209,7 +209,7 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized - Token expired or invalid
     if (status === 401) {
-      console.log('[API] Unauthorized - clearing auth state');
+      if (__DEV__) console.log('[API] Unauthorized - clearing auth state');
 
       // Clear all stored auth data
       await clearAllStorage();
@@ -222,22 +222,22 @@ api.interceptors.response.use(
 
     // Handle 403 Forbidden
     if (status === 403) {
-      console.log('[API] Forbidden - insufficient permissions');
+      if (__DEV__) console.log('[API] Forbidden - insufficient permissions');
     }
 
     // Handle 422 Validation Error
     if (status === 422) {
-      console.log('[API] Validation error:', error.response?.data?.errors);
+      if (__DEV__) console.log('[API] Validation error:', error.response?.data?.errors);
     }
 
     // Handle 500 Server Error
     if (status && status >= 500) {
-      console.log('[API] Server error:', error.response?.data?.message);
+      if (__DEV__) console.log('[API] Server error:', error.response?.data?.message);
     }
 
     // Handle network errors
     if (!error.response) {
-      console.log('[API] Network error - no response received');
+      if (__DEV__) console.log('[API] Network error - no response received');
     }
 
     return Promise.reject(error);

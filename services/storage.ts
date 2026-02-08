@@ -21,7 +21,7 @@ export const secureStorage = {
     try {
       await SecureStore.setItemAsync(STORAGE_KEYS.AUTH_TOKEN, token);
     } catch (error) {
-      console.error('Error saving token:', error);
+      if (__DEV__) console.error('Error saving token:', error);
       throw error;
     }
   },
@@ -33,7 +33,7 @@ export const secureStorage = {
     try {
       return await SecureStore.getItemAsync(STORAGE_KEYS.AUTH_TOKEN);
     } catch (error) {
-      console.error('Error getting token:', error);
+      if (__DEV__) console.error('Error getting token:', error);
       return null;
     }
   },
@@ -45,7 +45,7 @@ export const secureStorage = {
     try {
       await SecureStore.deleteItemAsync(STORAGE_KEYS.AUTH_TOKEN);
     } catch (error) {
-      console.error('Error removing token:', error);
+      if (__DEV__) console.error('Error removing token:', error);
     }
   },
 
@@ -56,7 +56,7 @@ export const secureStorage = {
     try {
       await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, token);
     } catch (error) {
-      console.error('Error saving refresh token:', error);
+      if (__DEV__) console.error('Error saving refresh token:', error);
       throw error;
     }
   },
@@ -68,7 +68,7 @@ export const secureStorage = {
     try {
       return await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
     } catch (error) {
-      console.error('Error getting refresh token:', error);
+      if (__DEV__) console.error('Error getting refresh token:', error);
       return null;
     }
   },
@@ -80,7 +80,7 @@ export const secureStorage = {
     try {
       await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
     } catch (error) {
-      console.error('Error removing refresh token:', error);
+      if (__DEV__) console.error('Error removing refresh token:', error);
     }
   },
 
@@ -92,7 +92,7 @@ export const secureStorage = {
       await SecureStore.deleteItemAsync(STORAGE_KEYS.AUTH_TOKEN);
       await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
     } catch (error) {
-      console.error('Error clearing secure storage:', error);
+      if (__DEV__) console.error('Error clearing secure storage:', error);
     }
   },
 };
@@ -109,7 +109,7 @@ export const storage = {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(data));
     } catch (error) {
-      console.error('Error saving user data:', error);
+      if (__DEV__) console.error('Error saving user data:', error);
       throw error;
     }
   },
@@ -122,7 +122,7 @@ export const storage = {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('Error getting user data:', error);
+      if (__DEV__) console.error('Error getting user data:', error);
       return null;
     }
   },
@@ -134,7 +134,7 @@ export const storage = {
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
     } catch (error) {
-      console.error('Error removing user data:', error);
+      if (__DEV__) console.error('Error removing user data:', error);
     }
   },
 
@@ -145,7 +145,7 @@ export const storage = {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.REMEMBER_ME, JSON.stringify(value));
     } catch (error) {
-      console.error('Error saving remember me:', error);
+      if (__DEV__) console.error('Error saving remember me:', error);
     }
   },
 
@@ -157,7 +157,7 @@ export const storage = {
       const value = await AsyncStorage.getItem(STORAGE_KEYS.REMEMBER_ME);
       return value ? JSON.parse(value) : false;
     } catch (error) {
-      console.error('Error getting remember me:', error);
+      if (__DEV__) console.error('Error getting remember me:', error);
       return false;
     }
   },
@@ -170,7 +170,7 @@ export const storage = {
       const data = await AsyncStorage.getItem(key);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error(`Error getting ${key}:`, error);
+      if (__DEV__) console.error(`Error getting ${key}:`, error);
       return null;
     }
   },
@@ -182,7 +182,7 @@ export const storage = {
     try {
       await AsyncStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
-      console.error(`Error setting ${key}:`, error);
+      if (__DEV__) console.error(`Error setting ${key}:`, error);
       throw error;
     }
   },
@@ -194,7 +194,7 @@ export const storage = {
     try {
       await AsyncStorage.removeItem(key);
     } catch (error) {
-      console.error(`Error removing ${key}:`, error);
+      if (__DEV__) console.error(`Error removing ${key}:`, error);
     }
   },
 
@@ -208,7 +208,7 @@ export const storage = {
         STORAGE_KEYS.REMEMBER_ME,
       ]);
     } catch (error) {
-      console.error('Error clearing storage:', error);
+      if (__DEV__) console.error('Error clearing storage:', error);
     }
   },
 };

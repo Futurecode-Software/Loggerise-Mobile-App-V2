@@ -120,7 +120,7 @@ export function BorderCrossingSection({ position, onUpdate }: BorderCrossingSect
 
       onUpdate();
     } catch (error: any) {
-      console.error('Update error:', error);
+      if (__DEV__) console.error('Update error:', error);
 
       // Handle validation errors
       if (error.response?.data?.errors) {

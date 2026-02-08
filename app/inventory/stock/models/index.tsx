@@ -188,7 +188,7 @@ export default function ModelsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Models fetch error:', err);
+          if (__DEV__) console.error('Models fetch error:', err);
           setError(err instanceof Error ? err.message : 'Modeller yüklenemedi');
         }
       } finally {

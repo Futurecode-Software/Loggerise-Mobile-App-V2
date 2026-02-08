@@ -54,7 +54,7 @@ export function GroupCreationModal({
       const availableUsers = await getAvailableUsers();
       setUsers(availableUsers);
     } catch (err) {
-      console.error('Users fetch error:', err);
+      if (__DEV__) console.error('Users fetch error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Kullanıcılar yüklenemedi';
       if (onError) {
         onError(errorMessage);
@@ -132,7 +132,7 @@ export function GroupCreationModal({
       onGroupCreated(conversation.id);
       onClose();
     } catch (err) {
-      console.error('Create group error:', err);
+      if (__DEV__) console.error('Create group error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Grup oluşturulurken bir hata oluştu';
       if (onError) {
         onError(errorMessage);

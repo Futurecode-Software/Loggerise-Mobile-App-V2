@@ -95,7 +95,7 @@ export function InsuranceFuelSection({ position, onUpdate }: InsuranceFuelSectio
       const rate = rateData.forex_selling;
       setFormData((prev) => ({ ...prev, insurance_exchange_rate: rate }));
     } catch (error) {
-      console.error('Exchange rate fetch error:', error);
+      if (__DEV__) console.error('Exchange rate fetch error:', error);
       showToast({
         type: 'error',
         message: `${currencyCode} için kur bulunamadı. Manuel giriş yapabilirsiniz.`,
@@ -156,7 +156,7 @@ export function InsuranceFuelSection({ position, onUpdate }: InsuranceFuelSectio
 
       onUpdate();
     } catch (error: any) {
-      console.error('Update error:', error);
+      if (__DEV__) console.error('Update error:', error);
 
       // Handle validation errors
       if (error.response?.data?.errors) {

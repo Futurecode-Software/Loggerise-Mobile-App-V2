@@ -162,7 +162,7 @@ export async function logout(): Promise<void> {
     await api.post('/logout');
   } catch (error) {
     // Continue with local logout even if API fails
-    console.log('Logout API error:', error);
+    if (__DEV__) console.log('Logout API error:', error);
   } finally {
     // Always clear local storage
     await clearAllStorage();
@@ -252,6 +252,20 @@ export async function hasStoredAuth(): Promise<boolean> {
  */
 export async function getStoredUser(): Promise<User | null> {
   return storage.getUserData<User>();
+}
+
+/**
+ * Delete user account
+ * Requires password confirmation. Permanently deletes all data.
+ */
+export async function deleteAccount(password: string): Promise<void> {
+  try {
+    await api.delete('/account', { data: { password } });
+    await clearAllStorage();
+  } catch (error) {
+    const message = getErrorMessage(error);
+    throw new Error(message);
+  }
 }
 
 /**

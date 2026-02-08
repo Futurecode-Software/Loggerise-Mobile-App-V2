@@ -255,7 +255,7 @@ export default function ExportPositionsScreen() {
       }
     } catch (err) {
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-        console.error('Positions fetch error:', err)
+        if (__DEV__) console.error('Positions fetch error:', err)
       }
     } finally {
       if (currentFetchId === fetchIdRef.current && isMountedRef.current) {

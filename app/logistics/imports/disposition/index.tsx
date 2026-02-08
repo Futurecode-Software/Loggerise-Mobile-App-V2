@@ -342,7 +342,7 @@ export default function DispositionScreen() {
       }
     } catch (err) {
       if (isMountedRef.current) {
-        console.error('İthalat dispozisyon getirme hatası:', err)
+        if (__DEV__) console.error('İthalat dispozisyon getirme hatası:', err)
         setError(err instanceof Error ? err.message : 'Veriler yüklenemedi')
       }
     } finally {

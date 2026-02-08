@@ -65,7 +65,7 @@ export function QuoteCreatePricingScreen({
         const rate = await getCurrentRate(data.currency);
         onChange({ exchange_rate: parseFloat(parseFloat(rate).toFixed(4)) });
       } catch (error) {
-        console.error('[Pricing] Fetch rate error:', error);
+        if (__DEV__) console.error('[Pricing] Fetch rate error:', error);
       } finally {
         setIsLoadingRate(false);
       }

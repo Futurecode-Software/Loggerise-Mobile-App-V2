@@ -34,7 +34,7 @@ export function Step2Contact({ state, actions }: Step2Props) {
         data: country
       }))
     } catch (error) {
-      console.error('Country search error:', error)
+      if (__DEV__) console.error('Country search error:', error)
       return []
     }
   }, [])
@@ -52,7 +52,7 @@ export function Step2Contact({ state, actions }: Step2Props) {
         data: st
       }))
     } catch (error) {
-      console.error('State search error:', error)
+      if (__DEV__) console.error('State search error:', error)
       return []
     }
   }, [state.country_id])
@@ -70,7 +70,7 @@ export function Step2Contact({ state, actions }: Step2Props) {
         data: city
       }))
     } catch (error) {
-      console.error('City search error:', error)
+      if (__DEV__) console.error('City search error:', error)
       return []
     }
   }, [state.main_state_id])

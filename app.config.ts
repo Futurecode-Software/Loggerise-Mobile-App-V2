@@ -21,6 +21,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true,
     bundleIdentifier: 'com.loggerise.erp',
     googleServicesFile: './GoogleService-Info.plist',
+    infoPlist: {
+      NSCameraUsageDescription: 'Profil fotoğrafı çekmek ve mesajlarda fotoğraf paylaşmak için kamera erişimi gereklidir.',
+      NSPhotoLibraryUsageDescription: 'Profil fotoğrafı seçmek ve mesajlarda fotoğraf paylaşmak için fotoğraf galerisi erişimi gereklidir.',
+    },
   },
   android: {
     adaptiveIcon: {
@@ -58,12 +62,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-secure-store',
     'expo-notifications',
     '@react-native-google-signin/google-signin',
+    ['expo-build-properties', {
+      android: {
+        blockedPermissions: ['android.permission.RECORD_AUDIO'],
+      },
+    }],
   ],
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
   },
   extra: {
+    privacyPolicyUrl: 'https://futurecode.com.tr/gizlilik-politikasi',
     // Google OAuth Client IDs (Firebase loggerise-erp projesi)
     googleWebClientId: '1039412213943-qk6dt54mve1jckpq54aj017mh8n9hj31.apps.googleusercontent.com',
     googleAndroidClientId: '1039412213943-u4q0qe8952h8khk5oaq55cf2gkqbvp07.apps.googleusercontent.com',

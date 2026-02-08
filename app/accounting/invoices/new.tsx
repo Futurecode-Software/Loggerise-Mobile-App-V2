@@ -120,7 +120,7 @@ export default function NewInvoiceScreen() {
       const response = await getContacts({ per_page: 100 })
       setContacts(response.contacts)
     } catch (err) {
-      console.error('Contacts fetch error:', err)
+      if (__DEV__) console.error('Contacts fetch error:', err)
       Toast.show({
         type: 'error',
         text1: 'Cariler yüklenemedi',
@@ -142,7 +142,7 @@ export default function NewInvoiceScreen() {
         setSelectedWarehouse(response.warehouses[0])
       }
     } catch (err) {
-      console.error('Warehouses fetch error:', err)
+      if (__DEV__) console.error('Warehouses fetch error:', err)
       Toast.show({
         type: 'error',
         text1: 'Depolar yüklenemedi',
@@ -160,7 +160,7 @@ export default function NewInvoiceScreen() {
       const response = await getProducts({ is_active: true, per_page: 200 })
       setProducts(response.products)
     } catch (err) {
-      console.error('Products fetch error:', err)
+      if (__DEV__) console.error('Products fetch error:', err)
       Toast.show({
         type: 'error',
         text1: 'Ürünler yüklenemedi',
@@ -201,7 +201,7 @@ export default function NewInvoiceScreen() {
       const selectedAddr = billingAddress || defaultAddress || firstAddress
       setSelectedContactAddress(selectedAddr)
     } catch (err) {
-      console.error('Contact addresses fetch error:', err)
+      if (__DEV__) console.error('Contact addresses fetch error:', err)
       Toast.show({
         type: 'error',
         text1: 'Adresler yüklenemedi',
@@ -232,7 +232,7 @@ export default function NewInvoiceScreen() {
           visibilityTime: 1500
         })
       } catch (err) {
-        console.error('Exchange rate fetch error:', err)
+        if (__DEV__) console.error('Exchange rate fetch error:', err)
         Toast.show({
           type: 'error',
           text1: `${currencyType} için kur bulunamadı`,
@@ -458,7 +458,7 @@ export default function NewInvoiceScreen() {
 
       router.back()
     } catch (err) {
-      console.error('Invoice creation error:', err)
+      if (__DEV__) console.error('Invoice creation error:', err)
       Toast.show({
         type: 'error',
         text1: err instanceof Error ? err.message : 'Fatura oluşturulamadı',

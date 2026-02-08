@@ -79,7 +79,7 @@ export default function NewTractorTrailerAssignmentScreen() {
       setTractors(tractorsRes.vehicles)
       setTrailers(trailersRes.vehicles)
     } catch (error) {
-      console.error('Failed to load vehicles:', error)
+      if (__DEV__) console.error('Failed to load vehicles:', error)
       Toast.show({
         type: 'error',
         text1: 'Araçlar yüklenemedi',

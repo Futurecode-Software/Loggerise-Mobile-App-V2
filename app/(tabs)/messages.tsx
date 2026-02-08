@@ -223,7 +223,7 @@ export default function MessagesScreen() {
       updateUnreadCountRef.current(response.totalUnreadCount)
       hasInitialFetchRef.current = true
     } catch (err) {
-      console.error('Conversations fetch error:', err)
+      if (__DEV__) console.error('Conversations fetch error:', err)
       setError(err instanceof Error ? err.message : 'Mesajlar yüklenemedi')
     } finally {
       setIsLoading(false)

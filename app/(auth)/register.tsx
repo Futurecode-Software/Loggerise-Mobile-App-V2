@@ -19,6 +19,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import * as WebBrowser from 'expo-web-browser'
 
 import Animated, {
   useSharedValue,
@@ -72,12 +73,14 @@ export default function Register() {
     confirmPassword: '',
     companyName: '',
   })
+  const [kvkkAccepted, setKvkkAccepted] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const inputRefs = useRef<Record<string, TextInput | null>>({})
   const [focusedField, setFocusedField] = useState<string | null>(null)
 
   // Animation values
   const buttonScale = useSharedValue(1)
+  const kvkkScale = useSharedValue(1)
   const stepProgress = useSharedValue(0)
 
   useEffect(() => {
@@ -117,6 +120,9 @@ export default function Register() {
         } else if (formData.password !== formData.confirmPassword) {
           newErrors.confirmPassword = 'Şifreler eşleşmiyor'
         }
+        if (!kvkkAccepted) {
+          newErrors.kvkk = 'KVKK Aydınlatma Metni\'ni kabul etmeniz gerekiyor'
+        }
       } else if (step === 1) {
         if (!formData.companyName.trim()) {
           newErrors.companyName = 'Firma adı gerekli'
@@ -126,7 +132,7 @@ export default function Register() {
       setErrors(newErrors)
       return Object.keys(newErrors).length === 0
     },
-    [formData]
+    [formData, kvkkAccepted]
   )
 
   const handleNext = useCallback(() => {
@@ -176,8 +182,23 @@ export default function Register() {
     buttonScale.value = withSpring(1, { damping: 15, stiffness: 400 })
   }
 
+  const handleKvkkPress = () => {
+    kvkkScale.value = withSpring(0.8, { damping: 10, stiffness: 400 })
+    setTimeout(() => {
+      kvkkScale.value = withSpring(1, { damping: 10, stiffness: 400 })
+    }, 100)
+    setKvkkAccepted(!kvkkAccepted)
+    if (errors.kvkk) {
+      setErrors((prev) => ({ ...prev, kvkk: '' }))
+    }
+  }
+
   const buttonAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: buttonScale.value }],
+  }))
+
+  const kvkkAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: kvkkScale.value }],
   }))
 
   const getInputStyle = (fieldName: string) => {
@@ -334,6 +355,38 @@ export default function Register() {
         secureTextEntry: true,
         autoComplete: 'new-password',
       })}
+
+      {/* KVKK Onay */}
+      <View style={styles.kvkkContainer}>
+        <Pressable style={styles.kvkkRow} onPress={handleKvkkPress}>
+          <Animated.View
+            style={[
+              styles.kvkkCheckbox,
+              kvkkAccepted && styles.kvkkCheckboxActive,
+              kvkkAnimStyle,
+            ]}
+          >
+            {kvkkAccepted && (
+              <Ionicons name="checkmark" size={14} color={AuthColors.white} />
+            )}
+          </Animated.View>
+          <Text style={styles.kvkkText}>
+            <Text
+              style={styles.kvkkLink}
+              onPress={() => WebBrowser.openBrowserAsync('https://futurecode.com.tr/gizlilik-politikasi')}
+            >
+              KVKK Aydınlatma Metni
+            </Text>
+            {`'ni okudum ve kabul ediyorum`}
+          </Text>
+        </Pressable>
+        {errors.kvkk && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={14} color={AuthColors.error} />
+            <Text style={styles.errorText}>{errors.kvkk}</Text>
+          </View>
+        )}
+      </View>
     </Animated.View>
   )
 
@@ -627,6 +680,40 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: AuthFontSizes.sm,
     color: AuthColors.error,
+  },
+  // KVKK
+  kvkkContainer: {
+    marginBottom: AuthSpacing.lg,
+  },
+  kvkkRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: AuthSpacing.sm,
+  },
+  kvkkCheckbox: {
+    width: AuthSizes.checkboxSize,
+    height: AuthSizes.checkboxSize,
+    borderRadius: AuthBorderRadius.sm,
+    borderWidth: 2,
+    borderColor: AuthColors.inputBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: AuthColors.white,
+    marginTop: 2,
+  },
+  kvkkCheckboxActive: {
+    backgroundColor: AuthColors.primary,
+    borderColor: AuthColors.primary,
+  },
+  kvkkText: {
+    flex: 1,
+    fontSize: AuthFontSizes.base,
+    color: AuthColors.textSecondary,
+    lineHeight: 20,
+  },
+  kvkkLink: {
+    color: AuthColors.primary,
+    fontWeight: '600',
   },
   // Feature List
   featureList: {

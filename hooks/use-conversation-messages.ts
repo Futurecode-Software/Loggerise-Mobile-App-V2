@@ -118,7 +118,7 @@ export function useConversationMessages({
 
       await markConversationAsRead(parsedConversationId);
     } catch (err) {
-      console.error('Conversation fetch error:', err);
+      if (__DEV__) console.error('Conversation fetch error:', err);
       setError(err instanceof Error ? err.message : 'Mesajlar yüklenemedi');
     } finally {
       setIsLoading(false);
@@ -201,7 +201,7 @@ export function useConversationMessages({
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
       }, 100);
     } catch (err) {
-      console.error('Send message error:', err);
+      if (__DEV__) console.error('Send message error:', err);
       showError('Hata', 'Mesaj gönderilemedi. Lütfen tekrar deneyin.');
       setNewMessage(messageText);
     } finally {

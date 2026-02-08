@@ -75,7 +75,7 @@ export default function NewDriverTractorAssignmentScreen() {
       setDrivers(driversRes.employees)
       setTractors(tractorsRes.vehicles)
     } catch (error) {
-      console.error('Failed to load initial data:', error)
+      if (__DEV__) console.error('Failed to load initial data:', error)
       Toast.show({
         type: 'error',
         text1: 'Veriler yüklenemedi',

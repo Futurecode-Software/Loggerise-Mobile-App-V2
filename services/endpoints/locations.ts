@@ -165,7 +165,7 @@ export async function lookupLocation(place: Partial<PlaceDetails>): Promise<Loca
     );
     return response.data.data || {};
   } catch (error) {
-    console.error('Location lookup error:', error);
+    if (__DEV__) console.error('Location lookup error:', error);
     return {}; // Silent fail - user can manually select
   }
 }

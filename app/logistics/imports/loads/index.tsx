@@ -333,7 +333,7 @@ export default function ImportLoadsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Loads fetch error:', err)
+          if (__DEV__) console.error('Loads fetch error:', err)
           setError(err instanceof Error ? err.message : 'Yükler yüklenemedi')
         }
       } finally {

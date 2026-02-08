@@ -258,9 +258,9 @@ export default function EditContactScreen() {
       // E-Finans ayarlari yapilandirilmamissa sessizce gec (400 error)
       // Diger hatalarda da kullaniciyi rahatsiz etme
       if (error?.response?.status === 400) {
-        console.log('[E-Fatura] E-Finans ayarlari yapilandirilmamis, sorgulama atlanacak')
+        if (__DEV__) console.log('[E-Fatura] E-Finans ayarlari yapilandirilmamis, sorgulama atlanacak')
       } else {
-        console.error('E-Fatura API Hatasi:', error)
+        if (__DEV__) console.error('E-Fatura API Hatasi:', error)
       }
       setEfaturaInfo(null)
     } finally {
@@ -307,7 +307,7 @@ export default function EditContactScreen() {
           return
         }
       } catch (error) {
-        console.error('Location lookup error:', error)
+        if (__DEV__) console.error('Location lookup error:', error)
       }
     }
 

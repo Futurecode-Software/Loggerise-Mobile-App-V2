@@ -59,7 +59,7 @@ export default function NewCategoryScreen() {
         const response = await getProductCategories({ is_active: true, per_page: 100 })
         setParentCategories(response.categories)
       } catch (err) {
-        console.error('Failed to fetch parent categories:', err)
+        if (__DEV__) console.error('Failed to fetch parent categories:', err)
       } finally {
         setIsLoadingParents(false)
       }

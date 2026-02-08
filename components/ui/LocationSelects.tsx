@@ -235,7 +235,7 @@ export function CountrySelect({
         if (found) setSelectedLabel(found.label);
       }
     } catch (error) {
-      console.error('Error loading countries:', error);
+      if (__DEV__) console.error('Error loading countries:', error);
     } finally {
       setIsLoading(false);
     }
@@ -368,7 +368,7 @@ export function StateSelect({
           if (found) setSelectedLabel(found.label);
         }
       } catch (error) {
-        console.error('Error loading states:', error);
+        if (__DEV__) console.error('Error loading states:', error);
       } finally {
         setIsLoading(false);
       }
@@ -511,7 +511,7 @@ export function CitySelect({
           if (found) setSelectedLabel(found.label);
         }
       } catch (error) {
-        console.error('Error loading cities:', error);
+        if (__DEV__) console.error('Error loading cities:', error);
       } finally {
         setIsLoading(false);
       }

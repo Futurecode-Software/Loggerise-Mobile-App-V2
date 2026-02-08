@@ -130,7 +130,7 @@ export function AutocompleteInput({
         setOptions(results);
         setIsOpen(results.length > 0);
       } catch (error) {
-        console.error('Error loading options:', error);
+        if (__DEV__) console.error('Error loading options:', error);
         setOptions([]);
         setIsOpen(false);
       } finally {

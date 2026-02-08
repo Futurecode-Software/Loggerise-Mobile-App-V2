@@ -84,7 +84,7 @@ export function useNewConversation({
       // Filter out current user
       setUsers(data.filter((u) => u.id !== currentUserId));
     } catch (err) {
-      console.error('Users fetch error:', err);
+      if (__DEV__) console.error('Users fetch error:', err);
       setError(err instanceof Error ? err.message : 'Kullanıcılar yüklenemedi');
     } finally {
       setIsLoading(false);
@@ -130,7 +130,7 @@ export function useNewConversation({
           const result = await findOrCreateConversation(selectedUser.id);
           router.replace(`/message/${result.conversation.id}` as any);
         } catch (err) {
-          console.error('Create conversation error:', err);
+          if (__DEV__) console.error('Create conversation error:', err);
           showError('Hata', 'Konuşma başlatılamadı. Lütfen tekrar deneyin.');
         } finally {
           setIsCreating(false);
@@ -161,7 +161,7 @@ export function useNewConversation({
       });
       router.replace(`/message/${result.id}` as any);
     } catch (err) {
-      console.error('Create group error:', err);
+      if (__DEV__) console.error('Create group error:', err);
       showError('Hata', 'Grup oluşturulamadı. Lütfen tekrar deneyin.');
     } finally {
       setIsCreating(false);

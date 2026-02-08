@@ -222,7 +222,7 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
         setActiveTab(firstAvailable.id)
       }
     } catch (err) {
-      console.error('Available dashboards error:', err)
+      if (__DEV__) console.error('Available dashboards error:', err)
       setError(
         err instanceof Error ? err.message : 'Dashboard bilgileri alinamadi'
       )
@@ -237,7 +237,7 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
       const data = await getDashboardStats()
       setBasicStats(data)
     } catch (err) {
-      console.error('Basic stats error:', err)
+      if (__DEV__) console.error('Basic stats error:', err)
     }
   }, [])
 
@@ -304,7 +304,7 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
         // Mark tab as loaded
         loadedTabsRef.current.add(tab)
       } catch (err) {
-        console.error(`${tab} stats error:`, err)
+        if (__DEV__) console.error(`${tab} stats error:`, err)
       } finally {
         setLoadingTab(null)
       }

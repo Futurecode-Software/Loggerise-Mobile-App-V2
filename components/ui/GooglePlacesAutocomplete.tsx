@@ -22,13 +22,12 @@ import {
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet'
 import { MapPin, Search, X } from 'lucide-react-native'
+import Constants from 'expo-constants'
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme'
 import { PlaceDetails } from '@/services/endpoints/locations'
 
 // Google Places API key
-const GOOGLE_API_KEY =
-  process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_MOBILE ||
-  process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+const GOOGLE_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey || ''
 
 interface GooglePlacesAutocompleteProps {
   value?: string
@@ -98,7 +97,7 @@ export function GooglePlacesAutocomplete({
     }
 
     if (!GOOGLE_API_KEY) {
-      console.error('[GooglePlaces] API key is missing')
+      if (__DEV__) console.error('[GooglePlaces] API key is missing')
       return
     }
 
@@ -133,7 +132,7 @@ export function GooglePlacesAutocomplete({
         setSuggestions([])
       }
     } catch (err: unknown) {
-      console.error('[GooglePlaces] Autocomplete error:', err)
+      if (__DEV__) console.error('[GooglePlaces] Autocomplete error:', err)
       setSuggestions([])
     } finally {
       setIsSearching(false)
@@ -143,7 +142,7 @@ export function GooglePlacesAutocomplete({
   // Places API (New) - Place Details
   const fetchPlaceDetails = useCallback(async (placeId: string): Promise<PlaceDetails | null> => {
     if (!GOOGLE_API_KEY) {
-      console.error('[GooglePlaces] API key is missing')
+      if (__DEV__) console.error('[GooglePlaces] API key is missing')
       return null
     }
 
@@ -175,7 +174,7 @@ export function GooglePlacesAutocomplete({
         return placeDetails
       }
     } catch (err: unknown) {
-      console.error('[GooglePlaces] Details error:', err)
+      if (__DEV__) console.error('[GooglePlaces] Details error:', err)
     }
     return null
   }, [])

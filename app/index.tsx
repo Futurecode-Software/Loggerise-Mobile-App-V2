@@ -19,7 +19,7 @@ export default function Splash() {
       try {
         await SplashScreenModule.hideAsync()
       } catch (e) {
-        console.warn('Splash screen hide error:', e)
+        if (__DEV__) console.warn('Splash screen hide error:', e)
       }
     }
 

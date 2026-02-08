@@ -318,7 +318,7 @@ export default function EventsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Events fetch error:', err)
+          if (__DEV__) console.error('Events fetch error:', err)
           setError(err instanceof Error ? err.message : 'Etkinlikler yüklenemedi')
         }
       } finally {

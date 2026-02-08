@@ -118,7 +118,7 @@ export default function TripDetailScreen() {
       }
     } catch (err) {
       if (isMountedRef.current) {
-        console.error('Trip fetch error:', err)
+        if (__DEV__) console.error('Trip fetch error:', err)
         let errorMessage = 'Sefer bilgileri yüklenemedi'
         if (err instanceof Error) {
           if (err.message.includes('status code 500')) {
@@ -153,7 +153,7 @@ export default function TripDetailScreen() {
         setPositions(response.positions)
       }
     } catch (err) {
-      console.error('Positions fetch error:', err)
+      if (__DEV__) console.error('Positions fetch error:', err)
     } finally {
       if (isMountedRef.current) {
         setIsLoadingPositions(false)

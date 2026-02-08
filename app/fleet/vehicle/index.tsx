@@ -249,7 +249,7 @@ export default function VehicleListScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Vehicles fetch error:', err)
+          if (__DEV__) console.error('Vehicles fetch error:', err)
           setError(err instanceof Error ? err.message : 'Araçlar yüklenemedi')
         }
       } finally {

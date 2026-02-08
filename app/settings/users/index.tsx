@@ -275,7 +275,7 @@ export default function UsersScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Users fetch error:', err)
+          if (__DEV__) console.error('Users fetch error:', err)
           Toast.show({
             type: 'error',
             text1: 'Hata',
@@ -303,7 +303,7 @@ export default function UsersScreen() {
         setUserLimits(limits)
       }
     } catch (err) {
-      console.error('User limits fetch error:', err)
+      if (__DEV__) console.error('User limits fetch error:', err)
     }
   }, [])
 

@@ -244,7 +244,7 @@ export default function JobApplicationsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Job applications fetch error:', err)
+          if (__DEV__) console.error('Job applications fetch error:', err)
           setError(err instanceof Error ? err.message : 'Başvurular yüklenemedi')
         }
       } finally {

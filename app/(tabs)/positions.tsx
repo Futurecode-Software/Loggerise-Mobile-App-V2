@@ -103,7 +103,7 @@ export default function PositionsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Positions fetch error:', err);
+          if (__DEV__) console.error('Positions fetch error:', err);
           setError(err instanceof Error ? err.message : 'Pozisyonlar yüklenemedi');
         }
       } finally {

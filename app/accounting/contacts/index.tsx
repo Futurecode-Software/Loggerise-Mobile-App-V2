@@ -317,7 +317,7 @@ export default function ContactsListScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Contacts fetch error:', err)
+          if (__DEV__) console.error('Contacts fetch error:', err)
           setError(err instanceof Error ? err.message : 'Cariler yüklenemedi')
         }
       } finally {

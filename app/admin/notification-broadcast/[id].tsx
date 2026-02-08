@@ -161,7 +161,7 @@ export default function NotificationBroadcastDetailScreen() {
       router.back()
     } catch (err: any) {
       if (!isMountedRef.current) return
-      console.error('Bildirim silinirken hata:', err)
+      if (__DEV__) console.error('Bildirim silinirken hata:', err)
       Toast.show({
         type: 'error',
         text1: 'Hata',

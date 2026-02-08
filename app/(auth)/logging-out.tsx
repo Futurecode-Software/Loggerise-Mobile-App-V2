@@ -91,7 +91,7 @@ export default function LoggingOutScreen() {
 
         // NavigationController otomatik olarak login'e yönlendirecek
       } catch (error) {
-        console.error('Logout error:', error)
+        if (__DEV__) console.error('Logout error:', error)
       }
     }
 

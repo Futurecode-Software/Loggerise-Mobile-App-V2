@@ -117,7 +117,7 @@ export default function GroupSettingsScreen() {
         setError(null);
       }
     } catch (err) {
-      console.error('Group details fetch error:', err);
+      if (__DEV__) console.error('Group details fetch error:', err);
       if (isMountedRef.current) {
         setError(err instanceof Error ? err.message : 'Grup bilgileri yüklenemedi');
       }
@@ -181,7 +181,7 @@ export default function GroupSettingsScreen() {
         visibilityTime: 1500
       });
     } catch (err) {
-      console.error('Update group error:', err);
+      if (__DEV__) console.error('Update group error:', err);
       Toast.show({
         type: 'error',
         text1: 'Grup güncellenemedi',
@@ -209,7 +209,7 @@ export default function GroupSettingsScreen() {
         visibilityTime: 1500
       });
     } catch (err) {
-      console.error('Add participants error:', err);
+      if (__DEV__) console.error('Add participants error:', err);
       Toast.show({
         type: 'error',
         text1: 'Katılımcılar eklenemedi',
@@ -244,7 +244,7 @@ export default function GroupSettingsScreen() {
         visibilityTime: 1500
       });
     } catch (err) {
-      console.error('Remove participant error:', err);
+      if (__DEV__) console.error('Remove participant error:', err);
       Toast.show({
         type: 'error',
         text1: 'Katılımcı çıkarılamadı',
@@ -280,7 +280,7 @@ export default function GroupSettingsScreen() {
       setShowLeaveGroupDialog(false);
       router.replace('/messages' as any);
     } catch (err) {
-      console.error('Leave group error:', err);
+      if (__DEV__) console.error('Leave group error:', err);
       Toast.show({
         type: 'error',
         text1: 'Gruptan ayrılırken bir hata oluştu',
@@ -338,7 +338,7 @@ export default function GroupSettingsScreen() {
         }
       }
     } catch (err) {
-      console.error('Image picker error:', err);
+      if (__DEV__) console.error('Image picker error:', err);
       Toast.show({
         type: 'error',
         text1: 'Fotoğraf seçilirken bir hata oluştu',
@@ -375,7 +375,7 @@ export default function GroupSettingsScreen() {
       });
       await fetchGroupDetails();
     } catch (err) {
-      console.error('Avatar upload error:', err);
+      if (__DEV__) console.error('Avatar upload error:', err);
       Toast.show({
         type: 'error',
         text1: 'Fotoğraf yüklenirken bir hata oluştu',

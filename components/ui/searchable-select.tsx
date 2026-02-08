@@ -191,7 +191,7 @@ export function SearchableSelect({
           }
         }
       } catch (error) {
-        console.error('Error loading options:', error);
+        if (__DEV__) console.error('Error loading options:', error);
         setOptions([]);
       } finally {
         setIsLoading(false);

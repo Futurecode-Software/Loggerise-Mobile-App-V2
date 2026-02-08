@@ -76,7 +76,7 @@ export default function NewJobApplicationScreen() {
         const response = await getJobPostings({ per_page: 100, is_active: true })
         setJobPostings(response.jobPostings)
       } catch (err) {
-        console.error('Failed to load job postings:', err)
+        if (__DEV__) console.error('Failed to load job postings:', err)
       } finally {
         setLoadingJobPostings(false)
       }

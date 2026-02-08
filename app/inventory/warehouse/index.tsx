@@ -231,7 +231,7 @@ export default function WarehouseScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Warehouses fetch error:', err)
+          if (__DEV__) console.error('Warehouses fetch error:', err)
           setError(err instanceof Error ? err.message : 'Depolar yüklenemedi')
         }
       } finally {

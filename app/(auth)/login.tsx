@@ -18,7 +18,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { Ionicons, FontAwesome } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons'
 
 import Animated, {
   useSharedValue,
@@ -28,7 +28,6 @@ import Animated, {
   FadeInUp,
 } from 'react-native-reanimated'
 import { useAuth } from '@/context/auth-context'
-import { useGoogleAuth } from '@/hooks/use-google-auth'
 import Toast from 'react-native-toast-message'
 import {
   AuthColors,
@@ -45,8 +44,6 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 export default function Login() {
   const router = useRouter()
   const { login, isLoading, isInitializing } = useAuth()
-  const { signIn: googleSignIn, isLoading: isGoogleLoading, isAvailable: isGoogleAvailable, error: googleError } = useGoogleAuth()
-
   // Form state
   const [formData, setFormData] = useState({
     email: '',
@@ -130,33 +127,6 @@ export default function Login() {
   const handleForgotPassword = useCallback(() => {
     router.push('/(auth)/forgot-password')
   }, [router])
-
-  const handleGoogleLogin = useCallback(async () => {
-    try {
-      await googleSignIn()
-      // Navigation handled by NavigationController in _layout.tsx
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Google ile giriş yapılamadı.'
-      Toast.show({
-        type: 'error',
-        text1: errorMessage,
-        position: 'top',
-        visibilityTime: 2000
-      })
-    }
-  }, [googleSignIn])
-
-  // Google auth hook hataları göster
-  React.useEffect(() => {
-    if (googleError) {
-      Toast.show({
-        type: 'error',
-        text1: googleError,
-        position: 'top',
-        visibilityTime: 2000
-      })
-    }
-  }, [googleError])
 
   const handleButtonPressIn = () => {
     buttonScale.value = withSpring(0.97, { damping: 15, stiffness: 400 })
@@ -367,37 +337,6 @@ export default function Login() {
             )}
           </AnimatedPressable>
 
-          {/* Divider + Google Button - Expo Go'da gizle */}
-          {isGoogleAvailable && (
-            <>
-              <Animated.View
-                entering={FadeInDown.delay(600).duration(400)}
-                style={styles.divider}
-              >
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>veya</Text>
-                <View style={styles.dividerLine} />
-              </Animated.View>
-
-              <View style={styles.socialSection}>
-                <Pressable
-                  style={styles.googleButtonFull}
-                  onPress={handleGoogleLogin}
-                  disabled={isGoogleLoading || isLoading || isInitializing}
-                >
-                  {isGoogleLoading ? (
-                    <ActivityIndicator size="small" color={AuthColors.textPrimary} />
-                  ) : (
-                    <>
-                      <FontAwesome name="google" size={18} color={AuthColors.textPrimary} />
-                      <Text style={styles.googleButtonText}>Google ile Devam Et</Text>
-                    </>
-                  )}
-                </Pressable>
-              </View>
-            </>
-          )}
-
           {/* Footer */}
           <Animated.View
             entering={FadeInUp.delay(800).duration(400)}
@@ -552,42 +491,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: AuthSpacing.xs,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: AuthSpacing.xl,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: AuthColors.divider,
-  },
-  dividerText: {
-    fontSize: AuthFontSizes.sm,
-    color: AuthColors.textMuted,
-    paddingHorizontal: AuthSpacing.lg,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  socialSection: {
-    marginBottom: AuthSpacing['2xl'],
-  },
-  googleButtonFull: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: AuthColors.white,
-    height: AuthSizes.socialButtonHeight,
-    borderRadius: AuthBorderRadius.lg,
-    borderWidth: 1.5,
-    borderColor: AuthColors.inputBorder,
-    gap: AuthSpacing.sm,
-  },
-  googleButtonText: {
-    color: AuthColors.textPrimary,
-    fontSize: AuthFontSizes.lg,
-    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',

@@ -208,7 +208,7 @@ export default function CreateMultiStepQuoteScreen() {
           throw new Error(response.data.message || 'Teklif oluşturulamadı')
         }
       } catch (err: any) {
-        console.error('[CreateMultiStepQuote] Submit error:', err)
+        if (__DEV__) console.error('[CreateMultiStepQuote] Submit error:', err)
         Toast.show({
           type: 'error',
           text1: err.response?.data?.message || err.message || 'Bir hata oluştu',

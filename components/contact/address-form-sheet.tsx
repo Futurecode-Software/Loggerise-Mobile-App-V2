@@ -198,7 +198,7 @@ export const AddressFormSheet = forwardRef<AddressFormSheetRef, AddressFormSheet
           if (locationIds.state_id) updated.state_id = locationIds.state_id;
           if (locationIds.city_id) updated.city_id = locationIds.city_id;
         } catch (error) {
-          console.error('Location lookup error:', error);
+          if (__DEV__) console.error('Location lookup error:', error);
         }
       }
 

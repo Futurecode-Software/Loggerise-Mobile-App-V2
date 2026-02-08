@@ -440,7 +440,7 @@ export default function NewLoadScreen() {
         router.back()
       }
     } catch (error: any) {
-      console.error('Load creation error:', error)
+      if (__DEV__) console.error('Load creation error:', error)
       Toast.show({
         type: 'error',
         text1: error?.message || 'Yük oluşturulamadı',

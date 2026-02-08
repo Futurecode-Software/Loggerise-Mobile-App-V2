@@ -6,7 +6,7 @@
  */
 
 import React, { memo } from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Avatar } from '@/components/ui'
 import {
@@ -23,18 +23,22 @@ interface MessageBubbleProps {
   isFirstInGroup: boolean
   isLastInGroup: boolean
   isGroupConversation: boolean
+  onLongPress?: (message: Message) => void
 }
 
 function MessageBubbleComponent({
   item,
   isFirstInGroup,
   isLastInGroup,
-  isGroupConversation
+  isGroupConversation,
+  onLongPress
 }: MessageBubbleProps) {
   const isMine = item.is_mine
 
   return (
-    <View
+    <Pressable
+      onLongPress={onLongPress ? () => onLongPress(item) : undefined}
+      delayLongPress={400}
       style={[
         styles.messageRow,
         isMine ? styles.messageRowMine : styles.messageRowOther,
@@ -97,7 +101,7 @@ function MessageBubbleComponent({
           </View>
         </View>
       )}
-    </View>
+    </Pressable>
   )
 }
 

@@ -208,7 +208,7 @@ export default function NewEventScreen() {
       })
       router.back()
     } catch (error: any) {
-      console.error('Event creation error:', error)
+      if (__DEV__) console.error('Event creation error:', error)
 
       // Handle validation errors from backend
       const validationErrors = getValidationErrors(error)
@@ -249,7 +249,7 @@ export default function NewEventScreen() {
         subtitle: contact.code || '',
       }))
     } catch (error) {
-      console.error('Failed to load contacts:', error)
+      if (__DEV__) console.error('Failed to load contacts:', error)
       return []
     }
   }, [])

@@ -169,7 +169,7 @@ export default function VehicleDetailScreen() {
       }
     } catch (err) {
       if (isMountedRef.current) {
-        console.error('Vehicle fetch error:', err)
+        if (__DEV__) console.error('Vehicle fetch error:', err)
         setError(err instanceof Error ? err.message : 'Araç bilgileri yüklenemedi')
       }
     } finally {

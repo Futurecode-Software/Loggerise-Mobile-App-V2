@@ -60,7 +60,7 @@ export function useLoggyConversations(): UseLoggyConversationsReturn {
       const data = await getConversations({ per_page: 20 });
       setConversations(data);
     } catch (err) {
-      console.error('Conversations fetch error:', err);
+      if (__DEV__) console.error('Conversations fetch error:', err);
       setError(err instanceof Error ? err.message : 'Konuşmalar yüklenemedi');
     } finally {
       setIsLoading(false);

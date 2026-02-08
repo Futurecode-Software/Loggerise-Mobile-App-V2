@@ -148,7 +148,7 @@ const loadContacts = async (searchQuery: string): Promise<SelectOption[]> => {
       subtitle: contact.code,
     }));
   } catch (error) {
-    console.error('Error loading contacts:', error);
+    if (__DEV__) console.error('Error loading contacts:', error);
     return [];
   }
 };
@@ -166,7 +166,7 @@ const loadExportWarehouses = async (searchQuery: string): Promise<SelectOption[]
       subtitle: wh.code,
     }));
   } catch (error) {
-    console.error('Error loading export warehouses:', error);
+    if (__DEV__) console.error('Error loading export warehouses:', error);
     return [];
   }
 };
@@ -184,7 +184,7 @@ const loadWarehouses = async (searchQuery: string): Promise<SelectOption[]> => {
       subtitle: wh.code,
     }));
   } catch (error) {
-    console.error('Error loading warehouses:', error);
+    if (__DEV__) console.error('Error loading warehouses:', error);
     return [];
   }
 };

@@ -236,7 +236,7 @@ export default function NotificationBroadcastListScreen() {
       setLastPage(response.meta.last_page)
     } catch (err: any) {
       if (!isMountedRef.current) return
-      console.error('Bildirimler yüklenirken hata:', err)
+      if (__DEV__) console.error('Bildirimler yüklenirken hata:', err)
       setError(err.message || 'Bildirimler yüklenemedi')
       Toast.show({
         type: 'error',
@@ -321,7 +321,7 @@ export default function NotificationBroadcastListScreen() {
       fetchBroadcasts(false, 1)
     } catch (err: any) {
       if (!isMountedRef.current) return
-      console.error('Bildirim silinirken hata:', err)
+      if (__DEV__) console.error('Bildirim silinirken hata:', err)
       Toast.show({
         type: 'error',
         text1: 'Hata',

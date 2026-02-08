@@ -114,7 +114,7 @@ export default function NewNotificationBroadcastScreen() {
         subtitle: user.email
       }))
     } catch (err: any) {
-      console.error('Kullanıcılar yüklenirken hata:', err)
+      if (__DEV__) console.error('Kullanıcılar yüklenirken hata:', err)
       return []
     }
   }, [])
@@ -128,7 +128,7 @@ export default function NewNotificationBroadcastScreen() {
         value: role.id
       }))
     } catch (err: any) {
-      console.error('Roller yüklenirken hata:', err)
+      if (__DEV__) console.error('Roller yüklenirken hata:', err)
       return []
     }
   }, [])
@@ -142,7 +142,7 @@ export default function NewNotificationBroadcastScreen() {
         value: route.route
       }))
     } catch (err: any) {
-      console.error('Route\'lar yüklenirken hata:', err)
+      if (__DEV__) console.error('Route\'lar yüklenirken hata:', err)
       return []
     }
   }, [])
@@ -258,7 +258,7 @@ export default function NewNotificationBroadcastScreen() {
 
       router.back()
     } catch (err: any) {
-      console.error('Bildirim oluşturulurken hata:', err)
+      if (__DEV__) console.error('Bildirim oluşturulurken hata:', err)
       const errorMessage = getErrorMessage(err)
       Toast.show({
         type: 'error',

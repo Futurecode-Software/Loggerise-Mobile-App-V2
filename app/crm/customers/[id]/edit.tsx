@@ -193,7 +193,7 @@ export default function EditCrmCustomerScreen() {
           notes: customerData.notes || '',
         });
       } catch (err) {
-        console.error('Fetch customer error:', err);
+        if (__DEV__) console.error('Fetch customer error:', err);
         setError(err instanceof Error ? err.message : 'Müşteri bilgileri yüklenemedi');
       } finally {
         setIsLoading(false);
@@ -219,7 +219,7 @@ export default function EditCrmCustomerScreen() {
         setStates(data)
         setCities([])
       } catch (err) {
-        console.error('Failed to load states:', err)
+        if (__DEV__) console.error('Failed to load states:', err)
       } finally {
         setLoadingStates(false)
       }
@@ -236,7 +236,7 @@ export default function EditCrmCustomerScreen() {
         const data = await searchCities(stateId)
         setCities(data)
       } catch (err) {
-        console.error('Failed to load cities:', err)
+        if (__DEV__) console.error('Failed to load cities:', err)
       } finally {
         setLoadingCities(false)
       }
@@ -262,7 +262,7 @@ export default function EditCrmCustomerScreen() {
         setStates(data);
         setCities([]);
       } catch (err) {
-        console.error('Failed to load states:', err);
+        if (__DEV__) console.error('Failed to load states:', err);
       } finally {
         setLoadingStates(false);
       }

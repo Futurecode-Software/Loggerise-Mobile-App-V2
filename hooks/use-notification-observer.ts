@@ -43,7 +43,7 @@ if (isPushNotificationsSupported()) {
   import('expo-notifications').then((module) => {
     Notifications = module;
   }).catch((error) => {
-    console.warn('Failed to load expo-notifications:', error);
+    if (__DEV__) console.warn('Failed to load expo-notifications:', error);
   });
 }
 
@@ -166,7 +166,7 @@ export function useNotificationObserver() {
         handleNotificationNavigation(response.notification);
       });
     }).catch((error) => {
-      console.warn('Failed to load expo-notifications:', error);
+      if (__DEV__) console.warn('Failed to load expo-notifications:', error);
     });
 
     // Also check when app comes to foreground (cold start scenario)
@@ -177,7 +177,7 @@ export function useNotificationObserver() {
             notificationsModule = await import('expo-notifications');
             Notifications = notificationsModule;
           } catch (error) {
-            console.warn('Failed to load expo-notifications:', error);
+            if (__DEV__) console.warn('Failed to load expo-notifications:', error);
             return;
           }
         }
@@ -244,7 +244,7 @@ export async function scheduleMessageNotification(
     try {
       Notifications = await import('expo-notifications');
     } catch (error) {
-      console.error('Error loading expo-notifications:', error);
+      if (__DEV__) console.error('Error loading expo-notifications:', error);
       return null;
     }
   }
@@ -267,7 +267,7 @@ export async function scheduleMessageNotification(
 
     return identifier;
   } catch (error) {
-    console.error('Error scheduling message notification:', error);
+    if (__DEV__) console.error('Error scheduling message notification:', error);
     return null;
   }
 }

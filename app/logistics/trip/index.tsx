@@ -334,7 +334,7 @@ export default function TripsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Trips fetch error:', err)
+          if (__DEV__) console.error('Trips fetch error:', err)
           setError(err instanceof Error ? err.message : 'Seferler yüklenemedi')
         }
       } finally {

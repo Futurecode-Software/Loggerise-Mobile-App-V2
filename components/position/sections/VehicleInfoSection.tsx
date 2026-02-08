@@ -161,7 +161,7 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
       const rate = await getLatestRate(currencyCode);
       setFormData((prev) => ({ ...prev, rental_exchange_rate: rate }));
     } catch (error) {
-      console.error('Exchange rate fetch error:', error);
+      if (__DEV__) console.error('Exchange rate fetch error:', error);
       showToast({
         type: 'error',
         message: `${currencyCode} için kur bulunamadı. Manuel giriş yapabilirsiniz.`,
@@ -189,7 +189,7 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
         subtitle: contact.short_name || undefined,
       }));
     } catch (error) {
-      console.error('Error loading contacts:', error);
+      if (__DEV__) console.error('Error loading contacts:', error);
       return [];
     }
   }, []);
@@ -208,7 +208,7 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
         subtitle: vehicle.brand && vehicle.model ? `${vehicle.brand} ${vehicle.model}` : undefined,
       }));
     } catch (error) {
-      console.error('Error loading truck tractors:', error);
+      if (__DEV__) console.error('Error loading truck tractors:', error);
       return [];
     }
   }, []);
@@ -227,7 +227,7 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
         subtitle: vehicle.brand && vehicle.model ? `${vehicle.brand} ${vehicle.model}` : undefined,
       }));
     } catch (error) {
-      console.error('Error loading trailers:', error);
+      if (__DEV__) console.error('Error loading trailers:', error);
       return [];
     }
   }, []);
@@ -247,7 +247,7 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
         subtitle: employee.phone_1 || undefined,
       }));
     } catch (error) {
-      console.error('Error loading drivers:', error);
+      if (__DEV__) console.error('Error loading drivers:', error);
       return [];
     }
   }, []);
@@ -327,7 +327,7 @@ export function VehicleInfoSection({ position, onUpdate }: VehicleInfoSectionPro
 
       onUpdate();
     } catch (error: any) {
-      console.error('Update error:', error);
+      if (__DEV__) console.error('Update error:', error);
 
       // Handle validation errors
       if (error.response?.data?.errors) {

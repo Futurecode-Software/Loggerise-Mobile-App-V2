@@ -99,7 +99,7 @@ export function DocumentsSection({ position, onUpdate }: DocumentsSectionProps) 
         });
       }
     } catch (error) {
-      console.error('Document picker error:', error);
+      if (__DEV__) console.error('Document picker error:', error);
       showToast({ type: 'error', message: 'Dosya seçilemedi' });
     }
   };
@@ -219,7 +219,7 @@ export function DocumentsSection({ position, onUpdate }: DocumentsSectionProps) 
         });
       }
     } catch (error) {
-      console.error('View error:', error);
+      if (__DEV__) console.error('View error:', error);
       showToast({
         type: 'error',
         message: error instanceof Error ? error.message : 'Dosya açılamadı',
@@ -249,7 +249,7 @@ export function DocumentsSection({ position, onUpdate }: DocumentsSectionProps) 
         showToast({ type: 'error', message: 'Paylaşım bu cihazda desteklenmiyor' });
       }
     } catch (error) {
-      console.error('Share error:', error);
+      if (__DEV__) console.error('Share error:', error);
       showToast({
         type: 'error',
         message: error instanceof Error ? error.message : 'Dosya paylaşılamadı',

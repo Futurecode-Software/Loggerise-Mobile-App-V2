@@ -55,7 +55,7 @@ export function useLoggyMessages({
       const data = await getConversationMessages(conversation.id);
       setMessages(data.messages);
     } catch (err: any) {
-      console.error('Messages load error:', err);
+      if (__DEV__) console.error('Messages load error:', err);
       if (err.response?.status === 403 || err.response?.status === 404) {
         setError('Bu konuşmaya erişim yetkiniz yok');
       } else {

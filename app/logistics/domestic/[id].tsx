@@ -200,7 +200,7 @@ export default function DomesticOrderDetailScreen() {
       }
     } catch (err) {
       if (isMountedRef.current) {
-        console.error('Order fetch error:', err)
+        if (__DEV__) console.error('Order fetch error:', err)
         setError(err instanceof Error ? err.message : 'İş emri yüklenemedi')
       }
     } finally {

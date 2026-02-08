@@ -70,7 +70,7 @@ export function QuoteCreateAddressesScreen({
           subtitle: addr.address_line_1 || addr.address,
         }));
       } catch (error) {
-        console.error('[Addresses] Load pickup addresses error:', error);
+        if (__DEV__) console.error('[Addresses] Load pickup addresses error:', error);
         return [];
       }
     },
@@ -96,7 +96,7 @@ export function QuoteCreateAddressesScreen({
           subtitle: addr.address_line_1 || addr.address,
         }));
       } catch (error) {
-        console.error('[Addresses] Load delivery addresses error:', error);
+        if (__DEV__) console.error('[Addresses] Load delivery addresses error:', error);
         return [];
       }
     },

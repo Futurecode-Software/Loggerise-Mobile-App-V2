@@ -159,7 +159,7 @@ export default function NewCrmCustomerScreen() {
       const data = await searchCountries();
       setCountries(data);
     } catch (err) {
-      console.error('Failed to load countries:', err);
+      if (__DEV__) console.error('Failed to load countries:', err);
     } finally {
       setLoadingCountries(false);
     }
@@ -171,7 +171,7 @@ export default function NewCrmCustomerScreen() {
       const data = await searchStates(countryId);
       setStates(data);
     } catch (err) {
-      console.error('Failed to load states:', err);
+      if (__DEV__) console.error('Failed to load states:', err);
     } finally {
       setLoadingStates(false);
     }
@@ -183,7 +183,7 @@ export default function NewCrmCustomerScreen() {
       const data = await searchCities(stateId);
       setCities(data);
     } catch (err) {
-      console.error('Failed to load cities:', err);
+      if (__DEV__) console.error('Failed to load cities:', err);
     } finally {
       setLoadingCities(false);
     }
@@ -195,7 +195,7 @@ export default function NewCrmCustomerScreen() {
       const data = await searchTaxOffices();
       setTaxOffices(data);
     } catch (err) {
-      console.error('Failed to load tax offices:', err);
+      if (__DEV__) console.error('Failed to load tax offices:', err);
     } finally {
       setLoadingTaxOffices(false);
     }

@@ -273,7 +273,7 @@ export default function ProductsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Products fetch error:', err)
+          if (__DEV__) console.error('Products fetch error:', err)
           setError(err instanceof Error ? err.message : 'Ürünler yüklenemedi')
         }
       } finally {

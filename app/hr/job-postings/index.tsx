@@ -261,7 +261,7 @@ export default function JobPostingsScreen() {
         }
       } catch (err) {
         if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          console.error('Job postings fetch error:', err)
+          if (__DEV__) console.error('Job postings fetch error:', err)
           setError(err instanceof Error ? err.message : 'İş ilanları yüklenemedi')
         }
       } finally {

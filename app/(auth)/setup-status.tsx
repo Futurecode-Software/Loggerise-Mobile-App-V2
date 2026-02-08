@@ -203,7 +203,7 @@ export default function SetupStatus() {
     try {
       await logout()
     } catch (err) {
-      console.error('Logout error:', err)
+      if (__DEV__) console.error('Logout error:', err)
     }
 
     router.replace('/(auth)/login')
@@ -219,7 +219,7 @@ export default function SetupStatus() {
       // Dashboard verileri dashboard ekranında lazy load edilecek
       await refreshSetupStatus()
     } catch (err) {
-      console.error('Setup status refresh error:', err)
+      if (__DEV__) console.error('Setup status refresh error:', err)
       // Hata durumunda kullanıcıya bilgi ver
       setError('Hesap durumu güncellenemedi. Lütfen tekrar deneyin.')
       setIsFailed(true)
@@ -284,7 +284,7 @@ export default function SetupStatus() {
       } catch (err) {
         if (shouldStopPolling.current) return
 
-        console.log('Setup status check error:', err)
+        if (__DEV__) console.log('Setup status check error:', err)
 
         const error = err as Error & { response?: { status?: number } }
         const errorMessage = error?.message || ''

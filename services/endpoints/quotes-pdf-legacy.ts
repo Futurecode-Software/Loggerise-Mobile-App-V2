@@ -27,7 +27,7 @@ export async function exportQuotePdfLegacy(id: number): Promise<{ uri: string; f
     const fileName = `teklif_${id}_${new Date().getTime()}.pdf`;
     const fileUri = `${documentDirectory}${fileName}`;
 
-    console.log('[PDF Export] Starting download...', {
+    if (__DEV__) console.log('[PDF Export] Starting download...', {
       url: `${API_BASE_URL}/quotes/${id}/pdf`,
       destination: fileUri,
     });
@@ -44,7 +44,7 @@ export async function exportQuotePdfLegacy(id: number): Promise<{ uri: string; f
       }
     );
 
-    console.log('[PDF Export] Download result:', downloadResult);
+    if (__DEV__) console.log('[PDF Export] Download result:', downloadResult);
 
     if (downloadResult.status !== 200) {
       throw new Error(`PDF indirilemedi (HTTP ${downloadResult.status})`);
@@ -58,12 +58,12 @@ export async function exportQuotePdfLegacy(id: number): Promise<{ uri: string; f
         UTI: 'com.adobe.pdf',
       });
     } else {
-      console.warn('[PDF Export] Sharing not available on this device');
+      if (__DEV__) console.warn('[PDF Export] Sharing not available on this device');
     }
 
     return { uri: downloadResult.uri, fileName };
   } catch (error) {
-    console.error('[PDF Export] Error:', error);
+    if (__DEV__) console.error('[PDF Export] Error:', error);
     const message = getErrorMessage(error);
     throw new Error(message);
   }

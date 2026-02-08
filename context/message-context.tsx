@@ -40,7 +40,7 @@ export function MessageProvider({ children }: MessageProviderProps) {
       setUnreadCount(response.totalUnreadCount);
       return response.totalUnreadCount;
     } catch (err) {
-      console.error('[MessageContext] Error refreshing unread count:', err);
+      if (__DEV__) console.error('[MessageContext] Error refreshing unread count:', err);
       return 0;
     }
   }, []);
@@ -56,7 +56,7 @@ export function MessageProvider({ children }: MessageProviderProps) {
       setConversations(response.conversations);
       setUnreadCount(response.totalUnreadCount);
     } catch (err) {
-      console.error('[MessageContext] Error fetching conversations:', err);
+      if (__DEV__) console.error('[MessageContext] Error fetching conversations:', err);
       setError(err instanceof Error ? err.message : 'Mesajlar yüklenemedi');
     } finally {
       setIsLoading(false);

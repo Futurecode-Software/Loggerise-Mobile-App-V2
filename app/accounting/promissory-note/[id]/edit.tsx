@@ -126,7 +126,7 @@ export default function EditPromissoryNoteScreen() {
           sort_order: promissoryNoteData.sort_order
         })
       } catch (err) {
-        console.error('Failed to load promissory note:', err)
+        if (__DEV__) console.error('Failed to load promissory note:', err)
         Toast.show({
           type: 'error',
           text1: 'Senet bilgileri yüklenemedi',

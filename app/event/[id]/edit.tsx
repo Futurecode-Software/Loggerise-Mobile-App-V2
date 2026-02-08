@@ -164,7 +164,7 @@ export default function EditEventScreen() {
           next_action: data.next_action || undefined,
         })
       } catch (err) {
-        console.error('Event fetch error:', err)
+        if (__DEV__) console.error('Event fetch error:', err)
         Toast.show({
           type: 'error',
           text1: 'Hata',
@@ -269,7 +269,7 @@ export default function EditEventScreen() {
       })
       router.back()
     } catch (error: any) {
-      console.error('Event update error:', error)
+      if (__DEV__) console.error('Event update error:', error)
 
       // Handle validation errors from backend
       const validationErrors = getValidationErrors(error)
@@ -310,7 +310,7 @@ export default function EditEventScreen() {
         subtitle: contact.code || '',
       }))
     } catch (error) {
-      console.error('Failed to load contacts:', error)
+      if (__DEV__) console.error('Failed to load contacts:', error)
       return []
     }
   }, [])

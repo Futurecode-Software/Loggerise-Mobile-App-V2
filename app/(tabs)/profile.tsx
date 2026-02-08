@@ -5,6 +5,7 @@
  * %100 Backend uyumlu
  */
 
+import { ConfirmDialog } from '@/components/modals'
 import CustomBottomSheet from '@/components/modals/CustomBottomSheet'
 import { PageHeader } from '@/components/navigation'
 import {
@@ -15,9 +16,10 @@ import {
   DashboardSpacing
 } from '@/constants/dashboard-theme'
 import { useAuth } from '@/context/auth-context'
+import { deleteAccount } from '@/services/endpoints/auth'
 import { deleteAvatar, uploadAvatar } from '@/services/endpoints/profile'
 import { Ionicons } from '@expo/vector-icons'
-import { BottomSheetModal } from '@gorhom/bottom-sheet'
+import { BottomSheetModal, BottomSheetTextInput } from '@gorhom/bottom-sheet'
 import Constants from 'expo-constants'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -30,7 +32,11 @@ export default function ProfileScreen(): React.ReactElement {
   const { user, refreshUser } = useAuth()
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [avatarTimestamp, setAvatarTimestamp] = useState(Date.now())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
   const avatarSheetRef = useRef<BottomSheetModal>(null)
+  const deletePasswordSheetRef = useRef<BottomSheetModal>(null)
 
   const handleLogout = (): void => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
@@ -110,7 +116,7 @@ export default function ProfileScreen(): React.ReactElement {
         await handleUploadAvatar(result.assets[0].uri)
       }
     } catch (error) {
-      console.error('Image picker error:', error)
+      if (__DEV__) console.error('Image picker error:', error)
       Toast.show({
         type: 'error',
         text1: 'Resim seçilemedi',
@@ -186,6 +192,71 @@ export default function ProfileScreen(): React.ReactElement {
       })
     } finally {
       setIsUploadingAvatar(false)
+    }
+  }
+
+  const handleDeleteAccountPress = (): void => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+    setShowDeleteConfirm(true)
+  }
+
+  const handleDeleteConfirm = (): void => {
+    setShowDeleteConfirm(false)
+    setDeletePassword('')
+    setShowPasswordSheet(true)
+    setTimeout(() => {
+      deletePasswordSheetRef.current?.present()
+    }, 300)
+  }
+
+  const handleDeleteAccount = async (): Promise<void> => {
+    if (!deletePassword.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Şifrenizi girin',
+        position: 'top',
+        visibilityTime: 1500
+      })
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      await deleteAccount(deletePassword)
+      deletePasswordSheetRef.current?.dismiss()
+      Toast.show({
+        type: 'success',
+        text1: 'Hesabınız başarıyla silindi',
+        position: 'top',
+        visibilityTime: 2000
+      })
+      setTimeout(() => {
+        router.replace('/(auth)/login')
+      }, 500)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Hesap silinirken bir hata oluştu'
+      if (errorMessage.includes('şifre belirlemeniz')) {
+        deletePasswordSheetRef.current?.dismiss()
+        Toast.show({
+          type: 'info',
+          text1: 'Şifre gerekli',
+          text2: 'Lütfen önce bir şifre belirleyin',
+          position: 'top',
+          visibilityTime: 2000
+        })
+        setTimeout(() => {
+          router.push('/profile/change-password')
+        }, 500)
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: errorMessage,
+          position: 'top',
+          visibilityTime: 2000
+        })
+      }
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -305,6 +376,22 @@ export default function ProfileScreen(): React.ReactElement {
               </View>
               <Ionicons name="chevron-forward" size={20} color={DashboardColors.textSecondary} />
             </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={handleDeleteAccountPress}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuItemLeft}>
+                <View style={[styles.menuIconContainer, { backgroundColor: '#FEE2E2' }]}>
+                  <Ionicons name="person-remove-outline" size={20} color="#EF4444" />
+                </View>
+                <Text style={[styles.menuItemText, { color: '#EF4444' }]}>Hesabımı Sil</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={DashboardColors.textSecondary} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -395,6 +482,69 @@ export default function ProfileScreen(): React.ReactElement {
                 <Ionicons name="images-outline" size={24} color={DashboardColors.primary} />
               </View>
               <Text style={styles.sheetOptionText}>Galeriden Seç</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </CustomBottomSheet>
+
+      {/* Delete Account Confirm Dialog */}
+      <ConfirmDialog
+        visible={showDeleteConfirm}
+        title="Hesabı Sil"
+        message="Bu işlem geri alınamaz. Hesabınız ve tüm verileriniz kalıcı olarak silinecektir."
+        type="danger"
+        confirmText="Devam Et"
+        cancelText="İptal"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      {/* Delete Account Password Sheet */}
+      <CustomBottomSheet
+        ref={deletePasswordSheetRef}
+        snapPoints={['40%']}
+        enableDynamicSizing={false}
+        onDismiss={() => {
+          setDeletePassword('')
+          setShowPasswordSheet(false)
+        }}
+      >
+        <View style={styles.sheetContainer}>
+          <Text style={styles.sheetTitle}>Şifre Doğrulama</Text>
+          <Text style={styles.deleteSheetMessage}>
+            Hesabınızı silmek için şifrenizi girin
+          </Text>
+
+          <BottomSheetTextInput
+            style={styles.passwordInput}
+            placeholder="Şifrenizi girin"
+            placeholderTextColor={DashboardColors.textMuted}
+            value={deletePassword}
+            onChangeText={setDeletePassword}
+            secureTextEntry
+            autoFocus
+          />
+
+          <View style={styles.deleteSheetActions}>
+            <TouchableOpacity
+              style={styles.deleteSheetCancel}
+              onPress={() => deletePasswordSheetRef.current?.dismiss()}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.deleteSheetCancelText}>İptal</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.deleteSheetConfirm, isDeleting && { opacity: 0.6 }]}
+              onPress={handleDeleteAccount}
+              disabled={isDeleting}
+              activeOpacity={0.7}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.deleteSheetConfirmText}>Hesabımı Sil</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -597,5 +747,53 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: DashboardColors.textPrimary,
     flex: 1
+  },
+  deleteSheetMessage: {
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.lg
+  },
+  passwordInput: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
+    borderRadius: DashboardBorderRadius.lg,
+    paddingHorizontal: DashboardSpacing.lg,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
+    backgroundColor: DashboardColors.surface,
+    marginBottom: DashboardSpacing.xl
+  },
+  deleteSheetActions: {
+    flexDirection: 'row',
+    gap: DashboardSpacing.md
+  },
+  deleteSheetCancel: {
+    flex: 1,
+    height: 48,
+    borderRadius: DashboardBorderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: DashboardColors.background,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight
+  },
+  deleteSheetCancelText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.textSecondary
+  },
+  deleteSheetConfirm: {
+    flex: 1,
+    height: 48,
+    borderRadius: DashboardBorderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EF4444'
+  },
+  deleteSheetConfirmText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: '#FFFFFF'
   }
 })

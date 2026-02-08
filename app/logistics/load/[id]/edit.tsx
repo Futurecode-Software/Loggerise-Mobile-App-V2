@@ -309,7 +309,7 @@ export default function EditLoadScreen() {
           })
         }
       } catch (err) {
-        console.error('Load fetch error:', err)
+        if (__DEV__) console.error('Load fetch error:', err)
         if (isMountedRef.current) {
           Toast.show({
             type: 'error',
@@ -622,7 +622,7 @@ export default function EditLoadScreen() {
         router.back()
       }
     } catch (error: any) {
-      console.error('Load update error:', error)
+      if (__DEV__) console.error('Load update error:', error)
       Toast.show({
         type: 'error',
         text1: error?.message || 'Yük güncellenemedi',

@@ -97,7 +97,7 @@ export default function EditCategoryScreen() {
         // Kendisini filtreleme - döngüyü önlemek için
         setParentCategories(response.categories.filter(cat => cat.id !== categoryId))
       } catch (err) {
-        console.error('Failed to fetch parent categories:', err)
+        if (__DEV__) console.error('Failed to fetch parent categories:', err)
       } finally {
         setIsLoadingParents(false)
       }

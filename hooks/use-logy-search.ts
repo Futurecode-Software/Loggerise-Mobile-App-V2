@@ -44,7 +44,7 @@ export function useLoggySearch(): UseLoggySearchReturn {
         const results = await searchConversations(query);
         setSearchResults(results);
       } catch (err) {
-        console.error('Search error:', err);
+        if (__DEV__) console.error('Search error:', err);
         setSearchResults([]);
       } finally {
         setIsSearching(false);
