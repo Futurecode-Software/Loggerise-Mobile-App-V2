@@ -118,7 +118,16 @@
       "Bash(eas build:view:*)",
       "Bash(npx expo-cli:*)",
       "Bash(eas build:inspect:*)",
-      "Bash(eas build:*)"
+      "Bash(eas build:*)",
+      "Bash(git -C \"C:\\\\LoggeriseMobile\" ls-files .env)",
+      "Bash(git -C \"C:\\\\LoggeriseMobile\" ls-files:*)",
+      "Bash(git -C \"C:\\\\LoggeriseMobile\" ls-files nul)",
+      "Bash(git rm:*)",
+      "Bash(npx grep-cli:*)",
+      "Bash(git -C \"C:\\\\Users\\\\Ufuk\\\\Documents\\\\GitHub\\\\FlsV2\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\Ufuk\\\\Documents\\\\GitHub\\\\FlsV2\" diff --stat)",
+      "Bash(git -C \"C:\\\\Users\\\\Ufuk\\\\Documents\\\\GitHub\\\\FlsV2\" log --oneline -5)",
+      "Bash(git -C \"C:\\\\Users\\\\Ufuk\\\\Documents\\\\GitHub\\\\FlsV2\" add app/Http/Controllers/Api/V1/Mobile/AuthController.php app/Http/Controllers/Api/V1/Mobile/BlockController.php app/Models/BlockedUser.php app/Models/ReportedMessage.php \"database/migrations/tenant/2026_02_08_100000_create_blocked_users_table.php\" \"database/migrations/tenant/2026_02_08_100001_create_reported_messages_table.php\" routes/mobile-api.php)"
     ]
   },
   "enableAllProjectMcpServers": true,
