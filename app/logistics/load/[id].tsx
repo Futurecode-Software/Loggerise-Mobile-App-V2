@@ -273,16 +273,27 @@ export default function LoadDetailScreen() {
   const pickupAddress = load?.addresses?.find(a => a.type === 'pickup')
   const deliveryAddress = load?.addresses?.find(a => a.type === 'delivery')
 
-  // Header içeriği
-  const renderHeaderContent = () => {
+  // Header başlık içeriği (headerBar içinde ortalanmış)
+  const renderHeaderTitle = () => {
+    if (isLoading) {
+      return <Skeleton width={160} height={20} />
+    }
+    if (!load) return null
+
+    return (
+      <View style={styles.headerTitleCenter}>
+        <Text style={styles.loadNumber} numberOfLines={1}>{load.load_number}</Text>
+      </View>
+    )
+  }
+
+  // Header badge içeriği (headerBar altında)
+  const renderHeaderBadges = () => {
     if (isLoading) {
       return (
-        <View style={styles.loadInfo}>
-          <Skeleton width={160} height={24} style={{ marginBottom: DashboardSpacing.sm }} />
-          <View style={styles.badgeRow}>
-            <Skeleton width={80} height={24} borderRadius={12} />
-            <Skeleton width={80} height={24} borderRadius={12} />
-          </View>
+        <View style={styles.badgeRow}>
+          <Skeleton width={80} height={24} borderRadius={12} />
+          <Skeleton width={80} height={24} borderRadius={12} />
         </View>
       )
     }
@@ -290,46 +301,37 @@ export default function LoadDetailScreen() {
     if (!load) return null
 
     return (
-      <View style={styles.loadInfo}>
-        <View style={styles.loadNumberRow}>
-          <View style={styles.loadNumberIcon}>
-            <Ionicons name="cube" size={16} color="#fff" />
-          </View>
-          <Text style={styles.loadNumber}>{load.load_number}</Text>
-        </View>
-
-        <View style={styles.badgeRow}>
-          {load.direction && (
-            <View
-              style={[
-                styles.headerBadge,
-                { backgroundColor: LoadDirectionBgColors[load.direction] }
-              ]}
-            >
-              <Ionicons
-                name={load.direction === 'export' ? 'arrow-up-circle' : 'arrow-down-circle'}
-                size={14}
-                color={LoadDirectionColors[load.direction]}
-              />
-              <Text style={[styles.headerBadgeText, { color: LoadDirectionColors[load.direction] }]}>
-                {LoadDirectionLabels[load.direction]}
-              </Text>
-            </View>
-          )}
-
+      <View style={styles.badgeRow}>
+        {load.direction && (
           <View
             style={[
               styles.headerBadge,
-              { backgroundColor: LoadStatusBgColors[load.status] }
+              { backgroundColor: LoadDirectionBgColors[load.direction] }
             ]}
           >
-            <View
-              style={[styles.statusDot, { backgroundColor: LoadStatusColors[load.status] }]}
+            <Ionicons
+              name={load.direction === 'export' ? 'arrow-up-circle' : 'arrow-down-circle'}
+              size={14}
+              color={LoadDirectionColors[load.direction]}
             />
-            <Text style={[styles.headerBadgeText, { color: LoadStatusColors[load.status] }]}>
-              {LoadStatusLabels[load.status]}
+            <Text style={[styles.headerBadgeText, { color: LoadDirectionColors[load.direction] }]}>
+              {LoadDirectionLabels[load.direction]}
             </Text>
           </View>
+        )}
+
+        <View
+          style={[
+            styles.headerBadge,
+            { backgroundColor: LoadStatusBgColors[load.status] }
+          ]}
+        >
+          <View
+            style={[styles.statusDot, { backgroundColor: LoadStatusColors[load.status] }]}
+          />
+          <Text style={[styles.headerBadgeText, { color: LoadStatusColors[load.status] }]}>
+            {LoadStatusLabels[load.status]}
+          </Text>
         </View>
       </View>
     )
@@ -953,7 +955,9 @@ export default function LoadDetailScreen() {
               <Ionicons name="chevron-back" size={24} color="#fff" />
             </TouchableOpacity>
 
-            {!isLoading && load && (
+            {renderHeaderTitle()}
+
+            {!isLoading && load ? (
               <View style={styles.headerActions}>
                 <TouchableOpacity style={styles.headerButton} onPress={handleEdit}>
                   <Ionicons name="create-outline" size={22} color="#fff" />
@@ -970,10 +974,12 @@ export default function LoadDetailScreen() {
                   )}
                 </TouchableOpacity>
               </View>
+            ) : (
+              <View style={styles.headerActions} />
             )}
           </View>
 
-          {renderHeaderContent()}
+          {renderHeaderBadges()}
         </View>
         <View style={styles.bottomCurve} />
       </View>
@@ -1158,24 +1164,14 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: 'rgba(239, 68, 68, 0.2)'
   },
-  loadInfo: {
-    gap: DashboardSpacing.sm
-  },
-  loadNumberRow: {
-    flexDirection: 'row',
+  headerTitleCenter: {
+    flex: 1,
     alignItems: 'center',
-    gap: DashboardSpacing.sm
-  },
-  loadNumberIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    paddingHorizontal: DashboardSpacing.sm
   },
   loadNumber: {
-    fontSize: DashboardFontSizes.xl,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '700',
     color: '#fff',
     letterSpacing: 0.5
@@ -1207,8 +1203,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: DashboardColors.surface,
     marginHorizontal: DashboardSpacing.lg,
-    marginTop: DashboardSpacing.md,
-    marginBottom: DashboardSpacing.xs,
+    marginTop: 0,
+    marginBottom: DashboardSpacing.md,
     padding: 4,
     borderRadius: DashboardBorderRadius.xl,
     ...DashboardShadows.sm
