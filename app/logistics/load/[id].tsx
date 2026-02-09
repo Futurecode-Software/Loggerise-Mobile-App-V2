@@ -975,8 +975,10 @@ export default function LoadDetailScreen() {
 
           {renderHeaderContent()}
         </View>
+        <View style={styles.bottomCurve} />
       </View>
 
+      <View style={styles.contentWrapper}>
       {/* Tabs */}
       {!isLoading && load && (
         <View style={styles.tabsContainer}>
@@ -1068,6 +1070,7 @@ export default function LoadDetailScreen() {
         {/* Alt boşluk */}
         <View style={{ height: insets.bottom + DashboardSpacing['3xl'] }} />
       </ScrollView>
+      </View>
 
       {/* Silme Onay Dialogu */}
       <ConfirmDialog
@@ -1094,7 +1097,22 @@ const styles = StyleSheet.create({
   headerContainer: {
     position: 'relative',
     overflow: 'hidden',
-    paddingBottom: 24
+    paddingBottom: 32
+  },
+  bottomCurve: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: DashboardColors.background,
+    borderTopLeftRadius: DashboardBorderRadius['2xl'],
+    borderTopRightRadius: DashboardBorderRadius['2xl']
+  },
+  contentWrapper: {
+    flex: 1,
+    backgroundColor: DashboardColors.background,
+    overflow: 'hidden'
   },
   glowOrb1: {
     position: 'absolute',
@@ -1188,22 +1206,24 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: DashboardColors.surface,
-    paddingHorizontal: DashboardSpacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: DashboardColors.borderLight
+    marginHorizontal: DashboardSpacing.lg,
+    marginTop: DashboardSpacing.md,
+    marginBottom: DashboardSpacing.xs,
+    padding: 4,
+    borderRadius: DashboardBorderRadius.xl,
+    ...DashboardShadows.sm
   },
   tab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: DashboardSpacing.md,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.lg,
     gap: 4
   },
   tabActive: {
-    borderBottomColor: DashboardColors.primary
+    backgroundColor: DashboardColors.primaryGlow
   },
   tabText: {
     fontSize: DashboardFontSizes.xs,
