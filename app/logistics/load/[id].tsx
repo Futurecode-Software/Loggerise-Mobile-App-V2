@@ -90,9 +90,10 @@ interface SectionHeaderProps {
   title: string
   icon: keyof typeof Ionicons.glyphMap
   count?: number
+  rightContent?: React.ReactNode
 }
 
-function SectionHeader({ title, icon, count }: SectionHeaderProps) {
+function SectionHeader({ title, icon, count, rightContent }: SectionHeaderProps) {
   return (
     <View style={styles.sectionHeader}>
       <View style={styles.sectionHeaderLeft}>
@@ -106,6 +107,7 @@ function SectionHeader({ title, icon, count }: SectionHeaderProps) {
           </View>
         )}
       </View>
+      {rightContent}
     </View>
   )
 }
@@ -287,55 +289,8 @@ export default function LoadDetailScreen() {
     )
   }
 
-  // Header badge içeriği (headerBar altında)
-  const renderHeaderBadges = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.badgeRow}>
-          <Skeleton width={80} height={24} borderRadius={12} />
-          <Skeleton width={80} height={24} borderRadius={12} />
-        </View>
-      )
-    }
-
-    if (!load) return null
-
-    return (
-      <View style={styles.badgeRow}>
-        {load.direction && (
-          <View
-            style={[
-              styles.headerBadge,
-              { backgroundColor: LoadDirectionBgColors[load.direction] }
-            ]}
-          >
-            <Ionicons
-              name={load.direction === 'export' ? 'arrow-up-circle' : 'arrow-down-circle'}
-              size={14}
-              color={LoadDirectionColors[load.direction]}
-            />
-            <Text style={[styles.headerBadgeText, { color: LoadDirectionColors[load.direction] }]}>
-              {LoadDirectionLabels[load.direction]}
-            </Text>
-          </View>
-        )}
-
-        <View
-          style={[
-            styles.headerBadge,
-            { backgroundColor: LoadStatusBgColors[load.status] }
-          ]}
-        >
-          <View
-            style={[styles.statusDot, { backgroundColor: LoadStatusColors[load.status] }]}
-          />
-          <Text style={[styles.headerBadgeText, { color: LoadStatusColors[load.status] }]}>
-            {LoadStatusLabels[load.status]}
-          </Text>
-        </View>
-      </View>
-    )
-  }
+  // Header badge içeriği (headerBar altında) - boş bırakıldı, badge'ler Temel Bilgiler'e taşındı
+  const renderHeaderBadges = () => null
 
   // === TAB İÇERİKLERİ ===
 
@@ -346,7 +301,44 @@ export default function LoadDetailScreen() {
       <>
         {/* Temel Bilgiler */}
         <View style={styles.card}>
-          <SectionHeader title="Temel Bilgiler" icon="information-circle-outline" />
+          <SectionHeader
+            title="Temel Bilgiler"
+            icon="information-circle-outline"
+            rightContent={(
+              <View style={styles.sectionBadgeRow}>
+                <View
+                  style={[
+                    styles.directionBadge,
+                    { backgroundColor: LoadStatusBgColors[load.status] }
+                  ]}
+                >
+                  <View
+                    style={[styles.statusDot, { backgroundColor: LoadStatusColors[load.status] }]}
+                  />
+                  <Text style={[styles.directionBadgeText, { color: LoadStatusColors[load.status] }]}>
+                    {LoadStatusLabels[load.status]}
+                  </Text>
+                </View>
+                {load.direction && (
+                  <View
+                    style={[
+                      styles.directionBadge,
+                      { backgroundColor: LoadDirectionBgColors[load.direction] }
+                    ]}
+                  >
+                    <Ionicons
+                      name={load.direction === 'export' ? 'arrow-up-circle' : 'arrow-down-circle'}
+                      size={14}
+                      color={LoadDirectionColors[load.direction]}
+                    />
+                    <Text style={[styles.directionBadgeText, { color: LoadDirectionColors[load.direction] }]}>
+                      {LoadDirectionLabels[load.direction]}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          />
           <View style={styles.cardContent}>
             <InfoRow label="Kargo Adı" value={load.cargo_name || '-'} icon="cube-outline" />
             <InfoRow label="Araç Tipi" value={load.vehicle_type ? (VehicleTypeLabels[load.vehicle_type] || load.vehicle_type) : '-'} icon="car-outline" />
@@ -1176,26 +1168,29 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: 0.5
   },
-  badgeRow: {
-    flexDirection: 'row',
-    gap: DashboardSpacing.sm
-  },
-  headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: DashboardSpacing.sm,
-    paddingVertical: 6,
-    borderRadius: DashboardBorderRadius.full,
-    gap: 4
-  },
-  headerBadgeText: {
-    fontSize: DashboardFontSizes.xs,
-    fontWeight: '600'
-  },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4
+  },
+
+  // Badge'ler (Temel Bilgiler card içinde)
+  sectionBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DashboardSpacing.xs
+  },
+  directionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.full,
+    gap: 4
+  },
+  directionBadgeText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '600'
   },
 
   // Tabs
