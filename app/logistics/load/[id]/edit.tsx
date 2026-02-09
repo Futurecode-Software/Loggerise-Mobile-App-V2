@@ -36,7 +36,7 @@ import { LoadFormStepper } from '@/components/load-form/LoadFormStepper'
 import LoadFormNavigation from '@/components/load-form/LoadFormNavigation'
 import Step1BasicInfo from '@/components/load-form/Step1BasicInfo'
 import Step2LoadItems, { type LoadItem } from '@/components/load-form/Step2LoadItems'
-import Step3Addresses, { type LoadAddress } from '@/components/load-form/Step3Addresses'
+import Step3Addresses, { type LoadAddress, type SelectedOptionsMap } from '@/components/load-form/Step3Addresses'
 import Step4Pricing, { type LoadPricingItem } from '@/components/load-form/Step4Pricing'
 import Step5InvoiceDeclaration from '@/components/load-form/Step5InvoiceDeclaration'
 import Step6CustomsDocuments from '@/components/load-form/Step6CustomsDocuments'
@@ -165,6 +165,9 @@ export default function EditLoadScreen() {
   const [selectedManufacturer, setSelectedManufacturer] = useState<SelectOption | null>(null)
   const [selectedReceiver, setSelectedReceiver] = useState<SelectOption | null>(null)
 
+  // Step3 adres seçim state'leri (firma/depo/adres isimleri)
+  const [addressSelections, setAddressSelections] = useState<SelectedOptionsMap>({})
+
   // Hata state'i
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -278,6 +281,89 @@ export default function EditLoadScreen() {
             delivery_type: addr.delivery_type ?? null,
           })) as LoadAddress[]
           setAddresses(mappedAddresses)
+
+          // Adres seçim bilgilerini (firma/depo isimleri) selectedOptions'a aktar
+          const selections: SelectedOptionsMap = {}
+          for (const addr of load.addresses) {
+            // Yükleme/Boşaltma firması
+            if (addr.type === 'pickup' && addr.loadingCompany) {
+              selections['pickup_loading_company'] = {
+                label: addr.loadingCompany.name,
+                value: addr.loadingCompany.id,
+              }
+            }
+            if (addr.type === 'pickup' && addr.loadingLocation) {
+              selections['pickup_loading_address'] = {
+                label: addr.loadingLocation.title || addr.loadingLocation.address || '',
+                value: addr.loadingLocation.id,
+                address: addr.loadingLocation.address,
+              }
+            }
+
+            // Yurtiçi depo
+            if (addr.type === 'pickup' && addr.domesticWarehouse) {
+              selections['pickup_domestic_warehouse'] = {
+                label: addr.domesticWarehouse.name || '',
+                value: addr.domesticWarehouse.id,
+                subtitle: addr.domesticWarehouse.code,
+              }
+            }
+
+            // Yurtiçi gümrükleme firması
+            if (addr.type === 'pickup' && addr.domesticCustomsCompany) {
+              selections['pickup_domestic_customs_company'] = {
+                label: addr.domesticCustomsCompany.name,
+                value: addr.domesticCustomsCompany.id,
+              }
+            }
+            if (addr.type === 'pickup' && addr.domesticCustomsLocation) {
+              selections['pickup_domestic_customs_address'] = {
+                label: addr.domesticCustomsLocation.title || addr.domesticCustomsLocation.address || '',
+                value: addr.domesticCustomsLocation.id,
+                address: addr.domesticCustomsLocation.address,
+              }
+            }
+
+            // Yurtdışı gümrükleme firması
+            if (addr.type === 'delivery' && addr.intlCustomsCompany) {
+              selections['delivery_intl_customs_company'] = {
+                label: addr.intlCustomsCompany.name,
+                value: addr.intlCustomsCompany.id,
+              }
+            }
+            if (addr.type === 'delivery' && addr.intlCustomsLocation) {
+              selections['delivery_intl_customs_address'] = {
+                label: addr.intlCustomsLocation.title || addr.intlCustomsLocation.address || '',
+                value: addr.intlCustomsLocation.id,
+                address: addr.intlCustomsLocation.address,
+              }
+            }
+
+            // Boşaltma firması
+            if (addr.type === 'delivery' && addr.unloadingCompany) {
+              selections['delivery_unloading_company'] = {
+                label: addr.unloadingCompany.name,
+                value: addr.unloadingCompany.id,
+              }
+            }
+            if (addr.type === 'delivery' && addr.unloadingLocation) {
+              selections['delivery_unloading_address'] = {
+                label: addr.unloadingLocation.title || addr.unloadingLocation.address || '',
+                value: addr.unloadingLocation.id,
+                address: addr.unloadingLocation.address,
+              }
+            }
+
+            // Yurtdışı depo
+            if (addr.type === 'delivery' && addr.intlWarehouse) {
+              selections['delivery_intl_warehouse'] = {
+                label: addr.intlWarehouse.name || '',
+                value: addr.intlWarehouse.id,
+                subtitle: addr.intlWarehouse.code,
+              }
+            }
+          }
+          setAddressSelections(selections)
         }
 
         // Map pricing items
@@ -684,7 +770,14 @@ export default function EditLoadScreen() {
       case 2:
         return <Step2LoadItems items={items} setItems={setItems} />
       case 3:
-        return <Step3Addresses addresses={addresses} setAddresses={setAddresses} />
+        return (
+          <Step3Addresses
+            addresses={addresses}
+            setAddresses={setAddresses}
+            selectedOptions={addressSelections}
+            onSelectedOptionsChange={setAddressSelections}
+          />
+        )
       case 4:
         return <Step4Pricing items={pricingItems} setItems={setPricingItems} />
       case 5:
