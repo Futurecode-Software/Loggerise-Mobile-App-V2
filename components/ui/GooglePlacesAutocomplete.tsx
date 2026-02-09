@@ -12,6 +12,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native'
 import {
   BottomSheetModal,
@@ -21,6 +22,7 @@ import {
   useBottomSheetSpringConfigs,
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet'
+import { FullWindowOverlay } from 'react-native-screens'
 import { MapPin, Search, X } from 'lucide-react-native'
 import Constants from 'expo-constants'
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme'
@@ -69,6 +71,17 @@ export function GooglePlacesAutocomplete({
   }, [value])
 
   const snapPoints = useMemo(() => ['92%'], [])
+
+  // iOS'te iç içe modal sorununu çözmek için FullWindowOverlay kullan
+  const renderContainerComponent = useCallback(
+    ({ children }: { children: React.ReactNode }) =>
+      Platform.OS === 'ios' ? (
+        <FullWindowOverlay>{children}</FullWindowOverlay>
+      ) : (
+        <>{children}</>
+      ),
+    []
+  )
 
   const animationConfigs = useBottomSheetSpringConfigs({
     damping: 80,
@@ -431,6 +444,9 @@ export function GooglePlacesAutocomplete({
         keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
         android_keyboardInputMode="adjustResize"
+        bottomInset={0}
+        containerComponent={renderContainerComponent}
+        stackBehavior="push"
         onDismiss={handleDismiss}
       >
         {renderHeader()}
