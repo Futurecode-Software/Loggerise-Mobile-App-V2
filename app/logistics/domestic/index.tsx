@@ -108,15 +108,18 @@ function DomesticOrderCard({ item, onPress }: DomesticOrderCardProps) {
     >
       {/* Header */}
       <View style={styles.orderHeader}>
-        <View style={styles.orderNumberContainer}>
-          <Text style={styles.orderNumber}>{item.order_number}</Text>
+        <View style={styles.orderHeaderTop}>
+          <Text style={styles.orderNumber} numberOfLines={1}>{item.order_number}</Text>
+          <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
+        </View>
+        <View style={styles.orderBadgeRow}>
           <View style={[styles.orderTypeBadge, { backgroundColor: getOrderTypeColor(item.order_type) + '20' }]}>
             <Text style={[styles.orderTypeText, { color: getOrderTypeColor(item.order_type) }]}>
               {getOrderTypeLabel(item.order_type)}
             </Text>
           </View>
+          <Badge label={getOrderStatusLabel(item.status)} variant={getOrderStatusVariant(item.status) as any} size="sm" />
         </View>
-        <Badge label={getOrderStatusLabel(item.status)} variant={getOrderStatusVariant(item.status) as any} size="sm" />
       </View>
 
       {/* Customer */}
@@ -187,10 +190,6 @@ function DomesticOrderCard({ item, onPress }: DomesticOrderCardProps) {
         )}
       </View>
 
-      {/* Arrow */}
-      <View style={styles.cardArrow}>
-        <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
-      </View>
     </AnimatedPressable>
   )
 }
@@ -533,22 +532,24 @@ const styles = StyleSheet.create({
     ...DashboardShadows.md
   },
   orderHeader: {
+    marginBottom: DashboardSpacing.sm,
+    gap: DashboardSpacing.sm
+  },
+  orderHeaderTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: DashboardSpacing.sm
+    alignItems: 'center'
   },
-  orderNumberContainer: {
-    flex: 1,
+  orderBadgeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: DashboardSpacing.sm,
-    flexWrap: 'wrap'
+    flexWrap: 'wrap',
+    gap: DashboardSpacing.xs
   },
   orderNumber: {
     fontSize: DashboardFontSizes.base,
     fontWeight: '700',
-    color: DashboardColors.textPrimary
+    color: DashboardColors.textPrimary,
+    flex: 1
   },
   orderTypeBadge: {
     paddingHorizontal: DashboardSpacing.sm,
@@ -645,11 +646,6 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.xs,
     fontWeight: '500',
     color: '#ef4444'
-  },
-  cardArrow: {
-    position: 'absolute',
-    right: DashboardSpacing.md,
-    bottom: DashboardSpacing.lg + 8
   },
 
   // Empty State

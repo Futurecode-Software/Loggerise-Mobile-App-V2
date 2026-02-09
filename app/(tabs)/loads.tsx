@@ -100,21 +100,28 @@ function LoadCard({ item, onPress }: LoadCardProps) {
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
       >
-        {/* Üst kısım - Yük No ve Yön */}
+        {/* Üst kısım - Yük No + Badge'ler alt satırda */}
         <View style={styles.cardHeader}>
-          <View style={styles.loadNumberContainer}>
-            <View style={styles.loadNumberIcon}>
-              <Ionicons
-                name="cube"
-                size={14}
-                color={DashboardColors.primary}
-              />
+          <View style={styles.cardHeaderTop}>
+            <View style={styles.loadNumberContainer}>
+              <View style={styles.loadNumberIcon}>
+                <Ionicons
+                  name="cube"
+                  size={14}
+                  color={DashboardColors.primary}
+                />
+              </View>
+              <Text style={styles.loadNumber} numberOfLines={1}>{item.load_number}</Text>
             </View>
-            <Text style={styles.loadNumber}>{item.load_number}</Text>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={DashboardColors.textMuted}
+            />
           </View>
 
+          {/* Badge'ler - ayrı satırda, her zaman sığar */}
           <View style={styles.badgeRow}>
-            {/* Yön Badge */}
             {item.direction && (
               <View
                 style={[
@@ -137,8 +144,6 @@ function LoadCard({ item, onPress }: LoadCardProps) {
                 </Text>
               </View>
             )}
-
-            {/* Durum Badge */}
             <View
               style={[
                 styles.badge,
@@ -219,15 +224,6 @@ function LoadCard({ item, onPress }: LoadCardProps) {
               </Text>
             </View>
           )}
-        </View>
-
-        {/* Sağ ok */}
-        <View style={styles.cardArrow}>
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color={DashboardColors.textMuted}
-          />
         </View>
       </AnimatedPressable>
     </View>
@@ -870,15 +866,19 @@ const styles = StyleSheet.create({
     ...DashboardShadows.md
   },
   cardHeader: {
+    marginBottom: DashboardSpacing.sm,
+    gap: DashboardSpacing.sm
+  },
+  cardHeaderTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: DashboardSpacing.sm
+    alignItems: 'center'
   },
   loadNumberContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DashboardSpacing.sm
+    gap: DashboardSpacing.sm,
+    flex: 1
   },
   loadNumberIcon: {
     width: 28,
@@ -892,10 +892,12 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.base,
     fontWeight: '700',
     color: DashboardColors.textPrimary,
-    letterSpacing: 0.3
+    letterSpacing: 0.3,
+    flex: 1
   },
   badgeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: DashboardSpacing.xs
   },
   badge: {
@@ -925,8 +927,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: DashboardSpacing.xs,
-    marginBottom: DashboardSpacing.md,
-    paddingRight: DashboardSpacing['2xl']
+    marginBottom: DashboardSpacing.md
   },
   routeText: {
     flex: 1,
@@ -971,12 +972,6 @@ const styles = StyleSheet.create({
   customerText: {
     fontSize: DashboardFontSizes.xs,
     color: DashboardColors.textSecondary
-  },
-  cardArrow: {
-    position: 'absolute',
-    right: DashboardSpacing.md,
-    top: '50%',
-    marginTop: -10
   },
 
   // Boş durum

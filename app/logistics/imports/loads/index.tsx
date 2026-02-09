@@ -48,7 +48,6 @@ import {
   Pagination,
   LoadStatus,
   getStatusLabel,
-  getStatusColor,
   getDirectionLabel
 } from '@/services/endpoints/loads'
 
@@ -144,15 +143,21 @@ function LoadCard({ item, onPress }: LoadCardProps) {
           <Ionicons name="cube-outline" size={20} color={statusColors.primary} />
         </View>
         <View style={styles.cardHeaderContent}>
-          <Text style={styles.cardNumber} numberOfLines={1}>
-            {item.load_number}
-          </Text>
+          <View style={styles.cardHeaderTop}>
+            <Text style={styles.cardNumber} numberOfLines={1}>
+              {item.load_number}
+            </Text>
+            <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
+          </View>
           <Text style={styles.cardCargo}>{item.cargo_name || '-'}</Text>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
-          <Text style={[styles.statusText, { color: statusColors.primary }]}>
-            {getStatusLabel(item.status)}
-          </Text>
+          <View style={styles.badgeRow}>
+            <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
+              <View style={[styles.statusDot, { backgroundColor: statusColors.primary }]} />
+              <Text style={[styles.statusText, { color: statusColors.primary }]}>
+                {getStatusLabel(item.status)}
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -192,16 +197,7 @@ function LoadCard({ item, onPress }: LoadCardProps) {
             {getDirectionLabel(item.direction || 'import')}
           </Text>
         </View>
-        <View style={styles.cardArrow}>
-          <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
-        </View>
       </View>
-
-      {/* Durum Noktası */}
-      <View style={[
-        styles.statusDot,
-        { backgroundColor: getStatusColor(item.status) }
-      ]} />
     </AnimatedPressable>
   )
 }
@@ -800,24 +796,43 @@ const styles = StyleSheet.create({
   cardHeaderContent: {
     flex: 1,
     marginLeft: DashboardSpacing.sm,
-    marginRight: DashboardSpacing.md
+    gap: 2
+  },
+  cardHeaderTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
   cardNumber: {
     fontSize: DashboardFontSizes.lg,
     fontWeight: '700',
     color: DashboardColors.textPrimary,
     letterSpacing: 0.3,
-    marginBottom: 2
+    flex: 1
   },
   cardCargo: {
     fontSize: DashboardFontSizes.xs,
     color: DashboardColors.textMuted,
     fontWeight: '500'
   },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DashboardSpacing.xs,
+    marginTop: DashboardSpacing.xs
+  },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: DashboardSpacing.sm,
     paddingVertical: 4,
-    borderRadius: DashboardBorderRadius.md
+    borderRadius: DashboardBorderRadius.md,
+    gap: 4
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3
   },
   statusText: {
     fontSize: DashboardFontSizes.xs,
@@ -858,17 +873,6 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.xs,
     fontWeight: '600',
     color: DashboardColors.primary
-  },
-  cardArrow: {
-    marginLeft: 'auto'
-  },
-  statusDot: {
-    position: 'absolute',
-    top: DashboardSpacing.lg,
-    right: DashboardSpacing.lg,
-    width: 8,
-    height: 8,
-    borderRadius: 4
   },
 
   // Daha Fazla Yükleme
