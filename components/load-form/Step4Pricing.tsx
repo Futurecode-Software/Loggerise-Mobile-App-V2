@@ -4,7 +4,7 @@
  * Web versiyonu ile %100 uyumlu - Ürün bazlı fiyatlandırma sistemi
  */
 
-import React, { SetStateAction } from 'react'
+import React, { SetStateAction, useEffect } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Card, Input, SearchableSelect } from '@/components/ui'
@@ -104,8 +104,15 @@ const getDefaultPricingItem = (): LoadPricingItem => ({
   is_active: true,
 })
 
+// Ürün seçeneği (loadProducts'tan dönen ekstra alanlar)
+interface ProductOption extends SelectOption {
+  unit?: string
+  vat_rate?: string | number
+  price?: string | number
+}
+
 // Ürün arama API fonksiyonu
-const loadProducts = async (searchQuery: string): Promise<SelectOption[]> => {
+const loadProducts = async (searchQuery: string): Promise<ProductOption[]> => {
   try {
     const response = await api.get('/products', {
       params: { search: searchQuery, per_page: 20 },
@@ -138,6 +145,42 @@ const fetchExchangeRate = async (currency: string): Promise<string> => {
 }
 
 export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
+  // Edit modunda product_id var ama product null ise ürün verisini fetch et
+  useEffect(() => {
+    const missingProducts = items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.product_id && !item.product)
+
+    if (missingProducts.length === 0) return
+
+    const fetchMissingProducts = async () => {
+      for (const { item, index } of missingProducts) {
+        try {
+          const response = await api.get(`/products/${item.product_id}`)
+          const product = response.data.data?.product || response.data.data
+          setItems(prev => {
+            const updatedItems = [...prev]
+            updatedItems[index] = {
+              ...updatedItems[index],
+              product: {
+                id: product.id,
+                code: product.code,
+                name: product.name,
+                unit: product.unit,
+                vat_rate: product.vat_rate?.toString() || '0',
+              },
+            }
+            return updatedItems
+          })
+        } catch (error) {
+          if (__DEV__) console.error('Error fetching product:', error)
+        }
+      }
+    }
+
+    fetchMissingProducts()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const addItem = () => {
     const newItem = getDefaultPricingItem()
     newItem.sort_order = items.length
@@ -154,71 +197,62 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
     setItems(updatedItems)
   }
 
-  // Ürün seçildiğinde
-  const handleProductSelect = async (index: number, productId: number | undefined) => {
-    if (!productId) {
-      setItems(prev => {
-        const updatedItems = [...prev]
+  // Ürün seçildiğinde - onSelect ile senkron güncelleme (API çağrısı yok)
+  const handleProductSelect = (index: number, option: ProductOption | null) => {
+    setItems(prev => {
+      const updatedItems = [...prev]
+
+      if (!option) {
         updatedItems[index] = { ...updatedItems[index], product_id: null, product: null }
         return updatedItems
-      })
-      return
-    }
+      }
 
-    try {
-      const response = await api.get(`/products/${productId}`)
-      const product = response.data.data
+      const productId = option.value as number
+      updatedItems[index] = {
+        ...updatedItems[index],
+        product_id: productId,
+        product: {
+          id: productId,
+          code: option.subtitle || '',
+          name: option.label,
+          unit: option.unit || 'SET',
+          vat_rate: option.vat_rate?.toString() || '0',
+        },
+        unit: option.unit || 'SET',
+        vat_rate: option.vat_rate?.toString() || '0',
+        description: option.label,
+      }
 
-      setItems(prev => {
-        const updatedItems = [...prev]
-        updatedItems[index] = {
-          ...updatedItems[index],
-          product_id: product.id,
-          product: {
-            id: product.id,
-            code: product.code,
-            name: product.name,
-            unit: product.unit,
-            vat_rate: product.vat_rate?.toString() || '0',
-          },
-          unit: product.unit || 'SET',
-          vat_rate: product.vat_rate?.toString() || '0',
-          description: product.name,
-        }
+      if (option.price) {
+        updatedItems[index] = { ...updatedItems[index], unit_price: option.price.toString() }
+      }
 
-        if (product.price) {
-          updatedItems[index] = { ...updatedItems[index], unit_price: product.price.toString() }
-        }
+      const item = updatedItems[index]
+      const quantity = parseFloat(item.quantity?.toString() || '0') || 0
+      const unitPrice = parseFloat(item.unit_price?.toString() || '0') || 0
+      const exchangeRate = parseFloat(item.exchange_rate?.toString() || '1') || 1
+      const vatRate = parseFloat(item.vat_rate?.toString() || '0') || 0
+      const discountRate = parseFloat(item.discount_rate?.toString() || '0') || 0
+      const discountAmount = parseFloat(item.discount_amount?.toString() || '0') || 0
+      const lineTotalInTry = quantity * unitPrice * exchangeRate
+      let totalDiscount = 0
+      if (discountRate > 0) {
+        totalDiscount = lineTotalInTry * (discountRate / 100)
+      } else if (discountAmount > 0) {
+        totalDiscount = discountAmount * exchangeRate
+      }
+      const subTotal = lineTotalInTry - totalDiscount
+      const vatAmount = subTotal * (vatRate / 100)
+      const total = subTotal + vatAmount
+      updatedItems[index] = {
+        ...updatedItems[index],
+        sub_total: subTotal.toFixed(2),
+        vat_amount: vatAmount.toFixed(2),
+        total: total.toFixed(2),
+      }
 
-        const item = updatedItems[index]
-        const quantity = parseFloat(item.quantity?.toString() || '0') || 0
-        const unitPrice = parseFloat(item.unit_price?.toString() || '0') || 0
-        const exchangeRate = parseFloat(item.exchange_rate?.toString() || '1') || 1
-        const vatRate = parseFloat(item.vat_rate?.toString() || '0') || 0
-        const discountRate = parseFloat(item.discount_rate?.toString() || '0') || 0
-        const discountAmount = parseFloat(item.discount_amount?.toString() || '0') || 0
-        const lineTotalInTry = quantity * unitPrice * exchangeRate
-        let totalDiscount = 0
-        if (discountRate > 0) {
-          totalDiscount = lineTotalInTry * (discountRate / 100)
-        } else if (discountAmount > 0) {
-          totalDiscount = discountAmount * exchangeRate
-        }
-        const subTotal = lineTotalInTry - totalDiscount
-        const vatAmount = subTotal * (vatRate / 100)
-        const total = subTotal + vatAmount
-        updatedItems[index] = {
-          ...updatedItems[index],
-          sub_total: subTotal.toFixed(2),
-          vat_amount: vatAmount.toFixed(2),
-          total: total.toFixed(2),
-        }
-
-        return updatedItems
-      })
-    } catch (error) {
-      if (__DEV__) console.error('Error fetching product:', error)
-    }
+      return updatedItems
+    })
   }
 
   // Para birimi değiştiğinde kur çek
@@ -367,7 +401,8 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
                     placeholder="Ürün seçiniz veya arayınız..."
                     value={item.product_id || undefined}
                     selectedOption={item.product ? { value: item.product.id, label: item.product.name, subtitle: item.product.code } : undefined}
-                    onValueChange={(value) => handleProductSelect(index, value as number | undefined)}
+                    onValueChange={() => {}}
+                    onSelect={(option) => handleProductSelect(index, option as ProductOption | null)}
                     loadOptions={loadProducts}
                   />
                 </View>
