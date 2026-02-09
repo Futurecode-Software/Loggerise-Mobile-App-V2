@@ -29,7 +29,7 @@ import {
   BottomSheetModal,
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
-  BottomSheetView
+  BottomSheetScrollView
 } from '@gorhom/bottom-sheet'
 import { PageHeader } from '@/components/navigation'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -50,6 +50,12 @@ import {
   getStatusLabel,
   getDirectionLabel
 } from '@/services/endpoints/loads'
+import { DateInput } from '@/components/ui'
+import {
+  SearchableSelectModal,
+  SearchableSelectModalRef
+} from '@/components/modals/SearchableSelectModal'
+import api from '@/services/api'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
@@ -277,6 +283,7 @@ export default function ImportLoadsScreen() {
 
   // BottomSheet ref
   const filterBottomSheetRef = useRef<BottomSheetModal>(null)
+  const customerFilterRef = useRef<SearchableSelectModalRef>(null)
   const snapPoints = useMemo(() => ['90%'], [])
 
   // API state
@@ -285,6 +292,21 @@ export default function ImportLoadsScreen() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Filter state
+  const [filterCustomerId, setFilterCustomerId] = useState('')
+  const [filterCustomerLabel, setFilterCustomerLabel] = useState('')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
+
+  // Customer data
+  const [customers, setCustomers] = useState<{ id: number; name: string; code?: string }[]>([])
+  const [loadingCustomers, setLoadingCustomers] = useState(false)
+
+  // Filter refs (executeFetch yeniden oluşturulmadan erişim için)
+  const filterCustomerIdRef = useRef('')
+  const filterDateFromRef = useRef('')
+  const filterDateToRef = useRef('')
 
   // Refs
   const isMountedRef = useRef(true)
@@ -314,6 +336,18 @@ export default function ImportLoadsScreen() {
 
         if (filter !== 'all') {
           filters.status = filter as LoadStatus
+        }
+
+        if (filterCustomerIdRef.current) {
+          filters.customer_id = Number(filterCustomerIdRef.current)
+        }
+
+        if (filterDateFromRef.current) {
+          filters.date_from = filterDateFromRef.current
+        }
+
+        if (filterDateToRef.current) {
+          filters.date_to = filterDateToRef.current
         }
 
         const response = await getLoads(filters)
@@ -355,6 +389,46 @@ export default function ImportLoadsScreen() {
       }
     }
   }, [])
+
+  // Müşteri listesini yükle
+  useEffect(() => {
+    const loadCustomers = async () => {
+      setLoadingCustomers(true)
+      try {
+        const response = await api.get('/contacts', {
+          params: { per_page: 100, is_active: true, type: 'customer' }
+        })
+        let list: { id: number; name: string; code?: string }[] = []
+        if (response.data?.data?.contacts) {
+          list = response.data.data.contacts
+        } else if (Array.isArray(response.data?.data)) {
+          list = response.data.data
+        } else if (Array.isArray(response.data)) {
+          list = response.data
+        }
+        if (isMountedRef.current) setCustomers(list)
+      } catch (err) {
+        if (__DEV__) console.error('Failed to load customers:', err)
+      } finally {
+        if (isMountedRef.current) setLoadingCustomers(false)
+      }
+    }
+    loadCustomers()
+  }, [])
+
+  // Filter ref senkronizasyonu
+  useEffect(() => {
+    filterCustomerIdRef.current = filterCustomerId
+    filterDateFromRef.current = filterDateFrom
+    filterDateToRef.current = filterDateTo
+  }, [filterCustomerId, filterDateFrom, filterDateTo])
+
+  // Filter değişimi (müşteri ve tarih)
+  useEffect(() => {
+    if (!hasInitialFetchRef.current) return
+    setIsLoading(true)
+    executeFetch(searchQuery, activeFilter, 1, false)
+  }, [filterCustomerId, filterDateFrom, filterDateTo])
 
   // Arama debounce
   useEffect(() => {
@@ -447,7 +521,6 @@ export default function ImportLoadsScreen() {
   const handleFilterSelect = (filterId: string) => {
     Haptics.selectionAsync()
     setActiveFilter(filterId)
-    filterBottomSheetRef.current?.dismiss()
   }
 
   const handleBackPress = () => {
@@ -458,6 +531,39 @@ export default function ImportLoadsScreen() {
   const handleRetry = () => {
     setIsLoading(true)
     executeFetch(searchQuery, activeFilter, 1, false)
+  }
+
+  // Müşteri seçenekleri
+  const customerOptions = useMemo(() =>
+    customers.map((c) => ({
+      label: c.code ? `${c.name} (${c.code})` : c.name,
+      value: String(c.id)
+    })),
+    [customers]
+  )
+
+  // Aktif filtre kontrolü
+  const hasActiveFilters = activeFilter !== 'all' || !!filterCustomerId || !!filterDateFrom || !!filterDateTo
+
+  // Tüm filtreleri temizle
+  const clearAllFilters = () => {
+    setActiveFilter('all')
+    setFilterCustomerId('')
+    setFilterCustomerLabel('')
+    setFilterDateFrom('')
+    setFilterDateTo('')
+  }
+
+  // Müşteri filtresi seçim handler'ı
+  const handleCustomerFilterSelect = (option: any) => {
+    setFilterCustomerId(String(option.value))
+    setFilterCustomerLabel(option.label)
+  }
+
+  // Müşteri filtresini temizle
+  const clearCustomerFilter = () => {
+    setFilterCustomerId('')
+    setFilterCustomerLabel('')
   }
 
   // Aktif filtre etiketi
@@ -548,16 +654,51 @@ export default function ImportLoadsScreen() {
         </View>
 
         {/* Aktif Filtre Göstergesi */}
-        {activeFilter !== 'all' && (
+        {hasActiveFilters && (
           <View style={styles.activeFilterBar}>
-            <View style={styles.activeFilterContent}>
+            <View style={styles.activeFilterChips}>
               <Ionicons name="funnel" size={14} color={DashboardColors.primary} />
-              <Text style={styles.activeFilterText}>
-                Filtre: <Text style={styles.activeFilterValue}>{getActiveFilterLabel()}</Text>
-              </Text>
+              {activeFilter !== 'all' && (
+                <TouchableOpacity
+                  style={styles.filterChip}
+                  onPress={() => setActiveFilter('all')}
+                >
+                  <Text style={styles.filterChipText}>{getActiveFilterLabel()}</Text>
+                  <Ionicons name="close-circle" size={14} color={DashboardColors.primary} />
+                </TouchableOpacity>
+              )}
+              {filterCustomerId && (
+                <TouchableOpacity
+                  style={styles.filterChip}
+                  onPress={clearCustomerFilter}
+                >
+                  <Text style={styles.filterChipText} numberOfLines={1}>
+                    {filterCustomerLabel}
+                  </Text>
+                  <Ionicons name="close-circle" size={14} color={DashboardColors.primary} />
+                </TouchableOpacity>
+              )}
+              {filterDateFrom && (
+                <TouchableOpacity
+                  style={styles.filterChip}
+                  onPress={() => setFilterDateFrom('')}
+                >
+                  <Text style={styles.filterChipText}>{filterDateFrom}</Text>
+                  <Ionicons name="close-circle" size={14} color={DashboardColors.primary} />
+                </TouchableOpacity>
+              )}
+              {filterDateTo && (
+                <TouchableOpacity
+                  style={styles.filterChip}
+                  onPress={() => setFilterDateTo('')}
+                >
+                  <Text style={styles.filterChipText}>{filterDateTo}</Text>
+                  <Ionicons name="close-circle" size={14} color={DashboardColors.primary} />
+                </TouchableOpacity>
+              )}
             </View>
             <TouchableOpacity
-              onPress={() => setActiveFilter('all')}
+              onPress={clearAllFilters}
               style={styles.clearFilterButton}
             >
               <Ionicons name="close-circle" size={20} color={DashboardColors.textMuted} />
@@ -611,13 +752,13 @@ export default function ImportLoadsScreen() {
         enableContentPanningGesture={false}
         enableDynamicSizing={false}
       >
-        <BottomSheetView style={styles.bottomSheetContent}>
+        <BottomSheetScrollView style={styles.bottomSheetContent}>
           {/* Header */}
           <View style={styles.bottomSheetHeader}>
             <View style={styles.bottomSheetHeaderIcon}>
               <Ionicons name="funnel" size={20} color={DashboardColors.primary} />
             </View>
-            <Text style={styles.bottomSheetTitle}>Durum Filtresi</Text>
+            <Text style={styles.bottomSheetTitle}>Filtreler</Text>
             <TouchableOpacity
               onPress={() => filterBottomSheetRef.current?.dismiss()}
               style={styles.bottomSheetCloseButton}
@@ -626,48 +767,117 @@ export default function ImportLoadsScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Filtre Seçenekleri */}
           <View style={styles.bottomSheetBody}>
-            {STATUS_FILTERS.map((filter) => {
-              const isActive = activeFilter === filter.id
+            {/* Durum Filtresi */}
+            <Text style={styles.filterSectionTitle}>Durum</Text>
+            <View style={styles.filterSectionContent}>
+              {STATUS_FILTERS.map((filter) => {
+                const isActive = activeFilter === filter.id
 
-              return (
-                <TouchableOpacity
-                  key={filter.id}
-                  style={[
-                    styles.filterOption,
-                    isActive && styles.filterOptionActive
-                  ]}
-                  onPress={() => handleFilterSelect(filter.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[
-                    styles.filterOptionIcon,
-                    { backgroundColor: DashboardColors.primaryGlow }
-                  ]}>
-                    <Ionicons
-                      name={filter.icon}
-                      size={20}
-                      color={DashboardColors.primary}
-                    />
-                  </View>
-                  <Text style={[
-                    styles.filterOptionLabel,
-                    isActive && styles.filterOptionLabelActive
-                  ]}>
-                    {filter.label}
-                  </Text>
-                  {isActive && (
-                    <View style={styles.filterOptionCheck}>
-                      <Ionicons name="checkmark-circle" size={24} color={DashboardColors.primary} />
+                return (
+                  <TouchableOpacity
+                    key={filter.id}
+                    style={[
+                      styles.filterOption,
+                      isActive && styles.filterOptionActive
+                    ]}
+                    onPress={() => handleFilterSelect(filter.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[
+                      styles.filterOptionIcon,
+                      { backgroundColor: DashboardColors.primaryGlow }
+                    ]}>
+                      <Ionicons
+                        name={filter.icon}
+                        size={20}
+                        color={DashboardColors.primary}
+                      />
                     </View>
-                  )}
+                    <Text style={[
+                      styles.filterOptionLabel,
+                      isActive && styles.filterOptionLabelActive
+                    ]}>
+                      {filter.label}
+                    </Text>
+                    {isActive && (
+                      <View style={styles.filterOptionCheck}>
+                        <Ionicons name="checkmark-circle" size={24} color={DashboardColors.primary} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+
+            {/* Müşteri Filtresi */}
+            <Text style={styles.filterSectionTitle}>Müşteri</Text>
+            <TouchableOpacity
+              style={[
+                styles.filterSelectTrigger,
+                filterCustomerId ? styles.filterSelectTriggerActive : null
+              ]}
+              onPress={() => customerFilterRef.current?.present()}
+            >
+              <Ionicons name="business-outline" size={20} color={filterCustomerId ? DashboardColors.primary : DashboardColors.textMuted} />
+              <Text
+                style={[
+                  styles.filterSelectText,
+                  !filterCustomerId && styles.filterSelectPlaceholder
+                ]}
+                numberOfLines={1}
+              >
+                {filterCustomerLabel || 'Müşteri seçiniz...'}
+              </Text>
+              {filterCustomerId ? (
+                <TouchableOpacity onPress={clearCustomerFilter} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={20} color={DashboardColors.primary} />
                 </TouchableOpacity>
-              )
-            })}
+              ) : (
+                <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
+              )}
+            </TouchableOpacity>
+
+            {/* Tarih Aralığı */}
+            <Text style={styles.filterSectionTitle}>Tarih Aralığı</Text>
+            <DateInput
+              label="Başlangıç Tarihi"
+              placeholder="Tarih seçiniz"
+              value={filterDateFrom}
+              onChangeDate={setFilterDateFrom}
+            />
+            <DateInput
+              label="Bitiş Tarihi"
+              placeholder="Tarih seçiniz"
+              value={filterDateTo}
+              onChangeDate={setFilterDateTo}
+            />
+
+            {/* Filtreleri Temizle */}
+            {hasActiveFilters && (
+              <TouchableOpacity
+                style={styles.clearAllButton}
+                onPress={clearAllFilters}
+              >
+                <Ionicons name="trash-outline" size={18} color={DashboardColors.danger} />
+                <Text style={styles.clearAllButtonText}>Tüm Filtreleri Temizle</Text>
+              </TouchableOpacity>
+            )}
           </View>
-        </BottomSheetView>
+        </BottomSheetScrollView>
       </BottomSheetModal>
+
+      {/* Müşteri Seçim Modal'ı */}
+      <SearchableSelectModal
+        ref={customerFilterRef}
+        title="Müşteri Seçiniz"
+        options={customerOptions}
+        selectedValue={filterCustomerId}
+        onSelect={handleCustomerFilterSelect}
+        searchPlaceholder="Müşteri ara..."
+        emptyMessage="Müşteri bulunamadı"
+        loading={loadingCustomers}
+      />
     </View>
   )
 }
@@ -716,18 +926,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: DashboardColors.borderLight
   },
-  activeFilterContent: {
+  activeFilterChips: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DashboardSpacing.sm
+    flexWrap: 'wrap',
+    gap: DashboardSpacing.xs
   },
-  activeFilterText: {
-    fontSize: DashboardFontSizes.sm,
-    color: DashboardColors.textSecondary
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: DashboardColors.primaryGlow,
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: 4,
+    borderRadius: DashboardBorderRadius.md,
+    gap: 4,
+    maxWidth: 160
   },
-  activeFilterValue: {
+  filterChipText: {
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '600',
-    color: DashboardColors.primary
+    color: DashboardColors.primary,
+    flexShrink: 1
   },
   clearFilterButton: {
     padding: DashboardSpacing.xs
@@ -1008,7 +1228,55 @@ const styles = StyleSheet.create({
   },
   bottomSheetBody: {
     padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.sm,
+    paddingBottom: DashboardSpacing['3xl']
+  },
+  filterSectionTitle: {
+    fontSize: DashboardFontSizes.md,
+    fontWeight: '700',
+    color: DashboardColors.textPrimary,
+    marginTop: DashboardSpacing.md,
+    marginBottom: DashboardSpacing.xs
+  },
+  filterSectionContent: {
     gap: DashboardSpacing.sm
+  },
+  filterSelectTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DashboardSpacing.lg,
+    borderRadius: DashboardBorderRadius.xl,
+    backgroundColor: DashboardColors.background,
+    borderWidth: 1,
+    borderColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm
+  },
+  filterSelectTriggerActive: {
+    backgroundColor: DashboardColors.primaryGlow,
+    borderColor: DashboardColors.primary
+  },
+  filterSelectText: {
+    flex: 1,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary
+  },
+  filterSelectPlaceholder: {
+    color: DashboardColors.textMuted
+  },
+  clearAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.dangerBg,
+    gap: DashboardSpacing.sm,
+    marginTop: DashboardSpacing.md
+  },
+  clearAllButtonText: {
+    fontSize: DashboardFontSizes.base,
+    fontWeight: '600',
+    color: DashboardColors.danger
   },
   filterOption: {
     flexDirection: 'row',

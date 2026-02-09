@@ -4,84 +4,95 @@
  * Web versiyonu ile %100 uyumlu - Conditional rendering ve tüm alanlar
  */
 
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Switch } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Calendar, MapPin, Building, Warehouse, Truck, Package } from 'lucide-react-native';
-import { Card, SearchableSelect, AddressSelect } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import type { AddressOption } from '@/components/ui/address-select';
-import { Colors, Typography, Spacing, BorderRadius, Brand } from '@/constants/theme';
-import api from '@/services/api';
+import React, { useEffect } from 'react'
+import { View, Text, StyleSheet, Switch } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { Card, SearchableSelect, AddressSelect, DateInput } from '@/components/ui'
+import { SelectInput } from '@/components/ui/select-input'
+import type { AddressOption } from '@/components/ui/address-select'
+import type { SearchableSelectOption } from '@/components/ui/searchable-select'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
+import api from '@/services/api'
 
 // Web ile aynı adres tipi tanımlaması
 export interface LoadAddress {
-  type: 'pickup' | 'delivery';
-  pickup_type?: string | null;
-  delivery_type?: string | null;
-  sort_order?: number | null;
-  is_active?: boolean;
+  type: 'pickup' | 'delivery'
+  pickup_type?: string | null
+  delivery_type?: string | null
+  sort_order?: number | null
+  is_active?: boolean
   // Loading
-  loading_company_id?: number | null;
-  loading_location_id?: number | null;
-  expected_loading_entry_date?: string;
-  loading_entry_date?: string;
-  loading_exit_date?: string;
+  loading_company_id?: number | null
+  loading_location_id?: number | null
+  expected_loading_entry_date?: string
+  loading_entry_date?: string
+  loading_exit_date?: string
   // Domestic warehouse
-  domestic_warehouse_id?: number | null;
-  domestic_warehouse_expected_entry_date?: string;
-  domestic_warehouse_expected_exit_date?: string;
-  domestic_warehouse_entry_date?: string;
-  domestic_warehouse_exit_date?: string;
+  domestic_warehouse_id?: number | null
+  domestic_warehouse_expected_entry_date?: string
+  domestic_warehouse_expected_exit_date?: string
+  domestic_warehouse_entry_date?: string
+  domestic_warehouse_exit_date?: string
   // Domestic customs
-  domestic_customs_company_id?: number | null;
-  domestic_customs_location_id?: number | null;
-  expected_domestic_customs_entry_date?: string;
-  domestic_customs_date?: string;
-  domestic_customs_entry_date?: string;
-  domestic_customs_exit_date?: string;
+  domestic_customs_company_id?: number | null
+  domestic_customs_location_id?: number | null
+  expected_domestic_customs_entry_date?: string
+  domestic_customs_date?: string
+  domestic_customs_entry_date?: string
+  domestic_customs_exit_date?: string
   // Customs flags
-  mahrece_iade?: boolean;
-  kirmizi_beyanname?: boolean;
-  beyanname_acildi?: boolean;
-  talimat_geldi?: boolean;
-  serbest_bolge?: boolean;
-  transit?: boolean;
-  yys_sahip?: boolean;
-  mavi_hat?: boolean;
-  police?: boolean;
+  mahrece_iade?: boolean
+  kirmizi_beyanname?: boolean
+  beyanname_acildi?: boolean
+  talimat_geldi?: boolean
+  serbest_bolge?: boolean
+  transit?: boolean
+  yys_sahip?: boolean
+  mavi_hat?: boolean
+  police?: boolean
   // International customs
-  intl_customs_company_id?: number | null;
-  intl_customs_location_id?: number | null;
-  expected_intl_customs_entry_date?: string;
-  intl_customs_date?: string;
-  intl_customs_entry_date?: string;
-  intl_customs_exit_date?: string;
+  intl_customs_company_id?: number | null
+  intl_customs_location_id?: number | null
+  expected_intl_customs_entry_date?: string
+  intl_customs_date?: string
+  intl_customs_entry_date?: string
+  intl_customs_exit_date?: string
   // Unloading
-  unloading_company_id?: number | null;
-  unloading_location_id?: number | null;
-  destination_country_id?: number | null;
-  expected_unloading_entry_date?: string;
-  unloading_entry_date?: string;
-  unloading_exit_date?: string;
+  unloading_company_id?: number | null
+  unloading_location_id?: number | null
+  destination_country_id?: number | null
+  expected_unloading_entry_date?: string
+  unloading_entry_date?: string
+  unloading_exit_date?: string
   // International warehouse
-  intl_warehouse_id?: number | null;
-  intl_warehouse_expected_entry_date?: string;
-  intl_warehouse_expected_exit_date?: string;
-  intl_warehouse_entry_date?: string;
-  intl_warehouse_exit_date?: string;
+  intl_warehouse_id?: number | null
+  intl_warehouse_expected_entry_date?: string
+  intl_warehouse_expected_exit_date?: string
+  intl_warehouse_entry_date?: string
+  intl_warehouse_exit_date?: string
 }
 
 interface SelectOption {
-  label: string;
-  value: number | string;
-  subtitle?: string;
-  description?: string;
+  label: string
+  value: number | string
+  subtitle?: string
+  description?: string
+}
+
+export interface SelectedOptionsMap {
+  [key: string]: SearchableSelectOption | AddressOption | null
 }
 
 interface Step3AddressesProps {
-  addresses: LoadAddress[];
-  setAddresses: (addresses: LoadAddress[]) => void;
+  addresses: LoadAddress[]
+  setAddresses: (addresses: LoadAddress[]) => void
+  selectedOptions?: SelectedOptionsMap
+  onSelectedOptionsChange?: (options: SelectedOptionsMap) => void
 }
 
 // Web ile aynı pickup type seçenekleri (3 seçenek)
@@ -101,7 +112,7 @@ const PICKUP_TYPE_OPTIONS: SelectOption[] = [
     label: 'Müşteri Depoya Teslim Edecek',
     description: 'Depo + Gümrük',
   },
-];
+]
 
 // Web ile aynı delivery type seçenekleri (3 seçenek)
 const DELIVERY_TYPE_OPTIONS: SelectOption[] = [
@@ -120,7 +131,7 @@ const DELIVERY_TYPE_OPTIONS: SelectOption[] = [
     label: 'Depodan Teslim Alınacak',
     description: 'Gümrük + Depo',
   },
-];
+]
 
 // Gümrük bayrakları
 const CUSTOMS_FLAGS = [
@@ -133,185 +144,152 @@ const CUSTOMS_FLAGS = [
   { key: 'yys_sahip', label: 'YYS Sahip' },
   { key: 'mavi_hat', label: 'Mavi Hat' },
   { key: 'police', label: 'Poliçe' },
-] as const;
+] as const
 
 // Firma arama API fonksiyonu
 const loadContacts = async (searchQuery: string): Promise<SelectOption[]> => {
   try {
     const response = await api.get('/contacts', {
       params: { search: searchQuery, per_page: 20 },
-    });
-    const contacts = response.data.data?.contacts || response.data.data || [];
+    })
+    const contacts = response.data.data?.contacts || response.data.data || []
     return contacts.map((contact: any) => ({
       value: contact.id || contact.value,
       label: contact.name || contact.label,
       subtitle: contact.code,
-    }));
+    }))
   } catch (error) {
-    if (__DEV__) console.error('Error loading contacts:', error);
-    return [];
+    if (__DEV__) console.error('Error loading contacts:', error)
+    return []
   }
-};
+}
 
-// İhracat Depo arama API fonksiyonu (export_warehouses tablosu - yurtiçi depo)
+// İhracat Depo arama API fonksiyonu
 const loadExportWarehouses = async (searchQuery: string): Promise<SelectOption[]> => {
   try {
     const response = await api.get('/export-warehouses/search', {
       params: { search: searchQuery },
-    });
-    const warehouses = response.data.data || [];
+    })
+    const warehouses = response.data.data || []
     return warehouses.map((wh: any) => ({
       value: wh.value || wh.id,
       label: wh.label || wh.name,
       subtitle: wh.code,
-    }));
+    }))
   } catch (error) {
-    if (__DEV__) console.error('Error loading export warehouses:', error);
-    return [];
+    if (__DEV__) console.error('Error loading export warehouses:', error)
+    return []
   }
-};
+}
 
-// Depo arama API fonksiyonu (warehouses tablosu - yurtdışı depo)
+// Depo arama API fonksiyonu
 const loadWarehouses = async (searchQuery: string): Promise<SelectOption[]> => {
   try {
     const response = await api.get('/warehouses', {
       params: { search: searchQuery, per_page: 20 },
-    });
-    const warehouses = response.data.data?.warehouses || response.data.data || [];
+    })
+    const warehouses = response.data.data?.warehouses || response.data.data || []
     return warehouses.map((wh: any) => ({
       value: wh.id || wh.value,
       label: wh.name || wh.label,
       subtitle: wh.code,
-    }));
+    }))
   } catch (error) {
-    if (__DEV__) console.error('Error loading warehouses:', error);
-    return [];
+    if (__DEV__) console.error('Error loading warehouses:', error)
+    return []
   }
-};
+}
 
 const getDefaultPickupAddress = (): LoadAddress => ({
   type: 'pickup',
   pickup_type: null,
   sort_order: 0,
   is_active: true,
-});
+})
 
 const getDefaultDeliveryAddress = (): LoadAddress => ({
   type: 'delivery',
   delivery_type: null,
   sort_order: 1,
   is_active: true,
-});
+})
 
-export default function Step3Addresses({ addresses, setAddresses }: Step3AddressesProps) {
-  const colors = Colors.light;
-  const [showDatePicker, setShowDatePicker] = React.useState<{
-    field: string;
-    type: 'pickup' | 'delivery';
-  } | null>(null);
-
+export default function Step3Addresses({
+  addresses,
+  setAddresses,
+  selectedOptions = {},
+  onSelectedOptionsChange,
+}: Step3AddressesProps) {
   // Ensure we have pickup and delivery addresses
   useEffect(() => {
     if (addresses.length === 0) {
-      setAddresses([getDefaultPickupAddress(), getDefaultDeliveryAddress()]);
+      setAddresses([getDefaultPickupAddress(), getDefaultDeliveryAddress()])
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  const pickupAddress = addresses.find((a) => a.type === 'pickup') || getDefaultPickupAddress();
-  const deliveryAddress = addresses.find((a) => a.type === 'delivery') || getDefaultDeliveryAddress();
+  const pickupAddress = addresses.find((a) => a.type === 'pickup') || getDefaultPickupAddress()
+  const deliveryAddress = addresses.find((a) => a.type === 'delivery') || getDefaultDeliveryAddress()
 
   // Pickup type visibility logic (web ile aynı)
   const showPickupLoading =
     pickupAddress.pickup_type === 'pre_transport' ||
-    pickupAddress.pickup_type === 'direct_from_address';
+    pickupAddress.pickup_type === 'direct_from_address'
   const showPickupWarehouse =
     pickupAddress.pickup_type === 'pre_transport' ||
-    pickupAddress.pickup_type === 'customer_to_warehouse';
-  const showPickupCustoms = pickupAddress.pickup_type !== null;
+    pickupAddress.pickup_type === 'customer_to_warehouse'
+  const showPickupCustoms = pickupAddress.pickup_type !== null
 
   // Delivery type visibility logic (web ile aynı)
-  const showDeliveryCustoms = deliveryAddress.delivery_type !== null;
+  const showDeliveryCustoms = deliveryAddress.delivery_type !== null
   const showDeliveryUnloading =
     deliveryAddress.delivery_type === 'deliver_to_address' ||
-    deliveryAddress.delivery_type === 'final_transport';
+    deliveryAddress.delivery_type === 'final_transport'
   const showDeliveryWarehouse =
     deliveryAddress.delivery_type === 'final_transport' ||
-    deliveryAddress.delivery_type === 'pickup_from_warehouse';
+    deliveryAddress.delivery_type === 'pickup_from_warehouse'
 
   const updateAddress = (type: 'pickup' | 'delivery', field: keyof LoadAddress, value: any) => {
-    const updated = addresses.map((a) => (a.type === type ? { ...a, [field]: value } : a));
-    if (!updated.find((a) => a.type === type)) {
-      const newAddress = type === 'pickup' ? getDefaultPickupAddress() : getDefaultDeliveryAddress();
-      updated.push({ ...newAddress, [field]: value });
-    }
-    setAddresses(updated);
-  };
+    setAddresses((prev) => {
+      const updated = prev.map((a) => (a.type === type ? { ...a, [field]: value } : a))
+      if (!updated.find((a) => a.type === type)) {
+        const newAddress = type === 'pickup' ? getDefaultPickupAddress() : getDefaultDeliveryAddress()
+        updated.push({ ...newAddress, [field]: value })
+      }
+      return updated
+    })
+  }
 
-  const handleDateChange = (type: 'pickup' | 'delivery', field: string, date?: Date) => {
-    if (date) {
-      const formattedDate = date.toISOString().split('T')[0];
-      updateAddress(type, field as keyof LoadAddress, formattedDate);
-    }
-    setShowDatePicker(null);
-  };
-
-  const renderDateField = (
-    type: 'pickup' | 'delivery',
-    field: string,
-    label: string,
-    value: string | undefined
-  ) => (
-    <View style={styles.dateFieldContainer}>
-      <Text style={[styles.smallLabel, { color: colors.text }]}>{label}</Text>
-      <TouchableOpacity
-        style={[styles.dateButton, { borderColor: colors.border }]}
-        onPress={() => setShowDatePicker({ field, type })}
-      >
-        <Calendar size={12} color={colors.icon} />
-        <Text
-          style={[styles.dateButtonText, { color: value ? colors.text : colors.textMuted }]}
-          numberOfLines={1}
-        >
-          {value || 'Seçiniz'}
-        </Text>
-      </TouchableOpacity>
-      {showDatePicker?.field === field && showDatePicker?.type === type && (
-        <DateTimePicker
-          value={value ? new Date(value) : new Date()}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, date) => handleDateChange(type, field, date)}
-        />
-      )}
-    </View>
-  );
+  const updateSelectedOption = (key: string, option: any) => {
+    onSelectedOptionsChange?.({ ...selectedOptions, [key]: option })
+  }
 
   const renderCheckboxFlag = (
     type: 'pickup' | 'delivery',
-    flag: { key: string; label: string },
+    flag: { key: string, label: string },
     address: LoadAddress
   ) => (
     <View key={flag.key} style={styles.checkboxRow}>
       <Switch
         value={address[flag.key as keyof LoadAddress] as boolean || false}
         onValueChange={(checked) => updateAddress(type, flag.key as keyof LoadAddress, checked)}
-        trackColor={{ false: colors.border, true: Brand.primary }}
+        trackColor={{ false: DashboardColors.border, true: DashboardColors.primary }}
         thumbColor="#fff"
         style={styles.switch}
       />
-      <Text style={[styles.checkboxLabel, { color: colors.text }]}>{flag.label}</Text>
+      <Text style={styles.checkboxLabel}>{flag.label}</Text>
     </View>
-  );
+  )
 
   return (
     <View style={styles.container}>
       {/* Alış Adresi Kartı */}
       <Card style={styles.card}>
         <View style={styles.cardHeader}>
-          <MapPin size={18} color={Brand.primary} />
+          <Ionicons name="location-outline" size={18} color={DashboardColors.primary} />
           <View>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Alış Adresi</Text>
-            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+            <Text style={styles.cardTitle}>Alış Adresi</Text>
+            <Text style={styles.cardDescription}>
               Yükün alınacağı adres bilgileri
             </Text>
           </View>
@@ -329,152 +307,205 @@ export default function Step3Addresses({ addresses, setAddresses }: Step3Address
           }))}
         />
 
-        {/* Yurtiçi Yükleme Bilgileri - Conditional */}
+        {/* Yurtiçi Yükleme Bilgileri */}
         {showPickupLoading && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Truck size={16} color={Brand.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              <Ionicons name="car-outline" size={16} color={DashboardColors.primary} />
+              <Text style={styles.sectionTitle}>
                 Yurtiçi Yükleme Bilgileri
               </Text>
             </View>
 
             <View style={styles.fieldGroup}>
               <View style={styles.labelRow}>
-                <Building size={14} color={colors.icon} />
-                <Text style={[styles.label, { color: colors.text }]}>Yükleme Firması</Text>
+                <Ionicons name="business-outline" size={14} color={DashboardColors.textMuted} />
+                <Text style={styles.label}>Yükleme Firması</Text>
               </View>
               <SearchableSelect
                 placeholder="Firma seçiniz..."
                 value={pickupAddress.loading_company_id || undefined}
+                selectedOption={(selectedOptions['pickup_loading_company'] as SearchableSelectOption) || null}
                 onValueChange={(value) => {
-                  updateAddress('pickup', 'loading_company_id', value || null);
-                  // Firma değişince adresi sıfırla
+                  updateAddress('pickup', 'loading_company_id', value || null)
                   if (!value || value !== pickupAddress.loading_company_id) {
-                    updateAddress('pickup', 'loading_location_id', null);
+                    updateAddress('pickup', 'loading_location_id', null)
+                    updateSelectedOption('pickup_loading_address', null)
                   }
                 }}
+                onSelect={(option) => updateSelectedOption('pickup_loading_company', option)}
                 loadOptions={loadContacts}
               />
             </View>
 
-            {/* Yükleme Adresi - Firma seçildikten sonra göster */}
             {pickupAddress.loading_company_id && (
               <View style={styles.fieldGroup}>
                 <View style={styles.labelRow}>
-                  <MapPin size={14} color={colors.icon} />
-                  <Text style={[styles.label, { color: colors.text }]}>Yükleme Adresi</Text>
+                  <Ionicons name="location-outline" size={14} color={DashboardColors.textMuted} />
+                  <Text style={styles.label}>Yükleme Adresi</Text>
                 </View>
                 <AddressSelect
                   placeholder="Adres seçiniz..."
                   contactId={pickupAddress.loading_company_id}
                   value={pickupAddress.loading_location_id}
+                  selectedOption={(selectedOptions['pickup_loading_address'] as AddressOption) || null}
                   addressType="pickup"
                   onValueChange={(value) => updateAddress('pickup', 'loading_location_id', value)}
+                  onSelect={(option) => updateSelectedOption('pickup_loading_address', option)}
                 />
               </View>
             )}
 
-            <View style={styles.dateRow}>
-              {renderDateField('pickup', 'expected_loading_entry_date', 'Beklenen Yükleme Giriş', pickupAddress.expected_loading_entry_date)}
-              {renderDateField('pickup', 'loading_entry_date', 'Yüklemeye Giriş', pickupAddress.loading_entry_date)}
-              {renderDateField('pickup', 'loading_exit_date', 'Yükleme/Çıkış', pickupAddress.loading_exit_date)}
-            </View>
+            <DateInput
+              label="Beklenen Yükleme Giriş"
+              placeholder="Tarih seçiniz"
+              value={pickupAddress.expected_loading_entry_date || ''}
+              onChangeDate={(date) => updateAddress('pickup', 'expected_loading_entry_date', date)}
+            />
+            <DateInput
+              label="Yüklemeye Giriş"
+              placeholder="Tarih seçiniz"
+              value={pickupAddress.loading_entry_date || ''}
+              onChangeDate={(date) => updateAddress('pickup', 'loading_entry_date', date)}
+            />
+            <DateInput
+              label="Yükleme/Çıkış"
+              placeholder="Tarih seçiniz"
+              value={pickupAddress.loading_exit_date || ''}
+              onChangeDate={(date) => updateAddress('pickup', 'loading_exit_date', date)}
+            />
           </View>
         )}
 
-        {/* Yurtiçi Depo Bilgileri - Conditional */}
+        {/* Yurtiçi Depo Bilgileri */}
         {showPickupWarehouse && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Warehouse size={16} color={Brand.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              <Ionicons name="cube-outline" size={16} color={DashboardColors.primary} />
+              <Text style={styles.sectionTitle}>
                 Yurtiçi Depo Bilgileri
               </Text>
             </View>
 
             <View style={styles.fieldGroup}>
               <View style={styles.labelRow}>
-                <Warehouse size={14} color={colors.icon} />
-                <Text style={[styles.label, { color: colors.text }]}>Yurtiçi Depo</Text>
+                <Ionicons name="cube-outline" size={14} color={DashboardColors.textMuted} />
+                <Text style={styles.label}>Yurtiçi Depo</Text>
               </View>
               <SearchableSelect
                 placeholder="Depo seçiniz..."
                 value={pickupAddress.domestic_warehouse_id || undefined}
+                selectedOption={(selectedOptions['pickup_domestic_warehouse'] as SearchableSelectOption) || null}
                 onValueChange={(value) => updateAddress('pickup', 'domestic_warehouse_id', value || null)}
+                onSelect={(option) => updateSelectedOption('pickup_domestic_warehouse', option)}
                 loadOptions={loadExportWarehouses}
               />
             </View>
 
-            <View style={styles.dateRow}>
-              {renderDateField('pickup', 'domestic_warehouse_expected_entry_date', 'Beklenen Giriş', pickupAddress.domestic_warehouse_expected_entry_date)}
-              {renderDateField('pickup', 'domestic_warehouse_expected_exit_date', 'Beklenen Çıkış', pickupAddress.domestic_warehouse_expected_exit_date)}
-            </View>
-            <View style={styles.dateRow}>
-              {renderDateField('pickup', 'domestic_warehouse_entry_date', 'Depo Giriş', pickupAddress.domestic_warehouse_entry_date)}
-              {renderDateField('pickup', 'domestic_warehouse_exit_date', 'Depo Çıkış', pickupAddress.domestic_warehouse_exit_date)}
-            </View>
+            <DateInput
+              label="Beklenen Giriş"
+              placeholder="Tarih seçiniz"
+              value={pickupAddress.domestic_warehouse_expected_entry_date || ''}
+              onChangeDate={(date) => updateAddress('pickup', 'domestic_warehouse_expected_entry_date', date)}
+            />
+            <DateInput
+              label="Beklenen Çıkış"
+              placeholder="Tarih seçiniz"
+              value={pickupAddress.domestic_warehouse_expected_exit_date || ''}
+              onChangeDate={(date) => updateAddress('pickup', 'domestic_warehouse_expected_exit_date', date)}
+            />
+            <DateInput
+              label="Depo Giriş"
+              placeholder="Tarih seçiniz"
+              value={pickupAddress.domestic_warehouse_entry_date || ''}
+              onChangeDate={(date) => updateAddress('pickup', 'domestic_warehouse_entry_date', date)}
+            />
+            <DateInput
+              label="Depo Çıkış"
+              placeholder="Tarih seçiniz"
+              value={pickupAddress.domestic_warehouse_exit_date || ''}
+              onChangeDate={(date) => updateAddress('pickup', 'domestic_warehouse_exit_date', date)}
+            />
           </View>
         )}
 
-        {/* Yurtiçi Gümrükleme Bilgileri - Conditional */}
+        {/* Yurtiçi Gümrükleme Bilgileri */}
         {showPickupCustoms && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Package size={16} color="#F97316" />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              <Ionicons name="shield-checkmark-outline" size={16} color="#F97316" />
+              <Text style={styles.sectionTitle}>
                 Yurtiçi Gümrükleme Bilgileri
               </Text>
             </View>
 
             <View style={styles.fieldGroup}>
               <View style={styles.labelRow}>
-                <Building size={14} color={colors.icon} />
-                <Text style={[styles.label, { color: colors.text }]}>Yurtiçi Gümrükleme Firması</Text>
+                <Ionicons name="business-outline" size={14} color={DashboardColors.textMuted} />
+                <Text style={styles.label}>Yurtiçi Gümrükleme Firması</Text>
               </View>
               <SearchableSelect
                 placeholder="Firma seçiniz..."
                 value={pickupAddress.domestic_customs_company_id || undefined}
+                selectedOption={(selectedOptions['pickup_domestic_customs_company'] as SearchableSelectOption) || null}
                 onValueChange={(value) => {
-                  updateAddress('pickup', 'domestic_customs_company_id', value || null);
-                  // Firma değişince adresi sıfırla
+                  updateAddress('pickup', 'domestic_customs_company_id', value || null)
                   if (!value || value !== pickupAddress.domestic_customs_company_id) {
-                    updateAddress('pickup', 'domestic_customs_location_id', null);
+                    updateAddress('pickup', 'domestic_customs_location_id', null)
+                    updateSelectedOption('pickup_domestic_customs_address', null)
                   }
                 }}
+                onSelect={(option) => updateSelectedOption('pickup_domestic_customs_company', option)}
                 loadOptions={loadContacts}
               />
             </View>
 
-            {/* Gümrükleme Adresi - Firma seçildikten sonra göster */}
             {pickupAddress.domestic_customs_company_id && (
               <View style={styles.fieldGroup}>
                 <View style={styles.labelRow}>
-                  <MapPin size={14} color={colors.icon} />
-                  <Text style={[styles.label, { color: colors.text }]}>Gümrükleme Adresi</Text>
+                  <Ionicons name="location-outline" size={14} color={DashboardColors.textMuted} />
+                  <Text style={styles.label}>Gümrükleme Adresi</Text>
                 </View>
                 <AddressSelect
                   placeholder="Adres seçiniz..."
                   contactId={pickupAddress.domestic_customs_company_id}
                   value={pickupAddress.domestic_customs_location_id}
+                  selectedOption={(selectedOptions['pickup_domestic_customs_address'] as AddressOption) || null}
                   addressType="pickup"
                   onValueChange={(value) => updateAddress('pickup', 'domestic_customs_location_id', value)}
+                  onSelect={(option) => updateSelectedOption('pickup_domestic_customs_address', option)}
                 />
               </View>
             )}
 
-            <View style={styles.dateRow}>
-              {renderDateField('pickup', 'expected_domestic_customs_entry_date', 'Beklenen Gümrük Giriş', pickupAddress.expected_domestic_customs_entry_date)}
-              {renderDateField('pickup', 'domestic_customs_date', 'Yurtiçi Gümrük Tarihi', pickupAddress.domestic_customs_date)}
-            </View>
-            <View style={styles.dateRow}>
-              {renderDateField('pickup', 'domestic_customs_entry_date', 'Gümrüklemeye Giriş', pickupAddress.domestic_customs_entry_date)}
-              {renderDateField('pickup', 'domestic_customs_exit_date', 'Gümrüklemeden Çıkış', pickupAddress.domestic_customs_exit_date)}
-            </View>
+            <DateInput
+              label="Beklenen Gümrük Giriş"
+              placeholder="Tarih seçiniz"
+              value={pickupAddress.expected_domestic_customs_entry_date || ''}
+              onChangeDate={(date) => updateAddress('pickup', 'expected_domestic_customs_entry_date', date)}
+            />
+            <DateInput
+              label="Yurtiçi Gümrük Tarihi"
+              placeholder="Tarih seçiniz"
+              value={pickupAddress.domestic_customs_date || ''}
+              onChangeDate={(date) => updateAddress('pickup', 'domestic_customs_date', date)}
+            />
+            <DateInput
+              label="Gümrüklemeye Giriş"
+              placeholder="Tarih seçiniz"
+              value={pickupAddress.domestic_customs_entry_date || ''}
+              onChangeDate={(date) => updateAddress('pickup', 'domestic_customs_entry_date', date)}
+            />
+            <DateInput
+              label="Gümrüklemeden Çıkış"
+              placeholder="Tarih seçiniz"
+              value={pickupAddress.domestic_customs_exit_date || ''}
+              onChangeDate={(date) => updateAddress('pickup', 'domestic_customs_exit_date', date)}
+            />
 
             {/* Gümrük Bayrakları */}
-            <View style={[styles.flagsContainer, { borderColor: '#FDBA74', backgroundColor: '#FFF7ED' }]}>
-              <Text style={[styles.flagsTitle, { color: '#9A3412' }]}>Gümrük Bayrakları</Text>
+            <View style={styles.flagsContainer}>
+              <Text style={styles.flagsTitle}>Gümrük Bayrakları</Text>
               <View style={styles.flagsGrid}>
                 {CUSTOMS_FLAGS.map((flag) => renderCheckboxFlag('pickup', flag, pickupAddress))}
               </View>
@@ -486,10 +517,10 @@ export default function Step3Addresses({ addresses, setAddresses }: Step3Address
       {/* Teslim Adresi Kartı */}
       <Card style={styles.card}>
         <View style={styles.cardHeader}>
-          <MapPin size={18} color="#3B82F6" />
+          <Ionicons name="location-outline" size={18} color={DashboardColors.info} />
           <View>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Teslim Adresi</Text>
-            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+            <Text style={styles.cardTitle}>Teslim Adresi</Text>
+            <Text style={styles.cardDescription}>
               Yükün teslim edileceği adres bilgileri
             </Text>
           </View>
@@ -507,248 +538,282 @@ export default function Step3Addresses({ addresses, setAddresses }: Step3Address
           }))}
         />
 
-        {/* Yurtdışı Gümrükleme Bilgileri - Conditional */}
+        {/* Yurtdışı Gümrükleme Bilgileri */}
         {showDeliveryCustoms && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Package size={16} color="#3B82F6" />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              <Ionicons name="shield-checkmark-outline" size={16} color={DashboardColors.info} />
+              <Text style={styles.sectionTitle}>
                 Yurtdışı Gümrükleme Bilgileri
               </Text>
             </View>
 
             <View style={styles.fieldGroup}>
               <View style={styles.labelRow}>
-                <Building size={14} color={colors.icon} />
-                <Text style={[styles.label, { color: colors.text }]}>Yurtdışı Gümrükleme Firması</Text>
+                <Ionicons name="business-outline" size={14} color={DashboardColors.textMuted} />
+                <Text style={styles.label}>Yurtdışı Gümrükleme Firması</Text>
               </View>
               <SearchableSelect
                 placeholder="Firma seçiniz..."
                 value={deliveryAddress.intl_customs_company_id || undefined}
+                selectedOption={(selectedOptions['delivery_intl_customs_company'] as SearchableSelectOption) || null}
                 onValueChange={(value) => {
-                  updateAddress('delivery', 'intl_customs_company_id', value || null);
-                  // Firma değişince adresi sıfırla
+                  updateAddress('delivery', 'intl_customs_company_id', value || null)
                   if (!value || value !== deliveryAddress.intl_customs_company_id) {
-                    updateAddress('delivery', 'intl_customs_location_id', null);
+                    updateAddress('delivery', 'intl_customs_location_id', null)
+                    updateSelectedOption('delivery_intl_customs_address', null)
                   }
                 }}
+                onSelect={(option) => updateSelectedOption('delivery_intl_customs_company', option)}
                 loadOptions={loadContacts}
               />
             </View>
 
-            {/* Gümrükleme Adresi - Firma seçildikten sonra göster */}
             {deliveryAddress.intl_customs_company_id && (
               <View style={styles.fieldGroup}>
                 <View style={styles.labelRow}>
-                  <MapPin size={14} color={colors.icon} />
-                  <Text style={[styles.label, { color: colors.text }]}>Gümrükleme Adresi</Text>
+                  <Ionicons name="location-outline" size={14} color={DashboardColors.textMuted} />
+                  <Text style={styles.label}>Gümrükleme Adresi</Text>
                 </View>
                 <AddressSelect
                   placeholder="Adres seçiniz..."
                   contactId={deliveryAddress.intl_customs_company_id}
                   value={deliveryAddress.intl_customs_location_id}
+                  selectedOption={(selectedOptions['delivery_intl_customs_address'] as AddressOption) || null}
                   addressType="delivery"
                   onValueChange={(value) => updateAddress('delivery', 'intl_customs_location_id', value)}
+                  onSelect={(option) => updateSelectedOption('delivery_intl_customs_address', option)}
                 />
               </View>
             )}
 
-            <View style={styles.dateRow}>
-              {renderDateField('delivery', 'expected_intl_customs_entry_date', 'Beklenen Gümrük Giriş', deliveryAddress.expected_intl_customs_entry_date)}
-              {renderDateField('delivery', 'intl_customs_date', 'Yurtdışı Gümrük Tarihi', deliveryAddress.intl_customs_date)}
-            </View>
-            <View style={styles.dateRow}>
-              {renderDateField('delivery', 'intl_customs_entry_date', 'Gümrüklemeye Giriş', deliveryAddress.intl_customs_entry_date)}
-              {renderDateField('delivery', 'intl_customs_exit_date', 'Gümrüklemeden Çıkış', deliveryAddress.intl_customs_exit_date)}
-            </View>
+            <DateInput
+              label="Beklenen Gümrük Giriş"
+              placeholder="Tarih seçiniz"
+              value={deliveryAddress.expected_intl_customs_entry_date || ''}
+              onChangeDate={(date) => updateAddress('delivery', 'expected_intl_customs_entry_date', date)}
+            />
+            <DateInput
+              label="Yurtdışı Gümrük Tarihi"
+              placeholder="Tarih seçiniz"
+              value={deliveryAddress.intl_customs_date || ''}
+              onChangeDate={(date) => updateAddress('delivery', 'intl_customs_date', date)}
+            />
+            <DateInput
+              label="Gümrüklemeye Giriş"
+              placeholder="Tarih seçiniz"
+              value={deliveryAddress.intl_customs_entry_date || ''}
+              onChangeDate={(date) => updateAddress('delivery', 'intl_customs_entry_date', date)}
+            />
+            <DateInput
+              label="Gümrüklemeden Çıkış"
+              placeholder="Tarih seçiniz"
+              value={deliveryAddress.intl_customs_exit_date || ''}
+              onChangeDate={(date) => updateAddress('delivery', 'intl_customs_exit_date', date)}
+            />
           </View>
         )}
 
-        {/* Yurtdışı Boşaltma Bilgileri - Conditional */}
+        {/* Yurtdışı Boşaltma Bilgileri */}
         {showDeliveryUnloading && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Truck size={16} color="#3B82F6" />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              <Ionicons name="car-outline" size={16} color={DashboardColors.info} />
+              <Text style={styles.sectionTitle}>
                 Yurtdışı Boşaltma Bilgileri
               </Text>
             </View>
 
             <View style={styles.fieldGroup}>
               <View style={styles.labelRow}>
-                <Building size={14} color={colors.icon} />
-                <Text style={[styles.label, { color: colors.text }]}>Boşaltma Firması</Text>
+                <Ionicons name="business-outline" size={14} color={DashboardColors.textMuted} />
+                <Text style={styles.label}>Boşaltma Firması</Text>
               </View>
               <SearchableSelect
                 placeholder="Firma seçiniz..."
                 value={deliveryAddress.unloading_company_id || undefined}
+                selectedOption={(selectedOptions['delivery_unloading_company'] as SearchableSelectOption) || null}
                 onValueChange={(value) => {
-                  updateAddress('delivery', 'unloading_company_id', value || null);
-                  // Firma değişince adresi sıfırla
+                  updateAddress('delivery', 'unloading_company_id', value || null)
                   if (!value || value !== deliveryAddress.unloading_company_id) {
-                    updateAddress('delivery', 'unloading_location_id', null);
+                    updateAddress('delivery', 'unloading_location_id', null)
+                    updateSelectedOption('delivery_unloading_address', null)
                   }
                 }}
+                onSelect={(option) => updateSelectedOption('delivery_unloading_company', option)}
                 loadOptions={loadContacts}
               />
             </View>
 
-            {/* Boşaltma Adresi - Firma seçildikten sonra göster */}
             {deliveryAddress.unloading_company_id && (
               <View style={styles.fieldGroup}>
                 <View style={styles.labelRow}>
-                  <MapPin size={14} color={colors.icon} />
-                  <Text style={[styles.label, { color: colors.text }]}>Boşaltma Adresi</Text>
+                  <Ionicons name="location-outline" size={14} color={DashboardColors.textMuted} />
+                  <Text style={styles.label}>Boşaltma Adresi</Text>
                 </View>
                 <AddressSelect
                   placeholder="Adres seçiniz..."
                   contactId={deliveryAddress.unloading_company_id}
                   value={deliveryAddress.unloading_location_id}
+                  selectedOption={(selectedOptions['delivery_unloading_address'] as AddressOption) || null}
                   addressType="delivery"
                   onValueChange={(value) => updateAddress('delivery', 'unloading_location_id', value)}
+                  onSelect={(option) => updateSelectedOption('delivery_unloading_address', option)}
                 />
               </View>
             )}
 
-            <View style={styles.dateRow}>
-              {renderDateField('delivery', 'expected_unloading_entry_date', 'Beklenen Teslimat', deliveryAddress.expected_unloading_entry_date)}
-              {renderDateField('delivery', 'unloading_entry_date', 'Boşaltmaya Giriş', deliveryAddress.unloading_entry_date)}
-              {renderDateField('delivery', 'unloading_exit_date', 'Boşaltmadan Çıkış', deliveryAddress.unloading_exit_date)}
-            </View>
+            <DateInput
+              label="Beklenen Teslimat"
+              placeholder="Tarih seçiniz"
+              value={deliveryAddress.expected_unloading_entry_date || ''}
+              onChangeDate={(date) => updateAddress('delivery', 'expected_unloading_entry_date', date)}
+            />
+            <DateInput
+              label="Boşaltmaya Giriş"
+              placeholder="Tarih seçiniz"
+              value={deliveryAddress.unloading_entry_date || ''}
+              onChangeDate={(date) => updateAddress('delivery', 'unloading_entry_date', date)}
+            />
+            <DateInput
+              label="Boşaltmadan Çıkış"
+              placeholder="Tarih seçiniz"
+              value={deliveryAddress.unloading_exit_date || ''}
+              onChangeDate={(date) => updateAddress('delivery', 'unloading_exit_date', date)}
+            />
           </View>
         )}
 
-        {/* Yurtdışı Depo Bilgileri - Conditional */}
+        {/* Yurtdışı Depo Bilgileri */}
         {showDeliveryWarehouse && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Warehouse size={16} color="#3B82F6" />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              <Ionicons name="cube-outline" size={16} color={DashboardColors.info} />
+              <Text style={styles.sectionTitle}>
                 Yurtdışı Depo Bilgileri
               </Text>
             </View>
 
             <View style={styles.fieldGroup}>
               <View style={styles.labelRow}>
-                <Warehouse size={14} color={colors.icon} />
-                <Text style={[styles.label, { color: colors.text }]}>Yurtdışı Depo</Text>
+                <Ionicons name="cube-outline" size={14} color={DashboardColors.textMuted} />
+                <Text style={styles.label}>Yurtdışı Depo</Text>
               </View>
               <SearchableSelect
                 placeholder="Depo seçiniz..."
                 value={deliveryAddress.intl_warehouse_id || undefined}
+                selectedOption={(selectedOptions['delivery_intl_warehouse'] as SearchableSelectOption) || null}
                 onValueChange={(value) => updateAddress('delivery', 'intl_warehouse_id', value || null)}
+                onSelect={(option) => updateSelectedOption('delivery_intl_warehouse', option)}
                 loadOptions={loadWarehouses}
               />
             </View>
 
-            <View style={styles.dateRow}>
-              {renderDateField('delivery', 'intl_warehouse_expected_entry_date', 'Beklenen Giriş', deliveryAddress.intl_warehouse_expected_entry_date)}
-              {renderDateField('delivery', 'intl_warehouse_expected_exit_date', 'Beklenen Çıkış', deliveryAddress.intl_warehouse_expected_exit_date)}
-            </View>
-            <View style={styles.dateRow}>
-              {renderDateField('delivery', 'intl_warehouse_entry_date', 'Depo Giriş', deliveryAddress.intl_warehouse_entry_date)}
-              {renderDateField('delivery', 'intl_warehouse_exit_date', 'Depo Çıkış', deliveryAddress.intl_warehouse_exit_date)}
-            </View>
+            <DateInput
+              label="Beklenen Giriş"
+              placeholder="Tarih seçiniz"
+              value={deliveryAddress.intl_warehouse_expected_entry_date || ''}
+              onChangeDate={(date) => updateAddress('delivery', 'intl_warehouse_expected_entry_date', date)}
+            />
+            <DateInput
+              label="Beklenen Çıkış"
+              placeholder="Tarih seçiniz"
+              value={deliveryAddress.intl_warehouse_expected_exit_date || ''}
+              onChangeDate={(date) => updateAddress('delivery', 'intl_warehouse_expected_exit_date', date)}
+            />
+            <DateInput
+              label="Depo Giriş"
+              placeholder="Tarih seçiniz"
+              value={deliveryAddress.intl_warehouse_entry_date || ''}
+              onChangeDate={(date) => updateAddress('delivery', 'intl_warehouse_entry_date', date)}
+            />
+            <DateInput
+              label="Depo Çıkış"
+              placeholder="Tarih seçiniz"
+              value={deliveryAddress.intl_warehouse_exit_date || ''}
+              onChangeDate={(date) => updateAddress('delivery', 'intl_warehouse_exit_date', date)}
+            />
           </View>
         )}
       </Card>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   card: {
-    padding: Spacing.md,
+    padding: DashboardSpacing.md,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
+    gap: DashboardSpacing.sm,
+    marginBottom: DashboardSpacing.md,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '600',
+    color: DashboardColors.text,
     marginBottom: 2,
   },
   cardDescription: {
-    fontSize: 12,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textSecondary,
   },
   section: {
-    marginTop: Spacing.md,
-    padding: Spacing.sm,
+    marginTop: DashboardSpacing.md,
+    padding: DashboardSpacing.sm,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: BorderRadius.md,
-    backgroundColor: '#FAFAFA',
+    borderColor: DashboardColors.border,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.background,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
+    gap: DashboardSpacing.xs,
+    marginBottom: DashboardSpacing.sm,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: DashboardColors.text,
   },
   fieldGroup: {
-    marginBottom: Spacing.sm,
+    marginBottom: DashboardSpacing.sm,
   },
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs,
     marginBottom: 4,
   },
   label: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
-  },
-  smallLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-    marginBottom: Spacing.xs,
-  },
-  dateFieldContainer: {
-    flex: 1,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    padding: Spacing.xs,
-    borderWidth: 1,
-    borderRadius: BorderRadius.sm,
-    backgroundColor: '#fff',
-  },
-  dateButtonText: {
-    fontSize: 11,
-    flex: 1,
+    color: DashboardColors.text,
   },
   flagsContainer: {
-    marginTop: Spacing.sm,
-    padding: Spacing.sm,
+    marginTop: DashboardSpacing.sm,
+    padding: DashboardSpacing.sm,
     borderWidth: 1,
-    borderRadius: BorderRadius.sm,
+    borderRadius: DashboardBorderRadius.sm,
+    borderColor: '#FDBA74',
+    backgroundColor: DashboardColors.warningBg,
   },
   flagsTitle: {
-    fontSize: 12,
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '600',
-    marginBottom: Spacing.xs,
+    color: '#9A3412',
+    marginBottom: DashboardSpacing.xs,
   },
   flagsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs,
   },
   checkboxRow: {
     flexDirection: 'row',
@@ -761,7 +826,8 @@ const styles = StyleSheet.create({
     transform: [{ scaleX: 0.7 }, { scaleY: 0.7 }],
   },
   checkboxLabel: {
-    fontSize: 11,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.text,
     flex: 1,
   },
-});
+})

@@ -4,45 +4,50 @@
  * Web versiyonu ile %100 uyumlu - Ölçü alanları, otomatik hesaplama, tehlikeli madde detayları
  */
 
-import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { Plus, Trash2, Calculator, AlertTriangle, Info } from 'lucide-react-native';
-import { Card, Input, Checkbox } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
-import { useToast } from '@/hooks/use-toast';
+import React, { useCallback } from 'react'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { Card, Input, Checkbox } from '@/components/ui'
+import { SelectInput } from '@/components/ui/select-input'
+import Toast from 'react-native-toast-message'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
 
 export interface LoadItem {
-  id?: number;
-  cargo_name: string;
-  cargo_name_foreign?: string;
-  package_type: string;
-  package_count: number;
-  piece_count: number;
-  gross_weight: string;
-  net_weight: string;
-  volumetric_weight: string;
-  lademetre_weight: string;
-  total_chargeable_weight: string;
-  width: string;
-  height: string;
-  length: string;
-  volume: string;
-  lademetre: string;
-  is_stackable: boolean;
-  stackable_rows: number | null;
-  is_hazardous: boolean;
-  hazmat_un_no: string;
-  hazmat_class: string;
-  hazmat_page_no: string;
-  hazmat_packing_group: string;
-  hazmat_flash_point: string;
-  hazmat_description: string;
+  id?: number
+  cargo_name: string
+  cargo_name_foreign?: string
+  package_type: string
+  package_count: number
+  piece_count: number
+  gross_weight: string
+  net_weight: string
+  volumetric_weight: string
+  lademetre_weight: string
+  total_chargeable_weight: string
+  width: string
+  height: string
+  length: string
+  volume: string
+  lademetre: string
+  is_stackable: boolean
+  stackable_rows: number | null
+  is_hazardous: boolean
+  hazmat_un_no: string
+  hazmat_class: string
+  hazmat_page_no: string
+  hazmat_packing_group: string
+  hazmat_flash_point: string
+  hazmat_description: string
 }
 
 interface Step2LoadItemsProps {
-  items: LoadItem[];
-  setItems: (items: LoadItem[]) => void;
+  items: LoadItem[]
+  setItems: (items: LoadItem[]) => void
 }
 
 // Web ile aynı paket tipi seçenekleri (25 adet)
@@ -72,7 +77,7 @@ const PACKAGE_TYPE_OPTIONS = [
   { label: 'IBC', value: 'ibc' },
   { label: 'Big Bag', value: 'big_bag' },
   { label: 'Konteyner', value: 'konteyner' },
-];
+]
 
 const getDefaultItem = (): LoadItem => ({
   cargo_name: '',
@@ -99,29 +104,27 @@ const getDefaultItem = (): LoadItem => ({
   hazmat_packing_group: '',
   hazmat_flash_point: '0',
   hazmat_description: '',
-});
+})
 
 // Otomatik hesaplama fonksiyonları (web ile aynı formüller)
 const calculateVolume = (width: string, height: string, length: string, packageCount: number): string => {
-  const w = parseFloat(width) || 0;
-  const h = parseFloat(height) || 0;
-  const l = parseFloat(length) || 0;
-  if (w === 0 || h === 0 || l === 0) return '0';
-  // cm -> m3 dönüşümü: (w * h * l) / 1000000 * packageCount
-  const volume = (w * h * l) / 1000000 * (packageCount || 1);
-  return volume.toFixed(3);
-};
+  const w = parseFloat(width) || 0
+  const h = parseFloat(height) || 0
+  const l = parseFloat(length) || 0
+  if (w === 0 || h === 0 || l === 0) return '0'
+  const volume = (w * h * l) / 1000000 * (packageCount || 1)
+  return volume.toFixed(3)
+}
 
 const calculateVolumetricWeight = (width: string, height: string, length: string, packageCount: number): string => {
-  const w = parseFloat(width) || 0;
-  const h = parseFloat(height) || 0;
-  const l = parseFloat(length) || 0;
-  if (w === 0 || h === 0 || l === 0) return '0';
-  // Hacimsel ağırlık: hacim * 333 (karayolu için)
-  const volume = (w * h * l) / 1000000 * (packageCount || 1);
-  const volumetricWeight = volume * 333;
-  return volumetricWeight.toFixed(2);
-};
+  const w = parseFloat(width) || 0
+  const h = parseFloat(height) || 0
+  const l = parseFloat(length) || 0
+  if (w === 0 || h === 0 || l === 0) return '0'
+  const volume = (w * h * l) / 1000000 * (packageCount || 1)
+  const volumetricWeight = volume * 333
+  return volumetricWeight.toFixed(2)
+}
 
 const calculateLademetre = (
   width: string,
@@ -130,60 +133,55 @@ const calculateLademetre = (
   isStackable: boolean,
   stackableRows: number | null
 ): string => {
-  const w = parseFloat(width) || 0;
-  const l = parseFloat(length) || 0;
-  if (w === 0 || l === 0) return '0';
+  const w = parseFloat(width) || 0
+  const l = parseFloat(length) || 0
+  if (w === 0 || l === 0) return '0'
 
-  // Tır genişliği: 240 cm
-  const trailerWidth = 240;
-  const count = packageCount || 1;
+  const trailerWidth = 240
+  const count = packageCount || 1
+  let lademetre = (l * w) / (trailerWidth * 100) * count
 
-  // LDM = (Uzunluk * Genişlik) / (Tır Genişliği * 100) * Paket Sayısı
-  let lademetre = (l * w) / (trailerWidth * 100) * count;
-
-  // İstiflenebilir ise sıra sayısına böl
   if (isStackable && stackableRows && stackableRows > 1) {
-    lademetre = lademetre / stackableRows;
+    lademetre = lademetre / stackableRows
   }
 
-  return lademetre.toFixed(3);
-};
+  return lademetre.toFixed(3)
+}
 
 const calculateLademetreWeight = (lademetre: string): string => {
-  const ldm = parseFloat(lademetre) || 0;
-  // LDM ağırlık = LDM * 1750 kg
-  return (ldm * 1750).toFixed(2);
-};
+  const ldm = parseFloat(lademetre) || 0
+  return (ldm * 1750).toFixed(2)
+}
 
 const calculateChargeableWeight = (grossWeight: string, volumetricWeight: string, lademetreWeight: string): string => {
-  const gross = parseFloat(grossWeight) || 0;
-  const volumetric = parseFloat(volumetricWeight) || 0;
-  const ldmWeight = parseFloat(lademetreWeight) || 0;
-  // Faturalandırılabilir ağırlık = max(brüt, hacimsel, lademetre ağırlık)
-  return Math.max(gross, volumetric, ldmWeight).toFixed(2);
-};
+  const gross = parseFloat(grossWeight) || 0
+  const volumetric = parseFloat(volumetricWeight) || 0
+  const ldmWeight = parseFloat(lademetreWeight) || 0
+  return Math.max(gross, volumetric, ldmWeight).toFixed(2)
+}
 
 export default function Step2LoadItems({ items, setItems }: Step2LoadItemsProps) {
-  const colors = Colors.light;
-  const toast = useToast();
-
   const addItem = () => {
-    setItems([...items, getDefaultItem()]);
-  };
+    setItems([...items, getDefaultItem()])
+  }
 
   const removeItem = (index: number) => {
     if (items.length === 1) {
-      toast.warning('En az bir yük kalemi olmalıdır');
-      return;
+      Toast.show({
+        type: 'warning',
+        text1: 'En az bir yük kalemi olmalıdır',
+        position: 'top',
+        visibilityTime: 1500,
+      })
+      return
     }
-    setItems(items.filter((_, i) => i !== index));
-  };
+    setItems(items.filter((_, i) => i !== index))
+  }
 
   const updateItem = useCallback((index: number, field: keyof LoadItem, value: any) => {
-    const updatedItems = [...items];
-    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    const updatedItems = [...items]
+    updatedItems[index] = { ...updatedItems[index], [field]: value }
 
-    // Otomatik hesaplama yapılacak alanlar
     const calculationFields: (keyof LoadItem)[] = [
       'width',
       'height',
@@ -192,84 +190,78 @@ export default function Step2LoadItems({ items, setItems }: Step2LoadItemsProps)
       'gross_weight',
       'is_stackable',
       'stackable_rows',
-    ];
+    ]
 
-    // Eğer hesaplama yapılması gereken bir alan değiştiyse
     if (calculationFields.includes(field)) {
-      const item = updatedItems[index];
+      const item = updatedItems[index]
 
-      // Hacim hesapla
-      const volume = calculateVolume(item.width, item.height, item.length, item.package_count);
-      updatedItems[index].volume = volume;
+      const volume = calculateVolume(item.width, item.height, item.length, item.package_count)
+      updatedItems[index].volume = volume
 
-      // Hacimsel ağırlık hesapla
-      const volumetricWeight = calculateVolumetricWeight(item.width, item.height, item.length, item.package_count);
-      updatedItems[index].volumetric_weight = volumetricWeight;
+      const volumetricWeight = calculateVolumetricWeight(item.width, item.height, item.length, item.package_count)
+      updatedItems[index].volumetric_weight = volumetricWeight
 
-      // Lademetre hesapla
       const lademetre = calculateLademetre(
         item.width,
         item.length,
         item.package_count,
         item.is_stackable,
         item.stackable_rows
-      );
-      updatedItems[index].lademetre = lademetre;
+      )
+      updatedItems[index].lademetre = lademetre
 
-      // Lademetre ağırlık hesapla
-      const lademetreWeight = calculateLademetreWeight(lademetre);
-      updatedItems[index].lademetre_weight = lademetreWeight;
+      const lademetreWeight = calculateLademetreWeight(lademetre)
+      updatedItems[index].lademetre_weight = lademetreWeight
 
-      // Toplam faturalandırılabilir ağırlık hesapla
-      const chargeableWeight = calculateChargeableWeight(item.gross_weight, volumetricWeight, lademetreWeight);
-      updatedItems[index].total_chargeable_weight = chargeableWeight;
+      const chargeableWeight = calculateChargeableWeight(item.gross_weight, volumetricWeight, lademetreWeight)
+      updatedItems[index].total_chargeable_weight = chargeableWeight
     }
 
-    setItems(updatedItems);
-  }, [items, setItems]);
+    setItems(updatedItems)
+  }, [items, setItems])
 
   return (
     <View style={styles.container}>
       <Card style={styles.card}>
         <View style={styles.header}>
           <View>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Yük Kalemleri</Text>
-            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+            <Text style={styles.cardTitle}>Yük Kalemleri</Text>
+            <Text style={styles.cardDescription}>
               Yük kalemlerini ekleyin
             </Text>
           </View>
           <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: Brand.primary }]}
+            style={styles.addButton}
             onPress={addItem}
           >
-            <Plus size={16} color="#FFFFFF" />
+            <Ionicons name="add" size={16} color="#FFFFFF" />
             <Text style={styles.addButtonText}>Kalem Ekle</Text>
           </TouchableOpacity>
         </View>
 
         {items.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            <Text style={styles.emptyText}>
               Henüz kalem eklenmemiş
             </Text>
             <TouchableOpacity
-              style={[styles.emptyButton, { borderColor: colors.border }]}
+              style={styles.emptyButton}
               onPress={addItem}
             >
-              <Plus size={16} color={colors.text} />
-              <Text style={[styles.emptyButtonText, { color: colors.text }]}>İlk Kalemi Ekle</Text>
+              <Ionicons name="add" size={16} color={DashboardColors.text} />
+              <Text style={styles.emptyButtonText}>İlk Kalemi Ekle</Text>
             </TouchableOpacity>
           </View>
         ) : (
           items.map((item, index) => (
             <View
               key={index}
-              style={[styles.itemCard, { borderColor: colors.border, backgroundColor: colors.surface }]}
+              style={styles.itemCard}
             >
               <View style={styles.itemHeader}>
-                <Text style={[styles.itemTitle, { color: colors.text }]}>Kalem #{index + 1}</Text>
+                <Text style={styles.itemTitle}>Kalem #{index + 1}</Text>
                 <TouchableOpacity onPress={() => removeItem(index)}>
-                  <Trash2 size={18} color={colors.danger} />
+                  <Ionicons name="trash-outline" size={18} color={DashboardColors.danger} />
                 </TouchableOpacity>
               </View>
 
@@ -340,8 +332,8 @@ export default function Step2LoadItems({ items, setItems }: Step2LoadItemsProps)
                 </View>
               </View>
 
-              {/* Ölçü Alanları - Web ile aynı */}
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Ölçüler (cm)</Text>
+              {/* Ölçü Alanları */}
+              <Text style={styles.sectionTitle}>Ölçüler (cm)</Text>
               <View style={styles.row}>
                 <View style={styles.flex1}>
                   <Input
@@ -373,56 +365,56 @@ export default function Step2LoadItems({ items, setItems }: Step2LoadItemsProps)
               </View>
 
               {/* Otomatik Hesaplanan Değerler */}
-              <View style={[styles.calculatedSection, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+              <View style={styles.calculatedSection}>
                 <View style={styles.calculatedHeader}>
-                  <Calculator size={16} color="#1E40AF" />
-                  <Text style={[styles.calculatedTitle, { color: '#1E40AF' }]}>
+                  <Ionicons name="calculator-outline" size={16} color={DashboardColors.info} />
+                  <Text style={styles.calculatedTitle}>
                     Otomatik Hesaplanan Değerler
                   </Text>
                 </View>
 
                 <View style={styles.row}>
                   <View style={styles.flex1}>
-                    <Text style={[styles.calculatedLabel, { color: '#1E40AF' }]}>Hacim (m³)</Text>
-                    <View style={[styles.calculatedValue, { backgroundColor: '#FFFFFF' }]}>
-                      <Text style={[styles.calculatedValueText, { color: '#1E40AF' }]}>{item.volume}</Text>
+                    <Text style={styles.calculatedLabel}>Hacim (m³)</Text>
+                    <View style={styles.calculatedValue}>
+                      <Text style={styles.calculatedValueText}>{item.volume}</Text>
                     </View>
                   </View>
                   <View style={styles.flex1}>
-                    <Text style={[styles.calculatedLabel, { color: '#1E40AF' }]}>Hacimsel Ağırlık</Text>
-                    <View style={[styles.calculatedValue, { backgroundColor: '#FFFFFF' }]}>
-                      <Text style={[styles.calculatedValueText, { color: '#1E40AF' }]}>{item.volumetric_weight} kg</Text>
+                    <Text style={styles.calculatedLabel}>Hacimsel Ağırlık</Text>
+                    <View style={styles.calculatedValue}>
+                      <Text style={styles.calculatedValueText}>{item.volumetric_weight} kg</Text>
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.row}>
                   <View style={styles.flex1}>
-                    <Text style={[styles.calculatedLabel, { color: '#1E40AF' }]}>Lademetre (LDM)</Text>
-                    <View style={[styles.calculatedValue, { backgroundColor: '#FFFFFF' }]}>
-                      <Text style={[styles.calculatedValueText, { color: '#1E40AF' }]}>{item.lademetre}</Text>
+                    <Text style={styles.calculatedLabel}>Lademetre (LDM)</Text>
+                    <View style={styles.calculatedValue}>
+                      <Text style={styles.calculatedValueText}>{item.lademetre}</Text>
                     </View>
                   </View>
                   <View style={styles.flex1}>
-                    <Text style={[styles.calculatedLabel, { color: '#1E40AF' }]}>LDM Ağırlık</Text>
-                    <View style={[styles.calculatedValue, { backgroundColor: '#FFFFFF' }]}>
-                      <Text style={[styles.calculatedValueText, { color: '#1E40AF' }]}>{item.lademetre_weight} kg</Text>
+                    <Text style={styles.calculatedLabel}>LDM Ağırlık</Text>
+                    <View style={styles.calculatedValue}>
+                      <Text style={styles.calculatedValueText}>{item.lademetre_weight} kg</Text>
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.chargeableWeightRow}>
-                  <Text style={[styles.chargeableWeightLabel, { color: '#1E40AF' }]}>
+                  <Text style={styles.chargeableWeightLabel}>
                     Toplam Faturalandırılabilir Ağırlık
                   </Text>
-                  <View style={[styles.chargeableWeightValue, { backgroundColor: '#FFFFFF' }]}>
-                    <Text style={[styles.chargeableWeightValueText, { color: '#1E40AF' }]}>
+                  <View style={styles.chargeableWeightValue}>
+                    <Text style={styles.chargeableWeightValueText}>
                       {item.total_chargeable_weight} kg
                     </Text>
                   </View>
                 </View>
 
-                <Text style={[styles.calculatedInfo, { color: '#3B82F6' }]}>
+                <Text style={styles.calculatedInfo}>
                   Bu değerler genişlik, yükseklik, uzunluk, paket sayısı ve brüt ağırlık bilgilerine göre otomatik hesaplanmaktadır.
                 </Text>
               </View>
@@ -433,13 +425,13 @@ export default function Step2LoadItems({ items, setItems }: Step2LoadItemsProps)
                   checked={item.is_stackable}
                   onCheckedChange={(checked) => updateItem(index, 'is_stackable', checked)}
                 />
-                <Text style={[styles.checkboxLabel, { color: colors.text }]}>İstiflenebilir</Text>
+                <Text style={styles.checkboxLabel}>İstiflenebilir</Text>
               </View>
 
               {/* İstifleme Bilgileri */}
               {item.is_stackable && (
-                <View style={[styles.stackableSection, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
-                  <Text style={[styles.stackableTitle, { color: '#1E40AF' }]}>İstifleme Bilgileri</Text>
+                <View style={styles.stackableSection}>
+                  <Text style={styles.stackableTitle}>İstifleme Bilgileri</Text>
                   <Input
                     label="Kaç Sıra İstiflenebilir?"
                     placeholder="Örn: 3"
@@ -455,21 +447,25 @@ export default function Step2LoadItems({ items, setItems }: Step2LoadItemsProps)
                   checked={item.is_hazardous}
                   onCheckedChange={(checked) => updateItem(index, 'is_hazardous', checked)}
                 />
-                <AlertTriangle size={16} color={item.is_hazardous ? colors.danger : colors.textMuted} />
+                <Ionicons
+                  name="warning-outline"
+                  size={16}
+                  color={item.is_hazardous ? DashboardColors.danger : DashboardColors.textMuted}
+                />
                 <Text
                   style={[
                     styles.checkboxLabel,
-                    { color: item.is_hazardous ? colors.danger : colors.text },
+                    item.is_hazardous && { color: DashboardColors.danger },
                   ]}
                 >
                   Tehlikeli Madde
                 </Text>
               </View>
 
-              {/* Tehlikeli Madde Bilgileri - Web ile aynı detaylar */}
+              {/* Tehlikeli Madde Bilgileri */}
               {item.is_hazardous && (
-                <View style={[styles.hazmatSection, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}>
-                  <Text style={[styles.hazmatTitle, { color: '#9A3412' }]}>
+                <View style={styles.hazmatSection}>
+                  <Text style={styles.hazmatTitle}>
                     Tehlikeli Madde Bilgileri
                   </Text>
 
@@ -527,88 +523,98 @@ export default function Step2LoadItems({ items, setItems }: Step2LoadItemsProps)
         )}
       </Card>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   card: {
-    padding: Spacing.md,
+    padding: DashboardSpacing.md,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.md,
+    marginBottom: DashboardSpacing.md,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '600',
+    color: DashboardColors.text,
     marginBottom: 2,
   },
   cardDescription: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: DashboardSpacing.sm,
     paddingVertical: 6,
-    borderRadius: BorderRadius.md,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary,
   },
   addButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: Spacing.xl,
+    paddingVertical: DashboardSpacing.xl,
   },
   emptyText: {
-    fontSize: 14,
-    marginBottom: Spacing.sm,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.sm,
   },
   emptyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    gap: DashboardSpacing.sm,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
     borderWidth: 1,
-    borderRadius: BorderRadius.md,
+    borderColor: DashboardColors.border,
+    borderRadius: DashboardBorderRadius.lg,
   },
   emptyButtonText: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.text,
   },
   itemCard: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
+    padding: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.lg,
     borderWidth: 1,
-    marginBottom: Spacing.sm,
+    borderColor: DashboardColors.border,
+    backgroundColor: DashboardColors.surface,
+    marginBottom: DashboardSpacing.sm,
   },
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: DashboardSpacing.sm,
   },
   itemTitle: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: DashboardColors.text,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
-    marginTop: Spacing.sm,
+    color: DashboardColors.text,
+    marginTop: DashboardSpacing.sm,
     marginBottom: 4,
   },
   row: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   flex1: {
     flex: 1,
@@ -616,83 +622,100 @@ const styles = StyleSheet.create({
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
+    gap: DashboardSpacing.xs,
+    marginTop: DashboardSpacing.xs,
   },
   checkboxLabel: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.text,
   },
   calculatedSection: {
-    marginTop: Spacing.sm,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
+    marginTop: DashboardSpacing.sm,
+    padding: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.lg,
     borderWidth: 1,
+    backgroundColor: DashboardColors.infoBg,
+    borderColor: '#BFDBFE',
   },
   calculatedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
+    gap: DashboardSpacing.xs,
+    marginBottom: DashboardSpacing.sm,
   },
   calculatedTitle: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
+    color: DashboardColors.info,
   },
   calculatedLabel: {
-    fontSize: 11,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.info,
     marginBottom: 2,
   },
   calculatedValue: {
     padding: 6,
-    borderRadius: BorderRadius.sm,
+    borderRadius: DashboardBorderRadius.sm,
     alignItems: 'flex-end',
+    backgroundColor: DashboardColors.surface,
   },
   calculatedValueText: {
-    fontSize: 12,
+    fontSize: DashboardFontSizes.xs,
     fontFamily: 'monospace',
+    color: DashboardColors.info,
   },
   chargeableWeightRow: {
-    marginTop: Spacing.sm,
+    marginTop: DashboardSpacing.sm,
   },
   chargeableWeightLabel: {
-    fontSize: 12,
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '600',
+    color: DashboardColors.info,
     marginBottom: 2,
   },
   chargeableWeightValue: {
     padding: 6,
-    borderRadius: BorderRadius.sm,
+    borderRadius: DashboardBorderRadius.sm,
     alignItems: 'flex-end',
+    backgroundColor: DashboardColors.surface,
   },
   chargeableWeightValueText: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '700',
     fontFamily: 'monospace',
+    color: DashboardColors.info,
   },
   calculatedInfo: {
     fontSize: 10,
-    marginTop: Spacing.sm,
+    marginTop: DashboardSpacing.sm,
+    color: '#3B82F6',
   },
   stackableSection: {
-    marginTop: Spacing.sm,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
+    marginTop: DashboardSpacing.sm,
+    padding: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.lg,
     borderWidth: 1,
+    backgroundColor: DashboardColors.infoBg,
+    borderColor: '#BFDBFE',
   },
   stackableTitle: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
-    marginBottom: Spacing.sm,
+    color: DashboardColors.info,
+    marginBottom: DashboardSpacing.sm,
   },
   hazmatSection: {
-    marginTop: Spacing.sm,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
+    marginTop: DashboardSpacing.sm,
+    padding: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.lg,
     borderWidth: 1,
+    backgroundColor: DashboardColors.warningBg,
+    borderColor: '#FED7AA',
   },
   hazmatTitle: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
-    marginBottom: Spacing.sm,
+    color: '#9A3412',
+    marginBottom: DashboardSpacing.sm,
   },
-});
+})

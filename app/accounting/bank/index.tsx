@@ -164,12 +164,6 @@ function BankCard({ item, onPress }: BankCardProps) {
             {formatBalance(item.balance, item.currency_type)}
           </Text>
         </View>
-        <View style={styles.openingContainer}>
-          <Text style={styles.openingLabel}>Açılış</Text>
-          <Text style={styles.openingValue}>
-            {formatBalance(item.opening_balance, item.currency_type)}
-          </Text>
-        </View>
       </View>
 
       {/* Status Dot */}
@@ -927,19 +921,6 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes['2xl'],
     fontWeight: '800',
     letterSpacing: -0.3
-  },
-  openingContainer: {
-    alignItems: 'flex-end'
-  },
-  openingLabel: {
-    fontSize: DashboardFontSizes.xs,
-    color: DashboardColors.textMuted,
-    marginBottom: 2
-  },
-  openingValue: {
-    fontSize: DashboardFontSizes.sm,
-    fontWeight: '600',
-    color: DashboardColors.textSecondary
   },
   statusDot: {
     position: 'absolute',

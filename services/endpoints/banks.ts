@@ -32,7 +32,6 @@ export interface Bank {
   iban?: string;
   currency_type: CurrencyType;
   balance: number;
-  opening_balance: number;
   description?: string;
   is_active: boolean;
   created_at: string;
@@ -96,7 +95,7 @@ export interface BankFormData {
   account_number?: string;
   iban?: string;
   currency_type: CurrencyType;
-  opening_balance?: number;
+  balance?: number;
   description?: string;
   is_active?: boolean;
 }

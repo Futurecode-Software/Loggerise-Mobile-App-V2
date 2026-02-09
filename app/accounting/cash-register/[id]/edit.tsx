@@ -44,7 +44,7 @@ export default function CashRegisterEditScreen() {
     name: '',
     location: '',
     currency_type: 'TRY',
-    opening_balance: 0,
+    balance: undefined,
     description: '',
     is_active: true
   })
@@ -91,7 +91,7 @@ export default function CashRegisterEditScreen() {
           name: data.name || '',
           location: data.location || '',
           currency_type: data.currency_type || 'TRY',
-          opening_balance: data.opening_balance ?? 0,
+          balance: undefined,
           description: data.description || '',
           is_active: data.is_active !== false
         })
@@ -154,8 +154,8 @@ export default function CashRegisterEditScreen() {
     }
 
     // Bakiye kontrolü
-    if (formData.opening_balance !== undefined && formData.opening_balance < 0) {
-      newErrors.opening_balance = 'Bakiye negatif olamaz.'
+    if (formData.balance !== undefined && formData.balance < 0) {
+      newErrors.balance = 'Bakiye negatif olamaz.'
     }
 
     setErrors(newErrors)
@@ -295,17 +295,6 @@ export default function CashRegisterEditScreen() {
               error={errors.currency_type}
             />
 
-            <Input
-              label="Açılış Bakiyesi"
-              placeholder="0.00"
-              value={formData.opening_balance ? String(formData.opening_balance) : ''}
-              onChangeText={(text) => {
-                const numValue = parseFloat(text) || 0
-                handleInputChange('opening_balance', numValue)
-              }}
-              error={errors.opening_balance}
-              keyboardType="decimal-pad"
-            />
           </View>
         </View>
 

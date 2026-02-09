@@ -2,75 +2,63 @@
  * Step4Pricing - Navlun Fiyatlandırması
  *
  * Web versiyonu ile %100 uyumlu - Ürün bazlı fiyatlandırma sistemi
- * - Ürünler DB'den aranıyor
- * - Miktar, birim, birim fiyat, para birimi, kur, KDV hesaplamaları
- * - Döviz kuru otomatik çekiliyor
  */
 
-import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { Plus, Trash2, Package, DollarSign } from 'lucide-react-native';
-import { Card, Input, SearchableSelect } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
-import api from '@/services/api';
+import React, { SetStateAction } from 'react'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { Card, Input, SearchableSelect } from '@/components/ui'
+import { SelectInput } from '@/components/ui/select-input'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
+import { CURRENCY_OPTIONS } from '@/constants/currencies'
+import { formatNumber } from '@/utils/currency'
+import api from '@/services/api'
 
 // Web ile aynı LoadPricingItem tipi
 export interface LoadPricingItem {
-  id?: number;
-  load_id?: number;
-  product_id?: number | null;
+  id?: number
+  load_id?: number
+  product_id?: number | null
   product?: {
-    id: number;
-    code: string;
-    name: string;
-    unit: string;
-    vat_rate: string;
-  } | null;
-  description: string;
-  quantity: string | number;
-  unit: string;
-  unit_price: string | number;
-  currency: string;
-  exchange_rate: string | number;
-  vat_rate: string | number;
-  vat_amount: string | number;
-  discount_rate: string | number;
-  discount_amount: string | number;
-  sub_total: string | number;
-  total: string | number;
-  sort_order?: number;
-  is_active?: boolean;
+    id: number
+    code: string
+    name: string
+    unit: string
+    vat_rate: string
+  } | null
+  description: string
+  quantity: string | number
+  unit: string
+  unit_price: string | number
+  currency: string
+  exchange_rate: string | number
+  vat_rate: string | number
+  vat_amount: string | number
+  discount_rate: string | number
+  discount_amount: string | number
+  sub_total: string | number
+  total: string | number
+  sort_order?: number
+  is_active?: boolean
 }
 
 interface SelectOption {
-  label: string;
-  value: number | string;
-  subtitle?: string;
+  label: string
+  value: number | string
+  subtitle?: string
 }
 
 interface Step4PricingProps {
-  items: LoadPricingItem[];
-  setItems: (items: LoadPricingItem[]) => void;
+  items: LoadPricingItem[]
+  setItems: (value: SetStateAction<LoadPricingItem[]>) => void
 }
 
-// Web ile aynı para birimi seçenekleri
-const CURRENCY_OPTIONS: SelectOption[] = [
-  { label: 'TRY - Türk Lirası (₺)', value: 'TRY' },
-  { label: 'USD - ABD Doları ($)', value: 'USD' },
-  { label: 'EUR - Euro (€)', value: 'EUR' },
-  { label: 'GBP - İngiliz Sterlini (£)', value: 'GBP' },
-  { label: 'AUD - Avustralya Doları', value: 'AUD' },
-  { label: 'CHF - İsviçre Frangı', value: 'CHF' },
-  { label: 'CAD - Kanada Doları', value: 'CAD' },
-  { label: 'JPY - Japon Yeni', value: 'JPY' },
-  { label: 'CNY - Çin Yuanı', value: 'CNY' },
-  { label: 'AED - BAE Dirhemi', value: 'AED' },
-  { label: 'SAR - Suudi Riyali', value: 'SAR' },
-  { label: 'RUB - Rus Rublesi', value: 'RUB' },
-];
-
-// Web ile aynı birim seçenekleri (en çok kullanılanlar)
+// Web ile aynı birim seçenekleri
 const UNIT_OPTIONS: SelectOption[] = [
   { label: 'NIU - Adet', value: 'NIU' },
   { label: 'SET - Set', value: 'SET' },
@@ -87,7 +75,7 @@ const UNIT_OPTIONS: SelectOption[] = [
   { label: 'KTM - Kilometre', value: 'KTM' },
   { label: 'PR - Çift', value: 'PR' },
   { label: 'DZN - Düzine', value: 'DZN' },
-];
+]
 
 // KDV oranları
 const VAT_RATE_OPTIONS: SelectOption[] = [
@@ -95,7 +83,7 @@ const VAT_RATE_OPTIONS: SelectOption[] = [
   { label: '%1', value: '1' },
   { label: '%10', value: '10' },
   { label: '%20', value: '20' },
-];
+]
 
 const getDefaultPricingItem = (): LoadPricingItem => ({
   product_id: null,
@@ -114,200 +102,245 @@ const getDefaultPricingItem = (): LoadPricingItem => ({
   total: '0',
   sort_order: 0,
   is_active: true,
-});
+})
 
 // Ürün arama API fonksiyonu
 const loadProducts = async (searchQuery: string): Promise<SelectOption[]> => {
   try {
     const response = await api.get('/products', {
       params: { search: searchQuery, per_page: 20 },
-    });
-    const products = response.data.data?.products || response.data.data || [];
+    })
+    const products = response.data.data?.products || response.data.data || []
     return products.map((product: any) => ({
       value: product.id,
       label: product.name,
       subtitle: product.code,
-      // Extra fields for product selection
       unit: product.unit,
       vat_rate: product.vat_rate,
       price: product.price,
-    }));
+    }))
   } catch (error) {
-    if (__DEV__) console.error('Error loading products:', error);
-    return [];
+    if (__DEV__) console.error('Error loading products:', error)
+    return []
   }
-};
+}
 
 // Döviz kuru API fonksiyonu
 const fetchExchangeRate = async (currency: string): Promise<string> => {
-  if (currency === 'TRY') return '1';
+  if (currency === 'TRY') return '1'
   try {
-    const response = await api.get(`/exchange-rates/current/${currency}`);
-    return response.data.rate?.toString() || '1';
+    const response = await api.get(`/exchange-rates/current/${currency}`)
+    return response.data.rate?.toString() || '1'
   } catch (error) {
-    if (__DEV__) console.error('Error fetching exchange rate:', error);
-    return '1';
+    if (__DEV__) console.error('Error fetching exchange rate:', error)
+    return '1'
   }
-};
+}
 
 export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
-  const colors = Colors.light;
-
   const addItem = () => {
-    const newItem = getDefaultPricingItem();
-    newItem.sort_order = items.length;
-    setItems([...items, newItem]);
-  };
+    const newItem = getDefaultPricingItem()
+    newItem.sort_order = items.length
+    setItems([...items, newItem])
+  }
 
   const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
+    setItems(items.filter((_, i) => i !== index))
+  }
 
   const updateItem = (index: number, field: keyof LoadPricingItem, value: any) => {
-    const updatedItems = [...items];
-    updatedItems[index] = { ...updatedItems[index], [field]: value };
-    setItems(updatedItems);
-  };
-
-  // Kalem toplamlarını hesapla
-  const calculateItemTotals = useCallback((index: number, updatedItems: LoadPricingItem[]) => {
-    const item = updatedItems[index];
-
-    const quantity = parseFloat(item.quantity?.toString() || '0') || 0;
-    const unitPrice = parseFloat(item.unit_price?.toString() || '0') || 0;
-    const exchangeRate = parseFloat(item.exchange_rate?.toString() || '1') || 1;
-    const vatRate = parseFloat(item.vat_rate?.toString() || '0') || 0;
-    const discountRate = parseFloat(item.discount_rate?.toString() || '0') || 0;
-    const discountAmount = parseFloat(item.discount_amount?.toString() || '0') || 0;
-
-    // TRY karşılığı (birim fiyat × miktar × kur)
-    const lineTotalInTry = quantity * unitPrice * exchangeRate;
-
-    // İndirim hesapla (yüzde veya tutara göre)
-    let totalDiscount = 0;
-    if (discountRate > 0) {
-      totalDiscount = lineTotalInTry * (discountRate / 100);
-    } else if (discountAmount > 0) {
-      totalDiscount = discountAmount * exchangeRate;
-    }
-
-    const subTotal = lineTotalInTry - totalDiscount;
-    const vatAmount = subTotal * (vatRate / 100);
-    const total = subTotal + vatAmount;
-
-    updatedItems[index] = {
-      ...item,
-      sub_total: subTotal.toFixed(2),
-      vat_amount: vatAmount.toFixed(2),
-      total: total.toFixed(2),
-    };
-
-    setItems([...updatedItems]);
-  }, [setItems]);
+    const updatedItems = [...items]
+    updatedItems[index] = { ...updatedItems[index], [field]: value }
+    setItems(updatedItems)
+  }
 
   // Ürün seçildiğinde
   const handleProductSelect = async (index: number, productId: number | undefined) => {
-    const updatedItems = [...items];
-
     if (!productId) {
-      updatedItems[index].product_id = null;
-      updatedItems[index].product = null;
-      setItems(updatedItems);
-      return;
+      setItems(prev => {
+        const updatedItems = [...prev]
+        updatedItems[index] = { ...updatedItems[index], product_id: null, product: null }
+        return updatedItems
+      })
+      return
     }
 
     try {
-      const response = await api.get(`/products/${productId}`);
-      const product = response.data.data;
+      const response = await api.get(`/products/${productId}`)
+      const product = response.data.data
 
-      updatedItems[index].product_id = product.id;
-      updatedItems[index].product = {
-        id: product.id,
-        code: product.code,
-        name: product.name,
-        unit: product.unit,
-        vat_rate: product.vat_rate?.toString() || '0',
-      };
-      updatedItems[index].unit = product.unit || 'SET';
-      updatedItems[index].vat_rate = product.vat_rate?.toString() || '0';
-      updatedItems[index].description = product.name;
+      setItems(prev => {
+        const updatedItems = [...prev]
+        updatedItems[index] = {
+          ...updatedItems[index],
+          product_id: product.id,
+          product: {
+            id: product.id,
+            code: product.code,
+            name: product.name,
+            unit: product.unit,
+            vat_rate: product.vat_rate?.toString() || '0',
+          },
+          unit: product.unit || 'SET',
+          vat_rate: product.vat_rate?.toString() || '0',
+          description: product.name,
+        }
 
-      // Fiyat varsa ekle
-      if (product.price) {
-        updatedItems[index].unit_price = product.price.toString();
-      }
+        if (product.price) {
+          updatedItems[index] = { ...updatedItems[index], unit_price: product.price.toString() }
+        }
 
-      setItems(updatedItems);
-      calculateItemTotals(index, updatedItems);
+        const item = updatedItems[index]
+        const quantity = parseFloat(item.quantity?.toString() || '0') || 0
+        const unitPrice = parseFloat(item.unit_price?.toString() || '0') || 0
+        const exchangeRate = parseFloat(item.exchange_rate?.toString() || '1') || 1
+        const vatRate = parseFloat(item.vat_rate?.toString() || '0') || 0
+        const discountRate = parseFloat(item.discount_rate?.toString() || '0') || 0
+        const discountAmount = parseFloat(item.discount_amount?.toString() || '0') || 0
+        const lineTotalInTry = quantity * unitPrice * exchangeRate
+        let totalDiscount = 0
+        if (discountRate > 0) {
+          totalDiscount = lineTotalInTry * (discountRate / 100)
+        } else if (discountAmount > 0) {
+          totalDiscount = discountAmount * exchangeRate
+        }
+        const subTotal = lineTotalInTry - totalDiscount
+        const vatAmount = subTotal * (vatRate / 100)
+        const total = subTotal + vatAmount
+        updatedItems[index] = {
+          ...updatedItems[index],
+          sub_total: subTotal.toFixed(2),
+          vat_amount: vatAmount.toFixed(2),
+          total: total.toFixed(2),
+        }
+
+        return updatedItems
+      })
     } catch (error) {
-      if (__DEV__) console.error('Error fetching product:', error);
+      if (__DEV__) console.error('Error fetching product:', error)
     }
-  };
+  }
 
   // Para birimi değiştiğinde kur çek
   const handleCurrencyChange = async (index: number, currency: string | number) => {
-    const updatedItems = [...items];
-    updatedItems[index].currency = currency?.toString() || '';
+    const currencyStr = currency?.toString() || ''
+    const rate = await fetchExchangeRate(currencyStr)
 
-    const rate = await fetchExchangeRate(currency?.toString() || '');
-    updatedItems[index].exchange_rate = rate;
+    setItems(prev => {
+      const updatedItems = [...prev]
+      updatedItems[index] = {
+        ...updatedItems[index],
+        currency: currencyStr,
+        exchange_rate: rate,
+      }
 
-    setItems(updatedItems);
-    calculateItemTotals(index, updatedItems);
-  };
+      const item = updatedItems[index]
+      const quantity = parseFloat(item.quantity?.toString() || '0') || 0
+      const unitPrice = parseFloat(item.unit_price?.toString() || '0') || 0
+      const exchangeRate = parseFloat(rate) || 1
+      const vatRate = parseFloat(item.vat_rate?.toString() || '0') || 0
+      const discountRate = parseFloat(item.discount_rate?.toString() || '0') || 0
+      const discountAmount = parseFloat(item.discount_amount?.toString() || '0') || 0
+      const lineTotalInTry = quantity * unitPrice * exchangeRate
+      let totalDiscount = 0
+      if (discountRate > 0) {
+        totalDiscount = lineTotalInTry * (discountRate / 100)
+      } else if (discountAmount > 0) {
+        totalDiscount = discountAmount * exchangeRate
+      }
+      const subTotal = lineTotalInTry - totalDiscount
+      const vatAmount = subTotal * (vatRate / 100)
+      const total = subTotal + vatAmount
+      updatedItems[index] = {
+        ...updatedItems[index],
+        sub_total: subTotal.toFixed(2),
+        vat_amount: vatAmount.toFixed(2),
+        total: total.toFixed(2),
+      }
+
+      return updatedItems
+    })
+  }
 
   // Hesaplama gerektiren alan değişikliklerinde
   const handleCalculableFieldChange = (index: number, field: keyof LoadPricingItem, value: string | number) => {
-    const updatedItems = [...items];
-    updatedItems[index] = { ...updatedItems[index], [field]: value?.toString() || '' };
-    calculateItemTotals(index, updatedItems);
-  };
+    setItems(prev => {
+      const updatedItems = [...prev]
+      updatedItems[index] = { ...updatedItems[index], [field]: value?.toString() || '' }
+
+      const item = updatedItems[index]
+      const quantity = parseFloat(item.quantity?.toString() || '0') || 0
+      const unitPrice = parseFloat(item.unit_price?.toString() || '0') || 0
+      const exchangeRate = parseFloat(item.exchange_rate?.toString() || '1') || 1
+      const vatRate = parseFloat(item.vat_rate?.toString() || '0') || 0
+      const discountRate = parseFloat(item.discount_rate?.toString() || '0') || 0
+      const discountAmount = parseFloat(item.discount_amount?.toString() || '0') || 0
+      const lineTotalInTry = quantity * unitPrice * exchangeRate
+      let totalDiscount = 0
+      if (discountRate > 0) {
+        totalDiscount = lineTotalInTry * (discountRate / 100)
+      } else if (discountAmount > 0) {
+        totalDiscount = discountAmount * exchangeRate
+      }
+      const subTotal = lineTotalInTry - totalDiscount
+      const vatAmount = subTotal * (vatRate / 100)
+      const total = subTotal + vatAmount
+      updatedItems[index] = {
+        ...updatedItems[index],
+        sub_total: subTotal.toFixed(2),
+        vat_amount: vatAmount.toFixed(2),
+        total: total.toFixed(2),
+      }
+
+      return updatedItems
+    })
+  }
 
   // Toplamları hesapla
   const calculateTotals = () => {
-    const totalSubtotal = items.reduce((sum, item) => sum + (parseFloat(item.sub_total?.toString() || '0') || 0), 0);
-    const totalVat = items.reduce((sum, item) => sum + (parseFloat(item.vat_amount?.toString() || '0') || 0), 0);
-    const totalAmount = items.reduce((sum, item) => sum + (parseFloat(item.total?.toString() || '0') || 0), 0);
-    return { totalSubtotal, totalVat, totalAmount };
-  };
+    const totalSubtotal = items.reduce((sum, item) => sum + (parseFloat(item.sub_total?.toString() || '0') || 0), 0)
+    const totalVat = items.reduce((sum, item) => sum + (parseFloat(item.vat_amount?.toString() || '0') || 0), 0)
+    const totalAmount = items.reduce((sum, item) => sum + (parseFloat(item.total?.toString() || '0') || 0), 0)
+    return { totalSubtotal, totalVat, totalAmount }
+  }
 
-  const totals = calculateTotals();
+  const totals = calculateTotals()
 
   const formatAmount = (amount: number) => {
-    return amount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
+    return formatNumber(amount, 2)
+  }
 
   return (
     <View style={styles.container}>
       <Card style={styles.card}>
         <View style={styles.header}>
           <View style={styles.headerText}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Navlun Fiyatlandırması</Text>
-            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+            <Text style={styles.cardTitle}>Navlun Fiyatlandırması</Text>
+            <Text style={styles.cardDescription}>
               Yük için navlun, sigorta, gümrük vb. maliyetleri ekleyin
             </Text>
           </View>
           <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: Brand.primary }]}
+            style={styles.addButton}
             onPress={addItem}
           >
-            <Plus size={16} color="#FFFFFF" />
+            <Ionicons name="add" size={16} color="#FFFFFF" />
             <Text style={styles.addButtonText}>Kalem Ekle</Text>
           </TouchableOpacity>
         </View>
 
         {items.length === 0 ? (
           <View style={styles.emptyState}>
-            <DollarSign size={32} color={colors.textMuted} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            <Ionicons name="cash-outline" size={32} color={DashboardColors.textMuted} />
+            <Text style={styles.emptyText}>
               Henüz fiyatlandırma kalemi eklenmemiş
             </Text>
             <TouchableOpacity
-              style={[styles.emptyButton, { borderColor: colors.border }]}
+              style={styles.emptyButton}
               onPress={addItem}
             >
-              <Plus size={16} color={colors.text} />
-              <Text style={[styles.emptyButtonText, { color: colors.text }]}>İlk Kalemi Ekle</Text>
+              <Ionicons name="add" size={16} color={DashboardColors.text} />
+              <Text style={styles.emptyButtonText}>İlk Kalemi Ekle</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -315,27 +348,27 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
             {items.map((item, index) => (
               <View
                 key={index}
-                style={[styles.itemCard, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                style={styles.itemCard}
               >
                 <View style={styles.itemHeader}>
                   <View style={styles.itemTitleRow}>
-                    <Package size={16} color={Brand.primary} />
-                    <Text style={[styles.itemTitle, { color: colors.text }]}>Kalem #{index + 1}</Text>
+                    <Ionicons name="cube-outline" size={16} color={DashboardColors.primary} />
+                    <Text style={styles.itemTitle}>Kalem #{index + 1}</Text>
                   </View>
                   <TouchableOpacity onPress={() => removeItem(index)}>
-                    <Trash2 size={18} color={colors.danger} />
+                    <Ionicons name="trash-outline" size={18} color={DashboardColors.danger} />
                   </TouchableOpacity>
                 </View>
 
                 {/* Ürün/Hizmet Seçimi */}
                 <View style={styles.fieldGroup}>
-                  <Text style={[styles.label, { color: colors.text }]}>Ürün/Hizmet</Text>
+                  <Text style={styles.label}>Ürün/Hizmet</Text>
                   <SearchableSelect
                     placeholder="Ürün seçiniz veya arayınız..."
                     value={item.product_id || undefined}
+                    selectedOption={item.product ? { value: item.product.id, label: item.product.name, subtitle: item.product.code } : undefined}
                     onValueChange={(value) => handleProductSelect(index, value as number | undefined)}
                     loadOptions={loadProducts}
-                    displayValue={item.product?.name}
                   />
                 </View>
 
@@ -415,9 +448,9 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
                 </View>
 
                 {/* Kalem Toplamı */}
-                <View style={[styles.itemTotalRow, { backgroundColor: '#F8FAFC', borderColor: colors.border }]}>
-                  <Text style={[styles.itemTotalLabel, { color: colors.textSecondary }]}>Toplam (TRY):</Text>
-                  <Text style={[styles.itemTotalAmount, { color: Brand.primary }]}>
+                <View style={styles.itemTotalRow}>
+                  <Text style={styles.itemTotalLabel}>Toplam (TRY):</Text>
+                  <Text style={styles.itemTotalAmount}>
                     {formatAmount(parseFloat(item.total?.toString() || '0') || 0)} ₺
                   </Text>
                 </View>
@@ -425,26 +458,26 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
             ))}
 
             {/* Genel Toplam */}
-            <View style={[styles.totalsCard, { backgroundColor: '#F0FDF4', borderColor: '#86EFAC' }]}>
-              <Text style={[styles.totalsTitle, { color: '#166534' }]}>Genel Toplam</Text>
+            <View style={styles.totalsCard}>
+              <Text style={styles.totalsTitle}>Genel Toplam</Text>
 
               <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { color: '#166534' }]}>Ara Toplam (TRY)</Text>
-                <Text style={[styles.totalAmount, { color: '#166534' }]}>
+                <Text style={styles.totalLabel}>Ara Toplam (TRY)</Text>
+                <Text style={styles.totalAmount}>
                   {formatAmount(totals.totalSubtotal)} ₺
                 </Text>
               </View>
 
               <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { color: '#166534' }]}>KDV Toplamı (TRY)</Text>
-                <Text style={[styles.totalAmount, { color: '#166534' }]}>
+                <Text style={styles.totalLabel}>KDV Toplamı (TRY)</Text>
+                <Text style={styles.totalAmount}>
                   {formatAmount(totals.totalVat)} ₺
                 </Text>
               </View>
 
               <View style={[styles.totalRow, styles.grandTotalRow]}>
-                <Text style={[styles.grandTotalLabel, { color: '#166534' }]}>Genel Toplam (TRY)</Text>
-                <Text style={[styles.grandTotalAmount, { color: '#166534' }]}>
+                <Text style={styles.grandTotalLabel}>Genel Toplam (TRY)</Text>
+                <Text style={styles.grandTotalAmount}>
                   {formatAmount(totals.totalAmount)} ₺
                 </Text>
               </View>
@@ -453,100 +486,110 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
         )}
       </Card>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   card: {
-    padding: Spacing.md,
+    padding: DashboardSpacing.md,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.md,
+    marginBottom: DashboardSpacing.md,
   },
   headerText: {
     flex: 1,
-    marginRight: Spacing.sm,
+    marginRight: DashboardSpacing.sm,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '600',
+    color: DashboardColors.text,
     marginBottom: 2,
   },
   cardDescription: {
-    fontSize: 12,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textSecondary,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.md,
+    gap: DashboardSpacing.xs,
+    paddingHorizontal: DashboardSpacing.sm,
+    paddingVertical: DashboardSpacing.xs,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primary,
   },
   addButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: DashboardFontSizes.xs,
     fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: Spacing.lg,
+    paddingVertical: DashboardSpacing.lg,
   },
   emptyText: {
-    fontSize: 14,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textSecondary,
+    marginTop: DashboardSpacing.sm,
+    marginBottom: DashboardSpacing.sm,
   },
   emptyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    gap: DashboardSpacing.xs,
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
     borderWidth: 1,
-    borderRadius: BorderRadius.md,
+    borderColor: DashboardColors.border,
+    borderRadius: DashboardBorderRadius.lg,
   },
   emptyButtonText: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.text,
   },
   itemCard: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
+    padding: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.lg,
     borderWidth: 1,
-    marginBottom: Spacing.sm,
+    borderColor: DashboardColors.border,
+    backgroundColor: DashboardColors.surface,
+    marginBottom: DashboardSpacing.sm,
   },
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: DashboardSpacing.sm,
   },
   itemTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs,
   },
   itemTitle: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: DashboardColors.text,
   },
   fieldGroup: {
-    marginBottom: Spacing.sm,
+    marginBottom: DashboardSpacing.sm,
   },
   label: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
+    color: DashboardColors.text,
     marginBottom: 4,
   },
   row: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   flex1: {
     flex: 1,
@@ -555,30 +598,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.sm,
+    padding: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.sm,
     borderWidth: 1,
-    marginTop: Spacing.sm,
+    borderColor: DashboardColors.border,
+    backgroundColor: DashboardColors.background,
+    marginTop: DashboardSpacing.sm,
   },
   itemTotalLabel: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
+    color: DashboardColors.textSecondary,
   },
   itemTotalAmount: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '700',
     fontFamily: 'monospace',
+    color: DashboardColors.primary,
   },
   totalsCard: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+    padding: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
     borderWidth: 1,
-    marginTop: Spacing.sm,
+    marginTop: DashboardSpacing.sm,
+    backgroundColor: DashboardColors.successBg,
+    borderColor: '#86EFAC',
   },
   totalsTitle: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '700',
-    marginBottom: Spacing.sm,
+    color: '#166534',
+    marginBottom: DashboardSpacing.sm,
   },
   totalRow: {
     flexDirection: 'row',
@@ -587,26 +637,30 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   totalLabel: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
+    color: '#166534',
   },
   totalAmount: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '600',
     fontFamily: 'monospace',
+    color: '#166534',
   },
   grandTotalRow: {
-    marginTop: Spacing.xs,
-    paddingTop: Spacing.sm,
+    marginTop: DashboardSpacing.xs,
+    paddingTop: DashboardSpacing.sm,
     borderTopWidth: 1,
     borderTopColor: '#86EFAC',
   },
   grandTotalLabel: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
     fontWeight: '600',
+    color: '#166534',
   },
   grandTotalAmount: {
-    fontSize: 18,
+    fontSize: DashboardFontSizes.xl,
     fontWeight: '700',
     fontFamily: 'monospace',
+    color: '#166534',
   },
-});
+})

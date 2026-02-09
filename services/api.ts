@@ -120,7 +120,8 @@ const api: AxiosInstance = axios.create({
 
 /**
  * Request Interceptor
- * Adds auth token to all requests
+ * - Adds auth token to all requests
+ * - Converts PUT/DELETE to POST with _method override (bazı mobil ağlar PUT/DELETE'i engelliyor)
  */
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
@@ -131,9 +132,24 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Log request in dev mode
-    if (__DEV__) {
-      console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
+    // Method spoofing: PUT/DELETE → POST + _method
+    // Bazı mobil ağlar ve proxy'ler PUT/DELETE isteklerini engelliyor
+    // Laravel _method field ile method spoofing destekliyor
+    const method = config.method?.toUpperCase()
+    if (method === 'PUT' || method === 'DELETE') {
+      if (__DEV__) {
+        console.log(`[API] ${method} → POST (_method: ${method}) ${config.url}`)
+      }
+      config.method = 'post'
+      if (method === 'DELETE' && !config.data) {
+        config.data = { _method: method }
+      } else if (config.data && typeof config.data === 'object') {
+        config.data = { ...config.data, _method: method }
+      } else {
+        config.data = { _method: method }
+      }
+    } else if (__DEV__) {
+      console.log(`[API] ${method} ${config.url}`)
     }
 
     return config;

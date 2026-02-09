@@ -402,11 +402,6 @@ export default function BankDetailScreen() {
                   icon="globe-outline"
                 />
                 <InfoRow
-                  label="Açılış Bakiyesi"
-                  value={formatBalance(bank.opening_balance, bank.currency_type)}
-                  icon="log-in-outline"
-                />
-                <InfoRow
                   label="Güncel Bakiye"
                   value={formatBalance(bank.balance, bank.currency_type)}
                   icon="wallet-outline"

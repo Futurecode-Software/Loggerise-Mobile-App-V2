@@ -388,11 +388,6 @@ export default function CashRegisterDetailScreen() {
                   icon="globe-outline"
                 />
                 <InfoRow
-                  label="Açılış Bakiyesi"
-                  value={formatBalance(cashRegister.opening_balance, cashRegister.currency_type)}
-                  icon="log-in-outline"
-                />
-                <InfoRow
                   label="Güncel Bakiye"
                   value={formatBalance(cashRegister.balance, cashRegister.currency_type)}
                   icon="wallet-outline"

@@ -4,48 +4,54 @@
  * Web versiyonu ile %100 uyumlu - SearchableSelectModal ile modernize edildi
  */
 
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Plus, ChevronDown } from 'lucide-react-native';
-import { Card, Checkbox, SearchableSelect } from '@/components/ui';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { SearchableSelectModal, SearchableSelectModalRef, SelectOption } from '@/components/modals/SearchableSelectModal';
-import type { LoadFormData } from '@/services/endpoints/loads';
-import api from '@/services/api';
+import React, { useRef } from 'react'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { Card, Checkbox, SearchableSelect } from '@/components/ui'
+import {
+  SearchableSelectModal,
+  SearchableSelectModalRef,
+  SelectOption
+} from '@/components/modals/SearchableSelectModal'
+import {
+  DashboardColors,
+  DashboardSpacing,
+  DashboardFontSizes,
+  DashboardBorderRadius
+} from '@/constants/dashboard-theme'
+import type { LoadFormData } from '@/services/endpoints/loads'
+import api from '@/services/api'
 
 interface SelectOptionLocal {
-  label: string;
-  value: number;
-  subtitle?: string;
+  label: string
+  value: number
+  subtitle?: string
 }
 
 interface Step1BasicInfoProps {
-  data: LoadFormData;
-  updateFormData: (field: keyof LoadFormData, value: any) => void;
-  errors?: Record<string, string>;
-  // Firma seçim state'leri
-  selectedCustomer?: SelectOptionLocal | null;
-  selectedSender?: SelectOptionLocal | null;
-  selectedManufacturer?: SelectOptionLocal | null;
-  selectedReceiver?: SelectOptionLocal | null;
-  onCustomerChange?: (option: SelectOptionLocal | null) => void;
-  onSenderChange?: (option: SelectOptionLocal | null) => void;
-  onManufacturerChange?: (option: SelectOptionLocal | null) => void;
-  onReceiverChange?: (option: SelectOptionLocal | null) => void;
-  // Firma ekleme
-  onAddCustomerClick?: () => void;
-  onAddSenderClick?: () => void;
-  onAddManufacturerClick?: () => void;
-  onAddReceiverClick?: () => void;
-  // Direction kilitleme
-  isDirectionLocked?: boolean;
+  data: LoadFormData
+  updateFormData: (field: keyof LoadFormData, value: any) => void
+  errors?: Record<string, string>
+  selectedCustomer?: SelectOptionLocal | null
+  selectedSender?: SelectOptionLocal | null
+  selectedManufacturer?: SelectOptionLocal | null
+  selectedReceiver?: SelectOptionLocal | null
+  onCustomerChange?: (option: SelectOptionLocal | null) => void
+  onSenderChange?: (option: SelectOptionLocal | null) => void
+  onManufacturerChange?: (option: SelectOptionLocal | null) => void
+  onReceiverChange?: (option: SelectOptionLocal | null) => void
+  onAddCustomerClick?: () => void
+  onAddSenderClick?: () => void
+  onAddManufacturerClick?: () => void
+  onAddReceiverClick?: () => void
+  isDirectionLocked?: boolean
 }
 
 // Yük Yönü seçenekleri
 const DIRECTION_OPTIONS: SelectOption[] = [
   { label: 'İhracat (IHR)', value: 'export' },
   { label: 'İthalat (ITH)', value: 'import' },
-];
+]
 
 // Araç tipi seçenekleri
 const VEHICLE_TYPE_OPTIONS: SelectOption[] = [
@@ -65,25 +71,25 @@ const VEHICLE_TYPE_OPTIONS: SelectOption[] = [
   { label: 'Tır', value: 'tir' },
   { label: 'Kamyon', value: 'kamyon' },
   { label: 'Kamyonet', value: 'kamyonet' },
-];
+]
 
 // Yükleme tipi seçenekleri
 const LOADING_TYPE_OPTIONS: SelectOption[] = [
   { label: 'Normal', value: 'normal' },
   { label: 'Karışık', value: 'karisik' },
-];
+]
 
 // Yük tipi seçenekleri
 const LOAD_TYPE_OPTIONS: SelectOption[] = [
   { label: 'Komple', value: 'full' },
   { label: 'Parsiyel', value: 'partial' },
-];
+]
 
 // Taşıma hızı seçenekleri
 const TRANSPORT_SPEED_OPTIONS: SelectOption[] = [
   { label: 'Expres', value: 'expres' },
   { label: 'Normal', value: 'normal' },
-];
+]
 
 // Yük sınıfı seçenekleri
 const CARGO_CLASS_OPTIONS: SelectOption[] = [
@@ -92,25 +98,25 @@ const CARGO_CLASS_OPTIONS: SelectOption[] = [
   { label: 'Tehlikeli Madde', value: 'hazardous' },
   { label: 'Soğuk Zincir', value: 'cold_chain' },
   { label: 'Proje Kargo', value: 'project' },
-];
+]
 
 // Firma arama API fonksiyonu
 const loadContacts = async (searchQuery: string): Promise<SelectOptionLocal[]> => {
   try {
     const response = await api.get('/contacts', {
       params: { search: searchQuery, include_potential: true, per_page: 20 },
-    });
-    const contacts = response.data.data?.contacts || response.data.data || [];
+    })
+    const contacts = response.data.data?.contacts || response.data.data || []
     return contacts.map((contact: any) => ({
       value: contact.id || contact.value,
       label: contact.name || contact.label,
       subtitle: contact.code || contact.short_name,
-    }));
+    }))
   } catch (error) {
-    if (__DEV__) console.error('Error loading contacts:', error);
-    return [];
+    if (__DEV__) console.error('Error loading contacts:', error)
+    return []
   }
-};
+}
 
 export default function Step1BasicInfo({
   data,
@@ -130,22 +136,20 @@ export default function Step1BasicInfo({
   onAddReceiverClick,
   isDirectionLocked = false,
 }: Step1BasicInfoProps) {
-  const colors = Colors.light;
-
   // Modal refs
-  const directionModalRef = useRef<SearchableSelectModalRef>(null);
-  const vehicleTypeModalRef = useRef<SearchableSelectModalRef>(null);
-  const loadingTypeModalRef = useRef<SearchableSelectModalRef>(null);
-  const loadTypeModalRef = useRef<SearchableSelectModalRef>(null);
-  const transportSpeedModalRef = useRef<SearchableSelectModalRef>(null);
-  const cargoClassModalRef = useRef<SearchableSelectModalRef>(null);
+  const directionModalRef = useRef<SearchableSelectModalRef>(null)
+  const vehicleTypeModalRef = useRef<SearchableSelectModalRef>(null)
+  const loadingTypeModalRef = useRef<SearchableSelectModalRef>(null)
+  const loadTypeModalRef = useRef<SearchableSelectModalRef>(null)
+  const transportSpeedModalRef = useRef<SearchableSelectModalRef>(null)
+  const cargoClassModalRef = useRef<SearchableSelectModalRef>(null)
 
   // Get selected label
   const getSelectedLabel = (value: string | undefined, options: SelectOption[]): string => {
-    if (!value) return '';
-    const option = options.find((opt) => opt.value === value);
-    return option?.label || '';
-  };
+    if (!value) return ''
+    const option = options.find((opt) => opt.value === value)
+    return option?.label || ''
+  }
 
   // Render select button
   const renderSelectButton = (
@@ -157,17 +161,17 @@ export default function Step1BasicInfo({
     disabled = false,
     error?: string
   ) => {
-    const selectedLabel = getSelectedLabel(value, options);
+    const selectedLabel = getSelectedLabel(value, options)
 
     return (
       <View style={styles.fieldGroup}>
-        <Text style={[styles.label, { color: colors.text }]}>
-          {label} {required && <Text style={{ color: colors.danger }}>*</Text>}
+        <Text style={styles.label}>
+          {label} {required && <Text style={{ color: DashboardColors.danger }}>*</Text>}
         </Text>
         <TouchableOpacity
           style={[
             styles.selectButton,
-            { backgroundColor: colors.card, borderColor: error ? colors.danger : colors.border },
+            error && styles.selectButtonError,
             disabled && styles.selectButtonDisabled,
           ]}
           onPress={onPress}
@@ -178,32 +182,32 @@ export default function Step1BasicInfo({
             <Text
               style={[
                 styles.selectButtonText,
-                { color: selectedLabel ? colors.text : colors.placeholder },
+                !selectedLabel && styles.selectButtonPlaceholder,
               ]}
               numberOfLines={1}
             >
               {selectedLabel || 'Seçiniz'}
             </Text>
-            <ChevronDown size={20} color={colors.icon} />
+            <Ionicons name="chevron-down" size={20} color={DashboardColors.textMuted} />
           </View>
         </TouchableOpacity>
         {disabled && isDirectionLocked && (
-          <Text style={[styles.infoText, { color: colors.textMuted }]}>
+          <Text style={styles.infoText}>
             Yük yönü bu sayfadan otomatik belirlendi
           </Text>
         )}
-        {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
+        {error && <Text style={styles.errorText}>{error}</Text>}
       </View>
-    );
-  };
+    )
+  }
 
   return (
     <>
       <View style={styles.container}>
         {/* Temel Bilgiler Kartı */}
         <Card style={styles.card}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Temel Bilgiler</Text>
-          <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+          <Text style={styles.cardTitle}>Temel Bilgiler</Text>
+          <Text style={styles.cardDescription}>
             Yük hakkında temel bilgileri girin
           </Text>
 
@@ -211,8 +215,8 @@ export default function Step1BasicInfo({
           {onCustomerChange && (
             <View style={styles.fieldGroup}>
               <View style={styles.labelRow}>
-                <Text style={[styles.label, { color: colors.text }]}>
-                  Müşteri <Text style={{ color: colors.danger }}>*</Text>
+                <Text style={styles.label}>
+                  Müşteri <Text style={{ color: DashboardColors.danger }}>*</Text>
                 </Text>
               </View>
               <View style={styles.selectWithAddButton}>
@@ -231,8 +235,8 @@ export default function Step1BasicInfo({
                     }
                     onValueChange={(value) => {
                       if (!value) {
-                        onCustomerChange(null);
-                        updateFormData('customer_id', undefined);
+                        onCustomerChange(null)
+                        updateFormData('customer_id', undefined)
                       }
                     }}
                     onSelect={(option) => {
@@ -241,18 +245,18 @@ export default function Step1BasicInfo({
                           label: option.label,
                           value: option.value as number,
                           subtitle: option.subtitle,
-                        });
-                        updateFormData('customer_id', option.value);
+                        })
+                        updateFormData('customer_id', option.value)
                       }
                     }}
                     loadOptions={loadContacts}
                     renderOption={(option) => (
                       <View>
-                        <Text style={[styles.optionLabel, { color: colors.text }]}>
+                        <Text style={styles.optionLabel}>
                           {option.label}
                         </Text>
                         {option.subtitle && (
-                          <Text style={[styles.optionSubtitle, { color: colors.textMuted }]}>
+                          <Text style={styles.optionSubtitle}>
                             {option.subtitle}
                           </Text>
                         )}
@@ -262,15 +266,15 @@ export default function Step1BasicInfo({
                 </View>
                 {onAddCustomerClick && (
                   <TouchableOpacity
-                    style={[styles.addButton, { borderColor: colors.border }]}
+                    style={styles.addButton}
                     onPress={onAddCustomerClick}
                   >
-                    <Plus size={20} color={colors.icon} />
+                    <Ionicons name="add" size={20} color={DashboardColors.textMuted} />
                   </TouchableOpacity>
                 )}
               </View>
               {errors.customer_id && (
-                <Text style={[styles.errorText, { color: colors.danger }]}>
+                <Text style={styles.errorText}>
                   {errors.customer_id}
                 </Text>
               )}
@@ -340,7 +344,7 @@ export default function Step1BasicInfo({
               checked={data.publish_to_pool || false}
               onCheckedChange={(checked) => updateFormData('publish_to_pool', checked)}
             />
-            <Text style={[styles.checkboxLabel, { color: colors.text }]}>
+            <Text style={styles.checkboxLabel}>
               Yük Havuzunda yayınla
             </Text>
           </View>
@@ -348,15 +352,15 @@ export default function Step1BasicInfo({
 
         {/* Firma Bilgileri Kartı */}
         <Card style={styles.card}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Firma Bilgileri</Text>
-          <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+          <Text style={styles.cardTitle}>Firma Bilgileri</Text>
+          <Text style={styles.cardDescription}>
             Gönderici, üretici ve alıcı firma bilgileri
           </Text>
 
           {/* Gönderici Firma */}
           {onSenderChange && (
             <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Gönderici Firma</Text>
+              <Text style={styles.label}>Gönderici Firma</Text>
               <View style={styles.selectWithAddButton}>
                 <View style={styles.selectFlex}>
                   <SearchableSelect
@@ -373,8 +377,8 @@ export default function Step1BasicInfo({
                     }
                     onValueChange={(value) => {
                       if (!value) {
-                        onSenderChange(null);
-                        updateFormData('sender_company_id', undefined);
+                        onSenderChange(null)
+                        updateFormData('sender_company_id', undefined)
                       }
                     }}
                     onSelect={(option) => {
@@ -383,8 +387,8 @@ export default function Step1BasicInfo({
                           label: option.label,
                           value: option.value as number,
                           subtitle: option.subtitle,
-                        });
-                        updateFormData('sender_company_id', option.value);
+                        })
+                        updateFormData('sender_company_id', option.value)
                       }
                     }}
                     loadOptions={loadContacts}
@@ -392,10 +396,10 @@ export default function Step1BasicInfo({
                 </View>
                 {onAddSenderClick && (
                   <TouchableOpacity
-                    style={[styles.addButton, { borderColor: colors.border }]}
+                    style={styles.addButton}
                     onPress={onAddSenderClick}
                   >
-                    <Plus size={20} color={colors.icon} />
+                    <Ionicons name="add" size={20} color={DashboardColors.textMuted} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -405,7 +409,7 @@ export default function Step1BasicInfo({
           {/* Üretici Firma */}
           {onManufacturerChange && (
             <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Üretici Firma</Text>
+              <Text style={styles.label}>Üretici Firma</Text>
               <View style={styles.selectWithAddButton}>
                 <View style={styles.selectFlex}>
                   <SearchableSelect
@@ -422,8 +426,8 @@ export default function Step1BasicInfo({
                     }
                     onValueChange={(value) => {
                       if (!value) {
-                        onManufacturerChange(null);
-                        updateFormData('manufacturer_company_id', undefined);
+                        onManufacturerChange(null)
+                        updateFormData('manufacturer_company_id', undefined)
                       }
                     }}
                     onSelect={(option) => {
@@ -432,8 +436,8 @@ export default function Step1BasicInfo({
                           label: option.label,
                           value: option.value as number,
                           subtitle: option.subtitle,
-                        });
-                        updateFormData('manufacturer_company_id', option.value);
+                        })
+                        updateFormData('manufacturer_company_id', option.value)
                       }
                     }}
                     loadOptions={loadContacts}
@@ -441,10 +445,10 @@ export default function Step1BasicInfo({
                 </View>
                 {onAddManufacturerClick && (
                   <TouchableOpacity
-                    style={[styles.addButton, { borderColor: colors.border }]}
+                    style={styles.addButton}
                     onPress={onAddManufacturerClick}
                   >
-                    <Plus size={20} color={colors.icon} />
+                    <Ionicons name="add" size={20} color={DashboardColors.textMuted} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -454,7 +458,7 @@ export default function Step1BasicInfo({
           {/* Alıcı Firma */}
           {onReceiverChange && (
             <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Alıcı Firma</Text>
+              <Text style={styles.label}>Alıcı Firma</Text>
               <View style={styles.selectWithAddButton}>
                 <View style={styles.selectFlex}>
                   <SearchableSelect
@@ -471,8 +475,8 @@ export default function Step1BasicInfo({
                     }
                     onValueChange={(value) => {
                       if (!value) {
-                        onReceiverChange(null);
-                        updateFormData('receiver_company_id', undefined);
+                        onReceiverChange(null)
+                        updateFormData('receiver_company_id', undefined)
                       }
                     }}
                     onSelect={(option) => {
@@ -481,8 +485,8 @@ export default function Step1BasicInfo({
                           label: option.label,
                           value: option.value as number,
                           subtitle: option.subtitle,
-                        });
-                        updateFormData('receiver_company_id', option.value);
+                        })
+                        updateFormData('receiver_company_id', option.value)
                       }
                     }}
                     loadOptions={loadContacts}
@@ -490,10 +494,10 @@ export default function Step1BasicInfo({
                 </View>
                 {onAddReceiverClick && (
                   <TouchableOpacity
-                    style={[styles.addButton, { borderColor: colors.border }]}
+                    style={styles.addButton}
                     onPress={onAddReceiverClick}
                   >
-                    <Plus size={20} color={colors.icon} />
+                    <Ionicons name="add" size={20} color={DashboardColors.textMuted} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -557,27 +561,29 @@ export default function Step1BasicInfo({
         searchPlaceholder="Sınıf ara..."
       />
     </>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   card: {
-    padding: Spacing.md,
+    padding: DashboardSpacing.md,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '600',
+    color: DashboardColors.text,
     marginBottom: 2,
   },
   cardDescription: {
-    fontSize: 13,
-    marginBottom: Spacing.md,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.md,
   },
   fieldGroup: {
-    marginBottom: Spacing.sm,
+    marginBottom: DashboardSpacing.sm,
   },
   labelRow: {
     flexDirection: 'row',
@@ -585,16 +591,22 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   label: {
-    fontSize: 13,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
+    color: DashboardColors.text,
     marginBottom: 4,
   },
   selectButton: {
     justifyContent: 'center',
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.md,
+    paddingHorizontal: DashboardSpacing.md,
+    borderRadius: DashboardBorderRadius.lg,
     borderWidth: 1,
+    borderColor: DashboardColors.border,
+    backgroundColor: DashboardColors.surface,
     height: 48,
+  },
+  selectButtonError: {
+    borderColor: DashboardColors.danger,
   },
   selectButtonContent: {
     flexDirection: 'row',
@@ -605,15 +617,19 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   selectButtonText: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.text,
     flex: 1,
     textAlignVertical: 'center',
-    includeFontPadding: false
+    includeFontPadding: false,
+  },
+  selectButtonPlaceholder: {
+    color: DashboardColors.textMuted,
   },
   selectWithAddButton: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: Spacing.xs,
+    gap: DashboardSpacing.xs,
   },
   selectFlex: {
     flex: 1,
@@ -622,32 +638,38 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderWidth: 1,
-    borderRadius: BorderRadius.md,
+    borderColor: DashboardColors.border,
+    borderRadius: DashboardBorderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   optionLabel: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.text,
   },
   optionSubtitle: {
-    fontSize: 12,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted,
     marginTop: 2,
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
+    gap: DashboardSpacing.sm,
+    marginTop: DashboardSpacing.sm,
   },
   checkboxLabel: {
-    fontSize: 14,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.text,
   },
   infoText: {
-    fontSize: 11,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textMuted,
     marginTop: 4,
   },
   errorText: {
-    fontSize: 11,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.danger,
     marginTop: 2,
   },
-});
+})

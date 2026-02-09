@@ -118,6 +118,7 @@ export interface Load {
 export interface LoadDetail extends Load {
   items: LoadItem[];
   addresses: LoadAddress[];
+  pricing_items?: LoadPricingItem[];
 }
 
 /**
@@ -273,6 +274,8 @@ export interface LoadFilters {
   cargo_name?: string;
   is_active?: boolean;
   assigned_to_trip?: 'assigned' | 'not_assigned' | 'all';
+  date_from?: string;
+  date_to?: string;
   page?: number;
   per_page?: number;
   sort_by?: string;
@@ -453,28 +456,113 @@ export interface LoadFormData {
 }
 
 /**
+ * Address verisini backend'e göndermeden önce temizle
+ * - İlişki nesnelerini (loadingCompany vb.) kaldır
+ * - Boş string tarihleri null'a çevir
+ * - Sadece backend validation'da tanımlı alanları gönder
+ */
+export function cleanAddressForSubmit(addr: Partial<LoadAddress> & { id?: number }): Record<string, unknown> {
+  const cleanDate = (val: unknown) => (val && val !== '' ? val : null)
+
+  return {
+    ...(addr.id ? { id: addr.id } : {}),
+    type: addr.type,
+    pickup_type: addr.pickup_type || null,
+    delivery_type: addr.delivery_type || null,
+    loading_company_id: addr.loading_company_id || null,
+    loading_location_id: addr.loading_location_id || null,
+    domestic_warehouse_id: addr.domestic_warehouse_id || null,
+    domestic_customs_company_id: addr.domestic_customs_company_id || null,
+    domestic_customs_location_id: addr.domestic_customs_location_id || null,
+    intl_customs_company_id: addr.intl_customs_company_id || null,
+    intl_customs_location_id: addr.intl_customs_location_id || null,
+    receiver_customs_location_id: addr.receiver_customs_location_id || null,
+    unloading_company_id: addr.unloading_company_id || null,
+    unloading_location_id: addr.unloading_location_id || null,
+    intl_warehouse_id: addr.intl_warehouse_id || null,
+    destination_country_id: addr.destination_country_id || null,
+    sort_order: addr.sort_order ?? 0,
+    is_active: addr.is_active !== false,
+    // Tarih alanları - boş string → null
+    expected_loading_entry_date: cleanDate(addr.expected_loading_entry_date),
+    loading_entry_date: cleanDate(addr.loading_entry_date),
+    loading_exit_date: cleanDate(addr.loading_exit_date),
+    domestic_warehouse_expected_entry_date: cleanDate(addr.domestic_warehouse_expected_entry_date),
+    domestic_warehouse_expected_exit_date: cleanDate(addr.domestic_warehouse_expected_exit_date),
+    domestic_warehouse_entry_date: cleanDate(addr.domestic_warehouse_entry_date),
+    domestic_warehouse_exit_date: cleanDate(addr.domestic_warehouse_exit_date),
+    expected_domestic_customs_entry_date: cleanDate(addr.expected_domestic_customs_entry_date),
+    domestic_customs_date: cleanDate((addr as any).domestic_customs_date),
+    domestic_customs_entry_date: cleanDate(addr.domestic_customs_entry_date),
+    domestic_customs_exit_date: cleanDate(addr.domestic_customs_exit_date),
+    expected_intl_customs_entry_date: cleanDate(addr.expected_intl_customs_entry_date),
+    intl_customs_entry_date: cleanDate(addr.intl_customs_entry_date),
+    intl_customs_exit_date: cleanDate(addr.intl_customs_exit_date),
+    expected_unloading_entry_date: cleanDate(addr.expected_unloading_entry_date),
+    unloading_entry_date: cleanDate(addr.unloading_entry_date),
+    unloading_exit_date: cleanDate(addr.unloading_exit_date),
+    intl_warehouse_entry_date: cleanDate(addr.intl_warehouse_entry_date),
+    intl_warehouse_exit_date: cleanDate(addr.intl_warehouse_exit_date),
+    // Boolean bayraklar
+    mahrece_iade: addr.mahrece_iade || false,
+    kirmizi_beyanname: addr.kirmizi_beyanname || false,
+    beyanname_acildi: addr.beyanname_acildi || false,
+    talimat_geldi: addr.talimat_geldi || false,
+    serbest_bolge: addr.serbest_bolge || false,
+    transit: addr.transit || false,
+    yys_sahip: addr.yys_sahip || false,
+    mavi_hat: addr.mavi_hat || false,
+    police: addr.police || false,
+  }
+}
+
+/**
+ * Hata response'unu güvenli şekilde parse et
+ * React Native'de response data bazen string olarak gelebilir
+ */
+function parseErrorResponse(error: any): { errors?: Record<string, string[]>, message?: string } {
+  let data = error?.response?.data
+  if (typeof data === 'string') {
+    try {
+      data = JSON.parse(data)
+    } catch {
+      return {}
+    }
+  }
+  return data || {}
+}
+
+/**
  * Update existing load
  */
 export async function updateLoad(id: number, data: LoadFormData): Promise<LoadDetail> {
   try {
-    if (__DEV__) console.log('[API] Updating load', id, 'with data:', JSON.stringify(data, null, 2));
-    const response = await api.put<LoadResponse>(`/loads/${id}`, data);
-    return response.data.data.load;
+    if (__DEV__) console.log('[API] Updating load', id)
+    const response = await api.put<LoadResponse>(`/loads/${id}`, data)
+    return response.data.data.load
   } catch (error: any) {
-    if (__DEV__) console.error('[API] Load update failed:', error?.response?.data || error);
-    // Get detailed error message
-    if (error?.response?.data?.errors) {
-      const errors = error.response.data.errors;
-      const firstField = Object.keys(errors)[0];
+    if (__DEV__) {
+      console.error('[API] Load update failed:', {
+        code: error?.code,
+        message: error?.message,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        url: error?.config?.url,
+        baseURL: error?.config?.baseURL,
+      })
+    }
+    const parsed = parseErrorResponse(error)
+    if (parsed.errors) {
+      const firstField = Object.keys(parsed.errors)[0]
       if (firstField) {
-        throw new Error(`${firstField}: ${errors[firstField][0]}`);
+        throw new Error(`${firstField}: ${parsed.errors[firstField][0]}`)
       }
     }
-    if (error?.response?.data?.message) {
-      throw new Error(error.response.data.message);
+    if (parsed.message) {
+      throw new Error(parsed.message)
     }
-    const message = getErrorMessage(error);
-    throw new Error(message);
+    const message = getErrorMessage(error)
+    throw new Error(message)
   }
 }
 
@@ -483,24 +571,23 @@ export async function updateLoad(id: number, data: LoadFormData): Promise<LoadDe
  */
 export async function createLoad(data: LoadFormData): Promise<LoadDetail> {
   try {
-    if (__DEV__) console.log('[API] Creating load with data:', JSON.stringify(data, null, 2));
-    const response = await api.post<LoadResponse>('/loads', data);
-    return response.data.data.load;
+    if (__DEV__) console.log('[API] Creating load with data:', JSON.stringify(data, null, 2))
+    const response = await api.post<LoadResponse>('/loads', data)
+    return response.data.data.load
   } catch (error: any) {
-    if (__DEV__) console.error('[API] Load creation failed:', error?.response?.data || error);
-    // Get detailed error message
-    if (error?.response?.data?.errors) {
-      const errors = error.response.data.errors;
-      const firstField = Object.keys(errors)[0];
+    if (__DEV__) console.error('[API] Load creation failed:', error?.response?.data || error)
+    const parsed = parseErrorResponse(error)
+    if (parsed.errors) {
+      const firstField = Object.keys(parsed.errors)[0]
       if (firstField) {
-        throw new Error(`${firstField}: ${errors[firstField][0]}`);
+        throw new Error(`${firstField}: ${parsed.errors[firstField][0]}`)
       }
     }
-    if (error?.response?.data?.message) {
-      throw new Error(error.response.data.message);
+    if (parsed.message) {
+      throw new Error(parsed.message)
     }
-    const message = getErrorMessage(error);
-    throw new Error(message);
+    const message = getErrorMessage(error)
+    throw new Error(message)
   }
 }
 

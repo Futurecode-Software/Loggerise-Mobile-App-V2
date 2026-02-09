@@ -123,13 +123,21 @@ export function SearchableSelect({
 
   // Sync selectedOption with external value prop
   useEffect(() => {
-    if (selectedOptionProp === undefined && value && options.length > 0) {
+    // If value is cleared externally, clear selection
+    if (!value && !selectedOptionProp) {
+      if (selectedOption) {
+        setSelectedOption(null)
+      }
+      return
+    }
+    // If selectedOptionProp is provided, it takes priority (handled by other effect)
+    if (selectedOptionProp !== undefined) return
+    // Try to find value in available options
+    if (value && options.length > 0) {
       const selected = options.find((opt) => opt.value === value)
       if (selected && selectedOption?.value !== value) {
         setSelectedOption(selected)
       }
-    } else if (!value && !selectedOptionProp && selectedOption) {
-      setSelectedOption(null)
     }
   }, [value, options, selectedOptionProp])
 
@@ -211,11 +219,11 @@ export function SearchableSelect({
     bottomSheetRef.current?.present()
   }, [disabled, fetchOptions])
 
-  // Handle modal dismiss
+  // Handle modal dismiss - keep selected option intact
   const handleDismiss = useCallback(() => {
     setTimeout(() => {
       setSearchQuery('')
-      setOptions([])
+      // Don't clear options - it triggers value sync effect that resets selection
     }, 200)
   }, [])
 

@@ -4,31 +4,31 @@
  * Web versiyonu ile %100 uyumlu - GTIP API'den arama, belge durumları
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { FileCheck, FileWarning } from 'lucide-react-native';
-import { Card, Input, SearchableSelect } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { Colors, Typography, Spacing, Brand, BorderRadius } from '@/constants/theme';
-import type { LoadFormData } from '@/services/endpoints/loads';
-import api from '@/services/api';
+import React from 'react'
+import { View, Text, StyleSheet } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { Card, Input, SearchableSelect } from '@/components/ui'
+import { SelectInput } from '@/components/ui/select-input'
+import { DashboardColors, DashboardSpacing, DashboardFontSizes } from '@/constants/dashboard-theme'
+import type { LoadFormData } from '@/services/endpoints/loads'
+import api from '@/services/api'
 
 interface SelectOption {
-  label: string;
-  value: string;
-  subtitle?: string;
+  label: string
+  value: string
+  subtitle?: string
 }
 
 interface Step6CustomsDocumentsProps {
-  data: LoadFormData;
-  updateFormData: (field: keyof LoadFormData, value: any) => void;
+  data: LoadFormData
+  updateFormData: (field: keyof LoadFormData, value: any) => void
 }
 
 // Web ile aynı belge durumu seçenekleri (sadece 2 seçenek)
 const DOCUMENT_STATUS_OPTIONS: SelectOption[] = [
   { label: 'Orijinal', value: 'original' },
   { label: 'Kopya', value: 'copy' },
-];
+]
 
 // Web ile aynı belge alanları
 const DOCUMENT_FIELDS = [
@@ -39,45 +39,43 @@ const DOCUMENT_FIELDS = [
   { id: 'health_certificate_document', label: 'Sağlık Sertifikası Durumu' },
   { id: 'eur1_document', label: 'EUR-1 Belge Durumu' },
   { id: 't1_t2_document', label: 'T1/T2 Belge Durumu' },
-];
+]
 
 // GTIP kodu arama API fonksiyonu
 const loadGtipCodes = async (searchQuery: string): Promise<SelectOption[]> => {
   try {
     const response = await api.get('/gtip-codes/search', {
       params: { search: searchQuery },
-    });
+    })
     return (response.data.data || []).map((item: any) => ({
       value: item.value || item.code,
       label: item.label || `${item.code} - ${item.description || ''}`,
       subtitle: item.description,
-    }));
+    }))
   } catch (error) {
-    if (__DEV__) console.error('Error loading GTIP codes:', error);
-    return [];
+    if (__DEV__) console.error('Error loading GTIP codes:', error)
+    return []
   }
-};
+}
 
 export default function Step6CustomsDocuments({
   data,
   updateFormData,
 }: Step6CustomsDocumentsProps) {
-  const colors = Colors.light;
-
   // GTIP seçildiğinde
   const handleGtipChange = (value: string | number | null) => {
-    updateFormData('gtip_hs_code', (value as string) || '');
-  };
+    updateFormData('gtip_hs_code', (value as string) || '')
+  }
 
   return (
     <View style={styles.container}>
       {/* Gümrük Bilgileri */}
       <Card style={styles.card}>
         <View style={styles.cardHeader}>
-          <FileWarning size={18} color={Brand.primary} />
+          <Ionicons name="alert-circle-outline" size={18} color={DashboardColors.primary} />
           <View>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Gümrük Bilgileri</Text>
-            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+            <Text style={styles.cardTitle}>Gümrük Bilgileri</Text>
+            <Text style={styles.cardDescription}>
               GTIP, ATR ve rejim bilgileri
             </Text>
           </View>
@@ -85,7 +83,7 @@ export default function Step6CustomsDocuments({
 
         {/* GTIP - HS Kodu - API'den arama */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.label, { color: colors.text }]}>GTIP - HS Kodu</Text>
+          <Text style={styles.label}>GTIP - HS Kodu</Text>
           <SearchableSelect
             placeholder="GTIP - HS Kodu seçiniz..."
             value={data.gtip_hs_code || undefined}
@@ -119,10 +117,10 @@ export default function Step6CustomsDocuments({
       {/* Belge Durumları */}
       <Card style={styles.card}>
         <View style={styles.cardHeader}>
-          <FileCheck size={18} color="#3B82F6" />
+          <Ionicons name="checkmark-circle-outline" size={18} color={DashboardColors.info} />
           <View>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Belge Durumları</Text>
-            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+            <Text style={styles.cardTitle}>Belge Durumları</Text>
+            <Text style={styles.cardDescription}>
               Ticari belgelerin orijinal/kopya durumu
             </Text>
           </View>
@@ -144,41 +142,44 @@ export default function Step6CustomsDocuments({
         </View>
       </Card>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   card: {
-    padding: Spacing.md,
+    padding: DashboardSpacing.md,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
+    gap: DashboardSpacing.sm,
+    marginBottom: DashboardSpacing.md,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: DashboardFontSizes.md,
     fontWeight: '600',
+    color: DashboardColors.text,
     marginBottom: 2,
   },
   cardDescription: {
-    fontSize: 12,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textSecondary,
   },
   fieldGroup: {
-    marginBottom: Spacing.sm,
+    marginBottom: DashboardSpacing.sm,
   },
   label: {
     fontSize: 13,
     fontWeight: '500',
+    color: DashboardColors.text,
     marginBottom: 4,
   },
   row: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   flex1: {
     flex: 1,
@@ -186,9 +187,9 @@ const styles = StyleSheet.create({
   documentGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   documentItem: {
     width: '48%',
   },
-});
+})

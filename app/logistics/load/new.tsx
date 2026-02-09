@@ -36,11 +36,11 @@ import { LoadFormStepper } from '@/components/load-form/LoadFormStepper'
 import LoadFormNavigation from '@/components/load-form/LoadFormNavigation'
 import Step1BasicInfo from '@/components/load-form/Step1BasicInfo'
 import Step2LoadItems, { type LoadItem } from '@/components/load-form/Step2LoadItems'
-import Step3Addresses, { type LoadAddress } from '@/components/load-form/Step3Addresses'
+import Step3Addresses, { type LoadAddress, type SelectedOptionsMap } from '@/components/load-form/Step3Addresses'
 import Step4Pricing, { type LoadPricingItem } from '@/components/load-form/Step4Pricing'
 import Step5InvoiceDeclaration from '@/components/load-form/Step5InvoiceDeclaration'
 import Step6CustomsDocuments from '@/components/load-form/Step6CustomsDocuments'
-import { createLoad, type LoadFormData } from '@/services/endpoints/loads'
+import { createLoad, cleanAddressForSubmit, type LoadFormData } from '@/services/endpoints/loads'
 
 // SelectOption tipi
 interface SelectOption {
@@ -150,6 +150,9 @@ export default function NewLoadScreen() {
   const [selectedSender, setSelectedSender] = useState<SelectOption | null>(null)
   const [selectedManufacturer, setSelectedManufacturer] = useState<SelectOption | null>(null)
   const [selectedReceiver, setSelectedReceiver] = useState<SelectOption | null>(null)
+
+  // Step3 Adres seçimleri (firma/adres label'larını persist etmek için)
+  const [addressSelections, setAddressSelections] = useState<SelectedOptionsMap>({})
 
   // Hata state'i
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -405,7 +408,7 @@ export default function NewLoadScreen() {
         hazmat_flash_point: item.hazmat_flash_point,
         hazmat_description: item.hazmat_description
       })) as LoadFormData['items'],
-      addresses: addresses as LoadFormData['addresses'],
+      addresses: addresses.map(cleanAddressForSubmit) as LoadFormData['addresses'],
       // Clean pricing items - remove nested 'product' object and convert values
       pricing_items: pricingItems.map((pItem) => ({
         product_id: pItem.product_id || null,
@@ -474,7 +477,14 @@ export default function NewLoadScreen() {
       case 2:
         return <Step2LoadItems items={items} setItems={setItems} />
       case 3:
-        return <Step3Addresses addresses={addresses} setAddresses={setAddresses} />
+        return (
+          <Step3Addresses
+            addresses={addresses}
+            setAddresses={setAddresses}
+            selectedOptions={addressSelections}
+            onSelectedOptionsChange={setAddressSelections}
+          />
+        )
       case 4:
         return <Step4Pricing items={pricingItems} setItems={setPricingItems} />
       case 5:

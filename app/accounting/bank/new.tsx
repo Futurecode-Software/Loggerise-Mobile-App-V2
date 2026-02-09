@@ -39,7 +39,7 @@ export default function NewBankAccountScreen() {
     account_number: '',
     iban: '',
     currency_type: 'TRY',
-    opening_balance: 0,
+    balance: 0,
     description: '',
     is_active: true
   })
@@ -251,12 +251,12 @@ export default function NewBankAccountScreen() {
             <Input
               label="Açılış Bakiyesi"
               placeholder="0.00"
-              value={formData.opening_balance ? String(formData.opening_balance) : ''}
+              value={formData.balance ? String(formData.balance) : ''}
               onChangeText={(text) => {
                 const numValue = parseFloat(text) || 0
-                handleInputChange('opening_balance', numValue)
+                handleInputChange('balance', numValue)
               }}
-              error={errors.opening_balance}
+              error={errors.balance}
               keyboardType="decimal-pad"
             />
           </View>

@@ -47,7 +47,7 @@ export default function BankEditScreen() {
     account_number: '',
     iban: '',
     currency_type: 'TRY',
-    opening_balance: 0,
+    balance: undefined,
     description: '',
     is_active: true
   })
@@ -98,7 +98,7 @@ export default function BankEditScreen() {
           account_number: data.account_number || '',
           iban: data.iban || '',
           currency_type: data.currency_type || 'TRY',
-          opening_balance: data.opening_balance ?? 0,
+          balance: undefined,
           description: data.description || '',
           is_active: data.is_active !== false
         })
@@ -341,17 +341,6 @@ export default function BankEditScreen() {
               error={errors.currency_type}
             />
 
-            <Input
-              label="Açılış Bakiyesi"
-              placeholder="0.00"
-              value={formData.opening_balance ? String(formData.opening_balance) : ''}
-              onChangeText={(text) => {
-                const numValue = parseFloat(text) || 0
-                handleInputChange('opening_balance', numValue)
-              }}
-              error={errors.opening_balance}
-              keyboardType="decimal-pad"
-            />
           </View>
         </View>
 

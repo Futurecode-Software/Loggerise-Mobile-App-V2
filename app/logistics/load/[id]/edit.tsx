@@ -43,6 +43,7 @@ import Step6CustomsDocuments from '@/components/load-form/Step6CustomsDocuments'
 import {
   getLoad,
   updateLoad,
+  cleanAddressForSubmit,
   type LoadFormData
 } from '@/services/endpoints/loads'
 
@@ -277,6 +278,31 @@ export default function EditLoadScreen() {
             delivery_type: addr.delivery_type ?? null,
           })) as LoadAddress[]
           setAddresses(mappedAddresses)
+        }
+
+        // Map pricing items
+        if (load.pricing_items && load.pricing_items.length > 0) {
+          const mappedPricing: LoadPricingItem[] = load.pricing_items.map((pItem: any) => ({
+            id: pItem.id,
+            load_id: pItem.load_id,
+            product_id: pItem.product_id || null,
+            product: pItem.product || null,
+            description: pItem.description || '',
+            quantity: pItem.quantity?.toString() || '1',
+            unit: pItem.unit || 'SET',
+            unit_price: pItem.unit_price?.toString() || '0',
+            currency: pItem.currency || 'TRY',
+            exchange_rate: pItem.exchange_rate?.toString() || '1',
+            vat_rate: pItem.vat_rate?.toString() || '0',
+            vat_amount: pItem.vat_amount?.toString() || '0',
+            discount_rate: pItem.discount_rate?.toString() || '0',
+            discount_amount: pItem.discount_amount?.toString() || '0',
+            sub_total: pItem.sub_total?.toString() || '0',
+            total: pItem.total?.toString() || '0',
+            sort_order: pItem.sort_order || 0,
+            is_active: pItem.is_active !== false,
+          }))
+          setPricingItems(mappedPricing)
         }
 
         // Set selected companies
@@ -586,7 +612,7 @@ export default function EditLoadScreen() {
         hazmat_flash_point: item.hazmat_flash_point,
         hazmat_description: item.hazmat_description,
       })) as LoadFormData['items'],
-      addresses: addresses as LoadFormData['addresses'],
+      addresses: addresses.map(cleanAddressForSubmit) as LoadFormData['addresses'],
       // Clean pricing items
       pricing_items: pricingItems.map((pItem) => ({
         ...(pItem.id ? { id: pItem.id } : {}),

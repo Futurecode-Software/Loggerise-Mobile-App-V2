@@ -19,7 +19,6 @@ export interface CashRegister {
   location?: string
   currency_type: CurrencyCode
   balance: number
-  opening_balance: number
   responsible_user_id?: number
   responsible_user?: { id: number; name: string; email: string } | null
   description?: string
@@ -82,7 +81,7 @@ export interface CashRegisterFormData {
   code?: string
   location?: string
   currency_type: CurrencyCode
-  opening_balance?: number
+  balance?: number
   responsible_user_id?: number
   description?: string
   is_active?: boolean

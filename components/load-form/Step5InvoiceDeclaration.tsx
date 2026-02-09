@@ -4,34 +4,20 @@
  * Web versiyonu ile %100 uyumlu - Tüm tarih alanları ve kur bilgisi
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Calendar, FileText, Receipt } from 'lucide-react-native';
-import { Card, Input } from '@/components/ui';
-import { SelectInput } from '@/components/ui/select-input';
-import { Colors, Typography, Spacing, BorderRadius, Brand } from '@/constants/theme';
-import type { LoadFormData } from '@/services/endpoints/loads';
-import api from '@/services/api';
+import React from 'react'
+import { View, Text, StyleSheet } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { Card, Input, DateInput } from '@/components/ui'
+import { SelectInput } from '@/components/ui/select-input'
+import { CURRENCY_OPTIONS } from '@/constants/currencies'
+import { DashboardColors, DashboardSpacing, DashboardFontSizes } from '@/constants/dashboard-theme'
+import type { LoadFormData } from '@/services/endpoints/loads'
+import api from '@/services/api'
 
 interface Step5InvoiceDeclarationProps {
-  data: LoadFormData;
-  updateFormData: (field: keyof LoadFormData, value: any) => void;
+  data: LoadFormData
+  updateFormData: (field: keyof LoadFormData, value: any) => void
 }
-
-// Para birimi seçenekleri - Web ile aynı (currencyTypes)
-const CURRENCY_OPTIONS = [
-  { label: 'TRY - Türk Lirası', value: 'TRY' },
-  { label: 'USD - Amerikan Doları', value: 'USD' },
-  { label: 'EUR - Euro', value: 'EUR' },
-  { label: 'GBP - İngiliz Sterlini', value: 'GBP' },
-  { label: 'CHF - İsviçre Frangı', value: 'CHF' },
-  { label: 'JPY - Japon Yeni', value: 'JPY' },
-  { label: 'CNY - Çin Yuanı', value: 'CNY' },
-  { label: 'RUB - Rus Rublesi', value: 'RUB' },
-  { label: 'SAR - Suudi Arabistan Riyali', value: 'SAR' },
-  { label: 'AED - BAE Dirhemi', value: 'AED' },
-];
 
 // Teslim şartları seçenekleri - Web ile aynı (17 seçenek)
 const DELIVERY_TERMS_OPTIONS = [
@@ -52,89 +38,45 @@ const DELIVERY_TERMS_OPTIONS = [
   { label: 'FAS - Gemi Doğrultusunda Masrafsız', value: 'FAS' },
   { label: 'FCA - Taşıyıcıya Masrafsız', value: 'FCA' },
   { label: 'FOB - Gemide Masrafsız', value: 'FOB' },
-];
+]
 
 export default function Step5InvoiceDeclaration({
   data,
   updateFormData,
 }: Step5InvoiceDeclarationProps) {
-  const colors = Colors.light;
-  const [showDatePicker, setShowDatePicker] = React.useState<string | null>(null);
-
   // Döviz kuru çekme fonksiyonu - Web ile aynı
   const fetchExchangeRate = async (currencyCode: string) => {
     if (currencyCode === 'TRY') {
-      updateFormData('estimated_value_exchange_rate', '1');
-      return;
+      updateFormData('estimated_value_exchange_rate', '1')
+      return
     }
 
     try {
-      const response = await api.get(`/exchange-rates/latest/${currencyCode}`);
+      const response = await api.get(`/exchange-rates/latest/${currencyCode}`)
       if (response.data.success) {
-        const rate = response.data.data.forex_selling;
-        updateFormData('estimated_value_exchange_rate', rate?.toString() || '1');
+        const rate = response.data.data.forex_selling
+        updateFormData('estimated_value_exchange_rate', rate?.toString() || '1')
       }
     } catch (error) {
-      if (__DEV__) console.error('Kur çekilirken hata:', error);
-      // Hata durumunda sessizce devam et, kullanıcı manuel giriş yapabilir
+      if (__DEV__) console.error('Kur çekilirken hata:', error)
     }
-  };
+  }
 
   // Para birimi değiştiğinde kur çek
   const handleCurrencyChange = (value: string) => {
-    updateFormData('estimated_value_currency', value);
-    fetchExchangeRate(value);
-  };
-
-  const handleDateChange = (field: keyof LoadFormData, date?: Date) => {
-    if (date) {
-      const formattedDate = date.toISOString().split('T')[0];
-      updateFormData(field, formattedDate);
-    }
-    setShowDatePicker(null);
-  };
-
-  const renderDateField = (
-    field: keyof LoadFormData,
-    label: string,
-    value: string | undefined
-  ) => (
-    <View style={styles.dateFieldContainer}>
-      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-      <TouchableOpacity
-        style={[styles.dateButton, { borderColor: colors.border }]}
-        onPress={() => setShowDatePicker(field as string)}
-      >
-        <Calendar size={14} color={colors.icon} />
-        <Text
-          style={[
-            styles.dateButtonText,
-            { color: value ? colors.text : colors.textMuted },
-          ]}
-        >
-          {value || 'Tarih seçiniz'}
-        </Text>
-      </TouchableOpacity>
-      {showDatePicker === field && (
-        <DateTimePicker
-          value={value ? new Date(value) : new Date()}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, date) => handleDateChange(field, date)}
-        />
-      )}
-    </View>
-  );
+    updateFormData('estimated_value_currency', value)
+    fetchExchangeRate(value)
+  }
 
   return (
     <View style={styles.container}>
       {/* Beyanname Bilgileri */}
       <Card style={styles.card}>
         <View style={styles.cardHeader}>
-          <FileText size={18} color={Brand.primary} />
+          <Ionicons name="document-text-outline" size={18} color={DashboardColors.primary} />
           <View>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Beyanname Bilgileri</Text>
-            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+            <Text style={styles.cardTitle}>Beyanname Bilgileri</Text>
+            <Text style={styles.cardDescription}>
               Gümrük beyannamesi bilgileri
             </Text>
           </View>
@@ -150,35 +92,39 @@ export default function Step5InvoiceDeclaration({
         {/* 2'li grid - Web ile aynı */}
         <View style={styles.row}>
           <View style={styles.flex1}>
-            {renderDateField(
-              'declaration_submission_date',
-              'Beyanname Sunulma Tarihi',
-              data.declaration_submission_date
-            )}
+            <DateInput
+              label="Beyanname Sunulma Tarihi"
+              placeholder="Tarih seçiniz"
+              value={data.declaration_submission_date || ''}
+              onChangeDate={(date) => updateFormData('declaration_submission_date', date)}
+            />
           </View>
           <View style={styles.flex1}>
-            {renderDateField(
-              'declaration_ready_date',
-              'Beyanname Hazır Bildirim Tarihi',
-              data.declaration_ready_date
-            )}
+            <DateInput
+              label="Hazır Bildirim Tarihi"
+              placeholder="Tarih seçiniz"
+              value={data.declaration_ready_date || ''}
+              onChangeDate={(date) => updateFormData('declaration_ready_date', date)}
+            />
           </View>
         </View>
 
         <View style={styles.row}>
           <View style={styles.flex1}>
-            {renderDateField(
-              'declaration_inspection_date',
-              'Beyanname Fiziki Muayene Tarihi',
-              data.declaration_inspection_date
-            )}
+            <DateInput
+              label="Fiziki Muayene Tarihi"
+              placeholder="Tarih seçiniz"
+              value={data.declaration_inspection_date || ''}
+              onChangeDate={(date) => updateFormData('declaration_inspection_date', date)}
+            />
           </View>
           <View style={styles.flex1}>
-            {renderDateField(
-              'declaration_clearance_date',
-              'Beyanname Araç Çıkabilir Tarihi',
-              data.declaration_clearance_date
-            )}
+            <DateInput
+              label="Araç Çıkabilir Tarihi"
+              placeholder="Tarih seçiniz"
+              value={data.declaration_clearance_date || ''}
+              onChangeDate={(date) => updateFormData('declaration_clearance_date', date)}
+            />
           </View>
         </View>
       </Card>
@@ -186,10 +132,10 @@ export default function Step5InvoiceDeclaration({
       {/* Fatura Bilgileri */}
       <Card style={styles.card}>
         <View style={styles.cardHeader}>
-          <Receipt size={18} color="#3B82F6" />
+          <Ionicons name="receipt-outline" size={18} color={DashboardColors.info} />
           <View>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Fatura Bilgileri</Text>
-            <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+            <Text style={styles.cardTitle}>Fatura Bilgileri</Text>
+            <Text style={styles.cardDescription}>
               Mal faturası ve bedel bilgileri
             </Text>
           </View>
@@ -206,7 +152,12 @@ export default function Step5InvoiceDeclaration({
             />
           </View>
           <View style={styles.flex1}>
-            {renderDateField('cargo_invoice_date', 'Fatura Tarihi', data.cargo_invoice_date)}
+            <DateInput
+              label="Fatura Tarihi"
+              placeholder="Tarih seçiniz"
+              value={data.cargo_invoice_date || ''}
+              onChangeDate={(date) => updateFormData('cargo_invoice_date', date)}
+            />
           </View>
         </View>
 
@@ -249,33 +200,35 @@ export default function Step5InvoiceDeclaration({
         />
       </Card>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   card: {
-    padding: Spacing.md,
+    padding: DashboardSpacing.md,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
+    gap: DashboardSpacing.sm,
+    marginBottom: DashboardSpacing.md,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: DashboardFontSizes.md,
     fontWeight: '600',
+    color: DashboardColors.text,
     marginBottom: 2,
   },
   cardDescription: {
-    fontSize: 12,
+    fontSize: DashboardFontSizes.xs,
+    color: DashboardColors.textSecondary,
   },
   row: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    gap: DashboardSpacing.sm,
   },
   flex1: {
     flex: 1,
@@ -283,23 +236,4 @@ const styles = StyleSheet.create({
   flex2: {
     flex: 2,
   },
-  label: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  dateFieldContainer: {
-    marginBottom: Spacing.sm,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    padding: Spacing.sm,
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-  },
-  dateButtonText: {
-    fontSize: 14,
-  },
-});
+})

@@ -6,8 +6,8 @@
 
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
-import { Check } from 'lucide-react-native'
-import { Brand, Spacing } from '@/constants/theme'
+import { Ionicons } from '@expo/vector-icons'
+import { DashboardColors, DashboardSpacing } from '@/constants/dashboard-theme'
 
 interface LoadFormStepperProps {
   currentStep: number
@@ -49,7 +49,7 @@ export function LoadFormStepper({
           ]}
         >
           {isCompleted ? (
-            <Check size={14} color="#FFFFFF" strokeWidth={3} />
+            <Ionicons name="checkmark" size={14} color="#FFFFFF" />
           ) : (
             <Text
               style={[
@@ -116,11 +116,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingTop: 0,
-    paddingBottom: Spacing.md,
-    paddingHorizontal: Spacing.xs,
+    paddingBottom: DashboardSpacing.md,
+    paddingHorizontal: DashboardSpacing.xs,
     backgroundColor: 'transparent',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: DashboardColors.border,
   },
   stepTouchable: {
     flex: 1,
@@ -138,15 +138,15 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: DashboardSpacing.xs,
   },
   stepCircleActive: {
-    backgroundColor: Brand.primary,
-    borderColor: Brand.primary,
+    backgroundColor: DashboardColors.primary,
+    borderColor: DashboardColors.primary,
   },
   stepCircleCompleted: {
-    backgroundColor: Brand.primaryLight,
-    borderColor: Brand.primaryLight,
+    backgroundColor: DashboardColors.primaryLight,
+    borderColor: DashboardColors.primaryLight,
   },
   stepCirclePast: {
     backgroundColor: '#E5E7EB',
@@ -167,10 +167,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#9CA3AF',
     textAlign: 'center',
-    marginTop: Spacing.xs / 2,
+    marginTop: DashboardSpacing.xs / 2,
   },
   stepLabelActive: {
-    color: Brand.primary,
+    color: DashboardColors.primary,
     fontWeight: '600',
   },
   stepLabelCompleted: {
@@ -186,6 +186,6 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   stepConnectorCompleted: {
-    backgroundColor: Brand.primaryLight,
+    backgroundColor: DashboardColors.primaryLight,
   },
 })

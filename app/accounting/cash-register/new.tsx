@@ -37,7 +37,7 @@ export default function NewCashRegisterScreen() {
     name: '',
     location: '',
     currency_type: 'TRY',
-    opening_balance: 0,
+    balance: 0,
     description: '',
     is_active: true
   })
@@ -86,8 +86,8 @@ export default function NewCashRegisterScreen() {
     }
 
     // Bakiye kontrolü
-    if (formData.opening_balance !== undefined && formData.opening_balance < 0) {
-      newErrors.opening_balance = 'Bakiye negatif olamaz.'
+    if (formData.balance !== undefined && formData.balance < 0) {
+      newErrors.balance = 'Bakiye negatif olamaz.'
     }
 
     setErrors(newErrors)
@@ -210,12 +210,12 @@ export default function NewCashRegisterScreen() {
             <Input
               label="Açılış Bakiyesi"
               placeholder="0.00"
-              value={formData.opening_balance ? String(formData.opening_balance) : ''}
+              value={formData.balance ? String(formData.balance) : ''}
               onChangeText={(text) => {
                 const numValue = parseFloat(text) || 0
-                handleInputChange('opening_balance', numValue)
+                handleInputChange('balance', numValue)
               }}
-              error={errors.opening_balance}
+              error={errors.balance}
               keyboardType="decimal-pad"
             />
           </View>
