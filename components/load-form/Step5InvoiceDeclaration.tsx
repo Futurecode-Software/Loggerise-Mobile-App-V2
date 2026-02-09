@@ -7,7 +7,7 @@
 import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { Card, Input, DateInput } from '@/components/ui'
+import { Card, Input, CurrencyInput, DateInput } from '@/components/ui'
 import { SelectInput } from '@/components/ui/select-input'
 import { CURRENCY_OPTIONS } from '@/constants/currencies'
 import { DashboardColors, DashboardSpacing, DashboardFontSizes } from '@/constants/dashboard-theme'
@@ -164,12 +164,11 @@ export default function Step5InvoiceDeclaration({
         {/* 3'lü grid - Mal Bedeli, Para Birimi, Döviz Kuru */}
         <View style={styles.row}>
           <View style={styles.flex2}>
-            <Input
+            <CurrencyInput
               label="Mal Bedeli"
-              placeholder="0.00"
-              value={data.estimated_cargo_value || ''}
-              onChangeText={(value) => updateFormData('estimated_cargo_value', value)}
-              keyboardType="decimal-pad"
+              placeholder="0,00"
+              value={parseFloat(data.estimated_cargo_value || '0') || null}
+              onChangeValue={(val) => updateFormData('estimated_cargo_value', val?.toString() || '')}
             />
           </View>
           <View style={styles.flex1}>
@@ -183,12 +182,12 @@ export default function Step5InvoiceDeclaration({
           </View>
         </View>
 
-        <Input
+        <CurrencyInput
           label="Döviz Kuru"
-          placeholder="1.0000"
-          value={data.estimated_value_exchange_rate || ''}
-          onChangeText={(value) => updateFormData('estimated_value_exchange_rate', value)}
-          keyboardType="decimal-pad"
+          placeholder="1,0000"
+          value={parseFloat(data.estimated_value_exchange_rate || '1') || null}
+          onChangeValue={(val) => updateFormData('estimated_value_exchange_rate', val?.toString() || '')}
+          precision={4}
         />
 
         <SelectInput

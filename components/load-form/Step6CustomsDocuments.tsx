@@ -87,9 +87,9 @@ export default function Step6CustomsDocuments({
           <SearchableSelect
             placeholder="GTIP - HS Kodu seçiniz..."
             value={data.gtip_hs_code || undefined}
+            selectedOption={data.gtip_hs_code ? { value: data.gtip_hs_code, label: data.gtip_hs_code } : undefined}
             onValueChange={handleGtipChange}
             loadOptions={loadGtipCodes}
-            displayValue={data.gtip_hs_code || undefined}
           />
         </View>
 

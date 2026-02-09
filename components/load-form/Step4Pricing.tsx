@@ -7,7 +7,7 @@
 import React, { SetStateAction, useEffect } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { Card, Input, SearchableSelect } from '@/components/ui'
+import { Card, Input, CurrencyInput, SearchableSelect } from '@/components/ui'
 import { SelectInput } from '@/components/ui/select-input'
 import {
   DashboardColors,
@@ -440,12 +440,11 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
                 {/* Birim Fiyat ve Para Birimi */}
                 <View style={styles.row}>
                   <View style={styles.flex1}>
-                    <Input
+                    <CurrencyInput
                       label="Birim Fiyat *"
-                      placeholder="0.00"
-                      value={item.unit_price?.toString()}
-                      onChangeText={(value) => handleCalculableFieldChange(index, 'unit_price', value)}
-                      keyboardType="decimal-pad"
+                      placeholder="0,00"
+                      value={parseFloat(item.unit_price?.toString() || '0') || null}
+                      onChangeValue={(val) => handleCalculableFieldChange(index, 'unit_price', val?.toString() || '0')}
                     />
                   </View>
                   <View style={styles.flex1}>
@@ -462,12 +461,12 @@ export default function Step4Pricing({ items, setItems }: Step4PricingProps) {
                 {/* Kur ve KDV */}
                 <View style={styles.row}>
                   <View style={styles.flex1}>
-                    <Input
+                    <CurrencyInput
                       label="Kur"
-                      placeholder="1.00"
-                      value={item.exchange_rate?.toString()}
-                      onChangeText={(value) => handleCalculableFieldChange(index, 'exchange_rate', value)}
-                      keyboardType="decimal-pad"
+                      placeholder="1,0000"
+                      value={parseFloat(item.exchange_rate?.toString() || '1') || null}
+                      onChangeValue={(val) => handleCalculableFieldChange(index, 'exchange_rate', val?.toString() || '1')}
+                      precision={4}
                       editable={item.currency !== 'TRY'}
                     />
                   </View>

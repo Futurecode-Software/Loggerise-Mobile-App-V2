@@ -130,7 +130,11 @@
       "Bash(git -C \"C:\\\\Users\\\\Ufuk\\\\Documents\\\\GitHub\\\\FlsV2\" add app/Http/Controllers/Api/V1/Mobile/AuthController.php app/Http/Controllers/Api/V1/Mobile/BlockController.php app/Models/BlockedUser.php app/Models/ReportedMessage.php \"database/migrations/tenant/2026_02_08_100000_create_blocked_users_table.php\" \"database/migrations/tenant/2026_02_08_100001_create_reported_messages_table.php\" routes/mobile-api.php)",
       "Bash(cmd.exe:*)",
       "Bash(cmd.exe /c \"echo %ANDROID_HOME%\")",
-      "Bash(powershell.exe:*)"
+      "Bash(powershell.exe:*)",
+      "Bash(Select-String -Pattern \"searchable-select\" -Context 0,5)",
+      "Bash(python:*)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:github.com)"
     ]
   },
   "enableAllProjectMcpServers": true,
