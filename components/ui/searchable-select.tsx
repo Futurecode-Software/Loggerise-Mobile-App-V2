@@ -89,6 +89,7 @@ export function SearchableSelect({
   const loading = loadingProp ?? isLoading
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isModalOpenRef = useRef(false)
 
   // Fixed snap point at 90% of screen height
   const snapPoints = useMemo(() => ['90%'], [])
@@ -141,14 +142,18 @@ export function SearchableSelect({
     }
   }, [value, options, selectedOptionProp])
 
-  // Debounced search
+  // Debounced search - sadece modal açıkken çalışır
   useEffect(() => {
+    if (!isModalOpenRef.current) return
+
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      fetchOptions(searchQuery)
+      if (isModalOpenRef.current) {
+        fetchOptions(searchQuery)
+      }
     }, 300)
 
     return () => {
@@ -214,16 +219,21 @@ export function SearchableSelect({
   // Handle modal open
   const handleOpen = useCallback(() => {
     if (disabled) return
+    isModalOpenRef.current = true
     setSearchQuery('')
-    fetchOptions('') // Load initial options
+    fetchOptions('')
     bottomSheetRef.current?.present()
   }, [disabled, fetchOptions])
 
   // Handle modal dismiss - keep selected option intact
   const handleDismiss = useCallback(() => {
+    isModalOpenRef.current = false
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+      searchTimeoutRef.current = null
+    }
     setTimeout(() => {
       setSearchQuery('')
-      // Don't clear options - it triggers value sync effect that resets selection
     }, 200)
   }, [])
 
