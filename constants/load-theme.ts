@@ -84,44 +84,46 @@ export const DIRECTION_FILTER_OPTIONS = [
   { id: 'import', label: 'İthalat' },
 ] as const
 
-// Araç tipleri
-export const VEHICLE_TYPES = [
-  'Tır (TIR)',
-  'Kamyon',
-  'Kamyonet',
-  'Frigorifik',
-  'Tanker',
-  'Lowbed',
-  'Konteyner',
-] as const
+// Araç tipi etiketleri
+export const VehicleTypeLabels: Record<string, string> = {
+  tenteli: 'Tenteli',
+  mega_tenteli: 'Mega Tenteli',
+  maxi_tenteli: 'Maxi Tenteli',
+  optima_tenteli: 'Optima Tenteli',
+  jumbo_tenteli: 'Jumbo Tenteli',
+  jumbo_duz: 'Jumbo Düz',
+  duz: 'Düz',
+  kapali_kasa: 'Kapalı Kasa',
+  acik_kasa: 'Açık Kasa',
+  mega_askili: 'Mega Askılı',
+  frigorifik: 'Frigorifik',
+  lowbed: 'Lowbed',
+  damper: 'Damper',
+  tir: 'Tır',
+  kamyon: 'Kamyon',
+  kamyonet: 'Kamyonet',
+}
 
-// Yükleme tipleri
-export const LOADING_TYPES = [
-  'Palet',
-  'Koli',
-  'Dökme',
-  'Konteyner',
-  'Bigbag',
-  'Rulo',
-  'Paket',
-] as const
+// Yükleme tipi etiketleri
+export const LoadingTypeLabels: Record<string, string> = {
+  normal: 'Normal',
+  karisik: 'Karışık',
+}
 
-// Taşıma hızları
-export const TRANSPORT_SPEEDS = [
-  'Normal',
-  'Ekspres',
-  'Acil',
-] as const
+// Taşıma hızı etiketleri
+export const TransportSpeedLabels: Record<string, string> = {
+  expres: 'Expres',
+  normal: 'Normal',
+}
 
-// Kargo sınıfları
-export const CARGO_CLASSES = [
-  'Standart',
-  'Tehlikeli',
-  'Soğuk Zincir',
-  'Değerli',
-  'Kırılgan',
-  'Canlı',
-] as const
+// Yük sınıfı etiketleri
+export const CargoClassLabels: Record<string, string> = {
+  general: 'Genel Kargo',
+  container: 'Konteyner',
+  hazardous: 'Tehlikeli Madde',
+  cold_chain: 'Soğuk Zincir',
+  project: 'Proje Kargo',
+}
 
 // Teslim şartları (Incoterms)
 export const DELIVERY_TERMS = [

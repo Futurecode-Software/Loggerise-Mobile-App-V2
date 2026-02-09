@@ -36,7 +36,11 @@ import {
   LoadStatusLabels,
   LoadDirectionColors,
   LoadDirectionBgColors,
-  LoadDirectionLabels
+  LoadDirectionLabels,
+  VehicleTypeLabels,
+  LoadingTypeLabels,
+  TransportSpeedLabels,
+  CargoClassLabels
 } from '@/constants/load-theme'
 import { getLoad, deleteLoad } from '@/services/endpoints/loads'
 import type { LoadDetail, LoadItem } from '@/types/load'
@@ -445,10 +449,10 @@ export default function LoadDetailScreen() {
             <View style={styles.card}>
               <SectionHeader title="Temel Bilgiler" icon="information-circle-outline" />
               <View style={styles.cardContent}>
-                <InfoRow label="Araç Tipi" value={load.vehicle_type || '-'} icon="car-outline" />
-                <InfoRow label="Yükleme Tipi" value={load.loading_type || '-'} icon="layers-outline" />
-                <InfoRow label="Taşıma Hızı" value={load.transport_speed || '-'} icon="speedometer-outline" />
-                <InfoRow label="Kargo Sınıfı" value={load.cargo_class || '-'} icon="pricetag-outline" />
+                <InfoRow label="Araç Tipi" value={load.vehicle_type ? (VehicleTypeLabels[load.vehicle_type] || load.vehicle_type) : '-'} icon="car-outline" />
+                <InfoRow label="Yükleme Tipi" value={load.loading_type ? (LoadingTypeLabels[load.loading_type] || load.loading_type) : '-'} icon="layers-outline" />
+                <InfoRow label="Taşıma Hızı" value={load.transport_speed ? (TransportSpeedLabels[load.transport_speed] || load.transport_speed) : '-'} icon="speedometer-outline" />
+                <InfoRow label="Kargo Sınıfı" value={load.cargo_class ? (CargoClassLabels[load.cargo_class] || load.cargo_class) : '-'} icon="pricetag-outline" />
                 <InfoRow
                   label="Yük Tipi"
                   value={load.load_type === 'full' ? 'Komple' : load.load_type === 'partial' ? 'Parsiyel' : '-'}
