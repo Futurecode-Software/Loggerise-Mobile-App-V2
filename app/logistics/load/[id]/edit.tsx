@@ -866,8 +866,18 @@ export default function EditLoadScreen() {
               </Text>
             </View>
 
-            {/* Sağ: Boş alan (dengeleme için) */}
-            <View style={styles.headerButton} />
+            {/* Sağ: Kaydet Butonu */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              style={styles.headerButton}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -903,14 +913,15 @@ export default function EditLoadScreen() {
           bottomInset={insets.bottom}
         />
 
-        {/* Loading Overlay */}
-        {isSubmitting && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={DashboardColors.primary} />
-            <Text style={styles.loadingText}>Yük güncelleniyor...</Text>
-          </View>
-        )}
       </View>
+
+      {/* Loading Overlay - container'ın child'ı olarak tam ekran kaplar */}
+      {isSubmitting && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Yük güncelleniyor...</Text>
+        </View>
+      )}
     </View>
   )
 }

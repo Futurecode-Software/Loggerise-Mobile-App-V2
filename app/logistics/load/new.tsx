@@ -569,14 +569,15 @@ export default function NewLoadScreen() {
           bottomInset={insets.bottom}
         />
 
-        {/* Loading Overlay */}
-        {isSubmitting && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={DashboardColors.primary} />
-            <Text style={styles.loadingText}>Yük oluşturuluyor...</Text>
-          </View>
-        )}
       </View>
+
+      {/* Loading Overlay - container'ın child'ı olarak tam ekran kaplar */}
+      {isSubmitting && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={DashboardColors.primary} />
+          <Text style={styles.loadingText}>Yük oluşturuluyor...</Text>
+        </View>
+      )}
     </View>
   )
 }
