@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 import {
   View,
   TextInput,
@@ -7,21 +7,26 @@ import {
   TouchableOpacity,
   ViewStyle,
   TextInputProps,
-} from 'react-native';
-import { Eye, EyeOff } from 'lucide-react-native';
-import { Colors, Typography, BorderRadius, Spacing } from '@/constants/theme';
+} from 'react-native'
+import { Eye, EyeOff } from 'lucide-react-native'
+import {
+  DashboardColors,
+  DashboardFontSizes,
+  DashboardBorderRadius,
+  DashboardSpacing,
+} from '@/constants/dashboard-theme'
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
-  label?: string;
-  error?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
-  containerStyle?: ViewStyle;
-  inputStyle?: ViewStyle;
-  style?: ViewStyle;
-  isPassword?: boolean;
-  required?: boolean;
-  type?: string;
+  label?: string
+  error?: string
+  leftIcon?: React.ReactNode
+  rightIcon?: React.ReactNode
+  containerStyle?: ViewStyle
+  inputStyle?: ViewStyle
+  style?: ViewStyle
+  isPassword?: boolean
+  required?: boolean
+  type?: string
 }
 
 export function Input({
@@ -36,22 +41,21 @@ export function Input({
   type,
   ...props
 }: InputProps) {
-  const colors = Colors.light;
-  const [isFocused, setIsFocused] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [isFocused, setIsFocused] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const getBorderColor = () => {
-    if (error) return colors.danger;
-    if (isFocused) return colors.primary;
-    return colors.border;
-  };
+    if (error) return DashboardColors.danger
+    if (isFocused) return DashboardColors.primary
+    return DashboardColors.borderLight
+  }
 
   return (
     <View style={[styles.container, containerStyle, style]}>
       {label && (
-        <Text style={[styles.label, { color: colors.textSecondary }]}>
+        <Text style={styles.label}>
           {label}
-          {props.required && <Text style={{ color: colors.danger }}> *</Text>}
+          {props.required && <Text style={styles.required}> *</Text>}
         </Text>
       )}
       <View
@@ -59,7 +63,6 @@ export function Input({
           styles.inputContainer,
           {
             borderColor: getBorderColor(),
-            backgroundColor: colors.surface,
           },
           isFocused && styles.focused,
           error && styles.error,
@@ -72,18 +75,17 @@ export function Input({
           secureTextEntry={isPassword && !showPassword}
           style={[
             styles.input,
-            { color: colors.text },
             leftIcon ? styles.inputWithLeftIcon : undefined,
             (rightIcon || isPassword) ? styles.inputWithRightIcon : undefined,
           ]}
-          placeholderTextColor={colors.placeholder}
+          placeholderTextColor={DashboardColors.textMuted}
           onFocus={(e) => {
-            setIsFocused(true);
-            props.onFocus?.(e);
+            setIsFocused(true)
+            props.onFocus?.(e)
           }}
           onBlur={(e) => {
-            setIsFocused(false);
-            props.onBlur?.(e);
+            setIsFocused(false)
+            props.onBlur?.(e)
           }}
         />
         {isPassword && (
@@ -92,9 +94,9 @@ export function Input({
             onPress={() => setShowPassword(!showPassword)}
           >
             {showPassword ? (
-              <EyeOff size={20} color={colors.icon} />
+              <EyeOff size={20} color={DashboardColors.textMuted} />
             ) : (
-              <Eye size={20} color={colors.icon} />
+              <Eye size={20} color={DashboardColors.textMuted} />
             )}
           </TouchableOpacity>
         )}
@@ -103,26 +105,32 @@ export function Input({
         )}
       </View>
       {error && (
-        <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+        <Text style={styles.errorText}>{error}</Text>
       )}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: Spacing.lg,
+    marginBottom: DashboardSpacing.md,
   },
   label: {
-    ...Typography.bodySM,
-    marginBottom: Spacing.xs,
+    fontSize: DashboardFontSizes.sm,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.xs,
+  },
+  required: {
+    color: DashboardColors.danger,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     borderWidth: 1,
-    borderRadius: BorderRadius.lg,
+    borderRadius: DashboardBorderRadius.lg,
     minHeight: 48,
+    backgroundColor: DashboardColors.surface,
   },
   focused: {
     borderWidth: 2,
@@ -132,26 +140,28 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    ...Typography.bodyMD,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
+    paddingHorizontal: DashboardSpacing.lg,
+    paddingVertical: DashboardSpacing.md,
   },
   inputWithLeftIcon: {
-    paddingLeft: Spacing.xs,
+    paddingLeft: DashboardSpacing.xs,
   },
   inputWithRightIcon: {
-    paddingRight: Spacing.xs,
+    paddingRight: DashboardSpacing.xs,
   },
   leftIcon: {
-    paddingLeft: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingLeft: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
   },
   rightIcon: {
-    paddingRight: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingRight: DashboardSpacing.lg,
+    paddingTop: DashboardSpacing.md,
   },
   errorText: {
-    ...Typography.bodySM,
-    marginTop: Spacing.xs,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.danger,
+    marginTop: DashboardSpacing.xs,
   },
-});
+})

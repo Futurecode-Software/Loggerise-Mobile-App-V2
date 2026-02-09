@@ -14,7 +14,6 @@ import {
   BottomSheetView,
 } from '@gorhom/bottom-sheet'
 import { Calendar } from 'lucide-react-native'
-import { Colors, Typography, Spacing, BorderRadius, Brand } from '@/constants/theme'
 import {
   DashboardColors,
   DashboardFontSizes,
@@ -47,7 +46,6 @@ export function DateInput({
   minimumDate,
   maximumDate,
 }: DateInputProps) {
-  const colors = Colors.light
   const bottomSheetRef = useRef<BottomSheetModal>(null)
   const [tempDate, setTempDate] = useState<Date>(
     value ? new Date(value) : new Date()
@@ -135,19 +133,16 @@ export function DateInput({
   return (
     <View style={styles.container}>
       {label && (
-        <Text style={[styles.label, { color: colors.text }]}>
+        <Text style={styles.label}>
           {label}
-          {required && <Text style={{ color: colors.danger }}> *</Text>}
+          {required && <Text style={styles.required}> *</Text>}
         </Text>
       )}
 
       <TouchableOpacity
         style={[
           styles.inputContainer,
-          {
-            backgroundColor: colors.background,
-            borderColor: error ? '#DC2626' : colors.border,
-          },
+          error && styles.inputContainerError,
           disabled && styles.disabled,
         ]}
         onPress={showDatepicker}
@@ -156,21 +151,19 @@ export function DateInput({
         <Text
           style={[
             styles.inputText,
-            {
-              color: displayValue ? colors.text : colors.textMuted,
-            },
+            !displayValue && styles.inputTextPlaceholder,
           ]}
         >
           {displayValue || placeholder}
         </Text>
         <Calendar
           size={20}
-          color={disabled ? colors.textMuted : Brand.primary}
+          color={disabled ? DashboardColors.textMuted : DashboardColors.primary}
         />
       </TouchableOpacity>
 
       {error && (
-        <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>
+        <Text style={styles.errorText}>{error}</Text>
       )}
 
       {/* iOS: BottomSheetModal */}
@@ -244,29 +237,43 @@ function formatDateForDisplay(dateString: string): string {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: Spacing.md,
+    marginBottom: DashboardSpacing.md,
   },
   label: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.sm,
     fontWeight: '500',
-    marginBottom: Spacing.xs,
+    color: DashboardColors.textSecondary,
+    marginBottom: DashboardSpacing.xs,
+  },
+  required: {
+    color: DashboardColors.danger,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: 48,
+    minHeight: 48,
     borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
+    borderRadius: DashboardBorderRadius.lg,
+    borderColor: DashboardColors.borderLight,
+    backgroundColor: DashboardColors.surface,
+    paddingHorizontal: DashboardSpacing.lg,
+  },
+  inputContainerError: {
+    borderColor: DashboardColors.danger,
   },
   inputText: {
-    ...Typography.bodyMD,
+    fontSize: DashboardFontSizes.base,
+    color: DashboardColors.textPrimary,
     flex: 1,
   },
+  inputTextPlaceholder: {
+    color: DashboardColors.textMuted,
+  },
   errorText: {
-    ...Typography.bodySM,
-    marginTop: Spacing.xs,
+    fontSize: DashboardFontSizes.sm,
+    color: DashboardColors.danger,
+    marginTop: DashboardSpacing.xs,
   },
   disabled: {
     opacity: 0.5,
@@ -316,7 +323,7 @@ const styles = StyleSheet.create({
   },
   iosPicker: {
     height: 250,
-    minHeight:250,
-    maxHeight:250,
+    minHeight: 250,
+    maxHeight: 250,
   },
 })

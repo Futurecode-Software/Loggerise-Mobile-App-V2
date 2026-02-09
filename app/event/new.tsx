@@ -1,8 +1,8 @@
-﻿/**
+/**
  * New Event Screen (Yeni Etkinlik)
  *
  * FormHeader component + KeyboardAwareScrollView + BottomSheetModal selects
- * CLAUDE.md standartlarına tam uyumlu
+ * CLAUDE.md standartlarına tam uyumlu - kartlı section layout
  */
 
 import React, { useState, useCallback, useRef } from 'react'
@@ -66,17 +66,6 @@ const REMINDER_OPTIONS = [
   { label: '1 saat önce', value: 60 },
   { label: '1 gün önce', value: 1440 },
 ]
-
-// Section Header Component
-function SectionHeader({ title }: { title: string }) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionHeaderLine} />
-      <Text style={styles.sectionHeaderText}>{title}</Text>
-      <View style={styles.sectionHeaderLine} />
-    </View>
-  )
-}
 
 function flattenErrors(validationErrors: any): Record<string, string> {
   const flattened: Record<string, string> = {}
@@ -306,7 +295,6 @@ export default function NewEventScreen() {
         isSaving={isSubmitting}
       />
 
-
       {/* Content */}
       <KeyboardAwareScrollView
         ref={scrollViewRef}
@@ -316,166 +304,195 @@ export default function NewEventScreen() {
         keyboardShouldPersistTaps="handled"
         bottomOffset={20}
       >
-        {/* Basic Information */}
-        <SectionHeader title="Temel Bilgiler" />
+        {/* Temel Bilgiler Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="document-text-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Temel Bilgiler</Text>
+          </View>
+          <View style={styles.sectionContent}>
+            <Input
+              label="Başlık"
+              placeholder="Etkinlik başlığı"
+              value={formData.title}
+              onChangeText={(value) => handleInputChange('title', value)}
+              error={errors.title}
+              required
+            />
 
-        <Input
-          label="Başlık"
-          placeholder="Etkinlik başlığı"
-          value={formData.title}
-          onChangeText={(value) => handleInputChange('title', value)}
-          error={errors.title}
-          required
-        />
+            <Input
+              label="Açıklama"
+              placeholder="Detaylı açıklama (opsiyonel)"
+              value={formData.description || ''}
+              onChangeText={(value) => handleInputChange('description', value)}
+              error={errors.description}
+              multiline
+              numberOfLines={3}
+            />
 
-        <Input
-          label="Açıklama"
-          placeholder="Detaylı açıklama (opsiyonel)"
-          value={formData.description || ''}
-          onChangeText={(value) => handleInputChange('description', value)}
-          error={errors.description}
-          multiline
-          numberOfLines={3}
-        />
+            {/* Event Type */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>
+                Etkinlik Tipi <Text style={styles.required}>*</Text>
+              </Text>
+              <TouchableOpacity
+                style={styles.selectButton}
+                onPress={() => eventTypeModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="calendar-outline" size={20} color={DashboardColors.textSecondary} />
+                <Text
+                  style={[
+                    styles.selectButtonText,
+                    formData.event_type && { color: DashboardColors.textPrimary },
+                  ]}
+                >
+                  {getEventTypeLabel()}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
+              </TouchableOpacity>
+              {errors.event_type && <Text style={styles.errorText}>{errors.event_type}</Text>}
+            </View>
 
-        {/* Event Type */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>
-            Etkinlik Tipi <Text style={styles.required}>*</Text>
-          </Text>
-          <TouchableOpacity
-            style={styles.selectButton}
-            onPress={() => eventTypeModalRef.current?.present()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="calendar-outline" size={20} color={DashboardColors.textSecondary} />
-            <Text
-              style={[
-                styles.selectButtonText,
-                formData.event_type && { color: DashboardColors.textPrimary },
-              ]}
-            >
-              {getEventTypeLabel()}
-            </Text>
-            <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
-          </TouchableOpacity>
-          {errors.event_type && <Text style={styles.errorText}>{errors.event_type}</Text>}
+            {/* Priority */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Öncelik</Text>
+              <TouchableOpacity
+                style={styles.selectButton}
+                onPress={() => priorityModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="flag-outline" size={20} color={DashboardColors.textSecondary} />
+                <Text
+                  style={[
+                    styles.selectButtonText,
+                    formData.priority && { color: DashboardColors.textPrimary },
+                  ]}
+                >
+                  {getPriorityLabel()}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
-        {/* Priority */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Öncelik</Text>
-          <TouchableOpacity
-            style={styles.selectButton}
-            onPress={() => priorityModalRef.current?.present()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="flag-outline" size={20} color={DashboardColors.textSecondary} />
-            <Text
-              style={[
-                styles.selectButtonText,
-                formData.priority && { color: DashboardColors.textPrimary },
-              ]}
-            >
-              {getPriorityLabel()}
-            </Text>
-            <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
-          </TouchableOpacity>
+        {/* Tarih & Saat Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="time-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Tarih & Saat</Text>
+          </View>
+          <View style={styles.sectionContent}>
+            <DateInput
+              label="Başlangıç"
+              value={
+                formData.start_datetime
+                  ? formData.start_datetime.split('T')[0]
+                  : new Date().toISOString().split('T')[0]
+              }
+              onChangeDate={(date) => handleInputChange('start_datetime', new Date(date).toISOString())}
+              error={errors.start_datetime}
+              required
+            />
+
+            <DateInput
+              label="Bitiş"
+              value={
+                formData.end_datetime
+                  ? formData.end_datetime.split('T')[0]
+                  : new Date().toISOString().split('T')[0]
+              }
+              onChangeDate={(date) => handleInputChange('end_datetime', new Date(date).toISOString())}
+              error={errors.end_datetime}
+              required
+            />
+          </View>
         </View>
 
-        {/* Date & Time */}
-        <SectionHeader title="Tarih & Saat" />
-
-        <DateInput
-          label="Başlangıç"
-          value={
-            formData.start_datetime
-              ? formData.start_datetime.split('T')[0]
-              : new Date().toISOString().split('T')[0]
-          }
-          onChangeDate={(date) => handleInputChange('start_datetime', new Date(date).toISOString())}
-          error={errors.start_datetime}
-          required
-        />
-
-        <DateInput
-          label="Bitiş"
-          value={
-            formData.end_datetime
-              ? formData.end_datetime.split('T')[0]
-              : new Date().toISOString().split('T')[0]
-          }
-          onChangeDate={(date) => handleInputChange('end_datetime', new Date(date).toISOString())}
-          error={errors.end_datetime}
-          required
-        />
-
-        {/* Customer (Optional) */}
-        <SectionHeader title="Müşteri (Opsiyonel)" />
-
-        <SearchableSelect
-          label="Müşteri"
-          placeholder="Müşteri seçin"
-          loadOptions={loadContactOptions}
-          value={formData.customer_id}
-          onValueChange={(value) => handleInputChange('customer_id', value)}
-          error={errors.customer_id}
-        />
-
-        {/* Contact Method (Optional) */}
-        <SectionHeader title="İletişim Yöntemi (Opsiyonel)" />
-
-        {/* Contact Method */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>İletişim Yöntemi</Text>
-          <TouchableOpacity
-            style={styles.selectButton}
-            onPress={() => contactMethodModalRef.current?.present()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="call-outline" size={20} color={DashboardColors.textSecondary} />
-            <Text
-              style={[
-                styles.selectButtonText,
-                formData.contact_method && { color: DashboardColors.textPrimary },
-              ]}
-            >
-              {getContactMethodLabel()}
-            </Text>
-            <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
-          </TouchableOpacity>
+        {/* Müşteri Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="people-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Müşteri</Text>
+          </View>
+          <View style={styles.sectionContent}>
+            <SearchableSelect
+              label="Müşteri"
+              placeholder="Müşteri seçin"
+              loadOptions={loadContactOptions}
+              value={formData.customer_id}
+              onValueChange={(value) => handleInputChange('customer_id', value)}
+              error={errors.customer_id}
+            />
+          </View>
         </View>
 
-        <Input
-          label="İletişim Detayı"
-          placeholder="Telefon, e-posta vb."
-          value={formData.contact_detail || ''}
-          onChangeText={(value) => handleInputChange('contact_detail', value)}
-          error={errors.contact_detail}
-        />
+        {/* İletişim & Hatırlatıcı Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <Ionicons name="call-outline" size={18} color={DashboardColors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>İletişim & Hatırlatıcı</Text>
+          </View>
+          <View style={styles.sectionContent}>
+            {/* Contact Method */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>İletişim Yöntemi</Text>
+              <TouchableOpacity
+                style={styles.selectButton}
+                onPress={() => contactMethodModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="call-outline" size={20} color={DashboardColors.textSecondary} />
+                <Text
+                  style={[
+                    styles.selectButtonText,
+                    formData.contact_method && { color: DashboardColors.textPrimary },
+                  ]}
+                >
+                  {getContactMethodLabel()}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
+              </TouchableOpacity>
+            </View>
 
-        {/* Reminder (Optional) */}
-        <SectionHeader title="Hatırlatıcı (Opsiyonel)" />
+            <Input
+              label="İletişim Detayı"
+              placeholder="Telefon, e-posta vb."
+              value={formData.contact_detail || ''}
+              onChangeText={(value) => handleInputChange('contact_detail', value)}
+              error={errors.contact_detail}
+            />
 
-        {/* Reminder */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Hatırlatıcı</Text>
-          <TouchableOpacity
-            style={styles.selectButton}
-            onPress={() => reminderModalRef.current?.present()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="alarm-outline" size={20} color={DashboardColors.textSecondary} />
-            <Text
-              style={[
-                styles.selectButtonText,
-                formData.reminder_minutes && { color: DashboardColors.textPrimary },
-              ]}
-            >
-              {getReminderLabel()}
-            </Text>
-            <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
-          </TouchableOpacity>
+            {/* Reminder */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Hatırlatıcı</Text>
+              <TouchableOpacity
+                style={styles.selectButton}
+                onPress={() => reminderModalRef.current?.present()}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="alarm-outline" size={20} color={DashboardColors.textSecondary} />
+                <Text
+                  style={[
+                    styles.selectButtonText,
+                    formData.reminder_minutes && { color: DashboardColors.textPrimary },
+                  ]}
+                >
+                  {getReminderLabel()}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </KeyboardAwareScrollView>
 
@@ -535,37 +552,51 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: DashboardSpacing.lg,
-    paddingTop: 0,
+    paddingTop: DashboardSpacing.lg,
     paddingBottom: DashboardSpacing['3xl'],
   },
 
-  // Section Header
+  // Section Card
+  section: {
+    backgroundColor: DashboardColors.surface,
+    borderRadius: DashboardBorderRadius.xl,
+    marginBottom: DashboardSpacing.lg,
+    overflow: 'hidden',
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: DashboardSpacing.xl,
-    marginBottom: DashboardSpacing.lg,
+    padding: DashboardSpacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: DashboardColors.borderLight,
+    gap: DashboardSpacing.sm,
   },
-  sectionHeaderLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: DashboardColors.borderLight,
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: DashboardBorderRadius.lg,
+    backgroundColor: DashboardColors.primaryGlow,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sectionHeaderText: {
-    fontSize: DashboardFontSizes.base,
+  sectionTitle: {
+    fontSize: DashboardFontSizes.lg,
     fontWeight: '600',
     color: DashboardColors.textPrimary,
-    marginHorizontal: DashboardSpacing.md,
+  },
+  sectionContent: {
+    padding: DashboardSpacing.lg,
+    gap: DashboardSpacing.md,
   },
 
   // Input Group
   inputGroup: {
-    marginBottom: DashboardSpacing.lg,
+    marginBottom: 0,
   },
   inputLabel: {
     fontSize: DashboardFontSizes.sm,
-    fontWeight: '600',
-    color: DashboardColors.textPrimary,
+    fontWeight: '500',
+    color: DashboardColors.textSecondary,
     marginBottom: DashboardSpacing.xs,
   },
   required: {
@@ -577,7 +608,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: DashboardSpacing.sm,
-    backgroundColor: DashboardColors.background,
+    backgroundColor: DashboardColors.surface,
     borderWidth: 1,
     borderColor: DashboardColors.borderLight,
     borderRadius: DashboardBorderRadius.lg,
@@ -588,7 +619,7 @@ const styles = StyleSheet.create({
   selectButtonText: {
     flex: 1,
     fontSize: DashboardFontSizes.base,
-    color: DashboardColors.textSecondary,
+    color: DashboardColors.textMuted,
   },
 
   // Error

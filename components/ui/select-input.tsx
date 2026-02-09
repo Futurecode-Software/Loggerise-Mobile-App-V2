@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: DashboardColors.background,
+    backgroundColor: DashboardColors.surface,
     borderWidth: 1,
     borderColor: DashboardColors.borderLight,
     borderRadius: DashboardBorderRadius.lg,
