@@ -39,7 +39,7 @@ export const useWarehouseQuickActions = (): QuickAction[] => {
         icon: Boxes,
         onPress: () => {
           hapticLight();
-          router.push('/export-warehouse/items' as any);
+          router.push('/warehouse/export-items' as any);
         },
         permission: 'export_warehouse.view',
       },
@@ -49,7 +49,7 @@ export const useWarehouseQuickActions = (): QuickAction[] => {
         icon: Truck,
         onPress: () => {
           hapticLight();
-          router.push('/export-warehouse/expected' as any);
+          router.push('/warehouse/export-expected' as any);
         },
         permission: 'export_warehouse.view',
       },
@@ -59,7 +59,7 @@ export const useWarehouseQuickActions = (): QuickAction[] => {
         icon: MapPin,
         onPress: () => {
           hapticLight();
-          router.push('/export-warehouse/positions' as any);
+          router.push('/warehouse/export-positions' as any);
         },
         permission: 'export_warehouse.view',
       },

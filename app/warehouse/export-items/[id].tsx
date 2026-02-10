@@ -136,7 +136,7 @@ export default function ExportWarehouseItemDetailScreen() {
   const handleEdit = () => {
     if (!itemId) return
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    router.push(`/export-warehouse-items/${itemId}/edit`)
+    router.push(`/warehouse/export-items/${itemId}/edit`)
   }
 
   // Silme dialogunu aç

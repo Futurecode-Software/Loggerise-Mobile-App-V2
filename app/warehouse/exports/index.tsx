@@ -335,12 +335,12 @@ export default function ExportWarehousesScreen() {
 
   const handleCardPress = (item: ExportWarehouse) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    router.push(`/export-warehouse/${item.id}`)
+    router.push(`/warehouse/exports/${item.id}`)
   }
 
   const handleNewPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    router.push('/export-warehouse/new')
+    router.push('/warehouse/exports/new')
   }
 
   const handleBackPress = () => {

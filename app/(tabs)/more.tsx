@@ -256,10 +256,10 @@ export default function MoreScreen() {
       label: 'İhracat Depoları',
       color: '#14b8a6',
       subItems: [
-        { icon: 'home', label: 'Depolar', route: '/export-warehouse', color: '#14b8a6' },
-        { icon: 'cube', label: 'İhracat Deposu Malları', route: '/export-warehouse-items', color: '#f59e0b' },
-        { icon: 'time', label: 'Beklenen Mallar', route: '/export-warehouse-expected', color: '#8b5cf6' },
-        { icon: 'location', label: 'Pozisyon Durumu', route: '/export-warehouse-positions', color: '#0ea5e9' }
+        { icon: 'home', label: 'Depolar', route: '/warehouse/exports', color: '#14b8a6' },
+        { icon: 'cube', label: 'İhracat Deposu Malları', route: '/warehouse/export-items', color: '#f59e0b' },
+        { icon: 'time', label: 'Beklenen Mallar', route: '/warehouse/export-expected', color: '#8b5cf6' },
+        { icon: 'location', label: 'Pozisyon Durumu', route: '/warehouse/export-positions', color: '#0ea5e9' }
       ]
     },
     {

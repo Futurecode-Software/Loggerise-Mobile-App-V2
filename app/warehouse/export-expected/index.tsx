@@ -1,8 +1,10 @@
 /**
- * İhracat Deposu Malları Liste Sayfası
+ * Beklenen Mallar Liste Sayfası
  *
  * CLAUDE.md ilkelerine uygun
- * PageHeader + FlatList + Durum Filtreleri + Pagination
+ * PageHeader + FlatList + Durum Filtreleri
+ * Kart üzerinde Varış Onayla / Kabul Onayla butonları
+ * Backend: GET /export-warehouse-items/pending-receiving
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
@@ -13,7 +15,9 @@ import {
   FlatList,
   RefreshControl,
   Pressable,
-  TextInput
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator
 } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -23,6 +27,7 @@ import Animated, {
   withSpring
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
+import Toast from 'react-native-toast-message'
 import { PageHeader } from '@/components/navigation'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -34,10 +39,10 @@ import {
   DashboardAnimations
 } from '@/constants/dashboard-theme'
 import {
-  getExportWarehouseItems,
+  getPendingReceivingItems,
+  confirmArrival,
+  confirmReceiving,
   ExportWarehouseItem,
-  ExportWarehouseItemFilters,
-  Pagination,
   getStatusInfo,
   getPackageTypeLabel
 } from '@/services/endpoints/export-warehouse-items'
@@ -47,11 +52,42 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 // Durum filtreleri
 const STATUS_FILTERS = [
   { id: 'all', label: 'Tümü', icon: 'layers-outline' as const },
-  { id: 'waiting', label: 'Beklemede', icon: 'hourglass-outline' as const },
-  { id: 'received', label: 'Alındı', icon: 'checkmark-circle-outline' as const },
-  { id: 'ready', label: 'Hazır', icon: 'checkmark-done-outline' as const },
-  { id: 'loaded', label: 'Yüklendi', icon: 'car-outline' as const },
+  { id: 'expected', label: 'Bekleniyor', icon: 'time-outline' as const },
+  { id: 'pending_receiving', label: 'Kabul Bekliyor', icon: 'hourglass-outline' as const },
 ]
+
+// Tarih formatlama
+const formatDate = (dateString?: string): string => {
+  if (!dateString) return '-'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  } catch {
+    return dateString
+  }
+}
+
+// Gecikme kontrolü
+const isOverdue = (dateString?: string): boolean => {
+  if (!dateString) return false
+  return new Date(dateString) < new Date()
+}
+
+// Bugün kontrolü
+const isToday = (dateString?: string): boolean => {
+  if (!dateString) return false
+  const today = new Date()
+  const date = new Date(dateString)
+  return (
+    today.getDate() === date.getDate() &&
+    today.getMonth() === date.getMonth() &&
+    today.getFullYear() === date.getFullYear()
+  )
+}
 
 // Skeleton Component
 function ItemCardSkeleton() {
@@ -70,6 +106,10 @@ function ItemCardSkeleton() {
         <Skeleton width={120} height={14} />
         <Skeleton width={100} height={14} />
       </View>
+      <View style={styles.cardFooter}>
+        <Skeleton width={80} height={14} />
+        <Skeleton width={120} height={36} borderRadius={8} />
+      </View>
     </View>
   )
 }
@@ -78,11 +118,16 @@ function ItemCardSkeleton() {
 interface ItemCardProps {
   item: ExportWarehouseItem
   onPress: () => void
+  onAction: (item: ExportWarehouseItem) => void
+  isActionLoading: boolean
+  actionLoadingId: number | null
 }
 
-function ItemCard({ item, onPress }: ItemCardProps) {
+function ItemCard({ item, onPress, onAction, isActionLoading, actionLoadingId }: ItemCardProps) {
   const scale = useSharedValue(1)
   const statusInfo = getStatusInfo(item.status)
+  const overdue = isOverdue(item.expected_arrival_date)
+  const today = isToday(item.expected_arrival_date) && !overdue
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }]
@@ -96,6 +141,8 @@ function ItemCard({ item, onPress }: ItemCardProps) {
     scale.value = withSpring(1, DashboardAnimations.springBouncy)
   }
 
+  const isThisLoading = isActionLoading && actionLoadingId === item.id
+
   return (
     <AnimatedPressable
       style={[styles.card, animStyle]}
@@ -105,8 +152,16 @@ function ItemCard({ item, onPress }: ItemCardProps) {
     >
       {/* Header */}
       <View style={styles.cardHeader}>
-        <View style={styles.cardIcon}>
-          <Ionicons name="cube-outline" size={20} color={DashboardColors.primary} />
+        <View style={[
+          styles.cardIcon,
+          overdue && styles.cardIconOverdue,
+          today && styles.cardIconToday,
+        ]}>
+          <Ionicons
+            name={overdue ? 'alert-circle-outline' : 'cube-outline'}
+            size={20}
+            color={overdue ? '#EF4444' : today ? '#3B82F6' : DashboardColors.primary}
+          />
         </View>
         <View style={styles.cardHeaderContent}>
           <Text style={styles.cardItemNumber} numberOfLines={1}>
@@ -127,12 +182,6 @@ function ItemCard({ item, onPress }: ItemCardProps) {
 
       {/* Info */}
       <View style={styles.cardInfo}>
-        {item.description && (
-          <View style={styles.infoRow}>
-            <Ionicons name="document-text-outline" size={14} color={DashboardColors.textMuted} />
-            <Text style={styles.infoText} numberOfLines={1}>{item.description}</Text>
-          </View>
-        )}
         {item.customer?.name && (
           <View style={styles.infoRow}>
             <Ionicons name="person-outline" size={14} color={DashboardColors.textMuted} />
@@ -146,6 +195,24 @@ function ItemCard({ item, onPress }: ItemCardProps) {
             <Ionicons name="business-outline" size={14} color={DashboardColors.textMuted} />
             <Text style={styles.infoText} numberOfLines={1}>
               {item.warehouse.name} ({item.warehouse.code})
+            </Text>
+          </View>
+        )}
+        {item.expected_arrival_date && (
+          <View style={styles.infoRow}>
+            <Ionicons
+              name={overdue ? 'alert-circle' : 'calendar-outline'}
+              size={14}
+              color={overdue ? '#EF4444' : today ? '#3B82F6' : DashboardColors.textMuted}
+            />
+            <Text style={[
+              styles.infoText,
+              overdue && styles.infoTextOverdue,
+              today && styles.infoTextToday,
+            ]}>
+              {formatDate(item.expected_arrival_date)}
+              {overdue && ' (Gecikmiş)'}
+              {today && ' (Bugün)'}
             </Text>
           </View>
         )}
@@ -170,11 +237,42 @@ function ItemCard({ item, onPress }: ItemCardProps) {
             </View>
           )}
         </View>
-      </View>
 
-      {/* Arrow */}
-      <View style={styles.cardArrow}>
-        <Ionicons name="chevron-forward" size={20} color={DashboardColors.textMuted} />
+        {/* Aksiyon Butonu */}
+        {item.status === 'expected' && (
+          <TouchableOpacity
+            style={styles.arrivalButton}
+            onPress={() => onAction(item)}
+            disabled={isThisLoading}
+            activeOpacity={0.7}
+          >
+            {isThisLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                <Text style={styles.actionButtonText}>Varış Onayla</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+        {item.status === 'pending_receiving' && (
+          <TouchableOpacity
+            style={styles.receivingButton}
+            onPress={() => onAction(item)}
+            disabled={isThisLoading}
+            activeOpacity={0.7}
+          >
+            {isThisLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-done" size={16} color="#fff" />
+                <Text style={styles.actionButtonText}>Kabul Onayla</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     </AnimatedPressable>
   )
@@ -185,27 +283,26 @@ function EmptyState() {
   return (
     <View style={styles.emptyState}>
       <View style={styles.emptyIcon}>
-        <Ionicons name="cube-outline" size={64} color={DashboardColors.textMuted} />
+        <Ionicons name="time-outline" size={64} color={DashboardColors.textMuted} />
       </View>
-      <Text style={styles.emptyTitle}>Henüz mal yok</Text>
+      <Text style={styles.emptyTitle}>Beklenen mal yok</Text>
       <Text style={styles.emptyText}>
-        Yeni mal eklemek için sağ üstteki + butonuna tıklayın.
+        Şu anda yolda olan veya kabul bekleyen mal bulunmuyor.
       </Text>
     </View>
   )
 }
 
-export default function ExportWarehouseItemsScreen() {
+export default function ExportWarehouseExpectedScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [activeFilter, setActiveFilter] = useState('all')
   const [searchText, setSearchText] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
   // API state
-  const [items, setItems] = useState<ExportWarehouseItem[]>([])
-  const [pagination, setPagination] = useState<Pagination | null>(null)
+  const [allItems, setAllItems] = useState<ExportWarehouseItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null)
 
   // Refs
   const isMountedRef = useRef(true)
@@ -229,54 +326,32 @@ export default function ExportWarehouseItemsScreen() {
   }, [searchText])
 
   // Veri çekme
-  const executeFetch = useCallback(
-    async (filter: string, search: string, page: number = 1, append: boolean = false) => {
-      const currentFetchId = ++fetchIdRef.current
+  const executeFetch = useCallback(async () => {
+    const currentFetchId = ++fetchIdRef.current
 
-      try {
-        const filters: ExportWarehouseItemFilters = {
-          page,
-          per_page: 20,
-        }
+    try {
+      const items = await getPendingReceivingItems()
 
-        if (filter !== 'all') {
-          filters.status = filter
-        }
-
-        if (search.trim()) {
-          filters.search = search.trim()
-        }
-
-        const response = await getExportWarehouseItems(filters)
-
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          if (append) {
-            setItems(prev => [...prev, ...response.items])
-          } else {
-            setItems(response.items)
-          }
-          setPagination(response.pagination)
-          hasInitialFetchRef.current = true
-        }
-      } catch (err) {
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          if (__DEV__) console.error('Export warehouse items fetch error:', err)
-        }
-      } finally {
-        if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
-          setIsLoading(false)
-          setIsLoadingMore(false)
-          setRefreshing(false)
-        }
+      if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+        setAllItems(items)
+        hasInitialFetchRef.current = true
       }
-    },
-    []
-  )
+    } catch (err) {
+      if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+        if (__DEV__) console.error('Expected items fetch error:', err)
+      }
+    } finally {
+      if (currentFetchId === fetchIdRef.current && isMountedRef.current) {
+        setIsLoading(false)
+        setRefreshing(false)
+      }
+    }
+  }, [])
 
   // İlk yükleme
   useEffect(() => {
     isMountedRef.current = true
-    executeFetch(activeFilter, debouncedSearch, 1, false)
+    executeFetch()
 
     return () => {
       isMountedRef.current = false
@@ -284,58 +359,99 @@ export default function ExportWarehouseItemsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Filtre veya arama değişimi
-  useEffect(() => {
-    if (!hasInitialFetchRef.current) return
-
-    setIsLoading(true)
-    executeFetch(activeFilter, debouncedSearch, 1, false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilter, debouncedSearch])
-
   // Refs for useFocusEffect
   const executeFetchRef = useRef(executeFetch)
-  const activeFilterRef = useRef(activeFilter)
-  const debouncedSearchRef = useRef(debouncedSearch)
   useEffect(() => {
     executeFetchRef.current = executeFetch
-    activeFilterRef.current = activeFilter
-    debouncedSearchRef.current = debouncedSearch
-  }, [executeFetch, activeFilter, debouncedSearch])
+  }, [executeFetch])
 
   // Ekran focus olduğunda yenile
   useFocusEffect(
     useCallback(() => {
       if (hasInitialFetchRef.current) {
-        executeFetchRef.current(activeFilterRef.current, debouncedSearchRef.current, 1, false)
+        executeFetchRef.current()
       }
     }, [])
   )
 
+  // Filtrelenmiş veri
+  const filteredItems = React.useMemo(() => {
+    let items = allItems
+
+    // Durum filtresi
+    if (activeFilter !== 'all') {
+      items = items.filter(item => item.status === activeFilter)
+    }
+
+    // Arama filtresi
+    if (debouncedSearch.trim()) {
+      const search = debouncedSearch.trim().toLowerCase()
+      items = items.filter(item =>
+        item.item_number?.toLowerCase().includes(search) ||
+        item.load?.load_number?.toLowerCase().includes(search) ||
+        item.customer?.name?.toLowerCase().includes(search) ||
+        item.customer?.short_name?.toLowerCase().includes(search) ||
+        item.description?.toLowerCase().includes(search)
+      )
+    }
+
+    return items
+  }, [allItems, activeFilter, debouncedSearch])
+
+  // İstatistikler
+  const stats = React.useMemo(() => {
+    const expected = allItems.filter(i => i.status === 'expected').length
+    const pendingReceiving = allItems.filter(i => i.status === 'pending_receiving').length
+    return { total: allItems.length, expected, pendingReceiving }
+  }, [allItems])
+
   const onRefresh = async () => {
     setRefreshing(true)
-    await executeFetch(activeFilter, debouncedSearch, 1, false)
-  }
-
-  const loadMore = () => {
-    if (
-      !isLoadingMore &&
-      pagination &&
-      pagination.current_page < pagination.last_page
-    ) {
-      setIsLoadingMore(true)
-      executeFetch(activeFilter, debouncedSearch, pagination.current_page + 1, true)
-    }
+    await executeFetch()
   }
 
   const handleCardPress = (item: ExportWarehouseItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    router.push(`/export-warehouse-items/${item.id}`)
+    router.push(`/warehouse/export-expected/${item.id}`)
   }
 
-  const handleNewPress = () => {
+  const handleAction = async (item: ExportWarehouseItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    router.push('/export-warehouse-items/new')
+    setActionLoadingId(item.id)
+
+    try {
+      if (item.status === 'expected') {
+        await confirmArrival(item.id)
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+        Toast.show({
+          type: 'success',
+          text1: 'Varış başarıyla onaylandı',
+          position: 'top',
+          visibilityTime: 1500,
+        })
+      } else if (item.status === 'pending_receiving') {
+        await confirmReceiving(item.id)
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+        Toast.show({
+          type: 'success',
+          text1: 'Kabul başarıyla onaylandı',
+          position: 'top',
+          visibilityTime: 1500,
+        })
+      }
+      // Listeyi yenile
+      await executeFetch()
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      Toast.show({
+        type: 'error',
+        text1: err instanceof Error ? err.message : 'İşlem başarısız',
+        position: 'top',
+        visibilityTime: 1500,
+      })
+    } finally {
+      setActionLoadingId(null)
+    }
   }
 
   const handleBackPress = () => {
@@ -352,17 +468,11 @@ export default function ExportWarehouseItemsScreen() {
   return (
     <View style={styles.container}>
       <PageHeader
-        title="Depo Malları"
-        icon="cube-outline"
-        subtitle={pagination ? `${pagination.total} mal` : undefined}
+        title="Beklenen Mallar"
+        icon="time-outline"
+        subtitle={`${stats.total} mal`}
         showBackButton
         onBackPress={handleBackPress}
-        rightActions={[
-          {
-            icon: 'add',
-            onPress: handleNewPress,
-          },
-        ]}
       />
 
       <View style={styles.content}>
@@ -390,6 +500,11 @@ export default function ExportWarehouseItemsScreen() {
         <View style={styles.filterBar}>
           {STATUS_FILTERS.map((filter) => {
             const isActive = activeFilter === filter.id
+            const count = filter.id === 'all'
+              ? stats.total
+              : filter.id === 'expected'
+                ? stats.expected
+                : stats.pendingReceiving
             return (
               <Pressable
                 key={filter.id}
@@ -405,7 +520,7 @@ export default function ExportWarehouseItemsScreen() {
                   color={isActive ? '#fff' : DashboardColors.textSecondary}
                 />
                 <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                  {filter.label}
+                  {filter.label} ({count})
                 </Text>
               </Pressable>
             )
@@ -439,12 +554,15 @@ export default function ExportWarehouseItemsScreen() {
           </View>
         ) : (
           <FlatList
-            data={items}
+            data={filteredItems}
             keyExtractor={(item) => String(item.id)}
             renderItem={({ item }) => (
               <ItemCard
                 item={item}
                 onPress={() => handleCardPress(item)}
+                onAction={handleAction}
+                isActionLoading={actionLoadingId !== null}
+                actionLoadingId={actionLoadingId}
               />
             )}
             contentContainerStyle={styles.listContent}
@@ -456,8 +574,6 @@ export default function ExportWarehouseItemsScreen() {
                 tintColor={DashboardColors.primary}
               />
             }
-            onEndReached={loadMore}
-            onEndReachedThreshold={0.5}
             showsVerticalScrollIndicator={false}
           />
         )}
@@ -588,6 +704,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cardIconOverdue: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  cardIconToday: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+  },
   cardHeaderContent: {
     flex: 1,
     marginLeft: DashboardSpacing.sm,
@@ -630,6 +752,14 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.sm,
     color: DashboardColors.textMuted,
   },
+  infoTextOverdue: {
+    color: '#EF4444',
+    fontWeight: '600',
+  },
+  infoTextToday: {
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
   cardFooter: {
     paddingTop: DashboardSpacing.sm,
     flexDirection: 'row',
@@ -639,6 +769,7 @@ const styles = StyleSheet.create({
   footerLeft: {
     flexDirection: 'row',
     gap: DashboardSpacing.sm,
+    flex: 1,
   },
   footerTag: {
     flexDirection: 'row',
@@ -659,10 +790,34 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: DashboardColors.textMuted,
   },
-  cardArrow: {
-    position: 'absolute',
-    right: DashboardSpacing.md,
-    bottom: DashboardSpacing.lg + 8,
+
+  // Action Buttons
+  arrivalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#10B981',
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.lg,
+    minWidth: 120,
+    justifyContent: 'center',
+  },
+  receivingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: DashboardSpacing.md,
+    paddingVertical: DashboardSpacing.sm,
+    borderRadius: DashboardBorderRadius.lg,
+    minWidth: 120,
+    justifyContent: 'center',
+  },
+  actionButtonText: {
+    fontSize: DashboardFontSizes.xs,
+    fontWeight: '700',
+    color: '#fff',
   },
 
   // Empty State
