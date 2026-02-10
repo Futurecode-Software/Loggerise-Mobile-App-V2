@@ -79,6 +79,7 @@ function NavigationController() {
       <Stack.Screen name="hr" />
       <Stack.Screen name="inventory" />
       <Stack.Screen name="fleet" />
+      <Stack.Screen name="message" />
       <Stack.Screen name="+not-found" />
     </Stack>
   )

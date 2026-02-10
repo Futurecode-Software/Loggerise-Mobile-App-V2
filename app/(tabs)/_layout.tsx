@@ -15,7 +15,7 @@ export default function TabLayout() {
   const { unreadCount: messageCount } = useMessageContext()
 
   const handleMessagePress = () => {
-    router.push('/(tabs)/messages')
+    router.navigate('/(tabs)/messages')
   }
 
   return (

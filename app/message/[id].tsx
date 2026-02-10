@@ -232,7 +232,11 @@ export default function ConversationScreen() {
   })()
 
   const handleBack = useCallback(() => {
-    router.back()
+    if (router.canGoBack()) {
+      router.back()
+    } else {
+      router.replace('/(tabs)/messages')
+    }
   }, [])
 
   // Navigate to group settings

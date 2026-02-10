@@ -278,7 +278,7 @@ export default function GroupSettingsScreen() {
     try {
       await leaveGroup(conversationId);
       setShowLeaveGroupDialog(false);
-      router.replace('/messages' as any);
+      router.replace('/(tabs)/messages' as any);
     } catch (err) {
       if (__DEV__) console.error('Leave group error:', err);
       Toast.show({
