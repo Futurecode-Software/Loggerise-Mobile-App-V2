@@ -7,6 +7,7 @@
 
 import api, { ApiResponse, getErrorMessage } from '../api';
 import { secureStorage, storage, clearAllStorage } from '../storage';
+import { unregisterPushToken } from '../notifications';
 
 /**
  * User type returned from API
@@ -158,14 +159,21 @@ export async function register(data: RegisterData): Promise<AuthResult> {
  */
 export async function logout(): Promise<void> {
   try {
+    // Unregister push token before logout (auth token still valid here)
+    await unregisterPushToken()
+  } catch (error) {
+    if (__DEV__) console.log('Push token unregister error:', error)
+  }
+
+  try {
     // Call logout endpoint to invalidate token
-    await api.post('/logout');
+    await api.post('/logout')
   } catch (error) {
     // Continue with local logout even if API fails
-    if (__DEV__) console.log('Logout API error:', error);
+    if (__DEV__) console.log('Logout API error:', error)
   } finally {
     // Always clear local storage
-    await clearAllStorage();
+    await clearAllStorage()
   }
 }
 

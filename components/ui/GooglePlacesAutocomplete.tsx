@@ -2,27 +2,19 @@
  * Google Places Autocomplete Component
  *
  * Google Places API (New) kullanarak adres araması yapar.
- * BottomSheet modal ile sonuçları gösterir.
+ * Inline dropdown ile sonuçları gösterir (iç içe modal sorunu yok).
  */
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
+  TextInput,
+  FlatList,
 } from 'react-native'
-import {
-  BottomSheetModal,
-  BottomSheetFlatList,
-  BottomSheetBackdrop,
-  BottomSheetTextInput,
-  useBottomSheetSpringConfigs,
-  BottomSheetBackdropProps,
-} from '@gorhom/bottom-sheet'
-import { FullWindowOverlay } from 'react-native-screens'
 import { MapPin, Search, X } from 'lucide-react-native'
 import Constants from 'expo-constants'
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme'
@@ -50,57 +42,26 @@ export function GooglePlacesAutocomplete({
   value,
   onChange,
   onPlaceSelect,
-  placeholder = 'Adres aramak için tıklayın...',
+  placeholder = 'Adres aramak için yazın...',
   label,
   error,
 }: GooglePlacesAutocompleteProps) {
   const colors = Colors.light
 
-  const [displayValue, setDisplayValue] = useState(value || '')
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const [selectedAddress, setSelectedAddress] = useState(value || '')
   const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const bottomSheetRef = useRef<BottomSheetModal>(null)
+  const inputRef = useRef<TextInput>(null)
 
   useEffect(() => {
     if (value !== undefined) {
-      setDisplayValue(value)
+      setSelectedAddress(value)
     }
   }, [value])
-
-  const snapPoints = useMemo(() => ['92%'], [])
-
-  // iOS'te iç içe modal sorununu çözmek için FullWindowOverlay kullan
-  const renderContainerComponent = useCallback(
-    ({ children }: { children: React.ReactNode }) =>
-      Platform.OS === 'ios' ? (
-        <FullWindowOverlay>{children}</FullWindowOverlay>
-      ) : (
-        <>{children}</>
-      ),
-    []
-  )
-
-  const animationConfigs = useBottomSheetSpringConfigs({
-    damping: 80,
-    overshootClamping: true,
-    stiffness: 500,
-  })
-
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    []
-  )
 
   // Places API (New) - Autocomplete
   const fetchSuggestions = useCallback(async (input: string) => {
@@ -247,11 +208,14 @@ export function GooglePlacesAutocomplete({
 
   const handleSelectSuggestion = useCallback(async (suggestion: PlaceSuggestion) => {
     setIsLoadingDetails(true)
-    bottomSheetRef.current?.dismiss()
+    setSearchQuery('')
+    setSuggestions([])
+    setIsFocused(false)
+    inputRef.current?.blur()
 
     const details = await fetchPlaceDetails(suggestion.placeId)
     if (details) {
-      setDisplayValue(details.formatted_address)
+      setSelectedAddress(details.formatted_address)
       onChange?.(details.formatted_address)
       onPlaceSelect(details)
     }
@@ -259,132 +223,26 @@ export function GooglePlacesAutocomplete({
     setIsLoadingDetails(false)
   }, [fetchPlaceDetails, onChange, onPlaceSelect])
 
-  const handleOpenModal = useCallback(() => {
+  const handleClear = useCallback(() => {
     setSearchQuery('')
     setSuggestions([])
-    bottomSheetRef.current?.present()
+    setSelectedAddress('')
+    onChange?.('')
+    onPlaceSelect(null)
+  }, [onChange, onPlaceSelect])
+
+  const handleFocus = useCallback(() => {
+    setIsFocused(true)
   }, [])
 
-  const handleDismiss = useCallback(() => {
-    setSearchQuery('')
-    setSuggestions([])
-    if (debounceTimeout.current) {
-      clearTimeout(debounceTimeout.current)
-    }
+  const handleBlur = useCallback(() => {
+    // Küçük gecikme: suggestion'a tıklamadan önce blur olmasını engelle
+    setTimeout(() => {
+      setIsFocused(false)
+    }, 200)
   }, [])
 
-  const renderItem = useCallback(
-    ({ item }: { item: PlaceSuggestion }) => (
-      <TouchableOpacity
-        style={styles.item}
-        onPress={() => handleSelectSuggestion(item)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.itemIcon}>
-          <MapPin size={18} color={colors.textMuted} />
-        </View>
-        <View style={styles.itemTextContainer}>
-          <Text style={[styles.itemMainText, { color: colors.text }]} numberOfLines={1}>
-            {item.mainText}
-          </Text>
-          {item.secondaryText ? (
-            <Text style={[styles.itemSecondaryText, { color: colors.textMuted }]} numberOfLines={1}>
-              {item.secondaryText}
-            </Text>
-          ) : null}
-        </View>
-      </TouchableOpacity>
-    ),
-    [colors, handleSelectSuggestion]
-  )
-
-  const renderEmpty = useCallback(() => {
-    if (isSearching) {
-      return (
-        <View style={styles.emptyContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>Aranıyor...</Text>
-        </View>
-      )
-    }
-
-    if (searchQuery.length > 0 && searchQuery.length < 3) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Search size={48} color={colors.textMuted} strokeWidth={1.5} />
-          <Text style={[styles.emptyText, { color: colors.text }]}>En az 3 karakter yazın</Text>
-        </View>
-      )
-    }
-
-    if (searchQuery.length >= 3) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Search size={48} color={colors.textMuted} strokeWidth={1.5} />
-          <Text style={[styles.emptyText, { color: colors.text }]}>Sonuç bulunamadı</Text>
-        </View>
-      )
-    }
-
-    return (
-      <View style={styles.emptyContainer}>
-        <MapPin size={48} color={colors.textMuted} strokeWidth={1.5} />
-        <Text style={[styles.emptyText, { color: colors.text }]}>Adres aramak için yazın</Text>
-        <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
-          En az 3 karakter girin
-        </Text>
-      </View>
-    )
-  }, [isSearching, searchQuery, colors])
-
-  const renderHeader = useCallback(() => (
-    <>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <View style={styles.headerLeft}>
-          <Text style={[styles.title, { color: colors.text }]}>Adres Ara</Text>
-          {suggestions.length > 0 && (
-            <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-              {suggestions.length} sonuç
-            </Text>
-          )}
-        </View>
-        <TouchableOpacity
-          onPress={() => bottomSheetRef.current?.dismiss()}
-          style={styles.closeButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <X size={24} color={colors.textMuted} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Search Input */}
-      <View style={[styles.searchContainer, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-        <Search size={20} color={colors.icon} />
-        <BottomSheetTextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Adres veya yer adı yazın..."
-          placeholderTextColor={colors.placeholder}
-          value={searchQuery}
-          onChangeText={handleSearchChange}
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoFocus
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity
-            onPress={() => {
-              setSearchQuery('')
-              setSuggestions([])
-            }}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <X size={18} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
-    </>
-  ), [suggestions.length, searchQuery, colors, handleSearchChange])
+  const showResults = isFocused && (suggestions.length > 0 || isSearching || searchQuery.length >= 3)
 
   return (
     <View style={styles.container}>
@@ -392,75 +250,113 @@ export function GooglePlacesAutocomplete({
         <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
       )}
 
-      {/* Tıklanabilir input alanı */}
-      <TouchableOpacity
-        style={[
-          styles.inputTouchable,
+      {/* Seçili adres gösterimi */}
+      {selectedAddress && !isFocused ? (
+        <View style={[styles.selectedContainer, { borderColor: colors.border }]}>
+          <MapPin size={16} color={colors.primary} />
+          <Text style={[styles.selectedText, { color: colors.text }]} numberOfLines={2}>
+            {selectedAddress}
+          </Text>
+          <TouchableOpacity
+            onPress={handleClear}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <X size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        /* Arama input'u */
+        <View style={[
+          styles.inputContainer,
           {
-            borderColor: error ? colors.danger : colors.border,
+            borderColor: error ? colors.danger : isFocused ? colors.primary : colors.border,
           },
-        ]}
-        onPress={handleOpenModal}
-        activeOpacity={0.7}
-      >
-        <MapPin size={18} color={colors.icon} />
-        <Text
-          style={[
-            styles.inputText,
-            {
-              color: displayValue ? colors.text : colors.textMuted,
-            },
-          ]}
-          numberOfLines={1}
-        >
-          {displayValue || placeholder}
-        </Text>
-        {isLoadingDetails && (
-          <ActivityIndicator size="small" color={colors.primary} />
-        )}
-      </TouchableOpacity>
+        ]}>
+          <Search size={18} color={isFocused ? colors.primary : colors.icon} />
+          <TextInput
+            ref={inputRef}
+            style={[styles.input, { color: colors.text }]}
+            placeholder={placeholder}
+            placeholderTextColor={colors.placeholder}
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {(searchQuery.length > 0 || isLoadingDetails) && (
+            isLoadingDetails ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchQuery('')
+                  setSuggestions([])
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <X size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            )
+          )}
+        </View>
+      )}
 
       {error && (
         <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
       )}
 
-      <Text style={[styles.hint, { color: colors.textMuted }]}>
-        Adres seçince koordinatlar otomatik dolar
-      </Text>
+      {/* Inline sonuç listesi */}
+      {showResults && (
+        <View style={[styles.resultsContainer, { borderColor: colors.border }]}>
+          {isSearching ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={[styles.loadingText, { color: colors.textMuted }]}>Aranıyor...</Text>
+            </View>
+          ) : suggestions.length === 0 && searchQuery.length >= 3 ? (
+            <View style={styles.emptyRow}>
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>Sonuç bulunamadı</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={suggestions}
+              keyExtractor={(item) => item.placeId}
+              keyboardShouldPersistTaps="handled"
+              scrollEnabled={suggestions.length > 4}
+              style={styles.resultsList}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.resultItem}
+                  onPress={() => handleSelectSuggestion(item)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.resultIcon}>
+                    <MapPin size={16} color={colors.textMuted} />
+                  </View>
+                  <View style={styles.resultTextContainer}>
+                    <Text style={[styles.resultMainText, { color: colors.text }]} numberOfLines={1}>
+                      {item.mainText}
+                    </Text>
+                    {item.secondaryText ? (
+                      <Text style={[styles.resultSecondaryText, { color: colors.textMuted }]} numberOfLines={1}>
+                        {item.secondaryText}
+                      </Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </View>
+      )}
 
-      {/* BottomSheet Modal */}
-      <BottomSheetModal
-        ref={bottomSheetRef}
-        index={0}
-        snapPoints={snapPoints}
-        enablePanDownToClose
-        enableContentPanningGesture={false}
-        enableDynamicSizing={false}
-        animateOnMount
-        animationConfigs={animationConfigs}
-        backdropComponent={renderBackdrop}
-        backgroundStyle={styles.background}
-        handleIndicatorStyle={styles.handleIndicator}
-        keyboardBehavior="interactive"
-        keyboardBlurBehavior="restore"
-        android_keyboardInputMode="adjustResize"
-        bottomInset={0}
-        containerComponent={renderContainerComponent}
-        stackBehavior="push"
-        onDismiss={handleDismiss}
-      >
-        {renderHeader()}
-
-        <BottomSheetFlatList
-          data={suggestions}
-          renderItem={renderItem}
-          keyExtractor={(item: PlaceSuggestion) => item.placeId}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={renderEmpty}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        />
-      </BottomSheetModal>
+      {!isFocused && !selectedAddress && (
+        <Text style={[styles.hint, { color: colors.textMuted }]}>
+          Adres seçince koordinatlar otomatik dolar
+        </Text>
+      )}
     </View>
   )
 }
@@ -468,13 +364,14 @@ export function GooglePlacesAutocomplete({
 const styles = StyleSheet.create({
   container: {
     marginBottom: Spacing.md,
+    zIndex: 10,
   },
   label: {
     ...Typography.bodySM,
     fontWeight: '500',
     marginBottom: Spacing.sm,
   },
-  inputTouchable: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     height: 44,
@@ -484,9 +381,26 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     backgroundColor: '#FFFFFF',
   },
-  inputText: {
+  input: {
     flex: 1,
     fontSize: 15,
+    paddingVertical: 0,
+  },
+  selectedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+    backgroundColor: '#F0FDF4',
+  },
+  selectedText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
   },
   errorText: {
     ...Typography.bodySM,
@@ -497,103 +411,62 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
     fontStyle: 'italic',
   },
-  // BottomSheet styles
-  background: {
+  // Inline results
+  resultsContainer: {
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: BorderRadius.md,
+    borderBottomRightRadius: BorderRadius.md,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
+    maxHeight: 240,
+    overflow: 'hidden',
   },
-  handleIndicator: {
-    backgroundColor: '#9CA3AF',
-    width: 48,
-    height: 5,
-    borderRadius: 3,
+  resultsList: {
+    maxHeight: 240,
   },
-  header: {
+  resultItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing['2xl'],
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  title: {
-    ...Typography.headingLG,
-    marginBottom: 2,
-  },
-  subtitle: {
-    ...Typography.bodySM,
-  },
-  closeButton: {
-    padding: Spacing.xs,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    marginHorizontal: Spacing.lg,
-    marginVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F3F4F6',
   },
-  searchInput: {
-    flex: 1,
-    ...Typography.bodyMD,
-    paddingVertical: Spacing.xs,
-  },
-  listContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing['3xl'],
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
-    marginBottom: Spacing.xs,
-    borderRadius: BorderRadius.md,
-  },
-  itemIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  resultIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.md,
+    marginRight: Spacing.sm,
   },
-  itemTextContainer: {
+  resultTextContainer: {
     flex: 1,
   },
-  itemMainText: {
+  resultMainText: {
     ...Typography.bodyMD,
     fontWeight: '500',
-    marginBottom: 2,
   },
-  itemSecondaryText: {
+  resultSecondaryText: {
     ...Typography.bodySM,
+    marginTop: 1,
   },
-  emptyContainer: {
-    flex: 1,
+  loadingRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing['5xl'],
-    paddingHorizontal: Spacing['2xl'],
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
+  },
+  loadingText: {
+    ...Typography.bodySM,
+  },
+  emptyRow: {
+    alignItems: 'center',
+    paddingVertical: Spacing.lg,
   },
   emptyText: {
-    ...Typography.bodyLG,
-    fontWeight: '500',
-    marginTop: Spacing.md,
-    textAlign: 'center',
-  },
-  emptySubtext: {
     ...Typography.bodySM,
-    marginTop: Spacing.xs,
-    textAlign: 'center',
   },
 })
