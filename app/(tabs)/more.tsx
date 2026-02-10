@@ -272,7 +272,8 @@ export default function MoreScreen() {
         { icon: 'link', label: 'Çekici-Römork Eşleştirme', route: '/fleet/tractor-trailer', color: '#f59e0b' },
         { icon: 'link', label: 'Sürücü-Çekici Eşleştirme', route: '/fleet/driver-tractor', color: '#ec4899' },
         { icon: 'disc', label: 'Lastik Deposu', route: '/fleet/tire-warehouse', color: '#8b5cf6' },
-        { icon: 'warning', label: 'Arıza Bildirimleri', route: '/fleet/fault-reports', color: '#ef4444' }
+        { icon: 'warning', label: 'Arıza Bildirimleri', route: '/fleet/fault-reports', color: '#ef4444' },
+        { icon: 'airplane-outline', label: 'İhracat Planlama', route: '/fleet/export-planning', color: '#0ea5e9' }
       ]
     },
     {
