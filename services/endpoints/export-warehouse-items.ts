@@ -351,3 +351,183 @@ export async function updateItemStatus(
     throw new Error(message)
   }
 }
+
+/**
+ * Beklenen (yolda) malları getir
+ * GET /export-warehouse-items/expected
+ */
+export async function getExpectedItems(): Promise<ExportWarehouseItem[]> {
+  try {
+    const response = await api.get<{ success: boolean; data: ExportWarehouseItem[] }>(
+      '/export-warehouse-items/expected'
+    )
+    return response.data.data
+  } catch (error) {
+    const message = getErrorMessage(error)
+    throw new Error(message)
+  }
+}
+
+/**
+ * Kabul bekleyen malları getir (expected + pending_receiving)
+ * GET /export-warehouse-items/pending-receiving
+ */
+export async function getPendingReceivingItems(): Promise<ExportWarehouseItem[]> {
+  try {
+    const response = await api.get<{ success: boolean; data: ExportWarehouseItem[] }>(
+      '/export-warehouse-items/pending-receiving'
+    )
+    return response.data.data
+  } catch (error) {
+    const message = getErrorMessage(error)
+    throw new Error(message)
+  }
+}
+
+/**
+ * Varış onayla (expected -> pending_receiving)
+ * POST /export-warehouse-items/{id}/confirm-arrival
+ */
+export async function confirmArrival(
+  id: number,
+  notes?: string
+): Promise<ExportWarehouseItem> {
+  try {
+    const response = await api.post<ItemResponse>(
+      `/export-warehouse-items/${id}/confirm-arrival`,
+      { notes }
+    )
+    return response.data.data
+  } catch (error) {
+    const message = getErrorMessage(error)
+    throw new Error(message)
+  }
+}
+
+/**
+ * Kabul onayla (pending_receiving -> received)
+ * POST /export-warehouse-items/{id}/confirm-receiving
+ */
+export async function confirmReceiving(
+  id: number,
+  notes?: string
+): Promise<ExportWarehouseItem> {
+  try {
+    const response = await api.post<ItemResponse>(
+      `/export-warehouse-items/${id}/confirm-receiving`,
+      { notes }
+    )
+    return response.data.data
+  } catch (error) {
+    const message = getErrorMessage(error)
+    throw new Error(message)
+  }
+}
+
+// ─── Pozisyon Tipleri ───────────────────────────────────
+
+export interface PositionListItem {
+  id: number
+  position_number: string
+  position_type: string
+  name?: string
+  description?: string
+  sent_to_warehouse_at?: string
+  driver?: { id: number; name: string } | null
+  second_driver?: { id: number; name: string } | null
+  truck_tractor?: { id: number; plate: string } | null
+  trailer?: { id: number; plate: string } | null
+  loads?: { id: number; load_number: string }[]
+  created_at?: string
+  updated_at?: string
+}
+
+export interface LoadStatusDetail {
+  load_id: number
+  load_number: string
+  status: string
+  expected_arrival_date: string | null
+  is_overdue: boolean
+  has_damage: boolean
+  has_quantity_discrepancy: boolean
+  expected_package_count: number | null
+  received_package_count: number | null
+  domestic_transport_order: {
+    id: number
+    order_number: string
+    status: string
+    vehicle_plate: string | null
+    driver_name: string | null
+  } | null
+}
+
+export interface PositionCompletionStatus {
+  total_loads: number
+  arrived_loads: number
+  missing_loads: number
+  missing_load_numbers: string[]
+  completion_percentage: number
+  can_ship: boolean
+  load_details: LoadStatusDetail[]
+  status_breakdown: Record<string, number>
+}
+
+// ─── Pozisyon Durum Bilgileri ────────────────────────────
+
+export const LOAD_STATUSES = [
+  { value: 'expected', label: 'Yolda', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)', icon: 'time-outline' as const },
+  { value: 'pending_receiving', label: 'Kabul Bekliyor', color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.1)', icon: 'hourglass-outline' as const },
+  { value: 'waiting', label: 'Bekleniyor', color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)', icon: 'pause-circle-outline' as const },
+  { value: 'received', label: 'Depoda', color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)', icon: 'checkmark-circle-outline' as const },
+  { value: 'loading', label: 'Yükleniyor', color: '#F97316', bg: 'rgba(249, 115, 22, 0.1)', icon: 'arrow-up-circle-outline' as const },
+  { value: 'loaded', label: 'Yüklendi', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)', icon: 'cube-outline' as const },
+  { value: 'shipped', label: 'Gönderildi', color: '#6B7280', bg: 'rgba(107, 114, 128, 0.1)', icon: 'airplane-outline' as const },
+] as const
+
+export function getLoadStatusInfo(status: string) {
+  return LOAD_STATUSES.find(s => s.value === status) || {
+    value: status,
+    label: status,
+    color: '#6B7280',
+    bg: 'rgba(107, 114, 128, 0.1)',
+    icon: 'help-circle-outline' as const,
+  }
+}
+
+// ─── Pozisyon API Fonksiyonları ─────────────────────────
+
+/**
+ * Pozisyon listesini getir
+ * GET /export-warehouses/positions
+ */
+export async function getPositions(): Promise<PositionListItem[]> {
+  try {
+    const response = await api.get<{ success: boolean; data: PositionListItem[] }>(
+      '/export-warehouses/positions'
+    )
+    return response.data.data
+  } catch (error) {
+    const message = getErrorMessage(error)
+    throw new Error(message)
+  }
+}
+
+/**
+ * Pozisyon tamamlanma durumu (detaylı)
+ * GET /positions/{id}/status?detailed=true
+ */
+export async function getPositionStatus(
+  positionId: number,
+  detailed: boolean = true
+): Promise<PositionCompletionStatus> {
+  try {
+    const response = await api.get<{ success: boolean; data: PositionCompletionStatus }>(
+      `/positions/${positionId}/status`,
+      { params: { detailed } }
+    )
+    return response.data.data
+  } catch (error) {
+    const message = getErrorMessage(error)
+    throw new Error(message)
+  }
+}
