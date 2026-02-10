@@ -191,11 +191,6 @@ export default function ExportPositionDetailScreen() {
     router.back()
   }
 
-  const handleEdit = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    router.push(`/logistics/exports/positions/${id}/edit` as any)
-  }
-
   // Silme dialogunu aç
   const handleDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
@@ -353,9 +348,6 @@ export default function ExportPositionDetailScreen() {
 
             {/* Aksiyonlar - Sağ */}
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.headerButton} onPress={handleEdit}>
-                <Ionicons name="create-outline" size={22} color="#fff" />
-              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.headerButton, styles.deleteButton]}
                 onPress={handleDelete}

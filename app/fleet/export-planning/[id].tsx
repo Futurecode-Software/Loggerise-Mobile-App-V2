@@ -547,13 +547,13 @@ export default function ExportPlanningDetailScreen() {
     if (!position?.loads) return null
     const loads = position.loads
     const totalPackages = loads.reduce((sum, load) => {
-      return sum + (load.items?.reduce((s, item) => s + (item.package_count || 0), 0) || 0)
+      return sum + (load.items?.reduce((s, item) => s + (Number(item.package_count) || 0), 0) || 0)
     }, 0)
     const totalWeight = loads.reduce((sum, load) => {
-      return sum + (load.items?.reduce((s, item) => s + (item.gross_weight || 0), 0) || 0)
+      return sum + (load.items?.reduce((s, item) => s + (Number(item.gross_weight) || 0), 0) || 0)
     }, 0)
     const totalVolume = loads.reduce((sum, load) => {
-      return sum + (load.items?.reduce((s, item) => s + (item.volume || 0), 0) || 0)
+      return sum + (load.items?.reduce((s, item) => s + (Number(item.volume) || 0), 0) || 0)
     }, 0)
     return {
       count: loads.length,

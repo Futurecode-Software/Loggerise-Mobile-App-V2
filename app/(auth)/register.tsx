@@ -163,12 +163,13 @@ export default function Register() {
         }
         // NavigationController otomatik yönlendirecek
         await register(registerData)
-      } catch {
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Kayıt sırasında bir hata oluştu'
         Toast.show({
           type: 'error',
-          text1: 'Kayıt sırasında bir hata oluştu',
+          text1: message,
           position: 'top',
-          visibilityTime: 1500
+          visibilityTime: 2500
         })
       }
     }
