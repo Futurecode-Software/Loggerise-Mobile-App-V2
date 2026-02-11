@@ -12,7 +12,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   Pressable
 } from 'react-native'
 import { router } from 'expo-router'
@@ -35,8 +34,6 @@ import {
 } from '@/components/modals'
 import {
   createExportWarehouseItem,
-  searchLoad,
-  LoadSearchResult,
   ExportWarehouseItemFormData,
   PACKAGE_TYPES,
   getPackageTypeLabel
@@ -45,6 +42,7 @@ import {
   getExportWarehouses,
   ExportWarehouse
 } from '@/services/endpoints/export-warehouses'
+import { getLoads, Load } from '@/services/endpoints/loads'
 import { getErrorMessage, getValidationErrors } from '@/services/api'
 
 type Step = 'load-search' | 'load-info' | 'item-form'
@@ -59,10 +57,12 @@ export default function NewExportWarehouseItemScreen() {
   // Stepper state
   const [currentStep, setCurrentStep] = useState<Step>('load-search')
 
-  // Yük arama state
-  const [loadNumberInput, setLoadNumberInput] = useState('')
-  const [isSearching, setIsSearching] = useState(false)
-  const [selectedLoad, setSelectedLoad] = useState<LoadSearchResult | null>(null)
+  // Yük seçimi state
+  const [loads, setLoads] = useState<Load[]>([])
+  const [isLoadingLoads, setIsLoadingLoads] = useState(false)
+  const [selectedLoad, setSelectedLoad] = useState<Load | null>(null)
+  const loadModalRef = useRef<SearchableSelectModalRef>(null)
+  const [loadLabel, setLoadLabel] = useState('')
 
   // Depo seçimi state
   const [warehouses, setWarehouses] = useState<ExportWarehouse[]>([])
@@ -93,9 +93,10 @@ export default function NewExportWarehouseItemScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Depoları yükle
+  // Depoları ve yükleri yükle
   useEffect(() => {
     loadWarehouses()
+    fetchLoads()
   }, [])
 
   const loadWarehouses = async () => {
@@ -110,22 +111,30 @@ export default function NewExportWarehouseItemScreen() {
     }
   }
 
-  // Yük ara
-  const handleSearchLoad = useCallback(async () => {
-    if (!loadNumberInput.trim()) {
-      Toast.show({
-        type: 'error',
-        text1: 'Lütfen yük numarası girin',
-        position: 'top',
-        visibilityTime: 1500,
-      })
-      return
-    }
-
-    setIsSearching(true)
+  // Yükleri getir
+  const fetchLoads = async () => {
+    setIsLoadingLoads(true)
     try {
-      const load = await searchLoad(loadNumberInput.trim())
+      const response = await getLoads({
+        per_page: 50,
+        sort_by: 'created_at',
+        sort_order: 'desc',
+        assigned_to_trip: 'all',
+      })
+      setLoads(response.loads)
+    } catch {
+      if (__DEV__) console.error('Loads fetch error')
+    } finally {
+      setIsLoadingLoads(false)
+    }
+  }
+
+  // Yük seçimi
+  const handleLoadSelect = (option: SelectOption) => {
+    const load = loads.find(l => l.id === Number(option.value))
+    if (load) {
       setSelectedLoad(load)
+      setLoadLabel(`${load.load_number}${load.cargo_name ? ' - ' + load.cargo_name : ''}`)
 
       // Yükten gelen bilgileri form'a doldur
       setFormData(prev => ({
@@ -137,18 +146,8 @@ export default function NewExportWarehouseItemScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       setCurrentStep('load-info')
-    } catch (err) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
-      Toast.show({
-        type: 'error',
-        text1: err instanceof Error ? err.message : 'Yük bulunamadı',
-        position: 'top',
-        visibilityTime: 1500,
-      })
-    } finally {
-      setIsSearching(false)
     }
-  }, [loadNumberInput])
+  }
 
   // Depo seçimi
   const handleWarehouseSelect = (option: SelectOption) => {
@@ -229,6 +228,7 @@ export default function NewExportWarehouseItemScreen() {
       setCurrentStep('load-info')
     } else if (currentStep === 'load-info') {
       setSelectedLoad(null)
+      setLoadLabel('')
       setCurrentStep('load-search')
     } else {
       router.back()
@@ -284,6 +284,16 @@ export default function NewExportWarehouseItemScreen() {
 
   // Stepper gösterimi
   const currentStepIndex = STEPS.findIndex(s => s.id === currentStep)
+
+  // Yük options
+  const loadOptions: SelectOption[] = loads.map(l => ({
+    value: l.id,
+    label: l.load_number,
+    subtitle: [
+      l.cargo_name,
+      l.customer?.name,
+    ].filter(Boolean).join(' • '),
+  }))
 
   // Depo options
   const warehouseOptions: SelectOption[] = warehouses.map(w => ({
@@ -353,50 +363,33 @@ export default function NewExportWarehouseItemScreen() {
         contentContainerStyle={styles.contentContainer}
         bottomOffset={20}
       >
-        {/* ADIM 1: Yük Ara */}
+        {/* ADIM 1: Yük Seç */}
         {currentStep === 'load-search' && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIcon}>
                 <Ionicons name="search-outline" size={18} color={DashboardColors.primary} />
               </View>
-              <Text style={styles.sectionTitle}>Yük Ara</Text>
+              <Text style={styles.sectionTitle}>Yük Seç</Text>
             </View>
 
             <View style={styles.sectionContent}>
               <Text style={styles.sectionDescription}>
-                Malın ait olacağı yükün numarasını girin ve arayın.
+                Malın ait olacağı yükü listeden seçin veya arayın.
               </Text>
 
-              <View style={styles.searchRow}>
-                <View style={styles.searchInputWrapper}>
-                  <Input
-                    label="Yük Numarası *"
-                    placeholder="Örn: YK-2025-001"
-                    value={loadNumberInput}
-                    onChangeText={setLoadNumberInput}
-                    autoCapitalize="characters"
-                    returnKeyType="search"
-                    onSubmitEditing={handleSearchLoad}
-                  />
-                </View>
+              <View>
+                <Text style={styles.inputLabel}>Yük *</Text>
+                <TouchableOpacity
+                  style={styles.selectTrigger}
+                  onPress={() => loadModalRef.current?.present()}
+                >
+                  <Text style={loadLabel ? styles.selectTriggerText : styles.selectTriggerPlaceholder}>
+                    {loadLabel || 'Yük seçmek için dokunun'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color={DashboardColors.textMuted} />
+                </TouchableOpacity>
               </View>
-
-              <TouchableOpacity
-                style={[styles.searchButton, isSearching && styles.searchButtonDisabled]}
-                onPress={handleSearchLoad}
-                disabled={isSearching}
-                activeOpacity={0.7}
-              >
-                {isSearching ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="search" size={18} color="#fff" />
-                    <Text style={styles.searchButtonText}>Yük Ara</Text>
-                  </>
-                )}
-              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -419,38 +412,33 @@ export default function NewExportWarehouseItemScreen() {
                     <Text style={styles.loadInfoLabel}>Yük No</Text>
                     <Text style={styles.loadInfoValue}>{selectedLoad.load_number}</Text>
                   </View>
-                  {selectedLoad.cargo_name && (
+                  {selectedLoad.cargo_name ? (
                     <View style={styles.loadInfoRow}>
                       <Text style={styles.loadInfoLabel}>Kargo</Text>
                       <Text style={styles.loadInfoValue}>{selectedLoad.cargo_name}</Text>
                     </View>
-                  )}
-                  {selectedLoad.customer && (
+                  ) : null}
+                  {selectedLoad.customer ? (
                     <View style={styles.loadInfoRow}>
                       <Text style={styles.loadInfoLabel}>Müşteri</Text>
                       <Text style={styles.loadInfoValue}>
-                        {selectedLoad.customer.short_name || selectedLoad.customer.name}
+                        {selectedLoad.customer.name}
                       </Text>
                     </View>
-                  )}
-                  {selectedLoad.position && (
-                    <View style={styles.loadInfoRow}>
-                      <Text style={styles.loadInfoLabel}>Pozisyon</Text>
-                      <Text style={styles.loadInfoValue}>{selectedLoad.position.position_number}</Text>
-                    </View>
-                  )}
-                  {selectedLoad.declaration_no && (
+                  ) : null}
+                  {selectedLoad.declaration_no ? (
                     <View style={styles.loadInfoRow}>
                       <Text style={styles.loadInfoLabel}>Deklarasyon</Text>
                       <Text style={styles.loadInfoValue}>{selectedLoad.declaration_no}</Text>
                     </View>
-                  )}
+                  ) : null}
                 </View>
 
                 <Pressable
                   style={styles.changeLoadButton}
                   onPress={() => {
                     setSelectedLoad(null)
+                    setLoadLabel('')
                     setCurrentStep('load-search')
                   }}
                 >
@@ -637,6 +625,17 @@ export default function NewExportWarehouseItemScreen() {
 
       {/* SearchableSelectModals */}
       <SearchableSelectModal
+        ref={loadModalRef}
+        title="Yük Seçin"
+        options={loadOptions}
+        selectedValue={selectedLoad?.id || null}
+        onSelect={handleLoadSelect}
+        loading={isLoadingLoads}
+        searchPlaceholder="Yük numarası veya kargo adı ara..."
+        emptyMessage="Yük bulunamadı"
+      />
+
+      <SearchableSelectModal
         ref={warehouseModalRef}
         title="Depo Seçin"
         options={warehouseOptions}
@@ -771,34 +770,6 @@ const styles = StyleSheet.create({
     fontSize: DashboardFontSizes.sm,
     color: DashboardColors.textSecondary,
     lineHeight: 20,
-  },
-
-  // Search
-  searchRow: {
-    flexDirection: 'row',
-    gap: DashboardSpacing.sm,
-  },
-  searchInputWrapper: {
-    flex: 1,
-  },
-  searchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: DashboardSpacing.sm,
-    backgroundColor: DashboardColors.primary,
-    paddingHorizontal: DashboardSpacing.xl,
-    paddingVertical: DashboardSpacing.md,
-    borderRadius: DashboardBorderRadius.lg,
-    height: 48,
-  },
-  searchButtonDisabled: {
-    opacity: 0.6,
-  },
-  searchButtonText: {
-    fontSize: DashboardFontSizes.base,
-    fontWeight: '600',
-    color: '#fff',
   },
 
   // Load Info Card
